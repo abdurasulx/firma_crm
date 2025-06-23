@@ -1,0 +1,106 @@
+{% extends 'ytbase.html' %}
+{% load static %}
+
+{% block title %}Asosiy Sahifa{% endblock %}
+
+{% block content %}
+<style>
+    .section-header {
+        font-size: 20px;
+        font-weight: bold;
+        margin-bottom: 20px;
+    }
+
+    .yuklama-list {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .yuklama-item {
+        background-color: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .yuklama-info {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .no-data {
+        text-align: center;
+        font-size: 16px;
+        color: #888;
+        padding: 30px;
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+
+    .sotish-btn {
+        margin-top: 30px;
+        display: block;
+        width: 100%;
+        padding: 12px;
+        background-color: #28a745;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        text-align: center;
+        text-decoration: none;
+    }
+
+    .sotish-btn:disabled {
+        background-color: #aaa;
+        cursor: not-allowed;
+    }
+
+    @media (max-width: 600px) {
+        .yuklama-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .sotish-btn {
+            font-size: 14px;
+            padding: 10px;
+        }
+    }
+</style>
+
+<div class="section-header">Yuklanmalar</div>
+
+{% if yuklamalar %}
+    <div class="yuklama-list">
+        {% for nom, miqdor in yuklamalar.items %}
+            <div class="yuklama-item">
+                <div class="yuklama-info">
+                    <strong>{{ nom|title }}</strong>
+                    <span>Miqdori: {{ miqdor }} dona/kg/l</span>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <form method="POST"  >
+        {% csrf_token %}
+         <a class="sotish-btn" style="text-decoration: none; color: white; ;" href="{% url 'add_haridor' %}"> Sotishni boshlash  </a>
+    </form>
+{% else %}
+    <div class="no-data">
+        Sizda hozircha yuklamalar mavjud emas.
+    </div>
+    <button class="sotish-btn" disabled>Sotishni boshlash</button>
+{% endif %}
+{% endblock %}

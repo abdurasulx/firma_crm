@@ -1,0 +1,76 @@
+{% extends 'ytbase.html' %}
+{% load static %}
+
+{% block title %}Foydalanuvchi Profil{% endblock %}
+
+{% block content %}
+<style>
+    .profile-container {
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #ffffff;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        text-align: center;
+    }
+
+    .profile-image {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        object-fit: cover;
+        object-position: center;
+        border: 3px solid #4285f4;
+        margin-bottom: 20px;
+    }
+
+    .profile-info {
+        font-size: 18px;
+        color: #333;
+        margin-bottom: 10px;
+        word-wrap: break-word;
+    }
+
+    .profile-label {
+        font-weight: bold;
+        color: #555;
+    }
+
+    @media (max-width: 600px) {
+        .profile-container {
+            padding: 20px;
+            margin: 15px;
+        }
+
+        .profile-image {
+            width: 100px;
+            height: 100px;
+        }
+
+        .profile-info {
+            font-size: 16px;
+        }
+    }
+</style>
+
+<div class="profile-container">
+    <img src="{% if user.rasmi %}{{ user.rasmi.url }}{% else %}{% static 'images/default_avatar.jpg' %}{% endif %}" alt="Avatar" class="profile-image">
+
+    <div class="profile-info">
+        <span class="profile-label">To‘liq ism:</span> {{ user.tuliq_ismi }}
+    </div>
+    <div class="profile-info">
+        <span class="profile-label">Foydalanuvchi nomi:</span> {{ user.username }}
+    </div>
+    <div class="profile-info">
+        <span class="profile-label">Email:</span> {{ user.email }}
+    </div>
+    <div class="profile-info">
+        <span class="profile-label">Telefon:</span> {{ user.telefon|default:"- kiritilmagan -" }}
+    </div>
+    <div class="profile-info">
+        <span class="profile-label">Turi:</span> {{ user.turi|title }}
+    </div>
+</div>
+{% endblock %}

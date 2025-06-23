@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Yetkazib beruvchi{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f4;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background-color: #4285f4;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .brand {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .user-block {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .user-block img {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #fff;
+        }
+
+        .user-block a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 15px;
+        }
+
+        main {
+            flex: 1;
+            padding: 20px;
+        }
+
+        footer {
+            background-color: #ddd;
+            text-align: center;
+            padding: 12px;
+            font-size: 13px;
+            color: #555;
+        }
+
+        /* Mobil qurilmalar uchun qo‘shimcha moslashuv */
+        @media (max-width: 600px) {
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .user-block {
+                justify-content: flex-start;
+                margin-top: 10px;
+            }
+
+            .brand {
+                font-size: 18px;
+            }
+
+            .user-block a {
+                font-size: 14px;
+            }
+
+            main {
+                padding: 15px;
+            }
+
+            footer {
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="brand">Tizim nomi</div>
+
+    <div class="user-block">
+        <a href="{% url 'profile' request.user.username %}">
+            <img src="{% if request.user.rasmi %}{{ request.user.rasmi.url }}{% else %}{% static 'images/default_avatar.jpg' %}{% endif %}" alt="avatar">
+        </a>
+        <a href="{% url 'profile' request.user.username %}">
+            {{ request.user.tuliq_ismi }}
+        </a>
+    </div>
+</header>
+
+<main>
+    {% block content %}
+    <!-- Sahifa kontenti shu yerda ko‘rinadi -->
+    {% endblock %}
+</main>
+
+<footer>
+    &copy; {{ year|default:"2025" }} Barcha huquqlar himoyalangan.
+</footer>
+
+</body>
+</html>

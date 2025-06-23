@@ -1,0 +1,162 @@
+{% extends 'ytbase.html' %}
+{% load static %}
+
+{% block title %}Haridor Dukon Qo'shish{% endblock %}
+
+{% block content %}
+<style>
+    .form-container {
+        background-color: white;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-header {
+        text-align: center;
+        margin-bottom: 25px;
+    }
+
+    .form-header h2 {
+        color: #333;
+        margin: 0;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: #555;
+        font-weight: 600;
+    }
+
+    .form-group input[type="text"],
+    .form-group textarea {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 16px;
+        box-sizing: border-box;
+    }
+
+    .form-group textarea {
+        min-height: 100px;
+        resize: vertical;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: #4285f4;
+    }
+
+    .file-input {
+        display: block;
+        margin-top: 5px;
+    }
+
+    .submit-button {
+        width: 100%;
+        padding: 12px;
+        background-color: #4285f4;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+
+    .submit-button:hover {
+        background-color: #3367d6;
+    }
+
+    .required:after {
+        content: " *";
+        color: red;
+    }
+
+    .message-box {
+        color: green;
+        margin-top: 10px;
+        text-align: center;
+    }
+
+    /* 🔽 Mobil qurilma uchun moslashuv */
+    @media (max-width: 600px) {
+        .form-container {
+            padding: 20px;
+            margin: 15px;
+        }
+
+        .form-header h2 {
+            font-size: 20px;
+        }
+
+        .form-group input[type="text"],
+        .form-group textarea {
+            font-size: 14px;
+            padding: 10px;
+        }
+
+        .submit-button {
+            font-size: 15px;
+            padding: 10px;
+        }
+
+        .message-box {
+            font-size: 14px;
+        }
+    }
+</style>
+
+<div class="form-container">
+    <div class="form-header">
+        <h2>Haridor Dukon Qo'shish</h2>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label for="nomi" class="required">Dukon nomi</label>
+            <input type="text" id="nomi" name="nomi" required>
+        </div>
+
+        <div class="form-group">
+            <label for="egasi" class="required">Egasi</label>
+            <input type="text" id="egasi" name="egasi" required>
+        </div>
+
+        <div class="form-group">
+            <label for="joylashuvi" class="required">Joylashuvi</label>
+            <textarea id="joylashuvi" name="joylashuvi" required></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="dukon_rasmi" class="required">Dukon rasmi</label>
+            <input type="file" id="dukon_rasmi" name="dukon_rasmi" accept="image/*" class="file-input" required>
+        </div>
+
+        <div class="form-group">
+            <label for="egasining_rasmi" class="required">Egasining rasmi</label>
+            <input type="file" id="egasining_rasmi" name="egasining_rasmi" accept="image/*" class="file-input" required>
+        </div>
+
+        <button type="submit" class="submit-button">Saqlash</button>
+    </form>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="message-box">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+</div>
+{% endblock %}

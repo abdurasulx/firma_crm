@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Ega paneli{% endblock %}</title>
+    <style>
+        :root {
+            --primary-color: #6f42c1;
+            --text-color: #fff;
+            --bg-color: #f4f4f4;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: var(--text-color);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .brand {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .user-block {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-block img {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #fff;
+        }
+
+        .user-block a {
+            color: var(--text-color);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        main {
+            flex: 1;
+            padding: 20px;
+        }
+
+        footer {
+            background-color: #ddd;
+            text-align: center;
+            padding: 15px;
+            font-size: 14px;
+            color: #555;
+        }
+
+        /* Mobilga moslashuv */
+        @media screen and (max-width: 600px) {
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .user-block {
+                margin-top: 10px;
+            }
+
+            .user-block a {
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="brand">Tizim nomi</div>
+
+    <div class="user-block">
+        <a href="{% url 'profile' request.user.username %}">
+            <img src="{% if request.user.rasmi %}{{ request.user.rasmi.url }}{% else %}{% static 'images/default_avatar.jpg' %}{% endif %}" alt="Avatar">
+        </a>
+        <a href="{% url 'profile' request.user.username %}">
+            {{ request.user.tuliq_ismi }}
+        </a>
+    </div>
+</header>
+
+<main>
+    {% block content %}
+    <!-- Sahifa mazmuni shu yerda bo‘ladi -->
+    {% endblock %}
+</main>
+
+<footer>
+    &copy; {{ year|default:"2025" }} Ega moduli. Barcha huquqlar himoyalangan.
+</footer>
+
+</body>
+</html>
