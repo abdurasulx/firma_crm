@@ -83,11 +83,11 @@
 
 {% if yuklamalar %}
     <div class="yuklama-list">
-        {% for nom, miqdor in yuklamalar.items %}
+        {% for i in yuklamalar %}
             <div class="yuklama-item">
                 <div class="yuklama-info">
-                    <strong>{{ nom|title }}</strong>
-                    <span>Miqdori: {{ miqdor }} dona/kg/l</span>
+                    <strong>{{ i.nom|title }}</strong>
+                    <span>Miqdori: {{ i.miqdor }} {{i.turi}}</span>
                 </div>
             </div>
         {% endfor %}

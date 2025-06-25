@@ -7,6 +7,7 @@ from .models import HaridorDukon, User, YetkazibBeruvchi
 from .functions import mahsulotlar_miqdori
 
 
+
 User = get_user_model()
 # Create your views here.
 def login(request):
@@ -32,7 +33,7 @@ def main(request):
     if user.type == 'pazanda':
         return render(request, 'pazanda_dashboard.html')
     elif user.type == 'yetkazib_beruvchi':
-        yuklamalar = mahsulotlar_miqdori( YetkazibBeruvchi.objects.filter(user=request.user).first().mahsulotlar) or {}
+        yuklamalar = mahsulotlar_miqdori( YetkazibBeruvchi.objects.get(user=request.user).mahsulotlar) or []
         return render(request, 'yetkazuvchi_dashboard.html',{'yuklamalar': yuklamalar})
     
     return render(request, 'main.html')
