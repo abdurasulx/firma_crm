@@ -72,7 +72,7 @@
         <p><strong>Foydalanuvchi nomi:</strong> {{ user.username }}</p>
         <p><strong>Email:</strong> {{ user.email }}</p>
         <p><strong>Telefon:</strong> {{ user.telefon|default:"Ko‘rsatilmagan" }}</p>
-        <p><strong>Rol:</strong> {{ user.get_turi_display }}</p>
+        <p><strong>Rol:</strong> {{ user.type }}</p>
     </div>
 
     

@@ -3,31 +3,17 @@
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Ega paneli{% endblock %}</title>
     <style>
-        :root {
-            --primary-color: #6f42c1;
-            --text-color: #fff;
-            --bg-color: #f4f4f4;
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
         body {
             margin: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
+            background-color: #f4f4f4;
         }
 
         header {
-            background-color: var(--primary-color);
-            color: var(--text-color);
+            background-color: #6c757d;
+            color: white;
             padding: 15px 20px;
             display: flex;
             justify-content: space-between;
@@ -35,58 +21,98 @@
             flex-wrap: wrap;
         }
 
-        .brand {
-            font-size: 20px;
-            font-weight: bold;
+        .left-nav {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
         }
 
-        .user-block {
+        .nav-group {
+            position: relative;
+        }
+
+        .nav-toggle {
+            background: none;
+            border: none;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .nav-items {
+            display: none;
+            position: absolute;
+            top: 35px;
+            left: 0;
+            background-color: white;
+            color: #333;
+            border-radius: 4px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            z-index: 1000;
+            min-width: 150px;
+        }
+
+        .nav-items a {
+            display: block;
+            padding: 10px 15px;
+            text-decoration: none;
+            color: #333;
+        }
+
+        .nav-items a:hover {
+            background-color: #f1f1f1;
+        }
+
+        .nav-group.open .nav-items {
+            display: block;
+        }
+
+        .right-nav {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .right-nav a {
+            color: white;
+            text-decoration: none;
+        }
+
+        .notif-icon {
+            font-size: 20px;
+        }
+
+        .profile {
             display: flex;
             align-items: center;
             gap: 10px;
         }
 
-        .user-block img {
-            width: 36px;
-            height: 36px;
+        .profile img {
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
             object-fit: cover;
             border: 2px solid #fff;
         }
 
-        .user-block a {
-            color: var(--text-color);
-            text-decoration: none;
-            font-weight: 500;
-            font-size: 14px;
-        }
-
-        main {
-            flex: 1;
-            padding: 20px;
-        }
-
-        footer {
-            background-color: #ddd;
-            text-align: center;
-            padding: 15px;
-            font-size: 14px;
-            color: #555;
-        }
-
-        /* Mobilga moslashuv */
-        @media screen and (max-width: 600px) {
+        @media (max-width: 600px) {
             header {
                 flex-direction: column;
                 align-items: flex-start;
+                gap: 10px;
             }
 
-            .user-block {
-                margin-top: 10px;
+            .left-nav {
+                flex-direction: column;
+                gap: 10px;
             }
 
-            .user-block a {
-                font-size: 13px;
+            .nav-items {
+                position: static;
+                box-shadow: none;
+                background-color: #eee;
             }
         }
     </style>
@@ -94,27 +120,60 @@
 <body>
 
 <header>
-    <div class="brand">Tizim nomi</div>
+    <div class="left-nav">
+        <!-- Har bir bo‘lim uchun nav-group ishlatiladi -->
+        <div class="nav-group">
+            <button class="nav-toggle">Bo‘lim 1</button>
+            <div class="nav-items">
+                <a href="#">Element 1</a>
+                <a href="#">Element 2</a>
+            </div>
+        </div>
 
-    <div class="user-block">
-        <a href="{% url 'profile' request.user.username %}">
-            <img src="{% if request.user.rasmi %}{{ request.user.rasmi.url }}{% else %}{% static 'images/default_avatar.jpg' %}{% endif %}" alt="Avatar">
-        </a>
-        <a href="{% url 'profile' request.user.username %}">
-            {{ request.user.tuliq_ismi }}
-        </a>
+        <div class="nav-group">
+            <button class="nav-toggle">Bo‘lim 2</button>
+            <div class="nav-items">
+                <a href="#">Element A</a>
+                <a href="#">Element B</a>
+                <a href="#">Element C</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="right-nav">
+        <a href="{% url 'main' %}" class="notif-icon">🔔</a>
+        <div class="profile">
+            <a href="{% url 'profile' request.user.username %}">
+                <img src="{% if request.user.rasmi %}{{ request.user.rasmi.url }}{% else %}{% static 'images/default_avatar.jpg' %}{% endif %}" alt="avatar">
+            </a>
+            <a href="{% url 'profile' request.user.username %}">{{ request.user.tuliq_ismi }}</a>
+        </div>
     </div>
 </header>
 
-<main>
-    {% block content %}
-    <!-- Sahifa mazmuni shu yerda bo‘ladi -->
-    {% endblock %}
-</main>
+{% block content %}
+<!-- Kontent bu yerda ko‘rinadi -->
+{% endblock %}
 
-<footer>
-    &copy; {{ year|default:"2025" }} Ega moduli. Barcha huquqlar himoyalangan.
-</footer>
+<script>
+    // Menyuni ochib/yopish uchun JS
+    document.querySelectorAll('.nav-toggle').forEach(toggle => {
+        toggle.addEventListener('click', () => {
+            const parent = toggle.closest('.nav-group');
+            document.querySelectorAll('.nav-group').forEach(group => {
+                if (group !== parent) group.classList.remove('open');
+            });
+            parent.classList.toggle('open');
+        });
+    });
+
+    // Ekrandan tashqariga bosilganda menyuni yopish
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.nav-group')) {
+            document.querySelectorAll('.nav-group').forEach(g => g.classList.remove('open'));
+        }
+    });
+</script>
 
 </body>
 </html>
