@@ -113,4 +113,10 @@ class Savdo(models.Model):
     def __str__(self):
         return f"{self.haridor_dukon.nomi} - {self.oluvchining_ismi}"
 
-      
+class AmalLog(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    amal_shifri = models.TextField()  # Masalan: 'chiqarish|un|10'
+    sana_vaqti = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.amal_shifri}"
