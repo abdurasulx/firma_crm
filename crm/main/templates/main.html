@@ -6,59 +6,55 @@
 {% block content %}
 <style>
 .dashboard-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
-    margin-bottom: 30px;
-}
-
-.card {
-    background-color: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    text-align: center;
-}
-
-.card h3 {
-    font-size: 16px;
-    color: #555;
-    margin-bottom: 10px;
-}
-
-.card p {
-    font-size: 22px;
-    font-weight: bold;
-    margin: 0;
-}
-
-.menu-section {
     display: flex;
     flex-direction: column;
     gap: 15px;
 }
 
-.menu-item {
-    background-color: #28a745;
-    color: white;
-    padding: 15px;
-    text-align: center;
-    border-radius: 6px;
-    text-decoration: none;
-    font-weight: 600;
-    transition: background-color 0.3s;
+.card {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    transition: box-shadow 0.2s;
 }
 
-.menu-item:hover {
-    background-color: #218838;
+.card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.card-header {
+    margin: 10px;
+    padding: 15px;
+    background-color: #007acc; /* uyg‘un brend ko‘k */
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.card-header:hover {
+    background-color: #005fa3;
+}
+
+.card-content {
+    padding: 15px;
+    display: none;
+    background-color: #f1f4f8;
+}
+
+.card.open .card-content {
+    display: block;
 }
 
 @media (max-width: 600px) {
-    .card p {
-        font-size: 18px;
-    }
-    .menu-item {
+    .card-header {
+        font-size: 14px;
         padding: 12px;
+    }
+    .card-content {
         font-size: 14px;
     }
 }
@@ -66,28 +62,42 @@
 
 <div class="dashboard-container">
     <div class="card">
-        <h3>Ishchilar soni</h3>
-        <p>{{ ishchilar_soni }}</p>
+        <div class="card-header" onclick="toggleCard(this)">👥 Ishchilar soni <span>{{ ishchilar_soni }}</span></div>
+        <div class="card-content">
+            Ishchilar ro‘yxatini ko‘rish uchun <a href="{% url 'main' %}">shu yerni bosing</a>.
+        </div>
     </div>
+
     <div class="card">
-        <h3>Mahsulot turlari</h3>
-        <p>{{ mahsulot_turlari }}</p>
+        <div class="card-header" onclick="toggleCard(this)">📦 Mahsulot turlari <span>{{ mahsulot_turlari }}</span></div>
+        <div class="card-content">
+            Mahsulotlar ro‘yxatini ko‘rish uchun <a href="{% url 'main' %}">shu yerni bosing</a>.
+        </div>
     </div>
+
     <div class="card">
-        <h3>Umumiy savdo</h3>
-        <p>{{ umumiy_savdo }} so'm</p>
+        <div class="card-header" onclick="toggleCard(this)">💰 Umumiy savdo <span>{{ umumiy_savdo }} so'm</span></div>
+        <div class="card-content">
+            Batafsil hisobotlar uchun <a href="{% url 'main' %}">shu yerni bosing</a>.
+        </div>
     </div>
+
     <div class="card">
-        <h3>Bugungi savdo</h3>
-        <p>{{ bugungi_savdo }} so'm</p>
+        <div class="card-header" onclick="toggleCard(this)">📅 Bugungi savdo <span>{{ bugungi_savdo }} so'm</span></div>
+        <div class="card-content">
+            Bugungi savdo tafsilotlari: <a href="{% url 'main' %}">Hisobotlar</a>
+        </div>
     </div>
 </div>
 
-<div class="menu-section">
-    {% comment %} <a href="{% url 'ishchilar_royxati' %}" class="menu-item">👥 Ishchilar</a>
-    <a href="{% url 'mahsulotlar_royxati' %}" class="menu-item">📦 Mahsulotlar</a>
-    <a href="{% url 'hisobotlar' %}" class="menu-item">📊 Hisobotlar</a>
-    <a href="{% url 'sozlamalar' %}" class="menu-item">⚙️ Sozlamalar</a> {% endcomment %}
-</div>
-
+<script>
+function toggleCard(header) {
+    document.querySelectorAll('.card').forEach(card => {
+        if (card.querySelector('.card-header') !== header) {
+            card.classList.remove('open');
+        }
+    });
+    header.parentElement.classList.toggle('open');
+}
+</script>
 {% endblock %}

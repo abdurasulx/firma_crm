@@ -6,115 +6,135 @@
     <title>{% block title %}Ega paneli{% endblock %}</title>
     <style>
         body {
-            margin: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f4f4;
-        }
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f1f4f8; /* yumshoq ko‘kimtir fon */
+}
 
-        header {
-            background-color: #6c757d;
-            color: white;
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-        }
+header {
+    background-color: #007acc; /* asosiy brend ko‘k */
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+}
 
-        .left-nav {
-            display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
+.left-nav {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
 
-        .nav-group {
-            position: relative;
-        }
+.nav-group {
+    position: relative;
+}
 
-        .nav-toggle {
-            background: none;
-            border: none;
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-            font-size: 16px;
-        }
+.nav-toggle {
+    background: none;
+    border: none;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
 
-        .nav-items {
-            display: none;
-            position: absolute;
-            top: 35px;
-            left: 0;
-            background-color: white;
-            color: #333;
-            border-radius: 4px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-            z-index: 1000;
-            min-width: 150px;
-        }
+.nav-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
 
-        .nav-items a {
-            display: block;
-            padding: 10px 15px;
-            text-decoration: none;
-            color: #333;
-        }
+.nav-items {
+    display: none;
+    position: absolute;
+    top: 40px;
+    left: 0;
+    background-color: #ffffff;
+    color: #333;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    min-width: 160px;
+    overflow: hidden;
+}
 
-        .nav-items a:hover {
-            background-color: #f1f1f1;
-        }
+.nav-items a {
+    display: block;
+    padding: 10px 15px;
+    text-decoration: none;
+    color: #333;
+    transition: background-color 0.2s;
+}
 
-        .nav-group.open .nav-items {
-            display: block;
-        }
+.nav-items a:hover {
+    background-color: #f1f4f8;
+}
 
-        .right-nav {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
+.nav-group.open .nav-items {
+    display: block;
+}
 
-        .right-nav a {
-            color: white;
-            text-decoration: none;
-        }
+.right-nav {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
 
-        .notif-icon {
-            font-size: 20px;
-        }
+.right-nav a {
+    color: white;
+    text-decoration: none;
+}
 
-        .profile {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+.notif-icon {
+    font-size: 22px;
+    cursor: pointer;
+    transition: color 0.2s;
+}
 
-        .profile img {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid #fff;
-        }
+.notif-icon:hover {
+    color: #ff9800; /* diqqat markazi uchun */
+}
 
-        @media (max-width: 600px) {
-            header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 10px;
-            }
+.profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
 
-            .left-nav {
-                flex-direction: column;
-                gap: 10px;
-            }
+.profile img {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #fff;
+}
 
-            .nav-items {
-                position: static;
-                box-shadow: none;
-                background-color: #eee;
-            }
-        }
+@media (max-width: 600px) {
+    header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .left-nav {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .nav-items {
+        position: static;
+        box-shadow: none;
+        background-color: #e3f2fd;
+    }
+
+    .nav-items a {
+        padding: 8px 12px;
+    }
+}
+
     </style>
 </head>
 <body>
