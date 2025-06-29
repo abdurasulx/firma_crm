@@ -120,3 +120,12 @@ class AmalLog(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.amal_shifri}"
+class qaytarilgan_mahsulotlar(models.Model):
+   
+    mahsulot = models.ForeignKey(Mahsulot, on_delete=models.CASCADE)
+    miqdor = models.FloatField()
+    sana = models.DateTimeField(auto_now_add=True)
+    yq=models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.mahsulot} - {self.miqdor}"

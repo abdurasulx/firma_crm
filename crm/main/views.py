@@ -3,7 +3,7 @@ from django.contrib.auth import authenticate, login as auth_login, logout, get_u
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages 
 from django.shortcuts import redirect
-from .models import HaridorDukon, User, YetkazibBeruvchi
+from .models import HaridorDukon, User, YetkazibBeruvchi, Pazanda
 from .functions import mahsulotlar_miqdori
 
 
