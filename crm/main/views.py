@@ -70,3 +70,11 @@ def profile_view(request, username):
         return render(request, 'pzprofile.html', {'user': user})
     elif user.type=='ega':
         return render(request, 'egaprofile.html', {'user': user})
+def crtuser(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        type = request.POST.get('type')
+        # User.objects.create_user(username=username, password=password, type=type)
+        return redirect('login')
+    return render(request, 'useryaratish.html')
