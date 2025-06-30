@@ -21,6 +21,19 @@ class User(AbstractUser):
 
     def __str__(self):
         return f"{self.username} ({self.type})"
+    @property
+    def rasmi(self):
+        if self.type == 'yetkazib_beruvchi':
+            try:
+                return YetkazibBeruvchi.objects.get(user=self).rasmi.url
+            except YetkazibBeruvchi.DoesNotExist:
+                return None
+        elif self.type == 'pazanda':
+            try:
+                return Pazanda.objects.get(user=self).rasmi.url
+            except Pazanda.DoesNotExist:
+                return None
+        return None
 
 
 # --- HARIDOR DUKON ---

@@ -102,7 +102,7 @@
 
     <div class="user-block">
         <a href="{% url 'profile' request.user.username %}">
-            <img src="{% if request.user.rasmi %}{{ request.user.rasmi.url }}{% else %}{% static 'images/default_avatar.jpg' %}{% endif %}" alt="avatar">
+            <img src="{% if request.user.rasmi.url %}{{ request.user.rasmi.url }}{% else %}{% static 'images/default_avatar.jpg' %}{% endif %}" alt="avatar">
         </a>
         <a href="{% url 'profile' request.user.username %}">
             {{ request.user.tuliq_ismi }}

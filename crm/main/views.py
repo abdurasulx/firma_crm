@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages 
 from django.shortcuts import redirect
 from .models import HaridorDukon, User, YetkazibBeruvchi, Pazanda
-from .functions import mahsulotlar_miqdori
+from .functions import mahsulotlar_miqdori, makenewform
 
 
 
@@ -36,10 +36,11 @@ def main(request):
     elif user.type == 'yetkazib_beruvchi':
         yuklamalar = mahsulotlar_miqdori( YetkazibBeruvchi.objects.get(user=request.user).mahsulotlar) or []
         return render(request, 'yetkazuvchi_dashboard.html',{'yuklamalar': yuklamalar})
-    hodims=User.objects.exclude(type='ega')
+    hodims=  User.objects.exclude(type='ega')
     
     payload['hodims'] = hodims
-    soni=hodims.count()
+    soni=len(hodims)
+    print(hodims[0].rasmi)
     payload['ishchilar_soni'] = soni
     
     return render(request, 'main.html',payload)

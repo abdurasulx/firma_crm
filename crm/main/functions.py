@@ -1,4 +1,4 @@
-from .models import Mahsulot
+from .models import Mahsulot, User, Pazanda, YetkazibBeruvchi
 import datetime as dt
 class new_yuklama:
     def __init__(self, mahsulot, miqdor,turi):
@@ -50,6 +50,20 @@ class addxodim:
         self.xodim = xodim
         self.user=user
         self.turi = turi
+class user_newform(User):
+    def get_newform(self):
+        if self.type=='yetkazib_beruvchi':
+            self.rasmi=YetkazibBeruvchi.objects.get(user=self).rasmi.url
+        elif self.type=='pazanda':
+            self.rasmi=Pazanda.objects.get(user=self).rasmi.url
+    
+        return self
+def makenewform(User):
+    res=[]
+    for user in User:
+        nuf=user_newform(user)
+        res.append(nuf.get_newform)
+    return res
 def make_amal_log(amal):
     # mqoshish|mahsulot|miqdor|xodim mahsulot qoshish
     # myuklash|mahsulot|miqdor|yetkazuvchi mahsulot yuklash

@@ -64,8 +64,15 @@
     <div class="card">
         <div class="card-header" onclick="toggleCard(this)">👥 Ishchilar soni  <span>{{ ishchilar_soni }}</span></div>
         <div class="card-content">
+            {% if ishchilar_soni == 0 %}
             
             Sizda ishchilar mavjud emas. Agar ishci qo'shmoqchi bo'lsangiz <a href="{% url 'crtuser' %}">shu yerni bosing</a>.
+            {%else%} 
+            odamlar bor 
+            {% for x in hodims %} 
+            <br>   <img src="{{x.rasmi}}" alt="avatar"> {{x.tuliq_ismi}}
+            {% endfor %}
+            {%endif%}
         </div>
     </div>
 
