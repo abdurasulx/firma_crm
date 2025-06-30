@@ -28,6 +28,7 @@ def login(request):
     return render(request, 'login.html',data)
 @login_required(login_url='login')
 def main(request):
+    payload={}
     user=request.user
     
     if user.type == 'pazanda':
@@ -35,8 +36,13 @@ def main(request):
     elif user.type == 'yetkazib_beruvchi':
         yuklamalar = mahsulotlar_miqdori( YetkazibBeruvchi.objects.get(user=request.user).mahsulotlar) or []
         return render(request, 'yetkazuvchi_dashboard.html',{'yuklamalar': yuklamalar})
+    hodims=User.objects.exclude(type='ega')
     
-    return render(request, 'main.html')
+    payload['hodims'] = hodims
+    soni=hodims.count()
+    payload['ishchilar_soni'] = soni
+    
+    return render(request, 'main.html',payload)
 def logout(request):
     logout(request)
     return redirect('login')
