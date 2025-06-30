@@ -79,27 +79,27 @@
 
         <div class="form-group">
             <label for="username">Login (foydalanuvchi nomi)</label>
-            <input type="text" id="username" name="username" required>
+            <input type="text" value="{{ username }}" id="username" name="username" required>
         </div>
 
         <div class="form-group">
             <label for="password">Parol</label>
-            <input type="password" id="password" name="password" required>
+            <input type="text" value="{{ password }}" id="password" name="password" required>
         </div>
 
         <div class="form-group">
             <label for="tuliq_ismi">To‘liq ismi</label>
-            <input type="text" id="tuliq_ismi" name="tuliq_ismi" required>
+            <input type="text" id="tuliq_ismi" value="{{ tuliq_ismi }}" name="tuliq_ismi" required>
         </div>
 
         <div class="form-group">
             <label for="telefon">Telefon raqam</label>
-            <input type="tel" id="telefon" name="telefon" placeholder="+998 90 123 45 67" pattern="^\+998 \d{2} \d{3} \d{2} \d{2}$" required>
+            <input type="tel" id="telefon" value="{{ telefon }}" name="telefon" placeholder="+998 90 123 45 67" pattern="^\+998 \d{2} \d{3} \d{2} \d{2}$" required>
         </div>
 
         <div class="form-group">
             <label for="turi">Xodim turi</label>
-            <select id="turi" name="turi" required onchange="toggleMashinaFields()">
+            <select id="turi" name="turi" value="{{ turi }}" required onchange="toggleMashinaFields()">
           
                 <option value="pazanda">Pazanda</option>
                 <option value="yetkazib_beruvchi">Yetkazib beruvchi</option>
@@ -109,7 +109,7 @@
 
         <div class="form-group">
             <label for="rasmi">Xodim rasmi</label>
-            <input type="file" id="rasmi" name="rasmi" accept="image/*">
+            <input type="file" id="rasmi" name="rasmi" required  accept="image/*">
         </div>
 
         <div id="mashina-fields" style="display: none;">
@@ -124,8 +124,37 @@
             </div>
         </div>
 
-        <button type="submit" class="submit-btn">Saqlash</button>
+                <button type="submit" class="submit-btn">Saqlash</button>
     </form>
+
+    {% if messages %}
+        <div style="margin-top: 15px;">
+            {% for message in messages %}
+                <div style="padding: 10px; border-radius: 4px; background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; margin-bottom: 5px;">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% if form.errors %}
+        <div style="margin-top: 15px;">
+            {% for field in form %}
+                {% for error in field.errors %}
+                    <div style="padding: 10px; border-radius: 4px; background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; margin-bottom: 5px;">
+                        {{ field.label }}: {{ error }}
+                    </div>
+                {% endfor %}
+            {% endfor %}
+            {% for error in form.non_field_errors %}
+                <div style="padding: 10px; border-radius: 4px; background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; margin-bottom: 5px;">
+                    {{ error }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+
 </div>
 
 <script>

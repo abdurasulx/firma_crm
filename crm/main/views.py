@@ -71,10 +71,36 @@ def profile_view(request, username):
     elif user.type=='ega':
         return render(request, 'egaprofile.html', {'user': user})
 def crtuser(request):
+    payload = {}
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
-        type = request.POST.get('type')
-        # User.objects.create_user(username=username, password=password, type=type)
-        return redirect('login')
+        fullname = request.POST.get('tuliq_ismi')
+        type = request.POST.get('turi')
+        telefon = request.POST.get('telefon')
+        payload['username'] = username
+        payload['password'] = password
+        payload['tuliq_ismi'] = fullname
+        payload['turi'] = type
+        payload['telefon'] = telefon
+
+        if User.objects.filter(username=username).exists():
+            messages.error(request, "Bu login allaqachon mavjud!")
+            return render(request, 'useryaratish.html',payload)
+
+        # user = User.objects.create_user(username=username, password=password)
+        # user.type = type  # Agar User modelida type bo'lsa
+        # user.save()
+
+        if type == 'yetkazib_beruvchi':
+            print('yetkazib beruvchi')
+            # YetkazibBeruvchi.objects.create(user=user, tuliq_ismi=fullname, telefon=telefon)
+        elif type == 'pazanda':
+            print('pazanda')
+            # Pazanda.objects.create(user=user, tuliq_ismi=fullname, telefon=telefon)
+
+        # messages.success(request, "Xodim muvaffaqiyatli yaratildi!")
+        return render(request, 'useryaratish.html',payload)
+    
+    
     return render(request, 'useryaratish.html')

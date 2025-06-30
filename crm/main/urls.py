@@ -9,5 +9,5 @@ urlpatterns = [
     path('logout/', login, name='logout'),
     path('register/', add_haridor, name='add_haridor'),
     path('profile/<str:username>', profile_view, name='profile'),
-    path('createuser/', crtuser , name='profile'),
+    path('createuser/', crtuser , name='crtuser'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
