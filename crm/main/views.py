@@ -69,6 +69,7 @@ def add_haridor(request):
         return redirect('main')  # yoki kerakli sahifaga
     
     return render(request, 'add_haridor.html')
+@login_required(login_url='login')
 def profile_view(request, username):
     user =  User.objects.get(username=username)
     
@@ -78,6 +79,7 @@ def profile_view(request, username):
         return render(request, 'pzprofile.html', {'user': user})
     elif request.user.type=='ega':
         return render(request, 'egaprofile.html', {'user': user})
+@login_required(login_url='login')
 def crtuser(request):
     payload = {}
    
@@ -115,7 +117,7 @@ def crtuser(request):
     
     
     return render(request, 'useryaratish.html')
-
+@login_required(login_url='login')
 def editusr(request, username):
 
     user_edit = get_object_or_404(User, username=username)
@@ -153,7 +155,7 @@ def editusr(request, username):
         
         if is_active!=user_edit.is_active:
             user_edit.is_active=is_active
-            
+
         if new_password:
             user_edit.set_password(new_password)
 

@@ -6,154 +6,192 @@
     <title>{% block title %}Ega paneli{% endblock %}</title>
     <style>
         body {
-    margin: 0;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f1f4f8; /* yumshoq ko‘kimtir fon */
-}
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f1f4f8;
+        }
 
-header {
-    background-color: #007acc; /* asosiy brend ko‘k */
-    color: white;
-    padding: 15px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-}
+        header {
+            background-color: #007acc;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
 
-.left-nav {
-    display: flex;
-    gap: 20px;
-    flex-wrap: wrap;
-}
+        .left-nav {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
 
-.nav-group {
-    position: relative;
-}
+        .nav-group {
+            position: relative;
+        }
 
-.nav-toggle {
-    background: none;
-    border: none;
-    color: white;
-    font-weight: bold;
-    cursor: pointer;
-    font-size: 16px;
-    padding: 8px 12px;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-}
+        .nav-toggle {
+            background: none;
+            border: none;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 8px 12px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
 
-.nav-toggle:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-}
+        .nav-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
 
-.nav-items {
-    display: none;
-    position: absolute;
-    top: 40px;
-    left: 0;
-    background-color: #ffffff;
-    color: #333;
-    border-radius: 4px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    z-index: 1000;
-    min-width: 160px;
-    overflow: hidden;
-}
+        .nav-items {
+            display: none;
+            position: absolute;
+            top: 40px;
+            left: 0;
+            background-color: #ffffff;
+            color: #333;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            min-width: 160px;
+        }
 
-.nav-items a {
-    display: block;
-    padding: 10px 15px;
-    text-decoration: none;
-    color: #333;
-    transition: background-color 0.2s;
-}
+        .nav-items a {
+            display: block;
+            padding: 10px 15px;
+            text-decoration: none;
+            color: #333;
+            transition: background-color 0.2s;
+        }
 
-.nav-items a:hover {
-    background-color: #f1f4f8;
-}
+        .nav-items a:hover {
+            background-color: #f1f4f8;
+        }
 
-.nav-group.open .nav-items {
-    display: block;
-}
+        .nav-group.open .nav-items {
+            display: block;
+        }
 
-.right-nav {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
+        .right-nav {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
 
-.right-nav a {
-    color: white;
-    text-decoration: none;
-}
+        .notif-icon {
+            font-size: 22px;
+            cursor: pointer;
+            transition: color 0.2s;
+            color: white;
+            text-decoration: none;
+        }
 
-.notif-icon {
-    font-size: 22px;
-    cursor: pointer;
-    transition: color 0.2s;
-}
+        .notif-icon:hover {
+            color: #ff9800;
+        }
 
-.notif-icon:hover {
-    color: #ff9800; /* diqqat markazi uchun */
-}
+        .profile-wrapper {
+            position: relative;
+            display: inline-block;
+        }
 
-.profile {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
+        .profile {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            padding: 5px 10px;
+        }
 
-.profile img {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid #fff;
-}
+        .profile img {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #fff;
+        }
 
-@media (max-width: 600px) {
-    header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-    }
+        .profile-name {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            white-space: nowrap;
+        }
 
-    .left-nav {
-        flex-direction: column;
-        gap: 10px;
-    }
+        .logout-panel {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+            padding: 5px 0;
+            min-width: 100%;
+            text-align: center;
+            z-index: 1000;
+        }
 
-    .nav-items {
-        position: static;
-        box-shadow: none;
-        background-color: #e3f2fd;
-    }
+        .logout-panel a {
+            display: block;
+            padding: 6px 10px;
+            color: #dc3545;
+            font-weight: 600;
+            text-decoration: none;
+        }
 
-    .nav-items a {
-        padding: 8px 12px;
-    }
+        .logout-panel a:hover {
+            background-color: #f8d7da;
+            color: #a71d2a;
+        }
 
+        .profile-wrapper:hover .logout-panel {
+            display: block;
+        }
 
-}
+        @media (max-width: 600px) {
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
 
+            .left-nav {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .nav-items {
+                position: static;
+                box-shadow: none;
+                background-color: #e3f2fd;
+            }
+
+            .nav-items a {
+                padding: 8px 12px;
+            }
+        }
     </style>
 </head>
 <body>
 
-<header id="header" >
+<header>
     <div class="left-nav">
-        <!-- Har bir bo‘lim uchun nav-group ishlatiladi -->
         <div class="nav-group">
             <button class="nav-toggle">Ishchilar</button>
             <div class="nav-items">
                 <a href="#">Ishchilar amallari</a>
-                <a href="#">Ishchilar amallari</a>
+                <a href="#">Yangi ishchi qo‘shish</a>
             </div>
         </div>
 
         <div class="nav-group">
-            <button class="nav-toggle">menu</button>
+            <button class="nav-toggle">Menu</button>
             <div class="nav-items">
                 <a href="#">Element A</a>
                 <a href="#">Element B</a>
@@ -164,11 +202,15 @@ header {
 
     <div class="right-nav">
         <a href="{% url 'main' %}" class="notif-icon">🔔</a>
-        <div class="profile">
-            <a href="{% url 'profile' request.user.username %}">
+
+        <div class="profile-wrapper">
+            <div class="profile">
                 <img src="{% if request.user.rasmi %}{{ request.user.rasmi.url }}{% else %}{% static 'images/default_avatar.jpg' %}{% endif %}" alt="avatar">
-            </a>
-            <a href="{% url 'profile' request.user.username %}">{{ request.user.tuliq_ismi }}</a>
+                <span class="profile-name">{{ request.user.tuliq_ismi }}</span>
+            </div>
+            <div class="logout-panel">
+                <a href="{% url 'logout' %}">Chiqish</a>
+            </div>
         </div>
     </div>
 </header>
@@ -178,7 +220,6 @@ header {
 {% endblock %}
 
 <script>
-    // Menyuni ochib/yopish uchun JS
     document.querySelectorAll('.nav-toggle').forEach(toggle => {
         toggle.addEventListener('click', () => {
             const parent = toggle.closest('.nav-group');
@@ -189,7 +230,6 @@ header {
         });
     });
 
-    // Ekrandan tashqariga bosilganda menyuni yopish
     document.addEventListener('click', e => {
         if (!e.target.closest('.nav-group')) {
             document.querySelectorAll('.nav-group').forEach(g => g.classList.remove('open'));
