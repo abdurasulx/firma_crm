@@ -136,3 +136,12 @@ AUTH_USER_MODEL = 'main.User'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+# Sessiya muddati: 7 kun (7 * 24 * 60 * 60 soniya)
+SESSION_COOKIE_AGE = 7 * 24 * 60 * 60  # 604800 soniya
+
+# Har so‘rovda sessiya muddati cho‘zilsin
+SESSION_SAVE_EVERY_REQUEST = True
+
+# Brauzer yopilganda tugamasin
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+

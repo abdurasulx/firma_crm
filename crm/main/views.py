@@ -40,7 +40,7 @@ def main(request):
     
     payload['hodims'] = hodims
     soni=len(hodims)
-    print(hodims[0].rasmi)
+    
     payload['ishchilar_soni'] = soni
     
     return render(request, 'main.html',payload)
@@ -70,16 +70,17 @@ def add_haridor(request):
     
     return render(request, 'add_haridor.html')
 def profile_view(request, username):
-    user = request.user if username == 'request.user.username' else User.objects.get(username=username)
-    if user.type == 'yetkazib_beruvchi':
+    user =  User.objects.get(username=username)
+    
+    if request.user.type ==  'yetkazib_beruvchi':
         return render(request, 'ytprofile.html', {'user': user})
-    elif user.type == 'pazanda':
+    elif request.user.type == 'pazanda':
         return render(request, 'pzprofile.html', {'user': user})
-    elif user.type=='ega':
+    elif request.user.type=='ega':
         return render(request, 'egaprofile.html', {'user': user})
 def crtuser(request):
     payload = {}
-    print('bumb')
+   
     if request.method == 'POST':
         print('post')
         username = request.POST.get('username')
@@ -119,8 +120,10 @@ def editusr(request, username):
 
     user_edit = get_object_or_404(User, username=username)
     mn=''
+    mr=''
     if user_edit.type == 'yetkazib_beruvchi':
         mn=YetkazibBeruvchi.objects.get(user=user_edit).bmh
+        mr=YetkazibBeruvchi.objects.get(user=user_edit).bmr.url
     
     if request.method == 'POST':
         action_type = request.POST.get('action_type')
@@ -146,6 +149,11 @@ def editusr(request, username):
         user_edit.tuliq_ismi = request.POST.get('tuliq_ismi')
         user_edit.tel_raqami = request.POST.get('telefon')
         new_password = request.POST.get('password')
+        is_active = request.POST.get('is_active')=="True"
+        
+        if is_active!=user_edit.is_active:
+            user_edit.is_active=is_active
+            
         if new_password:
             user_edit.set_password(new_password)
 
@@ -155,8 +163,12 @@ def editusr(request, username):
             
             yb = YetkazibBeruvchi.objects.get(user=user_edit)
             yb.mashina_nomi = request.POST.get('mashina_nomi')
-            if 'mashina_rasmi' in request.FILES:
-                yb.mashina_rasmi = request.FILES['mashina_rasmi']
+            if 'mashina_rasmi1' in request.FILES:
+                print('mashina rasmi')
+                yb.bmr = request.FILES['mashina_rasmi1']
+               
+            if 'rasmi' in request.FILES:
+                yb.rasmi = request.FILES['rasmi']
             yb.save()
 
         if user_edit.type == 'pazanda':
@@ -168,5 +180,5 @@ def editusr(request, username):
         
         return redirect('main')
 
-    return render(request, 'editusr.html', {'user_edit': user_edit,'mn':mn})
+    return render(request, 'editusr.html', {'user_edit': user_edit,'mn':mn,'mr':mr})
 
