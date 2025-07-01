@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.conf.urls.static import static
-from .views import login, main, add_haridor, profile_view, crtuser
+from .views import login, main, add_haridor, profile_view, crtuser, editusr
 from django.urls import path
 
 urlpatterns = [
@@ -10,5 +10,5 @@ urlpatterns = [
     path('register/', add_haridor, name='add_haridor'),
     path('profile/<str:username>', profile_view, name='profile'),
     path('createuser/', crtuser , name='crtuser'),
-    path('edituser/<str:username>', profile_view , name='edituser'),
+    path('edituser/<str:username>', editusr , name='edituser'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

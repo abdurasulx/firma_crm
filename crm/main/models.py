@@ -17,6 +17,7 @@ class User(AbstractUser):
     token = models.CharField(max_length=255, blank=True, null=True)
     tg_id = models.CharField(max_length=100, blank=True, null=True)
     tel_raqami = models.CharField(max_length=100, blank=True, null=True)
+    is_active = models.BooleanField(default=True)
     
 
     def __str__(self):

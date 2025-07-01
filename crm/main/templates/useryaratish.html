@@ -84,7 +84,7 @@
 
         <div class="form-group">
             <label for="password">Parol</label>
-            <input type="text" value="{{ password }}" id="password" name="password" required>
+            <input type="text" value="{{ password }}" id="password" minlength="8" name="password" required>
         </div>
 
         <div class="form-group">
@@ -94,7 +94,7 @@
 
         <div class="form-group">
             <label for="telefon">Telefon raqam</label>
-            <input type="tel" id="telefon" value="{{ telefon }}" name="telefon" placeholder="+998 90 123 45 67" pattern="^\+998 \d{2} \d{3} \d{2} \d{2}$" required>
+            <input type="tel" id="telefon" value="{{ telefon }}" name="telefon" placeholder="+998 90 123 45 67"  required>
         </div>
 
         <div class="form-group">
@@ -115,12 +115,12 @@
         <div id="mashina-fields" style="display: none;">
             <div class="form-group">
                 <label for="mashina_nomi">Mashina nomi</label>
-                <input type="text" id="mashina_nomi" name="mashina_nomi">
+                <input type="text" id="mashina_nomi"  name="mashina_nomi">
             </div>
 
             <div class="form-group">
                 <label for="mashina_rasmi">Mashina rasmi</label>
-                <input type="file" id="mashina_rasmi" name="mashina_rasmi" accept="image/*">
+                <input type="file" id="mashina_rasmi"  name="mashina_rasmi" accept="image/*">
             </div>
         </div>
 

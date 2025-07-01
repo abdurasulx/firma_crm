@@ -69,7 +69,7 @@
             Sizda ishchilar mavjud emas. Agar ishci qo'shmoqchi bo'lsangiz <a href="{% url 'crtuser' %}">shu yerni bosing</a>.
             {%else%} 
         
-            {% for x in hodims %} 
+            
             {% for x in hodims %}
 <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid #ddd;">
     <a href="{% url 'profile' x.username %}" style="text-decoration: none; display: flex; align-items: center; gap: 15px; color: inherit;">
@@ -93,8 +93,14 @@
 </div>
 {% endfor %}
 
-            {% endfor %}
+            
             {%endif%}
+            <div style="margin-top: 15px; text-align: center;">
+    <a href="{% url 'crtuser' %}" style="display: inline-block; padding: 10px 20px; background-color: #007acc; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">
+        ➕ Yangi Ishchi Qo'shish
+    </a>
+</div>
+
         </div>
     </div>
 

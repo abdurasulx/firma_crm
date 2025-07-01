@@ -79,12 +79,15 @@ def profile_view(request, username):
         return render(request, 'egaprofile.html', {'user': user})
 def crtuser(request):
     payload = {}
+    print('bumb')
     if request.method == 'POST':
+        print('post')
         username = request.POST.get('username')
         password = request.POST.get('password')
         fullname = request.POST.get('tuliq_ismi')
         type = request.POST.get('turi')
         telefon = request.POST.get('telefon')
+        rasmi = request.FILES.get('rasmi')
         payload['username'] = username
         payload['password'] = password
         payload['tuliq_ismi'] = fullname
@@ -95,19 +98,52 @@ def crtuser(request):
             messages.error(request, "Bu login allaqachon mavjud!")
             return render(request, 'useryaratish.html',payload)
 
-        # user = User.objects.create_user(username=username, password=password)
-        # user.type = type  # Agar User modelida type bo'lsa
-        # user.save()
+        user = User.objects.create_user(username=username, password=password,tel_raqami=telefon, tuliq_ismi=fullname)
+        user.type = type  # Agar User modelida type bo'lsa
+        user.save()
 
         if type == 'yetkazib_beruvchi':
             print('yetkazib beruvchi')
-            # YetkazibBeruvchi.objects.create(user=user, tuliq_ismi=fullname, telefon=telefon)
+            YetkazibBeruvchi.objects.create(user=user, tuliq_ismi=fullname ,rasmi=rasmi)
         elif type == 'pazanda':
             print('pazanda')
-            # Pazanda.objects.create(user=user, tuliq_ismi=fullname, telefon=telefon)
+            Pazanda.objects.create(user=user, tuliq_ismi=fullname, rasmi=rasmi)
 
-        # messages.success(request, "Xodim muvaffaqiyatli yaratildi!")
-        return render(request, 'useryaratish.html',payload)
+        
+        return redirect('main')
     
     
     return render(request, 'useryaratish.html')
+
+def editusr(request, username):
+
+    user_edit = get_object_or_404(User, username=username)
+
+    if request.method == 'POST':
+        user_edit.username = request.POST.get('username')
+        user_edit.tuliq_ismi = request.POST.get('tuliq_ismi')
+        user_edit.tel_raqami = request.POST.get('telefon')
+        new_password = request.POST.get('password')
+        if new_password:
+            user_edit.set_password(new_password)
+
+        user_edit.save()
+
+        if user_edit.type == 'yetkazib_beruvchi':
+            yb = YetkazibBeruvchi.objects.get(user=user_edit)
+            yb.mashina_nomi = request.POST.get('mashina_nomi')
+            if 'mashina_rasmi' in request.FILES:
+                yb.mashina_rasmi = request.FILES['mashina_rasmi']
+            yb.save()
+
+        if user_edit.type == 'pazanda':
+            pz = Pazanda.objects.get(user=user_edit)
+            if 'rasmi' in request.FILES:
+                pz.rasmi = request.FILES['rasmi']
+            pz.save()
+
+        
+        return redirect('main')
+
+    return render(request, 'editusr.html', {'user_edit': user_edit})
+
