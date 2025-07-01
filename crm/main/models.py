@@ -73,7 +73,7 @@ class Mahsulot(models.Model):
 class Pazanda(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     tuliq_ismi = models.CharField(max_length=255)
-    turi = models.CharField(max_length=100)
+    turi = models.CharField(max_length=100, blank=True, null=True)
     rasmi = models.ImageField(upload_to='pazandalar/')
 
     def __str__(self):

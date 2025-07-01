@@ -118,8 +118,30 @@ def crtuser(request):
 def editusr(request, username):
 
     user_edit = get_object_or_404(User, username=username)
+    mn=''
+    if user_edit.type == 'yetkazib_beruvchi':
+        mn=YetkazibBeruvchi.objects.get(user=user_edit).bmh
+    
+    if request.method == 'POST':
+        action_type = request.POST.get('action_type')
+        if user_edit.type == 'yetkazib_beruvchi':
+            su=YetkazibBeruvchi.objects.get(user=user_edit)
+        elif user_edit.type == 'pazanda':
+            su=Pazanda.objects.get(user=user_edit)
+
+        if action_type == 'delete_account':
+            confirm_text = request.POST.get('confirm_text')
+            if confirm_text == 'OCHIR':
+                user_edit.delete()
+                su.delete()
+             
+                return redirect('main')  # O'chirilgandan keyin qaysi sahifaga yo'naltirilishini belgilang
+            else:
+                messages.error(request, "Tasdiq matni noto'g'ri.")
+
 
     if request.method == 'POST':
+        
         user_edit.username = request.POST.get('username')
         user_edit.tuliq_ismi = request.POST.get('tuliq_ismi')
         user_edit.tel_raqami = request.POST.get('telefon')
@@ -130,6 +152,7 @@ def editusr(request, username):
         user_edit.save()
 
         if user_edit.type == 'yetkazib_beruvchi':
+            
             yb = YetkazibBeruvchi.objects.get(user=user_edit)
             yb.mashina_nomi = request.POST.get('mashina_nomi')
             if 'mashina_rasmi' in request.FILES:
@@ -145,5 +168,5 @@ def editusr(request, username):
         
         return redirect('main')
 
-    return render(request, 'editusr.html', {'user_edit': user_edit})
+    return render(request, 'editusr.html', {'user_edit': user_edit,'mn':mn})
 

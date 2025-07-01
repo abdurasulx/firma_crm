@@ -85,7 +85,7 @@
         {% if user_edit.type == 'yetkazib_beruvchi' %}
         <div class="form-group">
             <label for="mashina_nomi">Mashina nomi</label>
-            <input type="text" id="mashina_nomi" name="mashina_nomi" value="{{ user_edit.yetkazibberuvchi.mashina_nomi }}">
+            <input type="text" id="mashina_nomi" name="mashina_nomi" value="{{mn }}">
         </div>
         <div class="form-group">
             <label for="mashina_rasmi">Mashina rasmi</label>
@@ -99,8 +99,15 @@
             <input type="file" id="rasmi" name="rasmi" accept="image/*">
         </div>
         {% endif %}
+        <div style="margin-top: 20px; padding: 15px; border: 1px solidrgb(232, 236, 237); border-radius: 6px; ">
+    <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; ">Ishlamoqdami?
+        <input type="checkbox" name="is_active" value="True" {% if user_edit.is_active %}checked{% endif %}>
+        
+    </label>
+</div>
 
-        <button type="submit" class="submit-btn">Saqlash</button>
+
+        <button type="submit" style="margin-top: 20px;" class="submit-btn">Saqlash</button>
     </form>
 
     {% if messages %}
