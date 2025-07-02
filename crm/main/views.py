@@ -49,26 +49,28 @@ def logout(request):
     return redirect('login')
 @login_required(login_url='login')
 def add_haridor(request):
-    if request.method == 'POST':
-        nomi = request.POST.get('nomi')
-        egasi = request.POST.get('egasi')
-        joylashuvi = request.POST.get('joylashuvi')
-        dukon_rasmi = request.FILES.get('dukon_rasmi')
-        egasining_rasmi = request.FILES.get('egasining_rasmi')
-        
-        # Saqlash
-        HaridorDukon.objects.create(
-            nomi=nomi,
-            egasi=egasi,
-            joylashuvi=joylashuvi,
-            dukon_rasmi=dukon_rasmi,
-            egasining_rasmi=egasining_rasmi
-        )
-        
-        messages.success(request, "Yangi haridor muvaffaqiyatli qo‘shildi!")
-        return redirect('main')  # yoki kerakli sahifaga
+    if request.user.type == 'yetkazib_beruvchi':
+        if request.method == 'POST':
+            nomi = request.POST.get('nomi')
+            egasi = request.POST.get('egasi')
+            joylashuvi = request.POST.get('joylashuvi')
+            dukon_rasmi = request.FILES.get('dukon_rasmi')
+            egasining_rasmi = request.FILES.get('egasining_rasmi')
+            
+            # Saqlash
+            HaridorDukon.objects.create(
+                nomi=nomi,
+                egasi=egasi,
+                joylashuvi=joylashuvi,
+                dukon_rasmi=dukon_rasmi,
+                egasining_rasmi=egasining_rasmi
+            )
+            
+            messages.success(request, "Yangi haridor muvaffaqiyatli qo‘shildi!")
+            return redirect('main')  # yoki kerakli sahifaga
     
-    return render(request, 'add_haridor.html')
+        return render(request, 'add_haridor.html')
+    return redirect('main')
 @login_required(login_url='login')
 def profile_view(request, username):
     user =  User.objects.get(username=username)

@@ -1,10 +1,11 @@
 from .models import Mahsulot, User, Pazanda, YetkazibBeruvchi
 import datetime as dt
 class new_yuklama:
-    def __init__(self, mahsulot, miqdor,turi):
+    def __init__(self, mahsulot, miqdor,turi,narx):
         self.nom = mahsulot
         self.miqdor = miqdor
         self.turi = turi
+        self.narx=narx
 
 
 def mahsulotlar_miqdori(mahstr):
@@ -27,9 +28,10 @@ def mahsulotlar_miqdori(mahstr):
                 miqdor = int(miqdor.strip())
                 mahsulot_obj = Mahsulot.objects.filter(nomi=nomi).first()
                 turi = mahsulot_obj.turi if mahsulot_obj else "noma'lum"
+                narx = mahsulot_obj.narxi if mahsulot_obj else 0
 
                 if nomi not in natija:
-                    natija[nomi] = new_yuklama(nomi, miqdor, turi)
+                    natija[nomi] = new_yuklama(nomi, miqdor, turi,narx)
                 else:
                     natija[nomi].miqdor += miqdor
 
