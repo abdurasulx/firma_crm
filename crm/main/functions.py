@@ -94,3 +94,10 @@ def make_amal_log(amal):
         xturi='xodim qoshish'
         user=amals[3]
     return turi
+def yuklama_maker(mahsulotlar):
+    res=''
+    for i in mahsulotlar:
+        mq=mahsulotlar[i]
+        res+=f"{i} {mq},"
+        
+    return res

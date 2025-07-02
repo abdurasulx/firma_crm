@@ -3,8 +3,8 @@ from django.contrib.auth import authenticate, login as auth_login, logout, get_u
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages 
 from django.shortcuts import redirect
-from .models import HaridorDukon, User, YetkazibBeruvchi, Pazanda
-from .functions import mahsulotlar_miqdori, makenewform
+from .models import HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot
+from .functions import mahsulotlar_miqdori, makenewform, yuklama_maker
 
 
 
@@ -85,9 +85,20 @@ def profile_view(request, username):
             return render(request, 'egaprofile.html', {'user': user})
     elif request.method == 'POST':
         if request.user.type == 'ega':
+            res=''
             if user.type == 'yetkazib_beruvchi':
                 for i in request.POST:
-                    print(i,request.POST[i])
+                    
+                    nomi=Mahsulot.objects.filter(nomi=i)
+                    if nomi.exists():
+                        
+                        mq=request.POST[i]
+                        if mq!="0":
+                            res+=f"{i} {mq},"
+                
+                yt=YetkazibBeruvchi.objects.get(user=user)
+                yt.mahsulotlar=res
+                yt.save()
                 yuklamalar = mahsulotlar_miqdori( YetkazibBeruvchi.objects.get(user=user).mahsulotlar) or []
                 return render(request, 'egayt.html',{'user': user,'yuklamalar': yuklamalar})
 @login_required(login_url='login')

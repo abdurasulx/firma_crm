@@ -1,4 +1,4 @@
-{% extends 'ytbase.html' %}
+{% extends 'egabase.html' %}
 {% load static %}
 
 {% block title %}Foydalanuvchi Profil{% endblock %}
@@ -82,7 +82,7 @@
 </style>
 
 <div class="profile-container">
-    <img src="{% if user.rasmi and user.rasmi.url %}{{ user.rasmi.url }}{% else %}{% static 'images/default_avatar.jpg' %}{% endif %}" alt="Avatar" class="profile-image">
+    <img src="{% if user.rasmi %}{{ user.rasmi }}{% else %}{% static 'images/default_avatar.jpg' %}{% endif %}" alt="Avatar" class="profile-image">
 
     <div class="profile-info">
         <span class="profile-label">To‘liq ism:</span> {{ user.tuliq_ismi }}
