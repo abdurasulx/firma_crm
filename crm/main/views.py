@@ -72,13 +72,24 @@ def add_haridor(request):
 @login_required(login_url='login')
 def profile_view(request, username):
     user =  User.objects.get(username=username)
+    if request.method == 'GET':
     
-    if request.user.type ==  'yetkazib_beruvchi':
-        return render(request, 'ytprofile.html', {'user': user})
-    elif request.user.type == 'pazanda':
-        return render(request, 'pzprofile.html', {'user': user})
-    elif request.user.type=='ega':
-        return render(request, 'egaprofile.html', {'user': user})
+        if request.user.type ==  'yetkazib_beruvchi':
+            return render(request, 'ytprofile.html', {'user': user})
+        elif request.user.type == 'pazanda':
+            return render(request, 'pzprofile.html', {'user': user})
+        elif request.user.type=='ega':
+            if user.type == 'yetkazib_beruvchi':
+                yuklamalar = mahsulotlar_miqdori( YetkazibBeruvchi.objects.get(user=user).mahsulotlar) or []
+                return render(request, 'egayt.html',{'user': user,'yuklamalar': yuklamalar})
+            return render(request, 'egaprofile.html', {'user': user})
+    elif request.method == 'POST':
+        if request.user.type == 'ega':
+            if user.type == 'yetkazib_beruvchi':
+                for i in request.POST:
+                    print(i,request.POST[i])
+                yuklamalar = mahsulotlar_miqdori( YetkazibBeruvchi.objects.get(user=user).mahsulotlar) or []
+                return render(request, 'egayt.html',{'user': user,'yuklamalar': yuklamalar})
 @login_required(login_url='login')
 def crtuser(request):
     payload = {}
@@ -101,15 +112,24 @@ def crtuser(request):
             messages.error(request, "Bu login allaqachon mavjud!")
             return render(request, 'useryaratish.html',payload)
 
-        user = User.objects.create_user(username=username, password=password,tel_raqami=telefon, tuliq_ismi=fullname)
-        user.type = type  # Agar User modelida type bo'lsa
-        user.save()
+        
 
         if type == 'yetkazib_beruvchi':
-            print('yetkazib beruvchi')
-            YetkazibBeruvchi.objects.create(user=user, tuliq_ismi=fullname ,rasmi=rasmi)
+            mn=request.POST.get('mashina_nomi')
+            payload['mashina_nomi'] = mn
+            if 'mashina_rasmi' in request.FILES:
+                mr=request.FILES.get('mashina_rasmi')
+                user = User.objects.create_user(username=username, password=password,tel_raqami=telefon, tuliq_ismi=fullname)
+                user.type = type  # Agar User modelida type bo'lsa
+                user.save()
+            else:
+                messages.error(request, "Mashina rasmini tanlang!")
+                return render(request, 'useryaratish.html',payload)
+            
+            
+            YetkazibBeruvchi.objects.create(user=user, tuliq_ismi=fullname ,rasmi=rasmi,bmr=mr,bmh=mn)
         elif type == 'pazanda':
-            print('pazanda')
+            
             Pazanda.objects.create(user=user, tuliq_ismi=fullname, rasmi=rasmi)
 
         

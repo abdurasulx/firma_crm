@@ -35,7 +35,7 @@ def mahsulotlar_miqdori(mahstr):
 
             except ValueError:
                 continue
-    print(list(natija.values())[0].turi)
+    
     return list(natija.values())
 class addmahsulot:
     def __init__(self, mahsulot, miqdor,turi,xodim):

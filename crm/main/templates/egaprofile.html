@@ -70,7 +70,7 @@
     <div class="profile-info">
         <h2>{{ user.tuliq_ismi }} </h2>
         <p><strong>Foydalanuvchi nomi:</strong> {{ user.username }}</p>
-        <p><strong>Email:</strong> {{ user.email }}</p>
+        <p><strong>Email:</strong> {% if user.email %}{{ user.email }}{% else %}Ko‘rsatilmagan{% endif %} </p>
         <p><strong>Telefon:</strong> {{ user.telefon|default:"Ko‘rsatilmagan" }}</p>
         <p><strong>Rol:</strong> {{ user.type }}</p>
     </div>

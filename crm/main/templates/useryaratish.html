@@ -13,24 +13,20 @@
     border-radius: 8px;
     box-shadow: 0 3px 10px rgba(0,0,0,0.1);
 }
-
 .form-container h2 {
     text-align: center;
     margin-bottom: 20px;
     color: #007acc;
 }
-
 .form-group {
     margin-bottom: 15px;
 }
-
 .form-group label {
     display: block;
     margin-bottom: 6px;
     font-weight: 600;
     color: #333;
 }
-
 .form-group input,
 .form-group select {
     width: 100%;
@@ -40,13 +36,25 @@
     border-radius: 4px;
     box-sizing: border-box;
 }
-
-.form-group input:focus,
-.form-group select:focus {
-    border-color: #007acc;
-    outline: none;
+.preview-img {
+    display: block;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #007acc;
+    margin: 10px auto;
+    cursor: pointer;
 }
-
+#preview-mashina {
+    display: block;
+    width: 150px;
+    height: 100px;
+    object-fit: cover;
+    border: 2px solid #007acc;
+    margin: 10px auto;
+    cursor: pointer;
+}
 .submit-btn {
     width: 100%;
     padding: 12px;
@@ -59,11 +67,9 @@
     cursor: pointer;
     transition: background-color 0.3s;
 }
-
 .submit-btn:hover {
     background-color: #005fa3;
 }
-
 @media (max-width: 600px) {
     .form-container {
         padding: 20px;
@@ -99,32 +105,30 @@
 
         <div class="form-group">
             <label for="turi">Xodim turi</label>
-            <select id="turi" name="turi" value="{{ turi }}" required onchange="toggleMashinaFields()">
-          
-                <option value="pazanda">Pazanda</option>
-                <option value="yetkazib_beruvchi">Yetkazib beruvchi</option>
-                
+            <select id="turi" name="turi" required onchange="toggleMashinaFields()">
+                <option value="pazanda" {% if turi == 'pazanda' %}selected{% endif %}>Pazanda</option>
+                <option value="yetkazib_beruvchi" {% if turi == 'yetkazib_beruvchi' %}selected{% endif %}>Yetkazib beruvchi</option>
             </select>
         </div>
 
-        <div class="form-group">
-            <label for="rasmi">Xodim rasmi</label>
-            <input type="file" id="rasmi" name="rasmi" required  accept="image/*">
-        </div>
+        <label for="rasmi_input"> Xodim rasmi 
+            <img src="{% static 'images/default_avatar.jpg' %}" alt="Xodim rasmi" id="preview-rasm" class="preview-img">
+        </label>
+        <input type="file" id="rasmi_input" name="rasmi" style="display: none;" accept="image/*" onchange="showPreview(event, 'preview-rasm')" required>
 
-        <div id="mashina-fields" style="display: none;">
+        <div id="mashina-fields" style="{% if turi == 'yetkazib_beruvchi' %}display:block;{% else %}display:none;{% endif %}">
             <div class="form-group">
                 <label for="mashina_nomi">Mashina nomi</label>
-                <input type="text" id="mashina_nomi"  name="mashina_nomi">
+                <input type="text" id="mashina_nomi" value="{{ mashina_nomi }}" name="mashina_nomi">
             </div>
 
-            <div class="form-group">
-                <label for="mashina_rasmi">Mashina rasmi</label>
-                <input type="file" id="mashina_rasmi"  name="mashina_rasmi" accept="image/*">
-            </div>
+            <label for="mashina_rasmi_input">
+                <img src="{% static 'images/damas.jpg' %}" alt="Mashina rasmi" id="preview-mashina">
+            </label>
+            <input type="file" id="mashina_rasmi_input"  name="mashina_rasmi" style="display: none;" accept="image/*" onchange="showPreview(event, 'preview-mashina')">
         </div>
 
-                <button type="submit" class="submit-btn">Saqlash</button>
+        <button type="submit" class="submit-btn">Saqlash</button>
     </form>
 
     {% if messages %}
@@ -136,36 +140,25 @@
             {% endfor %}
         </div>
     {% endif %}
-
-    {% if form.errors %}
-        <div style="margin-top: 15px;">
-            {% for field in form %}
-                {% for error in field.errors %}
-                    <div style="padding: 10px; border-radius: 4px; background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; margin-bottom: 5px;">
-                        {{ field.label }}: {{ error }}
-                    </div>
-                {% endfor %}
-            {% endfor %}
-            {% for error in form.non_field_errors %}
-                <div style="padding: 10px; border-radius: 4px; background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; margin-bottom: 5px;">
-                    {{ error }}
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
-</div>
-
 </div>
 
 <script>
 function toggleMashinaFields() {
     const turi = document.getElementById("turi").value;
     const mashinaFields = document.getElementById("mashina-fields");
-    if (turi === "yetkazib_beruvchi") {
-        mashinaFields.style.display = "block";
-    } else {
-        mashinaFields.style.display = "none";
+    mashinaFields.style.display = (turi === "yetkazib_beruvchi") ? "block" : "none";
+}
+
+function showPreview(event, imgId) {
+    const input = event.target;
+    const reader = new FileReader();
+    reader.onload = function(){
+        document.getElementById(imgId).src = reader.result;
+    }
+    if(input.files[0]){
+        reader.readAsDataURL(input.files[0]);
     }
 }
 </script>
+
 {% endblock %}

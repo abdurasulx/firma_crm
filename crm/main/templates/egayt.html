@@ -1,0 +1,122 @@
+{% extends 'ytbase.html' %}
+{% load static %}
+
+{% block title %}Foydalanuvchi Profil{% endblock %}
+
+{% block content %}
+<style>
+    .profile-container {
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #ffffff;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        text-align: center;
+    }
+
+    .profile-image {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        object-fit: cover;
+        object-position: center;
+        border: 3px solid #4285f4;
+        margin-bottom: 20px;
+    }
+
+    .profile-info {
+        font-size: 18px;
+        color: #333;
+        margin-bottom: 10px;
+        word-wrap: break-word;
+    }
+
+    .profile-label {
+        font-weight: bold;
+        color: #555;
+    }
+
+    .products-container {
+        margin-top: 30px;
+        text-align: left;
+    }
+
+    .product-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+    }
+
+    .product-row label {
+        font-weight: 600;
+        min-width: 120px;
+    }
+
+    .product-row input {
+        width: 100px;
+        padding: 5px;
+    }
+
+    .product-type {
+        color: #555;
+    }
+
+    @media (max-width: 600px) {
+        .profile-container {
+            padding: 20px;
+            margin: 15px;
+        }
+
+        .profile-image {
+            width: 100px;
+            height: 100px;
+        }
+
+        .profile-info {
+            font-size: 16px;
+        }
+    }
+</style>
+
+<div class="profile-container">
+    <img src="{% if user.rasmi and user.rasmi.url %}{{ user.rasmi.url }}{% else %}{% static 'images/default_avatar.jpg' %}{% endif %}" alt="Avatar" class="profile-image">
+
+    <div class="profile-info">
+        <span class="profile-label">To‘liq ism:</span> {{ user.tuliq_ismi }}
+    </div>
+    <div class="profile-info">
+        <span class="profile-label">Foydalanuvchi nomi:</span> {{ user.username }}
+    </div>
+    <div class="profile-info">
+        <span class="profile-label">Email:</span> {{ user.email }}
+    </div>
+    <div class="profile-info">
+        <span class="profile-label">Telefon:</span> {{ user.telefon|default:"- kiritilmagan -" }}
+    </div>
+    <div class="profile-info">
+        <span class="profile-label">Turi:</span> {{ user.type|title }}
+    </div>
+
+    {% if user.type == "yetkazib_beruvchi" %}
+    <div class="products-container">
+        <h3>Yuklangan Mahsulotlar</h3>
+        <form method="POST">
+            {% csrf_token %}
+            {% for mahsulot in yuklamalar %}
+            <div class="product-row">
+                <label>{{ mahsulot.nom }}</label>
+                <input type="number" name="{{ mahsulot.nom }}" value="{{ mahsulot.miqdor }}" min="0" step="any" required>
+                <span class="product-type">{{ mahsulot.turi }}</span>
+            </div>
+            {% endfor %}
+            <button type="submit" style="margin-top: 15px; padding: 8px 16px; background: #4285f4; color: #fff; border: none; border-radius: 4px; cursor: pointer;">
+                Saqlash
+            </button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
