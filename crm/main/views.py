@@ -222,4 +222,14 @@ def editusr(request, username):
 def seemahsulot(request, mahsulot_id):
     mahsulot = Mahsulot.objects.get(id=mahsulot_id)
     turs=MahsulotTuri.objects.all()
+    if request.method == 'POST':
+        mahsulot.nomi = request.POST.get('nomi')
+        mahsulot.miqdori = request.POST.get('miqdori')
+        turi=MahsulotTuri.objects.get(nomi=request.POST.get('turi'))
+        mahsulot.turi = turi
+        mahsulot.save()
+        if 'mahsulot_rasmi' in request.FILES:
+            mahsulot.rasmi = request.FILES['mahsulot_rasmi']
+            mahsulot.save()
+        return redirect('main')
     return render(request, 'seemahsulot.html', {'mahsulot': mahsulot,'turs':turs})

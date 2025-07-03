@@ -23,7 +23,7 @@
        <select id="turi" name="turi" required 
                style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
                {% for tur in turs%} 
-               <option value="{{ tur.nomi }}"  >{{ tur.nomi }}</option> 
+               <option value="{{ tur.nomi }}" {%  if mahsulot.turi.nomi == tur.nomi %} selected  {% endif %} >{{ tur.nomi }}</option> 
                {% endfor %}
                </select>
 
@@ -65,5 +65,50 @@ function showPreview(event) {
         reader.readAsDataURL(input.files[0]);
     }
 }
+document.addEventListener('DOMContentLoaded', function() {
+    // Backenddan kelgan mahsulot narxi va miqdori
+    // Ular string holatda keladi, masalan: "123.45" yoki "123,45"
+    let mahsulotNarxi = "{{ mahsulot.narxi }}";
+    let mahsulotMiqdori = "{{ mahsulot.miqdori }}"; // Yangi qo'shilgan o'zgaruvchi
+
+    // --- Narxni formatlash ---
+    let formattedNarx;
+    if (typeof mahsulotNarxi === 'string' && mahsulotNarxi.includes(',')) {
+        formattedNarx = mahsulotNarxi.replace(',', '.');
+    } else {
+        formattedNarx = mahsulotNarxi;
+    }
+    // Narxni floatga aylantirib, 2 kasr xonasigacha yaxlitlash (nuqta bilan)
+    formattedNarx = parseFloat(formattedNarx).toFixed(2);
+
+    // --- Miqdorni formatlash ---
+    let formattedMiqdor;
+    // Agar miqdor ham o'nlik kasr bo'lishi mumkin bo'lsa:
+    if (typeof mahsulotMiqdori === 'string' && mahsulotMiqdori.includes(',')) {
+        formattedMiqdor = mahsulotMiqdori.replace(',', '.');
+    } else {
+        formattedMiqdor = mahsulotMiqdori;
+    }
+    // Miqdorni floatga aylantirib, agar kerak bo'lsa, 2 kasr xonasigacha yaxlitlash.
+    // Agar miqdor doim butun son bo'lsa, parseInt() yoki Math.floor() ishlatish yaxshiroq.
+    // Misol uchun, agar 3 kasr xonasi bo'lishi mumkin bo'lsa, .toFixed(3) qilasiz.
+    // Agar doim butun son bo'lsa, Math.round() yoki parseInt() ishlatish mumkin.
+    formattedMiqdor = parseFloat(formattedMiqdor).toFixed(2); // Agar miqdor ham kasrli bo'lsa
+    // Yoki agar miqdor doim butun son bo'lsa:
+    // formattedMiqdor = parseInt(formattedMiqdor);
+
+
+    // HTML input maydonlariga formatlangan qiymatlarni joylashtiramiz
+    const narxiInput = document.getElementById('narxi');
+    if (narxiInput) {
+        narxiInput.value = formattedNarx;
+    }
+
+    // Miqdor uchun yangi input maydoni ID'si (masalan, 'miqdori')
+    const miqdoriInput = document.getElementById('miqdori');
+    if (miqdoriInput) {
+        miqdoriInput.value = formattedMiqdor;
+    }
+});
 </script>
 {% endblock %}
