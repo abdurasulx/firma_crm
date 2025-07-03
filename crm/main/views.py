@@ -37,8 +37,10 @@ def main(request):
         yuklamalar = mahsulotlar_miqdori( YetkazibBeruvchi.objects.get(user=request.user).mahsulotlar) or []
         return render(request, 'yetkazuvchi_dashboard.html',{'yuklamalar': yuklamalar})
     hodims=  User.objects.exclude(type='ega')
+    mahs=Mahsulot.objects.all()
     
     payload['hodims'] = hodims
+    payload['mahsulotlar'] = mahs
     soni=len(hodims)
     
     payload['ishchilar_soni'] = soni
