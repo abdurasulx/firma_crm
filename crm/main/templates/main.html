@@ -134,7 +134,7 @@
             justify-content: flex-start;
         ">
             {% for mahsulot in mahsulotlar %}
-                <a href="#" style="
+                <a href="{% url 'seeproduct' mahsulot.id %}" style="
                     display: flex;
                     flex-direction: column;
                     align-items: center;
@@ -159,18 +159,15 @@
                     </div>
                 </a>
             {% endfor %}
-            <a href="#" 
+   <a href="#"
    style="
-       display: inline-flex;
+       display: flex;
        justify-content: center;
        align-items: center;
-       width: 70px;
-       height: 70px;
-       background-color:rgb(244, 253, 246);
+       width: 60px;
+       height: 60px;
+       background-color: rgb(244, 253, 246);
        border: 2px solid #007acc;
-       color: white;
-       font-size: 32px;
-       color: black;
        font-weight: bold;
        border-radius: 50%;
        text-decoration: none;
@@ -179,8 +176,12 @@
    title="Yangi Mahsulot Yaratish"
    onmouseover="this.style.backgroundColor='rgb(117, 122, 118)';"
    onmouseout="this.style.backgroundColor='rgb(244, 253, 246)';">
-   +
+   <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+     <line x1="12" y1="5" x2="12" y2="19"></line>
+     <line x1="5" y1="12" x2="19" y2="12"></line>
+   </svg>
 </a>
+
         </div>
     {% endif %}
 </div>

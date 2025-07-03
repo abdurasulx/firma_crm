@@ -3,7 +3,7 @@ from django.contrib.auth import authenticate, login as auth_login, logout, get_u
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages 
 from django.shortcuts import redirect
-from .models import HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot
+from .models import HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri
 from .functions import mahsulotlar_miqdori, makenewform, yuklama_maker
 
 
@@ -219,3 +219,7 @@ def editusr(request, username):
 
     return render(request, 'editusr.html', {'user_edit': user_edit,'mn':mn,'mr':mr})
 
+def seemahsulot(request, mahsulot_id):
+    mahsulot = Mahsulot.objects.get(id=mahsulot_id)
+    turs=MahsulotTuri.objects.all()
+    return render(request, 'seemahsulot.html', {'mahsulot': mahsulot,'turs':turs})
