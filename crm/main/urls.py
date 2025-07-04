@@ -13,5 +13,5 @@ urlpatterns = [
     path('edituser/<str:username>', editusr , name='edituser'),
     path('product/<int:mahsulot_id>/', seemahsulot, name='seeproduct'),
     path('product/create/', createmahsulot, name='createproduct'),
-    path('product/delete/<str:product_id>',deleteprdct,'delprdct')
+    path('product/delete/<str:product_id>',deleteprdct,name='delprdct'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

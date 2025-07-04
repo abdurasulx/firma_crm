@@ -33,6 +33,9 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin-left: 20px;
+    margin-right: 20px;
+    border-radius: 10px;    
 }
 
 .card-header:hover {
@@ -62,7 +65,7 @@
 
 <div class="dashboard-container">
     <div class="card">
-        <div class="card-header" onclick="toggleCard(this)">👥 Ishchilar soni  <span>{{ ishchilar_soni }}</span></div>
+        <div class="card-header" onclick="toggleCard(this)">👥 Ishchilar soni  <span style='text-align: center; width: 300px;'  >{{ ishchilar_soni }}ta ischi mavjud.</span></div>
         <div class="card-content">
             {% if ishchilar_soni == 0 %}
             
@@ -114,7 +117,7 @@
     cursor: pointer;
     user-select: none;
 ">
-    📦 Mahsulot turlari <span>{{ mahsulot_turlari }}</span>
+    📦 Mahsulot turlari <span  style='text-align: center; width: 300px;' >{{ msoni  }}ta xodim mavjud. </span>
 </div>
 
 <div class="card-content" style="
@@ -123,7 +126,7 @@
     border: 1px solid #ddd;
     border-top: none;
     border-radius: 0 0 8px 8px;
-">
+">1
     {% if mahsulotlar|length == 0 %}
         <p>Mahsulotlar yo‘q</p>
     {% else %}

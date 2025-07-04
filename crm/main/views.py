@@ -42,8 +42,10 @@ def main(request):
     payload['hodims'] = hodims
     payload['mahsulotlar'] = mahs
     soni=len(hodims)
+    msoni=len(mahs)
     
     payload['ishchilar_soni'] = soni
+    payload['msoni'] = msoni
     
     return render(request, 'main.html',payload)
 def logout(request):
@@ -255,4 +257,4 @@ def deleteprdct(request,product_id):
     if mhs:
         mhs.delete()
         return redirect('main')
-    pass
+    return redirect('main')
