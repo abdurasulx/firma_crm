@@ -218,7 +218,7 @@ def editusr(request, username):
         return redirect('main')
 
     return render(request, 'editusr.html', {'user_edit': user_edit,'mn':mn,'mr':mr})
-
+@login_required(login_url='login')
 def seemahsulot(request, mahsulot_id):
     mahsulot = Mahsulot.objects.get(id=mahsulot_id)
     turs=MahsulotTuri.objects.all()
@@ -233,3 +233,26 @@ def seemahsulot(request, mahsulot_id):
             mahsulot.save()
         return redirect('main')
     return render(request, 'seemahsulot.html', {'mahsulot': mahsulot,'turs':turs})
+@login_required(login_url='login')
+def createmahsulot(request):
+    tur=MahsulotTuri.objects.all()
+    payload={}  
+    payload['turs']=tur
+    if request.method == 'POST':
+        nomi = request.POST.get('nomi')
+        miqdori = request.POST.get('miqdori')
+        turi=MahsulotTuri.objects.get(nomi=request.POST.get('turi'))
+        rasmi = request.FILES.get('rasmi')
+        narxi=request.POST.get('narxi')
+        mh=Mahsulot.objects.create(nomi=nomi, miqdori=miqdori, turi=turi,narxi=narxi, rasmi=rasmi)
+        mh.save()
+        return redirect('main')
+    return render(request, 'crtmahsulot.html',payload)
+
+@login_required(login_url='login')
+def deleteprdct(request,product_id):
+    mhs=get_object_or_404(Mahsulot,id=product_id)
+    if mhs:
+        mhs.delete()
+        return redirect('main')
+    pass

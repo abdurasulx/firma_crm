@@ -1,0 +1,114 @@
+{% extends 'egabase.html' %}
+{% load static %}
+
+{% block title %}Mahsulotni Yaratish{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 30px auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+
+    <h2 style="color: #007acc; text-align: center; margin-bottom: 20px;">Mahsulotni Yaratish</h2>
+
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <label for="nomi" style="font-weight: bold;">Mahsulot nomi</label>
+        <input type="text" id="nomi" name="nomi" value="{{ nomi }}" required
+               style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
+
+        <label for="miqdori" style="font-weight: bold;">Miqdori</label>
+        <input type="number" id="miqdori" name="miqdori" value="{{ miqdori }}" required
+               style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
+
+        <label for="turi" style="font-weight: bold;">Turi (o‘lchov birligi) {{ turi }}  </label>
+       <select id="turi" name="turi" required 
+               style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
+               {% for tur in turs%} 
+               <option value="{{ tur.nomi }}"  >{{ tur.nomi }}</option> 
+               {% endfor %}
+               </select>
+
+        <label for="narxi" style="font-weight: bold;">Narxi</label>
+        <input type="number" id="narxi" name="narxi" value="{{ narxi }}" step="0.01" required
+               style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
+
+        <label for="rasmi_input" style="display: block; font-weight: bold;">Rasmi</label>
+        <img src="{% static 'images\default.png' %}"
+             alt="Mahsulot rasmi"
+             id="preview-rasm"
+             style="width: 200px; height: 200px; object-fit: cover; border-radius: 50%; border: 2px solid #007acc; margin: 10px auto; display: block; cursor: pointer;">
+        <input type="file" required id="rasmi_input" name="rasmi" accept="image/*" style="display: none;" onchange="showPreview(event)">
+        
+        <button type="submit"
+                style="margin-top: 20px; width: 100%; padding: 12px; background: #007acc; color: #fff; border: none; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer;">
+            Saqlash
+        </button>
+    </form>
+
+    <a href="{% url 'main' %}" style="display: inline-block; margin-top: 15px; text-align: center; width: 100%; text-decoration: none; color: #007acc;">
+        🔙 Orqaga
+    </a>
+
+</div>
+
+<script>
+document.getElementById('preview-rasm').addEventListener('click', function() {
+    document.getElementById('rasmi_input').click();
+});
+
+function showPreview(event) {
+    const input = event.target;
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('preview-rasm').src = e.target.result;
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+document.addEventListener('DOMContentLoaded', function() {
+    // Backenddan kelgan mahsulot narxi va miqdori
+    // Ular string holatda keladi, masalan: "123.45" yoki "123,45"
+    let mahsulotNarxi = "{{ narxi }}";
+    let mahsulotMiqdori = "{{ miqdori }}"; // Yangi qo'shilgan o'zgaruvchi
+
+    // --- Narxni formatlash ---
+    let formattedNarx;
+    if (typeof mahsulotNarxi === 'string' && mahsulotNarxi.includes(',')) {
+        formattedNarx = mahsulotNarxi.replace(',', '.');
+    } else {
+        formattedNarx = mahsulotNarxi;
+    }
+    // Narxni floatga aylantirib, 2 kasr xonasigacha yaxlitlash (nuqta bilan)
+    formattedNarx = parseFloat(formattedNarx).toFixed(2);
+
+    // --- Miqdorni formatlash ---
+    let formattedMiqdor;
+    // Agar miqdor ham o'nlik kasr bo'lishi mumkin bo'lsa:
+    if (typeof mahsulotMiqdori === 'string' && mahsulotMiqdori.includes(',')) {
+        formattedMiqdor = mahsulotMiqdori.replace(',', '.');
+    } else {
+        formattedMiqdor = mahsulotMiqdori;
+    }
+    // Miqdorni floatga aylantirib, agar kerak bo'lsa, 2 kasr xonasigacha yaxlitlash.
+    // Agar miqdor doim butun son bo'lsa, parseInt() yoki Math.floor() ishlatish yaxshiroq.
+    // Misol uchun, agar 3 kasr xonasi bo'lishi mumkin bo'lsa, .toFixed(3) qilasiz.
+    // Agar doim butun son bo'lsa, Math.round() yoki parseInt() ishlatish mumkin.
+    formattedMiqdor = parseFloat(formattedMiqdor).toFixed(2); // Agar miqdor ham kasrli bo'lsa
+    // Yoki agar miqdor doim butun son bo'lsa:
+    // formattedMiqdor = parseInt(formattedMiqdor);
+
+
+    // HTML input maydonlariga formatlangan qiymatlarni joylashtiramiz
+    const narxiInput = document.getElementById('narxi');
+    if (narxiInput) {
+        narxiInput.value = formattedNarx;
+    }
+
+    // Miqdor uchun yangi input maydoni ID'si (masalan, 'miqdori')
+    const miqdoriInput = document.getElementById('miqdori');
+    if (miqdoriInput) {
+        miqdoriInput.value = formattedMiqdor;
+    }
+});
+</script>
+{% endblock %}
