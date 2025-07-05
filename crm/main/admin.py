@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     User, HaridorDukon, Pazanda, YetkazibBeruvchi,
-    MahsulotTuri, Mahsulot, MiqdorQoshish, Savdo
+    MahsulotTuri, Mahsulot, MiqdorQoshish, Savdo, YuklamaSorov
 )
 
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
@@ -80,3 +80,6 @@ class MiqdorQoshishAdmin(admin.ModelAdmin):
 class SavdoAdmin(admin.ModelAdmin):
     list_display = ('haridor_dukon', 'yetkazib_beruvchi', 'vaqt_sana', 'oluvchining_ismi', 'smm', 'st', 'tulandi', 'tasdiq_kutilmoqda')
 
+@admin.register(YuklamaSorov)
+class yuklama(admin.ModelAdmin):
+    list_display = ( 'id','mahsulot','miqdor', 'mode', 'user', 'sana', 'tasdiq')

@@ -3,8 +3,9 @@ from django.contrib.auth import authenticate, login as auth_login, logout, get_u
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages 
 from django.shortcuts import redirect
-from .models import HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri, Savdo
+from .models import HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri, Savdo, YuklamaSorov
 from .functions import mahsulotlar_miqdori, makenewform, yuklama_maker
+import datetime as dt
 
 
 
@@ -36,7 +37,21 @@ def main(request):
     elif user.type == 'yetkazib_beruvchi':
         yuklamalar = mahsulotlar_miqdori( YetkazibBeruvchi.objects.get(user=request.user).mahsulotlar) or []
         savdo=Savdo.objects.filter(yetkazib_beruvchi=YetkazibBeruvchi.objects.get(user=request.user))
-        return render(request, 'yetkazuvchi_dashboard.html',{'yuklamalar': yuklamalar})
+        payload['savdo'] = savdo
+        payload['yuklamalar'] = yuklamalar
+        today = dt.date.today()
+        tomorrow = today + dt.timedelta(days=1)
+        reqyuklama = YuklamaSorov.objects.filter(
+        user=YetkazibBeruvchi.objects.get(user=request.user),
+        tasdiq=False,
+        mode='waiting',
+        sana__range=(today, tomorrow)
+        ).all()
+        # reqyuklama=YuklamaSorov.objects.filter(user=YetkazibBeruvchi.objects.get(user=request.user),tasdiq=False, mode='waiting',sana=dt.date.today() ).all()
+        payload['reqyuklama'] = reqyuklama
+        print(len(reqyuklama))
+        return render(request, 'yetkazuvchi_dashboard.html',payload)
+    
     hodims=  User.objects.exclude(type='ega')
     mahs=Mahsulot.objects.all()
     

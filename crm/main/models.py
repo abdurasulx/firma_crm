@@ -148,11 +148,13 @@ class YuklamaSorov(models.Model):
         ('done', 'Done'),
         ('waiting', 'kutilmoqda'),
     )
+    id=models.AutoField(primary_key=True)
     mode=models.CharField(max_length=20, choices=ST_CHOICES)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user=models.ForeignKey(YetkazibBeruvchi, on_delete=models.CASCADE)
+    mahsulot=models.ForeignKey(Mahsulot, on_delete=models.CASCADE, null=True, blank=True)
     miqdor = models.FloatField()
     sana = models.DateTimeField(auto_now_add=True)
     tasdiq=models.BooleanField(default=False)
 
     def __str__(self):
-        return f"{self.user.username} - {self.miqdor}"
+        return f"{self.user.user.login} - {self.miqdor}"
