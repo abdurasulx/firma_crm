@@ -147,6 +147,7 @@ class YuklamaSorov(models.Model):
     ST_CHOICES = (
         ('done', 'Done'),
         ('waiting', 'kutilmoqda'),
+        ('rejected', 'Rad etildi'),
     )
     id=models.AutoField(primary_key=True)
     mode=models.CharField(max_length=20, choices=ST_CHOICES)

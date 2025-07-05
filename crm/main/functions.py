@@ -97,9 +97,26 @@ def make_amal_log(amal):
         user=amals[3]
     return turi
 def yuklama_maker(mahsulotlar):
-    res=''
+    res = ''
     for i in mahsulotlar:
-        mq=mahsulotlar[i]
-        res+=f"{i} {mq},"
-        
+        nom = i.nom
+        miqdor = i.miqdor
+    
+        res += f"{nom} {miqdor},"
     return res
+def accptyuk(user,yuk):
+    yt=YetkazibBeruvchi.objects.get(user=user)
+    
+    
+    
+
+    
+    
+   
+    yt.mahsulotlar+=f'{yuk.mahsulot} {int(yuk.miqdor)},'
+    yt.save()
+    yuk.mode='done'
+    yuk.tasdiq=True
+    yuk.save()
+          
+    

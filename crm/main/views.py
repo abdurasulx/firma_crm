@@ -2,9 +2,10 @@ from django.shortcuts import render, get_list_or_404, get_object_or_404
 from django.contrib.auth import authenticate, login as auth_login, logout, get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages 
+from django.utils import timezone
 from django.shortcuts import redirect
 from .models import HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri, Savdo, YuklamaSorov
-from .functions import mahsulotlar_miqdori, makenewform, yuklama_maker
+from .functions import mahsulotlar_miqdori, makenewform, yuklama_maker, accptyuk
 import datetime as dt
 
 
@@ -35,22 +36,66 @@ def main(request):
     if user.type == 'pazanda':
         return render(request, 'pazanda_dashboard.html')
     elif user.type == 'yetkazib_beruvchi':
-        yuklamalar = mahsulotlar_miqdori( YetkazibBeruvchi.objects.get(user=request.user).mahsulotlar) or []
-        savdo=Savdo.objects.filter(yetkazib_beruvchi=YetkazibBeruvchi.objects.get(user=request.user))
-        payload['savdo'] = savdo
-        payload['yuklamalar'] = yuklamalar
-        today = dt.date.today()
-        tomorrow = today + dt.timedelta(days=1)
-        reqyuklama = YuklamaSorov.objects.filter(
-        user=YetkazibBeruvchi.objects.get(user=request.user),
-        tasdiq=False,
-        mode='waiting',
-        sana__range=(today, tomorrow)
-        ).all()
-        # reqyuklama=YuklamaSorov.objects.filter(user=YetkazibBeruvchi.objects.get(user=request.user),tasdiq=False, mode='waiting',sana=dt.date.today() ).all()
-        payload['reqyuklama'] = reqyuklama
-        print(len(reqyuklama))
-        return render(request, 'yetkazuvchi_dashboard.html',payload)
+        if request.method == 'GET':
+            yuklamalar = mahsulotlar_miqdori( YetkazibBeruvchi.objects.get(user=request.user).mahsulotlar) or []
+            savdo=Savdo.objects.filter(yetkazib_beruvchi=YetkazibBeruvchi.objects.get(user=request.user))
+            payload['savdo'] = savdo
+            payload['yuklamalar'] = yuklamalar
+            now = timezone.localtime()
+            today_start = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.min))
+            today_end = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.max))
+
+            reqyuklama = YuklamaSorov.objects.filter(
+                user=YetkazibBeruvchi.objects.get(user=request.user),
+                tasdiq=False,
+                mode='waiting',
+                sana__range=(today_start, today_end)).all()
+            # reqyuklama=YuklamaSorov.objects.filter(user=YetkazibBeruvchi.objects.get(user=request.user),tasdiq=False, mode='waiting',sana=dt.date.today() ).all()
+            payload['reqyuklama'] = reqyuklama
+            print(len(reqyuklama))
+            return render(request, 'yetkazuvchi_dashboard.html',payload)
+        elif request.method == 'POST':
+            if 'yk_id' in request.POST: 
+                yk_id=request.POST.get('yk_id')
+               
+                if 'accept' in yk_id:
+                    yk_id=yk_id.replace('accept','')
+                    yk=YuklamaSorov.objects.get(id=yk_id)
+                   
+                    accptyuk(request.user,yk)    
+
+
+                elif 'reject' in yk_id:
+                   
+                    yk_id=yk_id.replace('reject','')
+                    yk=YuklamaSorov.objects.get(id=yk_id)
+                    yk.mode='rejected'
+                    yk.tasdiq=True
+                    yk.save()
+                    
+
+                
+                
+               
+                return redirect('main')
+            yuklamalar = mahsulotlar_miqdori( YetkazibBeruvchi.objects.get(user=request.user).mahsulotlar) or []
+            savdo=Savdo.objects.filter(yetkazib_beruvchi=YetkazibBeruvchi.objects.get(user=request.user))
+            payload['savdo'] = savdo
+            payload['yuklamalar'] = yuklamalar
+            now = timezone.localtime()
+            today_start = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.min))
+            today_end = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.max))
+
+            reqyuklama = YuklamaSorov.objects.filter(
+                user=YetkazibBeruvchi.objects.get(user=request.user),
+                tasdiq=False,
+                mode='waiting',
+                sana__range=(today_start, today_end)).all()
+            # reqyuklama=YuklamaSorov.objects.filter(user=YetkazibBeruvchi.objects.get(user=request.user),tasdiq=False, mode='waiting',sana=dt.date.today() ).all()
+            payload['reqyuklama'] = reqyuklama
+            
+            return render(request, 'yetkazuvchi_dashboard.html',payload)
+            
     
     hodims=  User.objects.exclude(type='ega')
     mahs=Mahsulot.objects.all()
@@ -241,7 +286,23 @@ def seemahsulot(request, mahsulot_id):
     mahsulot = Mahsulot.objects.get(id=mahsulot_id)
     turs=MahsulotTuri.objects.all()
     if request.method == 'POST':
-        mahsulot.nomi = request.POST.get('nomi')
+        if 'nomi' in request.POST:
+            nnomi=request.POST.get('nomi')
+            yts=YetkazibBeruvchi.objects.all()
+            for yt in yts:
+                mahs= mahsulotlar_miqdori(yt.mahsulotlar)
+                nmahs=[]
+                for m in mahs:
+
+                    if m.nom==mahsulot.nomi:
+                        
+
+                        m.nom=nnomi
+                    nmahs.append(m)
+                yt.mahsulotlar=yuklama_maker(mahs)
+                yt.save()
+            mahsulot.nomi = request.POST.get('nomi')
+
         mahsulot.miqdori = request.POST.get('miqdori')
         turi=MahsulotTuri.objects.get(nomi=request.POST.get('turi'))
         mahsulot.turi = turi

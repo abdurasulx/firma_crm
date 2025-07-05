@@ -97,8 +97,8 @@
 
     <form method="post" style="display: inline;">
         {% csrf_token %}
-        <input type="hidden" name="action_type" value="accept">
-        <input type="hidden" name="yk_id" value="{{ yk.id }}">
+      
+        <input type="hidden" name="yk_id" value="accept{{ yk.id }}">
         <button type="submit" title="Qabul qilish" style="
             padding: 8px 14px;
             background-color: #28a745;
@@ -112,8 +112,8 @@
 
     <form method="post" style="display: inline;">
         {% csrf_token %}
-        <input type="hidden" name="action_type" value="reject">
-        <input type="hidden" name="yk_id" value="{{ yk.id }}">
+     
+        <input type="hidden" name="yk_id" value="reject{{ yk.id }}">
         <button type="submit" title="Rad etish" style="
             padding: 8px 14px;
             background-color: #dc3545;
