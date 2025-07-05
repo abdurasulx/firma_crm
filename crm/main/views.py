@@ -291,14 +291,14 @@ def seemahsulot(request, mahsulot_id):
             yts=YetkazibBeruvchi.objects.all()
             for yt in yts:
                 mahs= mahsulotlar_miqdori(yt.mahsulotlar)
-                nmahs=[]
+                
                 for m in mahs:
 
                     if m.nom==mahsulot.nomi:
                         
 
                         m.nom=nnomi
-                    nmahs.append(m)
+                    
                 yt.mahsulotlar=yuklama_maker(mahs)
                 yt.save()
             mahsulot.nomi = request.POST.get('nomi')

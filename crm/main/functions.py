@@ -112,11 +112,20 @@ def accptyuk(user,yuk):
 
     
     
-   
-    yt.mahsulotlar+=f'{yuk.mahsulot} {int(yuk.miqdor)},'
+    mxs=Mahsulot.objects.get(nomi=yuk.mahsulot.nomi)
+    if mxs.miqdori>=yuk.miqdor:
+        
+        yt.mahsulotlar+=f'{yuk.mahsulot} {int(yuk.miqdor)},'
+        yuk.mode='done'
+        yuk.tasdiq=True
+        yuk.save()
+        mxs.miqdori-=int(yuk.miqdor)
+        mxs.save()
+    else:
+        yuk.mode='rejected'
+        yuk.tasdiq=True
+        yuk.save()
     yt.save()
-    yuk.mode='done'
-    yuk.tasdiq=True
-    yuk.save()
+    
           
     
