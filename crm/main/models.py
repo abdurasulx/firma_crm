@@ -143,3 +143,16 @@ class qaytarilgan_mahsulotlar(models.Model):
 
     def __str__(self):
         return f"{self.mahsulot} - {self.miqdor}"
+class YuklamaSorov(models.Model):
+    ST_CHOICES = (
+        ('done', 'Done'),
+        ('waiting', 'kutilmoqda'),
+    )
+    mode=models.CharField(max_length=20, choices=ST_CHOICES)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    miqdor = models.FloatField()
+    sana = models.DateTimeField(auto_now_add=True)
+    tasdiq=models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.miqdor}"

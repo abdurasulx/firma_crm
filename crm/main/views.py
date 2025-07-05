@@ -3,7 +3,7 @@ from django.contrib.auth import authenticate, login as auth_login, logout, get_u
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages 
 from django.shortcuts import redirect
-from .models import HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri
+from .models import HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri, Savdo
 from .functions import mahsulotlar_miqdori, makenewform, yuklama_maker
 
 
@@ -35,6 +35,7 @@ def main(request):
         return render(request, 'pazanda_dashboard.html')
     elif user.type == 'yetkazib_beruvchi':
         yuklamalar = mahsulotlar_miqdori( YetkazibBeruvchi.objects.get(user=request.user).mahsulotlar) or []
+        savdo=Savdo.objects.filter(yetkazib_beruvchi=YetkazibBeruvchi.objects.get(user=request.user))
         return render(request, 'yetkazuvchi_dashboard.html',{'yuklamalar': yuklamalar})
     hodims=  User.objects.exclude(type='ega')
     mahs=Mahsulot.objects.all()

@@ -5,45 +5,50 @@
 
 {% block content %}
 <style>
-    .section-header {
-        font-size: 20px;
+    .card {
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        margin-bottom: 15px;
+        overflow: hidden;
+    }
+
+    .card-header {
+        padding: 12px 15px;
+        background-color: #007acc;
+        color: #fff;
+        cursor: pointer;
         font-weight: bold;
-        margin-bottom: 20px;
+        font-size: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .card-content {
+        display: none;
+        padding: 15px;
+        background-color: #f9f9f9;
+    }
+
+    .no-data {
+        text-align: center;
+        color: #777;
     }
 
     .yuklama-list {
         display: flex;
         flex-direction: column;
-        gap: 15px;
+        gap: 10px;
     }
 
     .yuklama-item {
-        background-color: white;
-        padding: 15px;
-        border-radius: 8px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-    }
+        background-color: #fff;
+        padding: 10px;
+        border-radius: 6px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 
-    .yuklama-info {
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
     }
-
-    .no-data {
-        text-align: center;
-        font-size: 16px;
-        color: #888;
-        padding: 30px;
-        background-color: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    }
-
     .sotish-btn {
         margin-top: 30px;
         display: block;
@@ -60,48 +65,72 @@
         text-align: center;
         text-decoration: none;
     }
-
-    .sotish-btn:disabled {
-        background-color: #aaa;
-        cursor: not-allowed;
-    }
-
-    @media (max-width: 600px) {
-        .yuklama-item {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 10px;
-        }
-        .sotish-btn {
+     .sotish-btn {
             font-size: 14px;
             padding: 10px;
         }
-    }
 </style>
 
-<div class="section-header">Yuklanmalar</div>
+<!-- Bo'lim 1: Yuklama So'rovlari -->
+<div class="card">
+    <div class="card-header" onclick="toggleCard(this)">
+        📩 Yuklama So'rovlari
+    </div>
+    <div class="card-content">
+        <div class="no-data">Sizga hozircha yuklama so'rovlari kelmagan.</div>
+        <!-- Bu yerga dinamik so'rovlar qo'shamiz keyinchalik -->
+    </div>
+</div>
 
-{% if yuklamalar %}
-    <div class="yuklama-list">
-        {% for i in yuklamalar %}
-            <div class="yuklama-item">
-                <div class="yuklama-info">
-                    <strong>{{ i.nom|title }}</strong>
-                    <span>Miqdori: {{ i.miqdor }} {{i.turi}}</span>
-                    <span>Narxi: {{ i.narx }} so'm</span>
-                </div>
+<!-- Bo'lim 2: Yuklanmalar -->
+<div class="card">
+    <div class="card-header" onclick="toggleCard(this)">
+        📦 Yuklanmalar
+    </div>
+    <div class="card-content" style="display: block;"  >
+        {% if yuklamalar %}
+            <div class="yuklama-list">
+                {% for i in yuklamalar %}
+                    <div class="yuklama-item">
+                        <strong>{{ i.nom|title }}</strong><br>
+                        Miqdori: {{ i.miqdor }} {{ i.turi }}<br>
+                        Narxi: {{ i.narx }} so'm
+                    </div>
+                {% endfor %}
             </div>
-        {% endfor %}
-    </div>
-
-    <form method="POST"  >
+        {% else %}
+            <div class="no-data">Sizda hozircha yuklanmalar mavjud emas.</div>
+        {% endif %}
+        <form method="POST">
         {% csrf_token %}
-         <a class="sotish-btn" style="text-decoration: none; color: white; ;" href="{% url 'add_haridor' %}"> Sotishni boshlash  </a>
+        <a class="sotish-btn" href="{% url 'add_haridor' %}">Sotishni boshlash</a>
     </form>
-{% else %}
-    <div class="no-data">
-        Sizda hozircha yuklamalar mavjud emas.
     </div>
-    <button class="sotish-btn" disabled>Sotishni boshlash</button>
-{% endif %}
+    
+</div>
+
+<!-- Bo'lim 3: Bugungi Sotuvlar -->
+<div class="card">
+    <div class="card-header" onclick="toggleCard(this)">
+        💰 Bugungi Sotuvlar
+    </div>
+    <div class="card-content">
+        <div class="no-data">Hozircha sotuvlar mavjud emas.</div>
+        <!-- Bu yerga sotuvlar dinamik chiqadi keyinroq -->
+    </div>
+    
+</div>
+
+
+<script>
+function toggleCard(header) {
+    const content = header.nextElementSibling;
+    if (content.style.display === "block") {
+        content.style.display = "none";
+    } else {
+        content.style.display = "block";
+    }
+}
+</script>
+
 {% endblock %}
