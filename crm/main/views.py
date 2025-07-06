@@ -345,3 +345,9 @@ def deleteprdct(request,product_id):
         mhs.delete()
         return redirect('main')
     return redirect('main')
+@login_required(login_url='login')
+def addmiqdor(request):
+    if request.user.type=='pazanda':        
+        payload={}
+        payload['mahsulotlar']=Mahsulot.objects.all()
+        return render(request, 'addmiqdor.html',payload)

@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.conf.urls.static import static
-from .views import login, main, add_haridor, profile_view, crtuser, editusr, seemahsulot, createmahsulot, deleteprdct
+from .views import login, main, add_haridor, profile_view, crtuser, editusr, seemahsulot, createmahsulot, deleteprdct, addmiqdor
 from django.urls import path
 
 urlpatterns = [
@@ -14,4 +14,5 @@ urlpatterns = [
     path('product/<int:mahsulot_id>/', seemahsulot, name='seeproduct'),
     path('product/create/', createmahsulot, name='createproduct'),
     path('product/delete/<str:product_id>',deleteprdct,name='delprdct'),
+    path('add/miqdor/', addmiqdor, name='add_miqdor'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
