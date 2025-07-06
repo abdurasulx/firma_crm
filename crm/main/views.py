@@ -43,6 +43,10 @@ def main(request):
             savdo=Savdo.objects.filter(yetkazib_beruvchi=YetkazibBeruvchi.objects.get(user=request.user))
             payload['savdo'] = savdo
             payload['yuklamalar'] = yuklamalar
+            mahs=Mahsulot.objects.all()
+            payload['zaxira_mahsulotlar'] = mahs
+            payload['lnmahs']=len(mahs)
+
             now = timezone.localtime()
             today_start = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.min))
             today_end = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.max))
@@ -95,15 +99,17 @@ def main(request):
                 sana__range=(today_start, today_end)).all()
             # reqyuklama=YuklamaSorov.objects.filter(user=YetkazibBeruvchi.objects.get(user=request.user),tasdiq=False, mode='waiting',sana=dt.date.today() ).all()
             payload['reqyuklama'] = reqyuklama
+            mahs=Mahsulot.objects.all()
+            payload['zaxira_mahsulotlar'] = mahs
             
             return render(request, 'yetkazuvchi_dashboard.html',payload)
             
     
     hodims=  User.objects.exclude(type='ega')
     mahs=Mahsulot.objects.all()
-    
-    payload['hodims'] = hodims
     payload['mahsulotlar'] = mahs
+    payload['hodims'] = hodims
+    
     soni=len(hodims)
     msoni=len(mahs)
     

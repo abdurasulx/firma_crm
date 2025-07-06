@@ -69,7 +69,46 @@
             font-size: 14px;
             padding: 10px;
         }
+    .mahsulot-item {
+    padding: 5px 0;
+    border-bottom: 1px dashed #ccc;
+    display: flex;
+    flex-wrap: wrap; /* 🌟 Mobil uchun qatorga sig‘magan so‘zlar o‘z qatoriga o‘tadi */
+    gap: 5px;
+    justify-content: space-between;
+}
+.mahsulot-item > div, .mahsulot-item > span {
+    flex: 1 1 45%; /* 🌟 Kichik ekranlarda yarmidan joy oladi */
+    min-width: 120px; /* 🌟 Juda kichrayib ketmasin */
+}
+.mahsulot-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .mahsulot-item > div, .mahsulot-item > span {
+        flex: 1 1 100%;
+    }
 </style>
+
+<div class="card">
+    <div class="card-header" onclick="toggleCard(this)">
+        📦 Zaxiradagi Mahsulotlar
+    </div>
+    <div class="card-content">
+        {% if zaxira_mahsulotlar %}
+            {% for m in zaxira_mahsulotlar %}
+                <div class="mahsulot-item">
+                    <span>{{ m.nomi }}</span>
+                    <span>{{ m.miqdori }} {{ m.turi }}</span>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div style="color: #888; text-align: center;">Zaxira mahsulotlar mavjud emas.</div>
+        {% endif %}
+     
+    </div>
+</div>
 
 <!-- Bo'lim 1: Yuklama So'rovlari -->
 <div class="card">
