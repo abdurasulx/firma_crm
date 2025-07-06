@@ -98,7 +98,23 @@
 <body>
 
 <header>
-    <div class="brand">Tizim nomi</div>
+    <div class="brand"><a href="{% url 'main' %}" 
+   style="
+       display: inline-block;
+       padding: 8px 15px;
+       background-color: transparent;
+       color: white;
+       font-size: 18px;
+       font-weight: bold;
+       text-decoration: none;
+       border: 2px solid white;
+       border-radius: 4px;
+       transition: background-color 0.3s, color 0.3s;
+   "
+   onmouseover="this.style.backgroundColor='white'; this.style.color='#007acc';"
+   onmouseout="this.style.backgroundColor='transparent'; this.style.color='white';">
+   StockFirm uz
+</a></div>
 
     <div class="user-block">
         <a href="{% url 'profile' request.user.username %}">
