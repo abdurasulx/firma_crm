@@ -82,4 +82,4 @@ class SavdoAdmin(admin.ModelAdmin):
 
 @admin.register(YuklamaSorov)
 class yuklama(admin.ModelAdmin):
-    list_display = ( 'id','mahsulot','miqdor', 'mode', 'user', 'sana', 'tasdiq')
+    list_display = ( 'id','mahsulot','miqdor','pazanda', 'mode', 'user', 'sana', 'tasdiq')

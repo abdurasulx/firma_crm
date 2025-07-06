@@ -34,7 +34,9 @@ def main(request):
     user=request.user
     
     if user.type == 'pazanda':
-        return render(request, 'pazanda_dashboard.html')
+        payload['sorovlar'] = YuklamaSorov.objects.filter(pazanda=Pazanda.objects.get(user=request.user)).all()
+        payload['zaxira_mahsulotlar']=Mahsulot.objects.all()
+        return render(request, 'pazanda_dashboard.html',payload)
     elif user.type == 'yetkazib_beruvchi':
         if request.method == 'GET':
             yuklamalar = mahsulotlar_miqdori( YetkazibBeruvchi.objects.get(user=request.user).mahsulotlar) or []
@@ -263,6 +265,8 @@ def editusr(request, username):
             
             yb = YetkazibBeruvchi.objects.get(user=user_edit)
             yb.mashina_nomi = request.POST.get('mashina_nomi')
+            yb.tuliq_ismi=request.POST.get('tuliq_ismi')
+            yb.user.tuliq_ismi=request.POST.get('tuliq_ismi')
             if 'mashina_rasmi1' in request.FILES:
                 print('mashina rasmi')
                 yb.bmr = request.FILES['mashina_rasmi1']

@@ -151,6 +151,7 @@ class YuklamaSorov(models.Model):
     )
     id=models.AutoField(primary_key=True)
     mode=models.CharField(max_length=20, choices=ST_CHOICES)
+    pazanda=models.ForeignKey(Pazanda, on_delete=models.CASCADE, null=True, blank=True)
     user=models.ForeignKey(YetkazibBeruvchi, on_delete=models.CASCADE)
     mahsulot=models.ForeignKey(Mahsulot, on_delete=models.CASCADE, null=True, blank=True)
     miqdor = models.FloatField()
