@@ -70,9 +70,9 @@
         {% csrf_token %}
         <div class="form-group">
             <label for="mahsulot">Mahsulot tanlang</label>
-            <select name="mahsulot" id="mahsulot" required>
+            <select name="mahsulot" id="mahsulot" required >
                 {% for m in mahsulotlar %}
-                    <option value="{{ m.id }}">{{ m.nomi }} ({{ m.turi }})</option>
+                    <option value="{{ m.nomi }}">{{ m.nomi }} ({{ m.turi }})</option>
                 {% endfor %}
             </select>
         </div>
@@ -93,11 +93,29 @@
 </div>
 
 <script>
-function showPreview(event) {
-    const preview = document.getElementById('preview');
-    preview.src = URL.createObjectURL(event.target.files[0]);
-    preview.style.display = 'block';
-}
+let mahsulotDict = {};
+
+
+    console.log("Barcha miqdorlar:", mahsulotDict);
+document.addEventListener('DOMContentLoaded', function () {
+    // Mahsulot IDlari asosida miqdorlar ro'yxati
+
+
+    // Select elementi
+    const select = document.getElementById("mahsulot");
+
+    // Hodisani ulaymiz
+    const tanlangan = select.value;
+
+    // Rasm preview funksiyasi (o'zi ishlayapti)
+    const fileInput = document.getElementById('rasm');
+    fileInput.addEventListener("change", function (event) {
+        const preview = document.getElementById('preview');
+        preview.src = URL.createObjectURL(event.target.files[0]);
+        preview.style.display = 'block';
+    });
+});
+
 </script>
 
 {% endblock %}

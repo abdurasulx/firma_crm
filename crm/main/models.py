@@ -101,6 +101,7 @@ class MiqdorQoshish(models.Model):
     miqdor = models.FloatField()
     tasdiqlangan = models.BooleanField(default=False)
     ariza_text = models.TextField(blank=True, null=True)
+    rasmi = models.ImageField(upload_to='miqdor_qoshish/', blank=True, null=True)
 
     def __str__(self):
         return f"{self.pazanda} - {self.mahsulot}"

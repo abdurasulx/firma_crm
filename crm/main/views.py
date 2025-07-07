@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages 
 from django.utils import timezone
 from django.shortcuts import redirect
-from .models import HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri, Savdo, YuklamaSorov
+from .models import HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri, Savdo, YuklamaSorov, MiqdorQoshish
 from .functions import mahsulotlar_miqdori, makenewform, yuklama_maker, accptyuk
 import datetime as dt
 
@@ -348,6 +348,20 @@ def deleteprdct(request,product_id):
 @login_required(login_url='login')
 def addmiqdor(request):
     if request.user.type=='pazanda':        
+        
         payload={}
         payload['mahsulotlar']=Mahsulot.objects.all()
+        
+        if request.method == 'POST':
+            ok=1
+            mxs=Mahsulot.objects.get(nomi=request.POST.get('mahsulot'))
+            mqdr=request.POST.get('miqdor')
+            rasmi=request.FILES.get('rasm')
+            pz=Pazanda.objects.get(user=request.user)
+            nw=MiqdorQoshish.objects.create(mahsulot=mxs,miqdor=mqdr,rasmi=rasmi,tasdiqlangan=True, pazanda=pz)
+            nw.save()
+            
+            
+            return redirect('main')
         return render(request, 'addmiqdor.html',payload)
+    return redirect('main')
