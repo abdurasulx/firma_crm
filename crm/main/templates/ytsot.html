@@ -1,0 +1,134 @@
+{% extends 'ytbase.html' %}
+{% load static %}
+
+{% block title %}Mahsulot Sotish{% endblock %}
+
+{% block content %}
+<style>
+    .form-block {
+        background-color: white;
+        padding: 20px;
+        margin-bottom: 25px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    }
+
+    .form-block h3 {
+        margin-bottom: 15px;
+        color: #007acc;
+    }
+
+    .form-block label {
+        font-weight: 600;
+        margin-top: 12px;
+        display: block;
+    }
+
+    .form-block input, .form-block select {
+        width: 100%;
+        padding: 8px 10px;
+        margin-top: 5px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    .form-block input[type="file"] {
+        padding: 6px;
+    }
+
+    .form-block button {
+        background-color: #007acc;
+        color: white;
+        padding: 10px 25px;
+        margin-top: 20px;
+        border: none;
+        border-radius: 4px;
+        font-size: 16px;
+        cursor: pointer;
+    }
+
+    .form-block button:hover {
+        background-color: #005fa3;
+    }
+
+    .inline-row {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
+
+    .inline-row select {
+        min-width: 200px;
+    }
+
+    .inline-row a {
+        padding: 8px 14px;
+        background: #28a745;
+        color: white;
+        border-radius: 4px;
+        text-decoration: none;
+        font-size: 14px;
+    }
+
+    .inline-row a:hover {
+        background-color: #218838;
+    }
+
+    @media (max-width: 600px) {
+        .inline-row {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .form-block button {
+            width: 100%;
+        }
+    }
+</style>
+
+<form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <!-- Mahsulotlar ro‘yxati -->
+    <div class="form-block">
+        <h3>📋 Mahsulotlar Ro‘yxati</h3>
+        {% for m in mahsulotlar %}
+            <label>{{ m.nom }} ({{ m.miqdor }} {{ m.turi }})</label>
+            <input type="number" name="miqdor_{{ m.nomi }}" value="0" min="0" max="{{ m.miqdor }}" step="any" placeholder="Sotilayotgan miqdor">
+        {% endfor %}
+    </div>
+
+    <!-- Xaridor ma’lumotlari -->
+    <div class="form-block">
+        <h3>🛒 Haridor Ma’lumotlari</h3>
+
+        <label for="haridor">Haridor yoki Do‘kon:</label>
+        <div class="inline-row">
+            <select name="haridor" required>
+                <option value="" selected disabled>Tanlang...</option>
+                {% for h in haridorlar %}
+                    <option value="{{ h.id }}">{{ h.nomi }}</option>
+                {% endfor %}
+            </select>
+            <a href="{% url 'add_haridor' %}">+ Qo‘shish</a>
+        </div>
+
+        <label for="oluvchi">Oluvchi Ismi:</label>
+        <input type="text" name="oluvchi" required placeholder="Oluvchining ismini kiriting">
+
+        <label for="st">To‘lov Turi:</label>
+        <select name="st" required>
+            <option value="naqd">Naqd</option>
+            <option value="karta">Karta</option>
+            <option value="nasiya">Nasiya</option>
+        </select>
+
+        <label for="rasm">Chek / Rasm:</label>
+        <input type="file" name="rasm" accept="image/*" required>
+    </div>
+
+    <button type="submit">💾 Sotishni Yakunlash</button>
+</form>
+{% endblock %}

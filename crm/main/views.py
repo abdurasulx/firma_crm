@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages 
 from django.utils import timezone
 from django.shortcuts import redirect
-from .models import HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri, Savdo, YuklamaSorov, MiqdorQoshish
+from .models import HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri, Savdo, YuklamaSorov, MiqdorQoshish, HaridorDukon
 from .functions import mahsulotlar_miqdori, makenewform, yuklama_maker, accptyuk
 import datetime as dt
 
@@ -64,7 +64,7 @@ def main(request):
                 sana__range=(today_start, today_end)).all()
             # reqyuklama=YuklamaSorov.objects.filter(user=YetkazibBeruvchi.objects.get(user=request.user),tasdiq=False, mode='waiting',sana=dt.date.today() ).all()
             payload['reqyuklama'] = reqyuklama
-            print(len(reqyuklama))
+            
             return render(request, 'yetkazuvchi_dashboard.html',payload)
         elif request.method == 'POST':
             if 'yk_id' in request.POST: 
@@ -187,7 +187,7 @@ def crtuser(request):
     payload = {}
    
     if request.method == 'POST':
-        print('post')
+       
         username = request.POST.get('username')
         password = request.POST.get('password')
         fullname = request.POST.get('tuliq_ismi')
@@ -280,7 +280,7 @@ def editusr(request, username):
             yb.tuliq_ismi=request.POST.get('tuliq_ismi')
             yb.user.tuliq_ismi=request.POST.get('tuliq_ismi')
             if 'mashina_rasmi1' in request.FILES:
-                print('mashina rasmi')
+                
                 yb.bmr = request.FILES['mashina_rasmi1']
                
             if 'rasmi' in request.FILES:
@@ -399,3 +399,25 @@ def add_yuklama(request):
         'mahsulotlar': mahsulotlar,
         'yetkazuvchilar': yetkazuvchilar,
     })
+def sotish(request):
+    
+    if request.user.type == 'yetkazib_beruvchi':
+        yt = YetkazibBeruvchi.objects.get(user=request.user)
+        mahsulotlar = mahsulotlar_miqdori(yt.mahsulotlar)
+        xaridorlar=HaridorDukon.objects.all()
+        if request.method == "POST":
+            sotilganlar = []
+            for m in mahsulotlar:
+                miqdor = request.POST.get(f'miqdor_{m.nom}')
+                if miqdor:
+                    m.miqdor -= float(miqdor)
+                    sotilganlar.append((m.nomi, miqdor))  # Logging uchun
+
+            # yt.mahsulotlar = yuklama_maker(mahsulotlar)
+            # yt.save()
+            # Istasa: Savdo modelga yozish
+            return redirect('main')
+    else:
+        return redirect('main')
+
+    return render(request, 'ytsot.html', {'mahsulotlar': mahsulotlar,'haridorlar':xaridorlar})
