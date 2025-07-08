@@ -1,0 +1,61 @@
+{% extends 'pzbase.html' %}
+{% load static %}
+
+{% block title %}Yangi Yuklama So‘rovi{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px; margin: auto; background: #fff; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+    <h2 style="text-align: center; color: #007acc;">Yangi Yuklama So‘rovi</h2>
+    
+    <form method="POST">
+        {% csrf_token %}
+        
+        <div style="margin-bottom: 15px;">
+            <label for="mahsulot">Mahsulot:</label>
+            <select name="mahsulot" id="mahsulot" required style="width: 100%; padding: 10px;" onchange="showmiqdor()" >
+                {% for m in mahsulotlar %}
+                    <option value="{{ m.id }}">{{ m.nomi }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label for="miqdor" style="display: block; margin-bottom: 5px;" id="mavjud_miqdor" >Mavjud miqdor:</label>
+            </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label for="miqdor">Miqdor:</label>
+            <input type="number" name="miqdor" id="miqdor" required min="0.1" step="0.1" style="width: 100%; padding: 10px;">
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label for="yetkazuvchi">Yetkazib Beruvchi:</label>
+            <select name="yetkazuvchi" id="yetkazuvchi" required style="width: 100%; padding: 10px;">
+                {% for y in yetkazuvchilar %}
+                    <option value="{{ y.id }}">{{ y.user.tuliq_ismi }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+     
+
+        <button type="submit" style="width: 100%; background-color: #007acc; color: white; padding: 12px; border: none; border-radius: 5px; font-size: 16px;">
+            So‘rov Yaratish
+        </button>
+    </form>
+</div>
+
+<script>
+    mxs={}
+    {% for m in mahsulotlar %}
+        mxs['{{ m.id }}']={{ m.miqdori }}
+    {% endfor %}
+    function showmiqdor() {
+        let mahsulot_id = document.getElementById("mahsulot").value;
+        let mavjud_miqdor = mxs[mahsulot_id];
+        document.getElementById("mavjud_miqdor").innerHTML = "Mavjud miqdor: " + mavjud_miqdor;
+        document.getElementById("miqdor").max = mavjud_miqdor
+        
+    }
+    showmiqdor()
+    </script>
+{% endblock %}

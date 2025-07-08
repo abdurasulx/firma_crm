@@ -34,8 +34,14 @@ def main(request):
     user=request.user
     
     if user.type == 'pazanda':
-        payload['sorovlar'] = YuklamaSorov.objects.filter(pazanda=Pazanda.objects.get(user=request.user)).all()
+        now = timezone.localtime()
+        today_start = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.min))
+        today_end = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.max))
+        payload['sorovlar'] = YuklamaSorov.objects.filter(pazanda=Pazanda.objects.get(user=request.user),sana__range=(today_start, today_end)).all()
         payload['zaxira_mahsulotlar']=Mahsulot.objects.all()
+        zapros=MiqdorQoshish.objects.filter(pazanda=Pazanda.objects.get(user=request.user),vaqt_sana__range=(today_start, today_end)).all()
+        payload['qms']=len(zapros)
+        payload['kunlik_miqdorlar'] = zapros
         return render(request, 'pazanda_dashboard.html',payload)
     elif user.type == 'yetkazib_beruvchi':
         if request.method == 'GET':
@@ -359,9 +365,37 @@ def addmiqdor(request):
             rasmi=request.FILES.get('rasm')
             pz=Pazanda.objects.get(user=request.user)
             nw=MiqdorQoshish.objects.create(mahsulot=mxs,miqdor=mqdr,rasmi=rasmi,tasdiqlangan=True, pazanda=pz)
+            mxs.miqdori+=int(mqdr)
+            mxs.save()
             nw.save()
             
             
             return redirect('main')
         return render(request, 'addmiqdor.html',payload)
     return redirect('main')
+@login_required(login_url='login')
+def add_yuklama(request):
+    pazanda = Pazanda.objects.get(user=request.user)
+    mahsulotlar = Mahsulot.objects.all()
+    yetkazuvchilar = YetkazibBeruvchi.objects.all()
+
+    if request.method == "POST":
+        mahsulot = Mahsulot.objects.get(id=request.POST['mahsulot'])
+        miqdor = float(request.POST['miqdor'])
+        yetkazuvchi = YetkazibBeruvchi.objects.get(id=request.POST['yetkazuvchi'])
+        
+
+        YuklamaSorov.objects.create(
+            pazanda=pazanda,
+            mahsulot=mahsulot,
+            user=yetkazuvchi,
+            miqdor=miqdor,
+            mode='waiting',
+            
+        )
+        return redirect('main')
+
+    return render(request, 'pzyuklama.html', {
+        'mahsulotlar': mahsulotlar,
+        'yetkazuvchilar': yetkazuvchilar,
+    })
