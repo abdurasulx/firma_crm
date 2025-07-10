@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.utils import timezone
 from django.shortcuts import redirect
 from .models import HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri, Savdo, YuklamaSorov, MiqdorQoshish, HaridorDukon
-from .functions import mahsulotlar_miqdori, makenewform, yuklama_maker, accptyuk
+from .functions import mahsulotlar_miqdori, makenewform, yuklama_maker, accptyuk, sotishm
 import datetime as dt
 
 
@@ -46,8 +46,7 @@ def main(request):
     elif user.type == 'yetkazib_beruvchi':
         if request.method == 'GET':
             yuklamalar = mahsulotlar_miqdori( YetkazibBeruvchi.objects.get(user=request.user).mahsulotlar) or []
-            savdo=Savdo.objects.filter(yetkazib_beruvchi=YetkazibBeruvchi.objects.get(user=request.user))
-            payload['savdo'] = savdo
+            
             payload['yuklamalar'] = yuklamalar
             mahs=Mahsulot.objects.all()
             payload['zaxira_mahsulotlar'] = mahs
@@ -64,6 +63,8 @@ def main(request):
                 sana__range=(today_start, today_end)).all()
             # reqyuklama=YuklamaSorov.objects.filter(user=YetkazibBeruvchi.objects.get(user=request.user),tasdiq=False, mode='waiting',sana=dt.date.today() ).all()
             payload['reqyuklama'] = reqyuklama
+            savdo=Savdo.objects.filter(yetkazib_beruvchi=YetkazibBeruvchi.objects.get(user=request.user),vaqt_sana__range=(today_start, today_end)).all()
+            payload['savdo'] = savdo
             
             return render(request, 'yetkazuvchi_dashboard.html',payload)
         elif request.method == 'POST':
@@ -103,6 +104,8 @@ def main(request):
                 tasdiq=False,
                 mode='waiting',
                 sana__range=(today_start, today_end)).all()
+            savdo=Savdo.objects.filter(yetkazib_beruvchi=YetkazibBeruvchi.objects.get(user=request.user),vaqt_sana__range=(today_start, today_end)).all()
+            payload['savdo'] = savdo
             # reqyuklama=YuklamaSorov.objects.filter(user=YetkazibBeruvchi.objects.get(user=request.user),tasdiq=False, mode='waiting',sana=dt.date.today() ).all()
             payload['reqyuklama'] = reqyuklama
             mahs=Mahsulot.objects.all()
@@ -403,15 +406,39 @@ def sotish(request):
     
     if request.user.type == 'yetkazib_beruvchi':
         yt = YetkazibBeruvchi.objects.get(user=request.user)
+        usr=request.user
         mahsulotlar = mahsulotlar_miqdori(yt.mahsulotlar)
         xaridorlar=HaridorDukon.objects.all()
+        
         if request.method == "POST":
+            rasm=request.FILES.get('rasm')
+            turi =request.POST.get('st')
+            haridor= HaridorDukon.objects.get(id=  request.POST.get('haridor'))
+            oluvchi=request.POST.get('oluvchi')
             sotilganlar = []
             for m in mahsulotlar:
                 miqdor = request.POST.get(f'miqdor_{m.nom}')
-                if miqdor:
+                if miqdor!='0':
                     m.miqdor -= float(miqdor)
-                    sotilganlar.append((m.nomi, miqdor))  # Logging uchun
+                    sotilganlar.append((m.nom, miqdor))  # Logging uchun
+                
+            if len(sotilganlar) > 0:
+                txt=''
+                for s in sotilganlar:
+                    txt+=f'{s[0]} {s[1]},'
+                if turi=='nasiya':
+                    svd=Savdo.objects.create(yetkazib_beruvchi=yt,haridor_dukon=haridor,smm=txt,smr=rasm,oluvchining_ismi=oluvchi,tulandi=False,tasdiq_kutilmoqda=False,st=turi)
+                    svd.save()
+
+                else:
+                    svd=Savdo.objects.create(yetkazib_beruvchi=yt,haridor_dukon=haridor,smm=txt,smr=rasm,oluvchining_ismi=oluvchi,tulandi=True,tasdiq_kutilmoqda=True,st=turi)
+                    svd.save()
+    
+                sotishm(txt,yt)
+                # svd=Savdo.objects.create(yetkazuvchi=yt,haridor=request.POST.get('haridor'),mahsulotlar=txt)
+                # Istasa: Savdo modelga yozish
+
+            
 
             # yt.mahsulotlar = yuklama_maker(mahsulotlar)
             # yt.save()

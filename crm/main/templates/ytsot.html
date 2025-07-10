@@ -96,7 +96,7 @@
         <h3>📋 Mahsulotlar Ro‘yxati</h3>
         {% for m in mahsulotlar %}
             <label>{{ m.nom }} ({{ m.miqdor }} {{ m.turi }})</label>
-            <input type="number" name="miqdor_{{ m.nomi }}" value="0" min="0" max="{{ m.miqdor }}" step="any" placeholder="Sotilayotgan miqdor">
+            <input type="number" name="miqdor_{{ m.nom }}" value="0" min="0" max="{{ m.miqdor }}" step="any" placeholder="Sotilayotgan miqdor">
         {% endfor %}
     </div>
 

@@ -223,11 +223,20 @@
         💰 Bugungi Sotuvlar
     </div>
     <div class="card-content">
-        <div class="no-data">Hozircha sotuvlar mavjud emas.</div>
-        <!-- Bu yerga sotuvlar dinamik chiqadi keyinroq -->
+        {% if savdo %}
+            {% for s in savdo %}
+                <div class="mahsulot-item" style="background: #fff; padding: 10px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 12px;">
+                    <div><strong>Haridor/Do‘kon:</strong> {{ s.haridor_dukon.nomi }}</div>
+                    <div><strong>To‘lov turi:</strong> {{ s.get_st_display }}</div>
+                    <div><strong>Mahsulotlar:</strong> {{ s.smm }}</div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="no-data">Hozircha sotuvlar mavjud emas.</div>
+        {% endif %}
     </div>
-    
 </div>
+
 
 
 <script>

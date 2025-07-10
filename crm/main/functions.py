@@ -127,5 +127,33 @@ def accptyuk(user,yuk):
         yuk.save()
     yt.save()
     
+def sotishm(mahs,yt):
+    ytyk=yt.mahsulotlar
+    ytyk=ytyk.split(',')
+    natija={}
+    for y in ytyk:
+        if y!='':
+            y=y.split(' ')
+            natija[y[0]]=int(y[1])
+    mahs=mahs.split(',')
+    # print(mahs)
+    
+    for m in mahs:
+        if m!='':
+            n=m.split(' ')
+            # print(m[0])
+            if n[0] in  natija:
+                    
+                ci=natija[n[0]]
+                # print(ci,ci-int(n[1]))
+                natija[n[0]]=ci-int(n[1])
+    sotl=''
+    for i in natija:
+        if natija[i]>0:
+            sotl+=f'{i} {natija[i]},'
+
+
+    yt.mahsulotlar=sotl
+    yt.save()
           
     

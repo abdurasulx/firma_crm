@@ -119,7 +119,7 @@ class Savdo(models.Model):
     yetkazib_beruvchi = models.ForeignKey(YetkazibBeruvchi, on_delete=models.CASCADE)
     vaqt_sana = models.DateTimeField(auto_now_add=True)
     oluvchining_ismi = models.CharField(max_length=255)
-    smm = models.FloatField(verbose_name="Sotilgan mahsulot miqdori")
+    smm = models.TextField(verbose_name="Sotilgan mahsulot miqdori", blank=True, null=True)
     smr = models.ImageField(upload_to='savdo/')
     st = models.CharField(max_length=20, choices=ST_CHOICES)
     tulandi = models.BooleanField(default=False)
