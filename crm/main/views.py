@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.utils import timezone
 from django.shortcuts import redirect
 from .models import HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri, Savdo, YuklamaSorov, MiqdorQoshish, HaridorDukon
-from .functions import mahsulotlar_miqdori, makenewform, yuklama_maker, accptyuk, sotishm
+from .functions import mahsulotlar_miqdori, makenewform, yuklama_maker, accptyuk, sotishm, sotuv_new_form ,yetkazuvchi_mahsulot_filter
 import datetime as dt
 
 
@@ -65,7 +65,8 @@ def main(request):
             payload['reqyuklama'] = reqyuklama
             savdo=Savdo.objects.filter(yetkazib_beruvchi=YetkazibBeruvchi.objects.get(user=request.user),vaqt_sana__range=(today_start, today_end)).all()
             payload['savdo'] = savdo
-            
+            nfs=yetkazuvchi_mahsulot_filter(savdo)
+            payload['nfs'] = nfs
             return render(request, 'yetkazuvchi_dashboard.html',payload)
         elif request.method == 'POST':
             if 'yk_id' in request.POST: 
@@ -94,6 +95,9 @@ def main(request):
             yuklamalar = mahsulotlar_miqdori( YetkazibBeruvchi.objects.get(user=request.user).mahsulotlar) or []
             savdo=Savdo.objects.filter(yetkazib_beruvchi=YetkazibBeruvchi.objects.get(user=request.user))
             payload['savdo'] = savdo
+            nfs=yetkazuvchi_mahsulot_filter(savdo)
+            payload['nfs'] = nfs
+
             payload['yuklamalar'] = yuklamalar
             now = timezone.localtime()
             today_start = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.min))
@@ -424,14 +428,17 @@ def sotish(request):
                 
             if len(sotilganlar) > 0:
                 txt=''
+                summa=0
                 for s in sotilganlar:
-                    txt+=f'{s[0]} {s[1]},'
+                    mxs=Mahsulot.objects.get(nomi=s[0])
+                    txt+=f'{s[0]} {s[1]} {mxs.narxi},'
+                    summa+=float(s[1])*float(mxs.narxi)
                 if turi=='nasiya':
-                    svd=Savdo.objects.create(yetkazib_beruvchi=yt,haridor_dukon=haridor,smm=txt,smr=rasm,oluvchining_ismi=oluvchi,tulandi=False,tasdiq_kutilmoqda=False,st=turi)
+                    svd=Savdo.objects.create(yetkazib_beruvchi=yt,haridor_dukon=haridor,smm=txt,smr=rasm,oluvchining_ismi=oluvchi,tulandi=False,tasdiq_kutilmoqda=False,st=turi,summa=summa)
                     svd.save()
 
                 else:
-                    svd=Savdo.objects.create(yetkazib_beruvchi=yt,haridor_dukon=haridor,smm=txt,smr=rasm,oluvchining_ismi=oluvchi,tulandi=True,tasdiq_kutilmoqda=True,st=turi)
+                    svd=Savdo.objects.create(yetkazib_beruvchi=yt,haridor_dukon=haridor,smm=txt,smr=rasm,oluvchining_ismi=oluvchi,tulandi=True,tasdiq_kutilmoqda=True,st=turi,summa=summa)
                     svd.save()
     
                 sotishm(txt,yt)

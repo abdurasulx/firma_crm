@@ -122,6 +122,7 @@ class Savdo(models.Model):
     smm = models.TextField(verbose_name="Sotilgan mahsulot miqdori", blank=True, null=True)
     smr = models.ImageField(upload_to='savdo/')
     st = models.CharField(max_length=20, choices=ST_CHOICES)
+    summa=models.FloatField(null=True, blank=True)
     tulandi = models.BooleanField(default=False)
     tasdiq_kutilmoqda = models.BooleanField(default=False)
 

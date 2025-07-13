@@ -155,5 +155,54 @@ def sotishm(mahs,yt):
 
     yt.mahsulotlar=sotl
     yt.save()
+class sotuv_new_form:
+    def __init__(self,mahsulot,savdo):
+        self.nomi=mahsulot[0]
+        self.miqdori=mahsulot[1]
+        self.narxi=mahsulot[2]
+        self.haridor_dukon=savdo.haridor_dukon
+        self.yetkazib_beruvchi=savdo.yetkazib_beruvchi
+        self.oluvchining_ismi=savdo.oluvchining_ismi
+        self.st=savdo.st
+        self.tulandi=savdo.tulandi
+        self.tasdiq_kutilmoqda=savdo.tasdiq_kutilmoqda
+        self.summa=savdo.summa
+        self.smm=savdo.smm
+        self.smr=savdo.smr.url
+        self.vaqt_sana=savdo.vaqt_sana
+
+    #     haridor_dukon = models.ForeignKey(HaridorDukon, on_delete=models.CASCADE)
+    # yetkazib_beruvchi = models.ForeignKey(YetkazibBeruvchi, on_delete=models.CASCADE)
+    # vaqt_sana = models.DateTimeField(auto_now_add=True)
+    # oluvchining_ismi = models.CharField(max_length=255)
+    # smm = models.TextField(verbose_name="Sotilgan mahsulot miqdori", blank=True, null=True)
+    # smr = models.ImageField(upload_to='savdo/')
+    # st = models.CharField(max_length=20, choices=ST_CHOICES)
+    # summa=models.FloatField(null=True, blank=True)
+    # tulandi = models.BooleanField(default=False)
+    # tasdiq_kutilmoqda = models.BooleanField(default=False)
+def yetkazuvchi_mahsulot_filter(Sotuv):
+    res=[]
+    for s in Sotuv:
+        sx=s.smm.split(',')
+        t0=''
+        t1=''
+        t2=''
+        
+        for i in sx:
+            
+            if i!='':
+                n=i.split(' ')
+                if n[0] not in t0:
+                    t0+=n[0]+' '
+                    t1+=n[0]+' '+n[1]+' '+str(Mahsulot.objects.get(nomi=n[0]).turi)+' '
+                    t2+=n[2]+' '
+        print(t0,t1,t2)
+        ns=sotuv_new_form([t0,t1,t2],s)
+         
+        print(ns.narxi)
+        res.append( ns)
+    
+    return res
           
     
