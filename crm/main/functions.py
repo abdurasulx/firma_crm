@@ -206,13 +206,21 @@ def yetkazuvchi_mahsulot_filter(Sotuv):
     return res
           
 def add_spctoint(x):
-    s=''
-    #1000000 to 1 000 000 do this in this function
-    for i in str(x):
-        s+=i
-        if len(s)==3:
-            s+= ' '
-    return s
+    x = str(x)
+    if '.' in x:
+        int_part, dec_part = x.split('.')
+    else:
+        int_part, dec_part = x, None
+
+    # Raqamlarni teskari qilib, 3 ta guruhlarga ajratamiz
+    s = ''
+    for i in range(0, len(int_part[::-1]), 3):
+        s += int_part[::-1][i:i+3] + ' '
+    formatted = s[::-1].strip()
+
+    if dec_part:
+        return f"{formatted}.{dec_part}"
+    return formatted
 def get_bugungi_savdo_summ(savdolar):
     summa=0
    
