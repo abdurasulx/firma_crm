@@ -205,4 +205,18 @@ def yetkazuvchi_mahsulot_filter(Sotuv):
     
     return res
           
+def add_spctoint(x):
+    s=''
+    #1000000 to 1 000 000 do this in this function
+    for i in str(x):
+        s+=i
+        if len(s)==3:
+            s+= ' '
+    return s
+def get_bugungi_savdo_summ(savdolar):
+    summa=0
+   
+    for s in savdolar:
+        summa+=s.summa
     
+    return add_spctoint(summa)

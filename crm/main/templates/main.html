@@ -192,17 +192,18 @@
     </div>
 
     <div class="card">
-        <div class="card-header" onclick="toggleCard(this)">💰 Umumiy savdo <span>{{ umumiy_savdo }} so'm</span></div>
+        <div class="card-header" onclick="toggleCard(this)">💰 Bu oyning savdolari <span  style='text-align: center; width: 300px;' >{{ usumma }} so'm</span></div>
         <div class="card-content">
             Batafsil hisobotlar uchun <a href="{% url 'main' %}">shu yerni bosing</a>.
         </div>
     </div>
 
     <div class="card">
-        <div class="card-header" onclick="toggleCard(this)">📅 Bugungi savdo <span>{{ bugungi_savdo }} so'm</span></div>
-        <div class="card-content">
+        <div class="card-header" onclick="toggleCard(this)">📅 Bugungi savdo <span  style='text-align: center; width: 300px;' >{{ bsumma }} so'm</span></div>
+     {% if bsumma == '0' %}  <div class="card-content">   Hozircha sotuvlar yo'q    {% else %}    <div class="card-content">
             Bugungi savdo tafsilotlari: <a href="{% url 'main' %}">Hisobotlar</a>
-        </div>
+        
+        {% endif %}  </div>
     </div>
 </div>
 

@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.utils import timezone
 from django.shortcuts import redirect
 from .models import HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri, Savdo, YuklamaSorov, MiqdorQoshish, HaridorDukon
-from .functions import mahsulotlar_miqdori, makenewform, yuklama_maker, accptyuk, sotishm, sotuv_new_form ,yetkazuvchi_mahsulot_filter
+from .functions import mahsulotlar_miqdori, makenewform, yuklama_maker, accptyuk, sotishm, sotuv_new_form ,yetkazuvchi_mahsulot_filter, get_bugungi_savdo_summ
 import datetime as dt
 
 
@@ -125,6 +125,27 @@ def main(request):
     
     soni=len(hodims)
     msoni=len(mahs)
+
+    now = timezone.localtime()
+
+    today_start = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.min))
+    today_end = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.max))
+    bsavdo=Savdo.objects.filter(vaqt_sana__range=(today_start, today_end)).all()
+    
+    
+
+    # Oyning 1-kunining 00:00:00 va bugungi 23:59:59
+    month_start = timezone.make_aware(dt.datetime.combine(now.replace(day=1).date(), dt.time.min))
+    today_end = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.max))
+
+    savdo = Savdo.objects.filter(vaqt_sana__range=(month_start, today_end)).all()
+    
+
+    payload['bsavdo'] = bsavdo
+
+    payload['savdo'] = savdo
+    payload['usumma']=get_bugungi_savdo_summ(savdo)
+    payload['bsumma'] = get_bugungi_savdo_summ(bsavdo)
     
     payload['ishchilar_soni'] = soni
     payload['msoni'] = msoni
