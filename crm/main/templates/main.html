@@ -1,231 +1,547 @@
 {% extends 'egabase.html' %}
 {% load static %}
 
-{% block title %}Ega Asosiy Sahifa{% endblock %}
+{% block title %}Dashboard - Boshqaruv Paneli{% endblock %}
 
 {% block content %}
 <style>
-    .dashboard-container {
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
-        margin-top: 20px;
-        /* Header bilan oraliq */
-    }
-
-    .card {
-        background-color: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        overflow: hidden;
-        transition: box-shadow 0.2s;
-    }
-
-    .card:hover {
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-
-    .card-header {
-        padding: 15px;
-        background-color: #007acc;
+    /* Modern Dashboard Styles */
+    .dashboard-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        font-weight: 600;
+        padding: 40px 30px;
+        border-radius: 16px;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+    }
+
+    .dashboard-header h1 {
+        font-size: 32px;
+        margin: 0 0 10px 0;
+        font-weight: 700;
+    }
+
+    .dashboard-header p {
+        margin: 0;
+        opacity: 0.9;
+        font-size: 16px;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 24px;
+        margin-bottom: 30px;
+    }
+
+    .stat-card {
+        background: white;
+        padding: 28px;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .stat-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+    }
+
+    .stat-card-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+        margin-bottom: 16px;
+    }
+
+    .stat-card-icon.blue {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .stat-card-icon.green {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    }
+
+    .stat-card-icon.orange {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .stat-card-icon.cyan {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+
+    .stat-card-label {
+        font-size: 14px;
+        color: #6b7280;
+        font-weight: 500;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .stat-card-value {
+        font-size: 28px;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 8px;
+    }
+
+    .stat-card-subtext {
+        font-size: 13px;
+        color: #9ca3af;
+    }
+
+    /* Section Card */
+    .section-card {
+        background: white;
+        border-radius: 16px;
+        padding: 0;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .section-header {
+        padding: 24px 28px;
+        background: linear-gradient(to right, #f8f9fa, #fff);
+        border-bottom: 2px solid #f3f4f6;
         cursor: pointer;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-left: 20px;
-        margin-right: 20px;
-        border-radius: 10px;
+        transition: background 0.3s ease;
     }
 
-    .card-header:hover {
-        background-color: #005fa3;
+    .section-header:hover {
+        background: linear-gradient(to right, #f3f4f6, #f8f9fa);
     }
 
-    .card-content {
-        padding: 15px;
+    .section-header-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #1f2937;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .section-header-badge {
+        background: #667eea;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .section-content {
+        padding: 28px;
         display: none;
-        background-color: #f1f4f8;
     }
 
-    .card.open .card-content {
+    .section-card.open .section-content {
         display: block;
     }
 
-    @media (max-width: 600px) {
-        .card-header {
-            font-size: 14px;
-            padding: 12px;
+    .section-card.open .section-header {
+        background: linear-gradient(to right, #667eea, #764ba2);
+    }
+
+    .section-card.open .section-header-title {
+        color: white;
+    }
+
+    /* Employee Card */
+    .employee-card {
+        display: flex;
+        align-items: center;
+        padding: 20px;
+        background: #f9fafb;
+        border-radius: 12px;
+        margin-bottom: 16px;
+        transition: all 0.3s ease;
+        border: 1px solid #e5e7eb;
+    }
+
+    .employee-card:hover {
+        background: white;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        transform: translateX(8px);
+    }
+
+    .employee-avatar {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        overflow: hidden;
+        border: 3px solid white;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        margin-right: 20px;
+    }
+
+    .employee-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .employee-info {
+        flex: 1;
+    }
+
+    .employee-name {
+        font-weight: 700;
+        font-size: 16px;
+        color: #1f2937;
+        margin-bottom: 4px;
+    }
+
+    .employee-role {
+        font-size: 14px;
+        color: #6b7280;
+        padding: 4px 12px;
+        background: #e5e7eb;
+        border-radius: 20px;
+        display: inline-block;
+    }
+
+    .btn-action {
+        padding: 10px 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        display: inline-block;
+    }
+
+    .btn-action:hover {
+        transform: scale(1.05);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-add {
+        width: 100%;
+        padding: 16px;
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        color: white;
+        border-radius: 12px;
+        text-decoration: none;
+        font-weight: 700;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        margin-top: 20px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-add:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 28px rgba(17, 153, 142, 0.3);
+    }
+
+    /* Product Grid */
+    .products-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 20px;
+    }
+
+    .product-item {
+        text-align: center;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .product-item:hover {
+        transform: translateY(-8px);
+    }
+
+    .product-image {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid #e5e7eb;
+        margin: 0 auto 12px;
+        transition: all 0.3s ease;
+    }
+
+    .product-item:hover .product-image {
+        border-color: #667eea;
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .product-name {
+        font-size: 13px;
+        color: #374151;
+        font-weight: 600;
+        text-align: center;
+        width: 100%;
+    }
+
+    .add-product-btn {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        font-size: 32px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .add-product-btn:hover {
+        transform: scale(1.1) rotate(90deg);
+        box-shadow: 0 12px 28px rgba(102, 126, 234, 0.4);
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 48px 24px;
+        color: #6b7280;
+    }
+
+    .empty-state-icon {
+        font-size: 64px;
+        margin-bottom: 16px;
+        opacity: 0.3;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .dashboard-header {
+            padding: 24px 20px;
         }
 
-        .card-content {
-            font-size: 14px;
+        .dashboard-header h1 {
+            font-size: 24px;
+        }
+
+        .stats-grid {
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+
+        .stat-card {
+            padding: 20px;
+        }
+
+        .employee-card {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .employee-avatar {
+            margin-right: 0;
+            margin-bottom: 12px;
+        }
+
+        .products-grid {
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 16px;
         }
     }
 </style>
 
-<div class="dashboard-container">
-    <div class="card">
-        <div class="card-header" onclick="toggleCard(this)">👥 Ishchilar soni <span
-                style='text-align: center; width: 300px;'>{{ ishchilar_soni }}ta ishchi mavjud.</span></div>
-        <div class="card-content">
-            {% if ishchilar_soni == 0 %}
+<div class="dashboard-header">
+    <h1>👋 Xush kelibsiz, Ega!</h1>
+    <p>Bugungi kun: {{ "now"|date:"d F Y, l" }}</p>
+</div>
 
-            Sizda ishchilar mavjud emas. Agar ishci qo'shmoqchi bo'lsangiz <a href="{% url 'crtuser' %}">shu yerni
-                bosing</a>.
-            {%else%}
-
-
-            {% for x in hodims %}
-            <div
-                style="display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid #ddd;">
-                <a href="{% url 'profile' x.username %}"
-                    style="text-decoration: none; display: flex; align-items: center; gap: 15px; color: inherit;">
-                    <div
-                        style="width: 50px; height: 50px; border-radius: 50%; overflow: hidden; border: 2px solid #007acc;">
-                        {% if x.rasmi %}
-                        <img src="{{ x.rasmi    }}" alt="{{ x.tuliq_ismi }}"
-                            style="width: 100%; height: 100%; object-fit: cover;">
-                        {% else %}
-                        <div
-                            style="width: 100%; height: 100%; background-color: #ccc; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px;">
-                            ?
-                        </div>
-                        {% endif %}
-                    </div>
-                    <div>
-                        <div style="font-weight: bold; font-size: 16px; color: #333;">{{ x.tuliq_ismi }}</div>
-                        <div style="font-size: 14px; color: #666;">{{ x.get_type_display }}</div>
-                    </div>
-                </a>
-                <a href="{% url 'edituser' x.username %}"
-                    style="padding: 6px 12px; background-color: #007acc; color: white; border-radius: 4px; font-size: 14px; text-decoration: none;">
-                    ✏ Tahrirlash
-                </a>
-            </div>
-            {% endfor %}
-
-
-            {%endif%}
-            <div style="margin-top: 15px; text-align: center;">
-                <a href="{% url 'crtuser' %}"
-                    style="display: inline-block; padding: 10px 20px; background-color: #007acc; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">
-                    ➕ Yangi Ishchi Qo'shish
-                </a>
-            </div>
-
-        </div>
+<!-- Statistics Cards -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-card-icon blue">👥</div>
+        <div class="stat-card-label">Jami Xodimlar</div>
+        <div class="stat-card-value">{{ ishchilar_soni }}</div>
+        <div class="stat-card-subtext">Faol ishchilar</div>
     </div>
 
-    <div class="card">
-        <div class="card-header" onclick="toggleCard(this)" style="
-    padding: 12px;
-    background: #007acc;
-    color: #fff;
-    font-weight: bold;
-    border-radius: 8px 8px 0 0;
-    cursor: pointer;
-    user-select: none;
-">
-            📦 Mahsulot turlari <span style='text-align: center; width: 300px;'>{{ msoni }}ta xodim mavjud. </span>
-        </div>
+    <div class="stat-card">
+        <div class="stat-card-icon green">📦</div>
+        <div class="stat-card-label">Mahsulotlar</div>
+        <div class="stat-card-value">{{ msoni }}</div>
+        <div class="stat-card-subtext">Turli xil mahsulotlar</div>
+    </div>
 
-        <div class="card-content" style="
-    padding: 15px;
-    background: #f9f9f9;
-    border: 1px solid #ddd;
-    border-top: none;
-    border-radius: 0 0 8px 8px;
-">
-            {% if mahsulotlar|length == 0 %}
-            <p>Mahsulotlar yo‘q</p>
-            {% else %}
-            <div class="products-wrapper" style="
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            justify-content: flex-start;
-        ">
-                {% for mahsulot in mahsulotlar %}
-                <a href="{% url 'seeproduct' mahsulot.id %}" style="
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    text-decoration: none;
-                    color: #333;
-                    width: 80px;
-                ">
-                    <img src="{{ mahsulot.rasmi.url }}" alt="{{ mahsulot.nomi }}" style="
-                        width: 60px;
-                        height: 60px;
-                        border-radius: 50%;
-                        object-fit: cover;
-                        border: 2px solid #007acc;
-                        margin-bottom: 5px;
-                    ">
-                    <div style="
-                        font-size: 13px;
-                        text-align: center;
-                        word-wrap: break-word;
-                    ">
-                        {{ mahsulot.nomi }}
+    <div class="stat-card">
+        <div class="stat-card-icon orange">💰</div>
+        <div class="stat-card-label">Bugungi Savdo</div>
+        <div class="stat-card-value">{{ bsumma }}</div>
+        <div class="stat-card-subtext">so'm</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-card-icon cyan">📊</div>
+        <div class="stat-card-label">Oylik Savdo</div>
+        <div class="stat-card-value">{{ usumma }}</div>
+        <div class="stat-card-subtext">so'm</div>
+    </div>
+</div>
+
+<!-- Employees Section -->
+<div class="section-card">
+    <div class="section-header" onclick="toggleCard(this)">
+        <div class="section-header-title">
+            <span>👥</span>
+            <span>Xodimlar</span>
+        </div>
+        <div class="section-header-badge">{{ ishchilar_soni }}</div>
+    </div>
+    <div class="section-content">
+        {% if ishchilar_soni == 0 %}
+        <div class="empty-state">
+            <div class="empty-state-icon">👤</div>
+            <p>Hozircha xodimlar mavjud emas</p>
+        </div>
+        {% else %}
+        {% for x in hodims %}
+        <div class="employee-card">
+            <a href="{% url 'profile' x.username %}" style="display: contents;">
+                <div class="employee-avatar">
+                    {% if x.rasmi %}
+                    <img src="{{ x.rasmi }}" alt="{{ x.tuliq_ismi }}">
+                    {% else %}
+                    <div
+                        style="width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: bold;">
+                        {{ x.tuliq_ismi|first|upper }}
                     </div>
-                </a>
-                {% endfor %}
-                <a href="{% url " createproduct" %}" style="
-       display: flex;
-       justify-content: center;
-       align-items: center;
-       width: 60px;
-       height: 60px;
-       background-color: rgb(244, 253, 246);
-       border: 2px solid #007acc;
-       font-weight: bold;
-       border-radius: 50%;
-       text-decoration: none;
-       position: relative;
-   " title="Yangi Mahsulot Yaratish" onmouseover="this.style.backgroundColor='rgb(117, 122, 118)';"
-                    onmouseout="this.style.backgroundColor='rgb(244, 253, 246)';">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
-                        stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    {% endif %}
+                </div>
+                <div class="employee-info">
+                    <div class="employee-name">{{ x.tuliq_ismi }}</div>
+                    <span class="employee-role">{{ x.get_type_display }}</span>
+                </div>
+            </a>
+            <a href="{% url 'edituser' x.username %}" class="btn-action">✏️ Tahrirlash</a>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        {% if ishchilar_soni > 6 %}
+        <div style="text-align: center; padding: 20px; color: #6b7280;">
+            Ko'rsatildi: 6 dan {{ ishchilar_soni }} ta xodim
+        </div>
+        <a href="{% url 'hodimlar_list' %}" class="btn-add"
+            style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+            👥 Barcha Xodimlarni Ko'rish
+        </a>
+        {% endif %}
+
+        <a href="{% url 'crtuser' %}" class="btn-add">
+            ➕ Yangi Ishchi Qo'shish
+        </a>
+    </div>
+</div>
+
+<!-- Products Section -->
+<div class="section-card">
+    <div class="section-header" onclick="toggleCard(this)">
+        <div class="section-header-title">
+            <span>📦</span>
+            <span>Mahsulotlar</span>
+        </div>
+        <div class="section-header-badge">{{ msoni }}</div>
+    </div>
+    <div class="section-content">
+        {% if mahsulotlar|length == 0 %}
+        <div class="empty-state">
+            <div class="empty-state-icon">📦</div>
+            <p>Mahsulotlar yo'q</p>
+        </div>
+        {% else %}
+        <div class="products-grid">
+            {% for mahsulot in mahsulotlar %}
+            <a href="{% url 'seeproduct' mahsulot.id %}" class="product-item">
+                <img src="{{ mahsulot.rasmi.url }}" alt="{{ mahsulot.nomi }}" class="product-image">
+                <div class="product-name">{{ mahsulot.nomi }}</div>
+            </a>
+            {% endfor %}
+            <a href="{% url 'createproduct' %}" class="product-item" style="text-decoration: none;">
+                <div class="add-product-btn">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"
+                        stroke-linecap="round" stroke-linejoin="round">
                         <line x1="12" y1="5" x2="12" y2="19"></line>
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                     </svg>
-                </a>
-
-            </div>
-            {% endif %}
+                </div>
+                <div class="product-name" style="color: #667eea; font-weight: 700;">Qo'shish</div>
+            </a>
         </div>
 
+        {% if msoni > 6 %}
+        <div style="text-align: center; padding: 20px; color: #6b7280; margin-top: 20px;">
+            Ko'rsatildi: 6 dan {{ msoni }} ta mahsulot
+        </div>
+        <a href="{% url 'mahsulotlar_list' %}" class="btn-add"
+            style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+            📦 Barcha Mahsulotlarni Ko'rish
+        </a>
+        {% endif %}
+        {% endif %}
     </div>
+</div>
 
-    <div class="card">
-        <div class="card-header" onclick="toggleCard(this)">💰 Bu oyning savdolari <span
-                style='text-align: center; width: 300px;'>{{ usumma }} so'm</span></div>
-        <div class="card-content">
-            Batafsil hisobotlar uchun <a href="{% url 'hisobotlar' %}">shu yerni bosing</a>.
+<!-- Reports Section -->
+<div class="section-card">
+    <div class="section-header" onclick="toggleCard(this)">
+        <div class="section-header-title">
+            <span>📊</span>
+            <span>Hisobotlar</span>
         </div>
     </div>
-
-    <div class="card">
-        <div class="card-header" onclick="toggleCard(this)">📅 Bugungi savdo <span
-                style='text-align: center; width: 300px;'>{{ bsumma }} so'm</span></div>
-        {% if bsumma == '0' %} <div class="card-content"> Hozircha sotuvlar yo'q {% else %} <div class="card-content">
-                Bugungi savdo tafsilotlari: <a href="{% url 'hisobotlar' %}">Hisobotlar</a>
-
-                {% endif %} </div>
-        </div>
+    <div class="section-content">
+        <p style="color: #6b7280; margin-bottom: 20px;">Batafsil savdo va moliyaviy hisobotlarni ko'ring</p>
+        <a href="{% url 'hisobotlar' %}" class="btn-add">
+            📈 Hisobotlarni Ko'rish
+        </a>
     </div>
+</div>
 
-    <script>
-        function toggleCard(header) {
-            document.querySelectorAll('.card').forEach(card => {
-                if (card.querySelector('.card-header') !== header) {
-                    card.classList.remove('open');
-                }
-            });
-            header.parentElement.classList.toggle('open');
+<script>
+    function toggleCard(header) {
+        const card = header.parentElement;
+        const allCards = document.querySelectorAll('.section-card');
+
+        // Close other cards
+        allCards.forEach(c => {
+            if (c !== card) {
+                c.classList.remove('open');
+            }
+        });
+
+        // Toggle current card
+        card.classList.toggle('open');
+    }
+
+    // Open first card by default
+    document.addEventListener('DOMContentLoaded', function () {
+        const firstCard = document.querySelector('.section-card');
+        if (firstCard) {
+            firstCard.classList.add('open');
         }
-    </script>
-    {% endblock %}
+    });
+</script>
+
+{% endblock %}

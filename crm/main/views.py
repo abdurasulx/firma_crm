@@ -128,13 +128,18 @@ def main(request):
             return render(request, 'yetkazuvchi_dashboard.html',payload)
             
     
-    hodims=  User.objects.exclude(type='ega')
-    mahs=Mahsulot.objects.all()
+    hodims = User.objects.exclude(type='ega').order_by('-date_joined')[:6]  # Faqat 6 ta
+    mahs = Mahsulot.objects.all().order_by('nomi')[:6]  # Faqat 6 ta
+    
+    # Jami sonlar
+    jami_hodimlar = User.objects.exclude(type='ega').count()
+    jami_mahsulotlar = Mahsulot.objects.count()
+    
     payload['mahsulotlar'] = mahs
     payload['hodims'] = hodims
     
-    soni=len(hodims)
-    msoni=len(mahs)
+    soni = jami_hodimlar
+    msoni = jami_mahsulotlar
 
     now = timezone.localtime()
 
@@ -174,6 +179,8 @@ def add_haridor(request):
             nomi = request.POST.get('nomi')
             egasi = request.POST.get('egasi')
             joylashuvi = request.POST.get('joylashuvi')
+            latitude = request.POST.get('latitude')
+            longitude = request.POST.get('longitude')
             dukon_rasmi = request.FILES.get('dukon_rasmi')
             egasining_rasmi = request.FILES.get('egasining_rasmi')
             
@@ -182,6 +189,8 @@ def add_haridor(request):
                 nomi=nomi,
                 egasi=egasi,
                 joylashuvi=joylashuvi,
+                latitude=float(latitude) if latitude else None,
+                longitude=float(longitude) if longitude else None,
                 dukon_rasmi=dukon_rasmi,
                 egasining_rasmi=egasining_rasmi
             )

@@ -4,118 +4,249 @@
 {% block title %}Mahsulotni Tahrirlash{% endblock %}
 
 {% block content %}
-<div style="max-width: 600px; margin: 30px auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+<style>
+    /* Modern Product Edit Page */
+    .page-header {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 16px;
+        margin-bottom: 30px;
+        box-shadow: 0 8px 32px rgba(245, 158, 11, 0.3);
+    }
 
-    <h2 style="color: #007acc; text-align: center; margin-bottom: 20px;">Mahsulotni Tahrirlash</h2>
+    .page-header h1 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 700;
+    }
 
+    .edit-card {
+        background: white;
+        padding: 40px;
+        border-radius: 16px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        max-width: 700px;
+        margin: 0 auto;
+    }
+
+    .image-preview-section {
+        text-align: center;
+        margin-bottom: 32px;
+    }
+
+    .product-image-preview {
+        width: 200px;
+        height: 200px;
+        border-radius: 16px;
+        object-fit: cover;
+        border: 4px solid #f59e0b;
+        box-shadow: 0 8px 24px rgba(245, 158, 11, 0.3);
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .product-image-preview:hover {
+        transform: scale(1.05);
+    }
+
+    .upload-hint {
+        color: #6b7280;
+        font-size: 14px;
+        margin-top: 8px;
+    }
+
+    .form-group {
+        margin-bottom: 24px;
+    }
+
+    .form-label {
+        display: block;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 8px;
+        font-size: 14px;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid #e5e7eb;
+        border-radius: 10px;
+        font-size: 16px;
+        transition: all 0.3s ease;
+        background: #f9fafb;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #f59e0b;
+        background: white;
+        box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.1);
+    }
+
+    .action-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-top: 32px;
+    }
+
+    .btn {
+        padding: 16px;
+        border: none;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: white;
+        grid-column: 1 / -1;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(245, 158, 11, 0.3);
+    }
+
+    .btn-danger {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+    }
+
+    .btn-danger:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-back {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .btn-back:hover {
+        background: #e5e7eb;
+    }
+
+    @media (max-width: 768px) {
+        .edit-card {
+            padding: 24px;
+        }
+
+        .action-buttons {
+            grid-template-columns: 1fr;
+        }
+
+        .btn-primary {
+            grid-column: 1;
+        }
+    }
+</style>
+
+<!-- Page Header -->
+<div class="page-header">
+    <h1>✏️ Mahsulotni Tahrirlash</h1>
+</div>
+
+<!-- Edit Card -->
+<div class="edit-card">
     <form method="POST" enctype="multipart/form-data">
         {% csrf_token %}
 
-        <label for="nomi" style="font-weight: bold;">Mahsulot nomi</label>
-        <input type="text" id="nomi" name="nomi" value="{{ mahsulot.nomi }}" required
-               style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
+        <!-- Image Preview -->
+        <div class="image-preview-section">
+            <img src="{% if mahsulot.rasmi %}{{ mahsulot.rasmi.url }}{% else %}{% static 'images/default_product.jpg' %}{% endif %}"
+                alt="Mahsulot rasmi" id="preview-rasm" class="product-image-preview">
+            <div class="upload-hint">📸 Rasmni o'zgartirish uchun bosing</div>
+            <input type="file" id="rasmi_input" name="rasmi" accept="image/*" style="display: none;"
+                onchange="showPreview(event)">
+        </div>
 
-        <label for="miqdori" style="font-weight: bold;">Miqdori</label>
-        <input type="number" id="miqdori" name="miqdori" value="{{ mahsulot.miqdori }}" required
-               style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
+        <!-- Form Fields -->
+        <div class="form-group">
+            <label for="nomi" class="form-label">📦 Mahsulot nomi</label>
+            <input type="text" id="nomi" name="nomi" class="form-control" value="{{ mahsulot.nomi }}" required>
+        </div>
 
-        <label for="turi" style="font-weight: bold;">Turi (o‘lchov birligi) {{ mahsulot.turi }}  </label>
-       <select id="turi" name="turi" required 
-               style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
-               {% for tur in turs%} 
-               <option value="{{ tur.nomi }}" {%  if mahsulot.turi.nomi == tur.nomi %} selected  {% endif %} >{{ tur.nomi }}</option> 
-               {% endfor %}
-               </select>
+        <div class="form-group">
+            <label for="miqdori" class="form-label">📊 Miqdori</label>
+            <input type="number" id="miqdori" name="miqdori" class="form-control" value="{{ mahsulot.miqdori }}"
+                step="0.01" required>
+        </div>
 
-        <label for="narxi" style="font-weight: bold;">Narxi</label>
-        <input type="number" id="narxi" name="narxi" value="{{ mahsulot.narxi }}" step="0.01" required
-               style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
+        <div class="form-group">
+            <label for="turi" class="form-label">📏 O'lchov birligi</label>
+            <select id="turi" name="turi" class="form-control" required>
+                {% for tur in turs %}
+                <option value="{{ tur.nomi }}" {% if mahsulot.turi.nomi==tur.nomi %}selected{% endif %}>
+                    {{ tur.nomi }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
 
-        <label for="rasmi_input" style="display: block; font-weight: bold;">Rasmi</label>
-        <img src="{% if mahsulot.rasmi %}{{ mahsulot.rasmi.url }}{% else %}{% static 'images/default_product.jpg' %}{% endif %}"
-             alt="Mahsulot rasmi"
-             id="preview-rasm"
-             style="width: 200px; height: 200px; object-fit: cover; border-radius: 50%; border: 2px solid #007acc; margin: 10px auto; display: block; cursor: pointer;">
-        <input type="file" id="rasmi_input" name="rasmi" accept="image/*" style="display: none;" onchange="showPreview(event)">
+        <div class="form-group">
+            <label for="narxi" class="form-label">💰 Narxi (so'm)</label>
+            <input type="number" id="narxi" name="narxi" class="form-control" value="{{ mahsulot.narxi }}" step="0.01"
+                required>
+        </div>
 
-        <button type="submit"
-                style="margin-top: 20px; width: 100%; padding: 12px; background: #007acc; color: #fff; border: none; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer;">
-            Saqlash
-        </button>
-        <a href="{% url 'delprdct' mahsulot.id %}" >
-            <button type="button"
-                    style="margin-top: 20px;  width: 100%; padding: 12px; background-color: #dc3545; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;"
-            >
-                O'chirish
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <button type="submit" class="btn btn-primary">
+                ✅ Saqlash
             </button>
-        </a>
+            <a href="{% url 'delprdct' mahsulot.id %}" class="btn btn-danger">
+                🗑️ O'chirish
+            </a>
+            <a href="{% url 'main' %}" class="btn btn-back">
+                🔙 Orqaga
+            </a>
+        </div>
     </form>
-
-    <a href="{% url 'main' %}" style="display: inline-block; margin-top: 15px; text-align: center; width: 100%; text-decoration: none; color: #007acc;">
-        🔙 Orqaga
-    </a>
-
 </div>
 
 <script>
-document.getElementById('preview-rasm').addEventListener('click', function() {
-    document.getElementById('rasmi_input').click();
-});
+    document.getElementById('preview-rasm').addEventListener('click', function () {
+        document.getElementById('rasmi_input').click();
+    });
 
-function showPreview(event) {
-    const input = event.target;
-    if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            document.getElementById('preview-rasm').src = e.target.result;
+    function showPreview(event) {
+        const input = event.target;
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                document.getElementById('preview-rasm').src = e.target.result;
+            }
+            reader.readAsDataURL(input.files[0]);
         }
-        reader.readAsDataURL(input.files[0]);
-    }
-}
-document.addEventListener('DOMContentLoaded', function() {
-    // Backenddan kelgan mahsulot narxi va miqdori
-    // Ular string holatda keladi, masalan: "123.45" yoki "123,45"
-    let mahsulotNarxi = "{{ mahsulot.narxi }}";
-    let mahsulotMiqdori = "{{ mahsulot.miqdori }}"; // Yangi qo'shilgan o'zgaruvchi
-
-    // --- Narxni formatlash ---
-    let formattedNarx;
-    if (typeof mahsulotNarxi === 'string' && mahsulotNarxi.includes(',')) {
-        formattedNarx = mahsulotNarxi.replace(',', '.');
-    } else {
-        formattedNarx = mahsulotNarxi;
-    }
-    // Narxni floatga aylantirib, 2 kasr xonasigacha yaxlitlash (nuqta bilan)
-    formattedNarx = parseFloat(formattedNarx).toFixed(2);
-
-    // --- Miqdorni formatlash ---
-    let formattedMiqdor;
-    // Agar miqdor ham o'nlik kasr bo'lishi mumkin bo'lsa:
-    if (typeof mahsulotMiqdori === 'string' && mahsulotMiqdori.includes(',')) {
-        formattedMiqdor = mahsulotMiqdori.replace(',', '.');
-    } else {
-        formattedMiqdor = mahsulotMiqdori;
-    }
-    // Miqdorni floatga aylantirib, agar kerak bo'lsa, 2 kasr xonasigacha yaxlitlash.
-    // Agar miqdor doim butun son bo'lsa, parseInt() yoki Math.floor() ishlatish yaxshiroq.
-    // Misol uchun, agar 3 kasr xonasi bo'lishi mumkin bo'lsa, .toFixed(3) qilasiz.
-    // Agar doim butun son bo'lsa, Math.round() yoki parseInt() ishlatish mumkin.
-    formattedMiqdor = parseFloat(formattedMiqdor).toFixed(2); // Agar miqdor ham kasrli bo'lsa
-    // Yoki agar miqdor doim butun son bo'lsa:
-    // formattedMiqdor = parseInt(formattedMiqdor);
-
-
-    // HTML input maydonlariga formatlangan qiymatlarni joylashtiramiz
-    const narxiInput = document.getElementById('narxi');
-    if (narxiInput) {
-        narxiInput.value = formattedNarx;
     }
 
-    // Miqdor uchun yangi input maydoni ID'si (masalan, 'miqdori')
-    const miqdoriInput = document.getElementById('miqdori');
-    if (miqdoriInput) {
-        miqdoriInput.value = formattedMiqdor;
-    }
-});
+    document.addEventListener('DOMContentLoaded', function () {
+        // Format numeric values
+        let mahsulotNarxi = "{{ mahsulot.narxi }}";
+        let mahsulotMiqdori = "{{ mahsulot.miqdori }}";
+
+        function formatNumber(value) {
+            if (typeof value === 'string' && value.includes(',')) {
+                return parseFloat(value.replace(',', '.')).toFixed(2);
+            }
+            return parseFloat(value).toFixed(2);
+        }
+
+        const narxiInput = document.getElementById('narxi');
+        const miqdoriInput = document.getElementById('miqdori');
+
+        if (narxiInput) narxiInput.value = formatNumber(mahsulotNarxi);
+        if (miqdoriInput) miqdoriInput.value = formatNumber(mahsulotMiqdori);
+    });
 </script>
+
 {% endblock %}

@@ -1,241 +1,503 @@
 <!DOCTYPE html>
 {% load static %}
 <html lang="uz">
+
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Ega paneli{% endblock %}</title>
     <style>
-        body {
+        * {
             margin: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f1f4f8;
+            padding: 0;
+            box-sizing: border-box;
         }
 
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+            min-height: 100vh;
+        }
+
+        /* Modern Navbar */
         header {
-            background-color: #007acc;
-            color: white;
-            padding: 15px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .navbar-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 24px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
+            height: 70px;
         }
 
-        .left-nav {
+        /* Brand/Logo */
+        .brand {
             display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: white;
+            font-size: 24px;
+            font-weight: 700;
+            transition: opacity 0.3s ease;
         }
 
-        .nav-group {
+        .brand:hover {
+            opacity: 0.9;
+        }
+
+        .brand-icon {
+            font-size: 32px;
+        }
+
+        /* Navigation Links */
+        .nav-links {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .nav-item {
             position: relative;
+        }
+
+        .nav-link,
+        .nav-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+
+        .nav-link:hover,
+        .nav-toggle:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+        }
+
+        /* Dropdown Menu */
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            min-width: 220px;
+            overflow: hidden;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .nav-item.active .dropdown-menu {
+            display: block;
+        }
+
+        .dropdown-menu a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 18px;
+            color: #374151;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .dropdown-menu a:hover {
+            background: #f3f4f6;
+            border-left-color: #667eea;
+            padding-left: 22px;
+        }
+
+        /* Right Section */
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        /* Notification Icon */
+        .notif-btn {
+            position: relative;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15);
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .notif-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: scale(1.1);
+        }
+
+        .nav-link {
+            padding: 12px 20px;
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+        }
+
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+        }
+
+        .nav-link.active {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
         .nav-toggle {
-            background: none;
+            padding: 12px 20px;
+            background: transparent;
             border: none;
-            color: white;
-            font-weight: bold;
+            color: rgba(255, 255, 255, 0.9);
             cursor: pointer;
-            font-size: 16px;
-            padding: 8px 12px;
-            border-radius: 4px;
-            transition: background-color 0.2s;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+            font-size: 15px;
         }
 
         .nav-toggle:hover {
-            background-color: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
         }
 
-        .nav-items {
-            display: none;
-            position: absolute;
-            top: 40px;
-            left: 0;
-            background-color: #ffffff;
-            color: #333;
-            border-radius: 4px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-            z-index: 1000;
-            min-width: 160px;
+        .nav-toggle.active {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-weight: 600;
         }
 
-        .nav-items a {
-            display: block;
-            padding: 10px 15px;
-            text-decoration: none;
-            color: #333;
-            transition: background-color 0.2s;
+        /* Profile Menu */
+        .profile-menu {
+            position: relative;
         }
 
-        .nav-items a:hover {
-            background-color: #f1f4f8;
-        }
-
-        .nav-group.open .nav-items {
-            display: block;
-        }
-
-        .right-nav {
+        .profile-trigger {
             display: flex;
             align-items: center;
-            gap: 15px;
-        }
-
-        .notif-icon {
-            font-size: 22px;
+            gap: 12px;
+            padding: 6px 12px 6px 6px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 50px;
             cursor: pointer;
-            transition: color 0.2s;
-            color: white;
-            text-decoration: none;
+            transition: all 0.3s ease;
+            border: 2px solid rgba(255, 255, 255, 0.2);
         }
 
-        .notif-icon:hover {
-            color: #ff9800;
+        .profile-trigger:hover {
+            background: rgba(255, 255, 255, 0.25);
+            border-color: rgba(255, 255, 255, 0.4);
         }
 
-        .profile-wrapper {
-            position: relative;
-            display: inline-block;
-        }
-
-        .profile {
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            cursor: pointer;
-            padding: 5px 10px;
-        }
-
-        .profile img {
-            width: 36px;
-            height: 36px;
+        .profile-avatar {
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             object-fit: cover;
-            border: 2px solid #fff;
+            border: 2px solid white;
         }
 
         .profile-name {
             color: white;
-            text-decoration: none;
-            font-weight: 500;
+            font-weight: 600;
+            font-size: 14px;
+            max-width: 150px;
             white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        .logout-panel {
+        .profile-dropdown {
             display: none;
             position: absolute;
-            top: 100%;
-            left: 0;
-            background-color: white;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            box-shadow: 0 3px 8px rgba(0,0,0,0.15);
-            padding: 5px 0;
-            min-width: 100%;
-            text-align: center;
-            z-index: 1000;
+            top: calc(100% + 8px);
+            right: 0;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            min-width: 200px;
+            overflow: hidden;
+            animation: slideDown 0.3s ease;
         }
 
-        .logout-panel a {
+        .profile-menu.active .profile-dropdown {
             display: block;
-            padding: 6px 10px;
-            color: #dc3545;
-            font-weight: 600;
+        }
+
+        .profile-dropdown a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 18px;
+            color: #374151;
             text-decoration: none;
+            transition: all 0.2s ease;
         }
 
-        .logout-panel a:hover {
-            background-color: #f8d7da;
-            color: #a71d2a;
+        .profile-dropdown a:hover {
+            background: #f3f4f6;
         }
 
-        .profile-wrapper:hover .logout-panel {
-            display: block;
+        .profile-dropdown a.logout {
+            color: #dc3545;
+            border-top: 1px solid #e5e7eb;
         }
 
-        @media (max-width: 600px) {
-            header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 10px;
+        .profile-dropdown a.logout:hover {
+            background: #fee;
+        }
+
+        /* Mobile Menu */
+        .mobile-menu-btn {
+            display: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.15);
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        /* Content Container */
+        .content-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .navbar-container {
+                height: 60px;
+                padding: 0 16px;
             }
 
-            .left-nav {
-                flex-direction: column;
-                gap: 10px;
+            .nav-links {
+                display: none;
             }
 
-            .nav-items {
-                position: static;
-                box-shadow: none;
-                background-color: #e3f2fd;
+            .mobile-menu-btn {
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
 
-            .nav-items a {
-                padding: 8px 12px;
+            .brand-text {
+                display: none;
+            }
+
+            .profile-name {
+                display: none;
+            }
+
+            .content-container {
+                padding: 16px;
             }
         }
     </style>
 </head>
+
 <body>
 
-<header>
-    <div class="left-nav">
-        <div class="nav-group">
-            <button class="nav-toggle">Ishchilar</button>
-            <div class="nav-items">
-                <a href="#">Ishchilar amallari</a>
-                <a href="{% url 'crtuser' %}">Yangi ishchi qo‘shish</a>
-            </div>
-        </div>
+    <header>
+        <div class="navbar-container">
+            <!-- Brand -->
+            <a href="{% url 'main' %}" class="brand">
+                <span class="brand-icon">🏢</span>
+                <span class="brand-text">Firma CRM</span>
+            </a>
 
-        <div class="nav-group">
-            <button class="nav-toggle">Menu</button>
-            <div class="nav-items">
-                <a href="#">Element A</a>
-                <a href="#">Element B</a>
-                <a href="#">Element C</a>
+            <!-- Navigation Links -->
+            <nav class="nav-links">
+                <div class="nav-item">
+                    <button
+                        class="nav-toggle {% if request.path == '/hodimlar/' or request.path|slice:':9' == '/profile/' or 'edituser' in request.path or 'createuser' in request.path %}active{% endif %}"
+                        onclick="toggleDropdown(this)">
+                        <span>👥</span>
+                        <span>Xodimlar</span>
+                    </button>
+                    <div class="dropdown-menu">
+                        <a href="{% url 'hodimlar_list' %}">
+                            <span>👨‍💼</span>
+                            <span>Barcha Xodimlar</span>
+                        </a>
+                        <a href="{% url 'crtuser' %}">
+                            <span>➕</span>
+                            <span>Yangi Xodim</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="nav-item">
+                    <button
+                        class="nav-toggle {% if request.path == '/mahsulotlar/' or 'product' in request.path %}active{% endif %}"
+                        onclick="toggleDropdown(this)">
+                        <span>📦</span>
+                        <span>Mahsulotlar</span>
+                    </button>
+                    <div class="dropdown-menu">
+                        <a href="{% url 'mahsulotlar_list' %}">
+                            <span>📋</span>
+                            <span>Barcha Mahsulotlar</span>
+                        </a>
+                        <a href="{% url 'createproduct' %}">
+                            <span>➕</span>
+                            <span>Yangi Mahsulot</span>
+                        </a>
+                    </div>
+                </div>
+
+                <a href="{% url 'mijozlar_list' %}" class="nav-link {% if '/mijoz' in request.path %}active{% endif %}">
+                    <span>🏪</span>
+                    <span>Mijozlar</span>
+                </a>
+
+                <a href="{% url 'hisobotlar' %}"
+                    class="nav-link {% if request.path == '/hisobotlar/' %}active{% endif %}">
+                    <span>📊</span>
+                    <span>Hisobotlar</span>
+                </a>
+
+                <a href="{% url 'nasiya_savdolar' %}"
+                    class="nav-link {% if 'nasiya' in request.path %}active{% endif %}">
+                    <span>💳</span>
+                    <span>Nasiya</span>
+                </a>
+            </nav>
+
+            <!-- Right Section -->
+            <div class="nav-right">
+                <button class="mobile-menu-btn">☰</button>
+
+                <a href="{% url 'main' %}">
+                    <button class="notif-btn" title="Dashboard">🏠</button>
+                </a>
+
+                <div class="profile-menu" onclick="toggleProfile(this)">
+                    <div class="profile-trigger">
+                        {% if request.user.rasmi %}
+                        <img src="{{ request.user.rasmi }}" alt="{{ request.user.tuliq_ismi }}" class="profile-avatar">
+                        {% else %}
+                        <div class="profile-avatar"
+                            style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 18px;">
+                            {{ request.user.tuliq_ismi|first|upper }}
+                        </div>
+                        {% endif %}
+                        <span class="profile-name">{{ request.user.tuliq_ismi }}</span>
+                    </div>
+                    <div class="profile-dropdown">
+                        <a href="{% url 'profile' request.user.username %}">
+                            <span>👤</span>
+                            <span>Profil</span>
+                        </a>
+                        <a href="{% url 'hisobotlar' %}">
+                            <span>📊</span>
+                            <span>Hisobotlar</span>
+                        </a>
+                        <a href="{% url 'logout' %}" class="logout">
+                            <span>🚪</span>
+                            <span>Chiqish</span>
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
+    </header>
+
+    <div class="content-container">
+        {% block content %}
+        <!-- Kontent bu yerda ko'rinadi -->
+        {% endblock %}
     </div>
 
-    <div class="right-nav">
-        <a href="{% url 'main' %}" class="notif-icon">🔔</a>
+    <script>
+        function toggleDropdown(button) {
+            const navItem = button.closest('.nav-item');
+            const wasActive = navItem.classList.contains('active');
 
-        <div class="profile-wrapper">
-            <div class="profile">
-                <img src="{% if request.user.rasmi %}{{ request.user.rasmi.url }}{% else %}{% static 'images/default_avatar.jpg' %}{% endif %}" alt="avatar">
-                <span class="profile-name">{{ request.user.tuliq_ismi }}</span>
-            </div>
-            <div class="logout-panel">
-                <a href="{% url 'logout' %}">Chiqish</a>
-            </div>
-        </div>
-    </div>
-</header>
-
-{% block content %}
-<!-- Kontent bu yerda ko‘rinadi -->
-{% endblock %}
-
-<script>
-    document.querySelectorAll('.nav-toggle').forEach(toggle => {
-        toggle.addEventListener('click', () => {
-            const parent = toggle.closest('.nav-group');
-            document.querySelectorAll('.nav-group').forEach(group => {
-                if (group !== parent) group.classList.remove('open');
+            // Close all dropdowns
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
             });
-            parent.classList.toggle('open');
-        });
-    });
 
-    document.addEventListener('click', e => {
-        if (!e.target.closest('.nav-group')) {
-            document.querySelectorAll('.nav-group').forEach(g => g.classList.remove('open'));
+            // Toggle current
+            if (!wasActive) {
+                navItem.classList.add('active');
+            }
         }
-    });
-</script>
+
+        function toggleProfile(menu) {
+            menu.classList.toggle('active');
+        }
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.nav-item')) {
+                document.querySelectorAll('.nav-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+            }
+            if (!e.target.closest('.profile-menu')) {
+                document.querySelectorAll('.profile-menu').forEach(menu => {
+                    menu.classList.remove('active');
+                });
+            }
+        });
+    </script>
 
 </body>
+
 </html>

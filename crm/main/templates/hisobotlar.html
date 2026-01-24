@@ -1,210 +1,574 @@
 {% extends 'egabase.html' %}
 {% load static %}
 
-{% block title %}Hisobotlar{% endblock %}
+{% block title %}📊 Hisobotlar - Advanced Filters{% endblock %}
 
 {% block content %}
 <style>
-.hisobot-container {
-    padding: 20px;
-}
-
-.stat-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 20px;
-    margin-bottom: 30px;
-}
-
-.stat-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-.stat-card.success {
-    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-}
-
-.stat-card.warning {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-}
-
-.stat-card.info {
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-}
-
-.stat-label {
-    font-size: 14px;
-    opacity: 0.9;
-    margin-bottom: 8px;
-}
-
-.stat-value {
-    font-size: 32px;
-    font-weight: bold;
-}
-
-.stat-subvalue {
-    font-size: 14px;
-    opacity: 0.8;
-    margin-top: 5px;
-}
-
-.section-title {
-    font-size: 24px;
-    font-weight: bold;
-    margin: 30px 0 15px 0;
-    color: #333;
-}
-
-.table-responsive {
-    overflow-x: auto;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-th {
-    background: #007acc;
-    color: white;
-    padding: 12px;
-    text-align: left;
-    font-weight: 600;
-}
-
-td {
-    padding: 12px;
-    border-bottom: 1px solid #eee;
-}
-
-tr:hover {
-    background: #f5f5f5;
-}
-
-.status-paid {
-    color: #28a745;
-    font-weight: bold;
-}
-
-.status-unpaid {
-    color: #dc3545;
-    font-weight: bold;
-}
-
-@media (max-width: 768px) {
-    .stat-grid {
-        grid-template-columns: 1fr;
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 40px 30px;
+        border-radius: 16px;
+        margin-bottom: 30px;
+        box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
     }
-    
+
+    .page-header h1 {
+        margin: 0 0 10px 0;
+        font-size: 32px;
+        font-weight: 700;
+    }
+
+    .page-header p {
+        margin: 0;
+        opacity: 0.95;
+        font-size: 16px;
+    }
+
+    /* Filter Type Tabs */
+    .filter-type-tabs {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 30px;
+        flex-wrap: wrap;
+    }
+
+    .filter-type-tab {
+        padding: 12px 24px;
+        background: white;
+        border-radius: 10px;
+        text-decoration: none;
+        color: #6b7280;
+        font-weight: 600;
+        font-size: 15px;
+        border: 2px solid #e5e7eb;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .filter-type-tab:hover {
+        border-color: #667eea;
+        color: #667eea;
+        transform: translateY(-2px);
+    }
+
+    .filter-type-tab.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-color: transparent;
+    }
+
+    /* Hierarchical Selectors */
+    .selector-group {
+        background: white;
+        padding: 24px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    }
+
+    .selector-label {
+        font-size: 14px;
+        font-weight: 700;
+        color: #374151;
+        margin-bottom: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .selector-options {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .selector-option {
+        padding: 10px 16px;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        background: white;
+        color: #374151;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .selector-option:hover:not(.disabled) {
+        border-color: #667eea;
+        color: #667eea;
+        transform: translateY(-2px);
+    }
+
+    .selector-option.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-color: transparent;
+    }
+
+    .selector-option.disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+        background: #f3f4f6;
+    }
+
+    .year-select {
+        padding: 12px 16px;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        font-size: 15px;
+        font-weight: 600;
+        color: #374151;
+        background: white;
+        cursor: pointer;
+        min-width: 150px;
+    }
+
+    .year-select:focus {
+        outline: none;
+        border-color: #667eea;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .stat-card {
+        background: white;
+        padding: 24px;
+        border-radius: 12px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        border-left: 4px solid;
+        transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    }
+
+    .stat-card.primary {
+        border-left-color: #667eea;
+    }
+
+    .stat-card.success {
+        border-left-color: #10b981;
+    }
+
+    .stat-card.warning {
+        border-left-color: #f59e0b;
+    }
+
+    .stat-card.danger {
+        border-left-color: #ef4444;
+    }
+
+    .stat-card.info {
+        border-left-color: #3b82f6;
+    }
+
+    .stat-label {
+        font-size: 13px;
+        color: #6b7280;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+    }
+
     .stat-value {
-        font-size: 24px;
+        font-size: 28px;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 4px;
     }
-}
+
+    .stat-card small {
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    /* Section Styles */
+    .section {
+        background: white;
+        border-radius: 12px;
+        padding: 0;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+    }
+
+    .section-header {
+        padding: 20px 24px;
+        background: linear-gradient(to right, #f8f9fa, #fff);
+        border-bottom: 2px solid #f3f4f6;
+    }
+
+    .section-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #1f2937;
+        margin: 0;
+    }
+
+    .section-content {
+        padding: 24px;
+    }
+
+    /* Table Styles */
+    .data-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 8px;
+    }
+
+    .data-table thead th {
+        background: #f8f9fa;
+        padding: 12px 16px;
+        text-align: left;
+        font-size: 12px;
+        font-weight: 700;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .data-table tbody tr {
+        background: white;
+        transition: all 0.2s ease;
+    }
+
+    .data-table tbody tr:hover {
+        background: #f9fafb;
+        transform: scale(1.01);
+    }
+
+    .data-table tbody td {
+        padding: 16px;
+        border-top: 1px solid #f3f4f6;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .data-table tbody td:first-child {
+        border-left: 1px solid #f3f4f6;
+        border-top-left-radius: 8px;
+        border-bottom-left-radius: 8px;
+    }
+
+    .data-table tbody td:last-child {
+        border-right: 1px solid #f3f4f6;
+        border-top-right-radius: 8px;
+        border-bottom-right-radius: 8px;
+    }
+
+    /* Badge Styles */
+    .badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        display: inline-block;
+    }
+
+    .badge.success {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .badge.warning {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .badge.danger {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .badge.info {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    /* Link Styles */
+    .detail-link {
+        color: #667eea;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .detail-link:hover {
+        color: #764ba2;
+        text-decoration: underline;
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        color: #9ca3af;
+        padding: 40px;
+        font-size: 15px;
+    }
 </style>
 
-<div class="hisobot-container">
-    <h1 style="font-size: 32px; margin-bottom: 20px;">📊 Hisobotlar</h1>
-    
-    <!-- Statistika Kartochkalari -->
-    <div class="stat-grid">
-        <div class="stat-card">
-            <div class="stat-label">Bugungi Savdolar</div>
-            <div class="stat-value">{{ bugungi_summa|floatformat:0 }}</div>
-            <div class="stat-subvalue">{{ bugungi_soni }} ta savdo</div>
-        </div>
-        
-        <div class="stat-card success">
-            <div class="stat-label">Haftalik Savdolar</div>
-            <div class="stat-value">{{ haftalik_summa|floatformat:0 }}</div>
-            <div class="stat-subvalue">{{ haftalik_soni }} ta savdo</div>
-        </div>
-        
-        <div class="stat-card info">
-            <div class="stat-label">Oylik Savdolar</div>
-            <div class="stat-value">{{ oylik_summa|floatformat:0 }}</div>
-            <div class="stat-subvalue">{{ oylik_soni }} ta savdo</div>
-        </div>
-        
-        <div class="stat-card warning">
-            <div class="stat-label">Nasiya Qarzlari</div>
-            <div class="stat-value">{{ nasiya_summa|floatformat:0 }}</div>
-            <div class="stat-subvalue">{{ nasiya_soni }} ta nasiya</div>
+<div class="page-header">
+    <h1>📊 Professional Hisobotlar</h1>
+    <p>{{ period_label|default:"Hisobot davri" }}</p>
+</div>
+
+<!-- Filter Type Selection -->
+<div class="filter-type-tabs">
+    <button class="filter-type-tab {% if filter_type  ==  'yearly' %}active{% endif %}"
+        onclick="changeFilterType('yearly')">
+        🗓️ Yillik
+    </button>
+    <button class="filter-type-tab {% if filter_type  ==  'monthly' %}active{% endif %}"
+        onclick="changeFilterType('monthly')">
+        📅 Oylik
+    </button>
+    <button class="filter-type-tab {% if filter_type  ==  'weekly' %}active{% endif %}"
+        onclick="changeFilterType('weekly')">
+        📊 Haftalik
+    </button>
+    <button class="filter-type-tab {% if filter_type  ==  'daily' %}active{% endif %}"
+        onclick="changeFilterType('daily')">
+        📆 Kunlik
+    </button>
+</div>
+
+<!-- Year Selector (Always visible) -->
+<div class="selector-group">
+    <div class="selector-label">📅 Yil tanlang</div>
+    <select class="year-select" onchange="changeYear(this.value)">
+        {% for year in available_years %}
+        <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<!-- Month Selector (Hidden for yearly) -->
+<div class="selector-group" id="month-selector" style="{% if filter_type  ==  'yearly' %}display:none;{% endif %}">
+    <div class="selector-label">📆 Oy tanlang</div>
+    <div class="selector-options">
+        {% for month in available_months %}
+        <a href="?type={{ filter_type }}&year={{ selected_year }}&month={{ month.number }}{% if employee_id %}&employee={{ employee_id }}{% endif %}"
+            class="selector-option {% if month.number  ==  selected_month %}active{% endif %} {% if not month.is_available %}disabled{% endif %}"
+            {% if not month.is_available %}onclick="return false;" {% endif %}>
+            {{ month.name }}
+        </a>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Week Selector (Only for weekly filter) -->
+<div class="selector-group" id="week-selector" style="{% if filter_type != 'weekly' %}display:none;{% endif %}">
+    <div class="selector-label">📊 Hafta tanlang</div>
+    <div class="selector-options">
+        {% for week in available_weeks %}
+        <a href="?type=weekly&year={{ selected_year }}&month={{ selected_month }}&week={{ week.number }}{% if employee_id %}&employee={{ employee_id }}{% endif %}"
+            class="selector-option {% if selected_week  ==  week.number|stringformat:'s' %}active{% endif %} {% if not week.is_available %}disabled{% endif %}"
+            {% if not week.is_available %}onclick="return false;" {% endif %}>
+            Hafta {{ week.number }}<br><small>{{ week.label }}</small>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Day Selector (Only for daily filter) -->
+<div class="selector-group" id="day-selector" style="{% if filter_type != 'daily' %}display:none;{% endif %}">
+    <div class="selector-label">📆 Kun tanlang</div>
+    <div class="selector-options">
+        {% for day in available_days %}
+        <a href="?type=daily&year={{ selected_year }}&month={{ selected_month }}&day={{ day.number }}{% if employee_id %}&employee={{ employee_id }}{% endif %}"
+            class="selector-option {% if selected_day  ==  day.number|stringformat:'s' %}active{% endif %} {% if not day.is_available %}disabled{% endif %}"
+            {% if not day.is_available %}onclick="return false;" {% endif %}>
+            {{ day.number }}
+        </a>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Employee Filter -->
+<div class="selector-group">
+    <div class="selector-label">👤 Xodim bo'yicha filtrlash (ixtiyoriy)</div>
+    <select class="year-select" onchange="changeEmployee(this.value)">
+        <option value="">Barcha xodimlar</option>
+        {% for emp in employees %}
+        <option value="{{ emp.id }}" {% if employee_id and emp.id|stringformat:"s" == employee_id %}selected{% endif %}>
+            {{ emp.tuliq_ismi }} ({{ emp.get_type_display }})
+        </option>
+        {% endfor %}
+    </select>
+</div>
+
+<!-- Main Stats -->
+<div class="stats-grid">
+    <div class="stat-card primary">
+        <div class="stat-label">💰 Jami Summa</div>
+        <div class="stat-value">{{ total_amount|floatformat:0|default:"0" }}</div>
+    </div>
+    <div class="stat-card success">
+        <div class="stat-label">🛒 Savdolar</div>
+        <div class="stat-value">{{ total_sales|default:"0" }}</div>
+    </div>
+    <div class="stat-card info">
+        <div class="stat-label">💳 To'langan</div>
+        <div class="stat-value">{{ paid_count|default:"0" }}</div>
+    </div>
+    <div class="stat-card warning">
+        <div class="stat-label">⏳ To'lanmagan</div>
+        <div class="stat-value">{{ unpaid_count|default:"0" }}</div>
+    </div>
+</div>
+
+<!-- Payment Types -->
+<div class="section">
+    <div class="section-header">
+        <div class="section-title">💵 To'lov Turlari</div>
+    </div>
+    <div class="section-content">
+        <div class="stats-grid">
+            <div class="stat-card success">
+                <div class="stat-label">💵 Naqd</div>
+                <div class="stat-value">{{ naqd_amount|floatformat:0|default:"0" }}</div>
+                <small>{{ naqd_sales|default:"0" }} ta</small>
+            </div>
+            <div class="stat-card info">
+                <div class="stat-label">💳 Karta</div>
+                <div class="stat-value">{{ karta_amount|floatformat:0|default:"0" }}</div>
+                <small>{{ karta_sales|default:"0" }} ta</small>
+            </div>
+            <div class="stat-card warning">
+                <div class="stat-label">🔄 Nasiya</div>
+                <div class="stat-value">{{ nasiya_amount|floatformat:0|default:"0" }}</div>
+                <small>{{ nasiya_sales|default:"0" }} ta</small>
+            </div>
         </div>
     </div>
-    
-    <!-- Yetkazib Beruvchilar Hisoboti -->
-    <h2 class="section-title">Yetkazib Beruvchilar Bo'yicha Hisobot</h2>
-    <div class="table-responsive">
-        <table>
-            <thead>
-                <tr>
-                    <th>Yetkazib Beruvchi</th>
-                    <th>Savdolar Soni</th>
-                    <th>Jami Summa</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for yt in yt_hisobot %}
-                <tr>
-                    <td>{{ yt.ism }}</td>
-                    <td>{{ yt.savdo_soni }}</td>
-                    <td>{{ yt.jami_summa|floatformat:0 }} so'm</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="3" style="text-align: center; color: #888;">Ma'lumot yo'q</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+</div>
+
+<!-- Yetkazuvchilar Stats (if no employee filter) -->
+{% if not employee_id and yetkazuvchilar_stats %}
+<div class="section">
+    <div class="section-header">
+        <div class="section-title">🚚 Yetkazuvchilar</div>
     </div>
-    
-    <!-- Oxirgi Savdolar -->
-    <h2 class="section-title">Oxirgi Savdolar</h2>
-    <div class="table-responsive">
-        <table>
+    <div class="section-content">
+        <table class="data-table">
             <thead>
                 <tr>
-                    <th>Sana</th>
-                    <th>Haridor</th>
-                    <th>Yetkazib Beruvchi</th>
+                    <th>Yetkazuvchi</th>
+                    <th>Savdolar</th>
                     <th>Summa</th>
-                    <th>To'lov Turi</th>
-                    <th>Holat</th>
+                    <th>Amallar</th>
                 </tr>
             </thead>
             <tbody>
-                {% for savdo in oxirgi_savdolar %}
+                {% for yt in yetkazuvchilar_stats %}
                 <tr>
-                    <td>{{ savdo.vaqt_sana|date:"d.m.Y H:i" }}</td>
-                    <td>{{ savdo.haridor_dukon.nomi }}</td>
-                    <td>{{ savdo.yetkazib_beruvchi.tuliq_ismi }}</td>
-                    <td>{{ savdo.summa|floatformat:0 }} so'm</td>
-                    <td>{{ savdo.get_st_display }}</td>
+                    <td><strong>{{ yt.user.tuliq_ismi }}</strong></td>
+                    <td><span class="badge info">{{ yt.sales_count }} ta</span></td>
+                    <td><strong>{{ yt.total_amount|floatformat:0 }}</strong> so'm</td>
                     <td>
-                        {% if savdo.tulandi %}
-                            <span class="status-paid">✓ To'landi</span>
-                        {% else %}
-                            <span class="status-unpaid">✗ To'lanmagan</span>
-                        {% endif %}
+                        <a href="?type={{ filter_type }}&year={{ selected_year }}&month={{ selected_month }}{% if selected_week %}&week={{ selected_week }}{% endif %}{% if selected_day %}&day={{ selected_day }}{% endif %}&employee={{ yt.user.id }}"
+                            class="detail-link">
+                            👁️ Batafsil
+                        </a>
                     </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="6" style="text-align: center; color: #888;">Savdolar yo'q</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
+{% endif %}
+
+<!-- Recent Sales -->
+<div class="section">
+    <div class="section-header">
+        <div class="section-title">📋 Oxirgi Savdolar</div>
+    </div>
+    <div class="section-content">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Sana</th>
+                    <th>Haridor</th>
+                    <th>Yetkazuvchi</th>
+                    <th>Summa</th>
+                    <th>To'lov</th>
+                    <th>Holat</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for savdo in recent_sales %}
+                <tr>
+                    <td>{{ savdo.vaqt_sana|date:"d.m.Y H:i" }}</td>
+                    <td><strong>{{ savdo.haridor_dukon.nomi }}</strong></td>
+                    <td>{{ savdo.yetkazib_beruvchi.tuliq_ismi }}</td>
+                    <td><strong>{{ savdo.summa|floatformat:0 }}</strong> so'm</td>
+                    <td>
+                        {% if savdo.st == 'naqd' %}
+                        <span class="badge success">💵 Naqd</span>
+                        {% elif savdo.st == 'karta' %}
+                        <span class="badge info">💳 Karta</span>
+                        {% else %}
+                        <span class="badge warning">🔄 Nasiya</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if savdo.tulandi %}
+                        <span class="badge success">✅</span>
+                        {% else %}
+                        <span class="badge danger">❌</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="empty-state">Savdolar topilmadi</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const filterType = '{{ filter_type|default:"monthly" }}';
+
+    const selectedYear = {{ selected_year|default:"null" }};
+    const selectedMonth = {{ selected_month|default:"null" }};
+
+    const finalYear = selectedYear ?? new Date().getFullYear();
+    const finalMonth = selectedMonth ?? (new Date().getMonth() + 1);
+
+    const employeeId = '{{ employee_id|default:"" }}';
+
+    function changeFilterType(type) {
+        let url = `?type=${type}&year=${finalYear}&month=${finalMonth}`;
+        if (employeeId) url += `&employee=${employeeId}`;
+        window.location.href = url;
+    }
+
+    function changeYear(year) {
+        let url = `?type=${filterType}&year=${year}&month=${finalMonth}`;
+        if (employeeId) url += `&employee=${employeeId}`;
+        window.location.href = url;
+    }
+
+    function changeEmployee(empId) {
+        let url = `?type=${filterType}&year=${finalYear}&month=${finalMonth}`;
+        if (empId) url += `&employee=${empId}`;
+        window.location.href = url;
+    }
+</script>
 
 {% endblock %}

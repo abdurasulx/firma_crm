@@ -5,130 +5,294 @@
 
 {% block content %}
 <style>
-    .form-block {
-        background-color: white;
-        padding: 20px;
-        margin-bottom: 25px;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-    }
-
-    .form-block h3 {
-        margin-bottom: 15px;
-        color: #007acc;
-    }
-
-    .form-block label {
-        font-weight: 600;
-        margin-top: 12px;
-        display: block;
-    }
-
-    .form-block input, .form-block select {
-        width: 100%;
-        padding: 8px 10px;
-        margin-top: 5px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        font-size: 14px;
-    }
-
-    .form-block input[type="file"] {
-        padding: 6px;
-    }
-
-    .form-block button {
-        background-color: #007acc;
+    /* Modern Sales Form */
+    .page-header {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
         color: white;
-        padding: 10px 25px;
-        margin-top: 20px;
-        border: none;
-        border-radius: 4px;
-        font-size: 16px;
-        cursor: pointer;
+        padding: 30px;
+        border-radius: 16px;
+        margin-bottom: 30px;
+        box-shadow: 0 8px 32px rgba(16, 185, 129, 0.3);
     }
 
-    .form-block button:hover {
-        background-color: #005fa3;
+    .page-header h1 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 700;
     }
 
-    .inline-row {
+    .form-section {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        margin-bottom: 24px;
+    }
+
+    .section-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 20px;
         display: flex;
         align-items: center;
+        gap: 10px;
+    }
+
+    .product-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
         gap: 20px;
-        flex-wrap: wrap;
     }
 
-    .inline-row select {
-        min-width: 200px;
+    .product-item {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        border: 2px solid #e5e7eb;
+        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
     }
 
-    .inline-row a {
-        padding: 8px 14px;
-        background: #28a745;
-        color: white;
-        border-radius: 4px;
-        text-decoration: none;
+    .product-item:hover {
+        border-color: #10b981;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .product-name {
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 6px;
+        font-size: 16px;
+    }
+
+
+    .product-stock {
+        font-size: 13px;
+        color: #10b981;
+        margin-bottom: 14px;
+        font-weight: 600;
+        background: #d1fae5;
+        padding: 6px 12px;
+        border-radius: 6px;
+        display: inline-block;
+    }
+
+    .product-input {
+        width: 100%;
+        padding: 12px 14px;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        font-size: 16px;
+        transition: all 0.3s ease;
+        background: #f9fafb;
+        font-weight: 600;
+        box-sizing: border-box;
+    }
+
+    .product-input:focus {
+        outline: none;
+        border-color: #10b981;
+        background: white;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    }
+
+    .product-input::-webkit-inner-spin-button,
+    .product-input::-webkit-outer-spin-button {
+        opacity: 1;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 8px;
         font-size: 14px;
     }
 
-    .inline-row a:hover {
-        background-color: #218838;
+    .form-control {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        font-size: 16px;
+        transition: all 0.3s ease;
+        background: #f9fafb;
     }
 
-    @media (max-width: 600px) {
-        .inline-row {
-            flex-direction: column;
-            align-items: flex-start;
+    .form-control:focus {
+        outline: none;
+        border-color: #10b981;
+        background: white;
+        box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+    }
+
+    .inline-group {
+        display: flex;
+        gap: 12px;
+        align-items: flex-end;
+    }
+
+    .inline-group select {
+        flex: 1;
+    }
+
+    .btn-add {
+        padding: 12px 20px;
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+    }
+
+    .btn-add:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-submit {
+        width: 100%;
+        padding: 16px;
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 18px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-top: 8px;
+    }
+
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
+    }
+
+    .file-upload {
+        padding: 16px;
+        border: 2px dashed #d1d5db;
+        border-radius: 8px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: #f9fafb;
+    }
+
+    .file-upload:hover {
+        border-color: #10b981;
+        background: white;
+    }
+
+    .file-upload input[type="file"] {
+        padding: 0;
+        border: none;
+        background: none;
+    }
+
+    @media (max-width: 768px) {
+        .product-grid {
+            grid-template-columns: 1fr;
         }
 
-        .form-block button {
+        .inline-group {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .btn-add {
             width: 100%;
         }
     }
 </style>
 
+<!-- Page Header -->
+<div class="page-header">
+    <h1>🛒 Mahsulot Sotish</h1>
+</div>
+
 <form method="POST" enctype="multipart/form-data">
     {% csrf_token %}
 
-    <!-- Mahsulotlar ro‘yxati -->
-    <div class="form-block">
-        <h3>📋 Mahsulotlar Ro‘yxati</h3>
-        {% for m in mahsulotlar %}
-            <label>{{ m.nom }} ({{ m.miqdor }} {{ m.turi }})</label>
-            <input type="number" name="miqdor_{{ m.nom }}" value="0" min="0" max="{{ m.miqdor }}" step="any" placeholder="Sotilayotgan miqdor">
-        {% endfor %}
-    </div>
-
-    <!-- Xaridor ma’lumotlari -->
-    <div class="form-block">
-        <h3>🛒 Haridor Ma’lumotlari</h3>
-
-        <label for="haridor">Haridor yoki Do‘kon:</label>
-        <div class="inline-row">
-            <select name="haridor" required>
-                <option value="" selected disabled>Tanlang...</option>
-                {% for h in haridorlar %}
-                    <option value="{{ h.id }}">{{ h.nomi }}</option>
-                {% endfor %}
-            </select>
-            <a href="{% url 'add_haridor' %}">+ Qo‘shish</a>
+    <!-- Products Section -->
+    <div class="form-section">
+        <div class="section-title">
+            📦 Mahsulotlar Ro'yxati
         </div>
 
-        <label for="oluvchi">Oluvchi Ismi:</label>
-        <input type="text" name="oluvchi" required placeholder="Oluvchining ismini kiriting">
-
-        <label for="st">To‘lov Turi:</label>
-        <select name="st" required>
-            <option value="naqd">Naqd</option>
-            <option value="karta">Karta</option>
-            <option value="nasiya">Nasiya</option>
-        </select>
-
-        <label for="rasm">Chek / Rasm:</label>
-        <input type="file" name="rasm" accept="image/*" required>
+        <div class="product-grid">
+            {% for m in mahsulotlar %}
+            <div class="product-item">
+                <div class="product-name">{{ m.nom }}</div>
+                <div class="product-stock">📦 {{ m.miqdor }} {{ m.turi }}</div>
+                <input type="number" name="miqdor_{{ m.nom }}" class="product-input" value="0" min="0"
+                    max="{{ m.miqdor }}" step="any" placeholder="0">
+            </div>
+            {% empty %}
+            <div style="grid-column: 1/-1; text-align: center; color: #9ca3af; padding: 40px;">
+                Hozircha mahsulotlar mavjud emas
+            </div>
+            {% endfor %}
+        </div>
     </div>
 
-    <button type="submit">💾 Sotishni Yakunlash</button>
+    <!-- Customer Info Section -->
+    <div class="form-section">
+        <div class="section-title">
+            👤 Haridor Ma'lumotlari
+        </div>
+
+        <div class="form-group">
+            <label for="haridor">🏪 Haridor yoki Do'kon</label>
+            <div class="inline-group">
+                <select name="haridor" id="haridor" class="form-control" required>
+                    <option value="" selected disabled>Tanlang...</option>
+                    {% for h in haridorlar %}
+                    <option value="{{ h.id }}">{{ h.nomi }}</option>
+                    {% endfor %}
+                </select>
+                <a href="{% url 'add_haridor' %}" class="btn-add">+ Qo'shish</a>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="oluvchi">📝 Oluvchi Ismi</label>
+            <input type="text" name="oluvchi" id="oluvchi" class="form-control" required
+                placeholder="Oluvchining to'liq ismini kiriting">
+        </div>
+
+        <div class="form-group">
+            <label for="st">💳 To'lov Turi</label>
+            <select name="st" id="st" class="form-control" required>
+                <option value="naqd">💵 Naqd</option>
+                <option value="karta">💳 Karta</option>
+                <option value="nasiya">🔄 Nasiya</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="rasm">📸 Chek / Rasm</label>
+            <div class="file-upload">
+                <input type="file" name="rasm" id="rasm" accept="image/*" required>
+            </div>
+        </div>
+    </div>
+
+    <button type="submit" class="btn-submit">
+        ✅ Sotishni Yakunlash
+    </button>
 </form>
+
 {% endblock %}

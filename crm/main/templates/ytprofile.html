@@ -5,72 +5,153 @@
 
 {% block content %}
 <style>
-    .profile-container {
-        max-width: 600px;
-        margin: 0 auto;
-        background-color: #ffffff;
+    /* Modern Profile Page */
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
         padding: 30px;
-        border-radius: 10px;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        border-radius: 16px;
+        margin-bottom: 30px;
+        box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
         text-align: center;
     }
 
-    .profile-image {
-        width: 120px;
-        height: 120px;
+    .page-header h1 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 700;
+    }
+
+    .profile-card {
+        background: white;
+        padding: 40px;
+        border-radius: 16px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .profile-avatar-section {
+        text-align: center;
+        margin-bottom: 32px;
+    }
+
+    .profile-avatar {
+        width: 150px;
+        height: 150px;
         border-radius: 50%;
         object-fit: cover;
-        object-position: center;
-        border: 3px solid #4285f4;
-        margin-bottom: 20px;
+        border: 5px solid #667eea;
+        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+        margin-bottom: 16px;
     }
 
-    .profile-info {
-        font-size: 18px;
-        color: #333;
-        margin-bottom: 10px;
-        word-wrap: break-word;
+    .profile-name {
+        font-size: 24px;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 8px;
     }
 
-    .profile-label {
-        font-weight: bold;
-        color: #555;
+    .profile-role {
+        display: inline-block;
+        padding: 6px 16px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 600;
     }
 
-    @media (max-width: 600px) {
-        .profile-container {
-            padding: 20px;
-            margin: 15px;
+    .profile-info-grid {
+        display: grid;
+        gap: 20px;
+    }
+
+    .info-item {
+        background: #f9fafb;
+        padding: 16px 20px;
+        border-radius: 10px;
+        border-left: 4px solid #667eea;
+    }
+
+    .info-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 6px;
+    }
+
+    .info-value {
+        font-size: 16px;
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    .info-value.empty {
+        color: #9ca3af;
+        font-style: italic;
+    }
+
+    @media (max-width: 768px) {
+        .profile-card {
+            padding: 24px;
         }
 
-        .profile-image {
-            width: 100px;
-            height: 100px;
+        .profile-avatar {
+            width: 120px;
+            height: 120px;
         }
 
-        .profile-info {
-            font-size: 16px;
+        .profile-name {
+            font-size: 20px;
         }
     }
 </style>
 
-<div class="profile-container">
-    <img src="{% if user.rasmi.url %}{{ user.rasmi.url }}{% else %}{% static 'images/default_avatar.jpg' %}{% endif %}" alt="Avatar" class="profile-image">
+<!-- Page Header -->
+<div class="page-header">
+    <h1>👤 Foydalanuvchi Profili</h1>
+</div>
 
-    <div class="profile-info">
-        <span class="profile-label">To‘liq ism:</span> {{ user.tuliq_ismi }}
+<!-- Profile Card -->
+<div class="profile-card">
+    <!-- Avatar Section -->
+    <div class="profile-avatar-section">
+        <img src="{% if user.rasmi.url %}{{ user.rasmi.url }}{% else %}{% static 'images/default_avatar.jpg' %}{% endif %}"
+            alt="Avatar" class="profile-avatar">
+        <div class="profile-name">{{ user.tuliq_ismi }}</div>
+        <div class="profile-role">{{ user.get_type_display }}</div>
     </div>
-    <div class="profile-info">
-        <span class="profile-label">Foydalanuvchi nomi:</span> {{ user.username }}
-    </div>
-    <div class="profile-info">
-        <span class="profile-label">Email:</span> {{ user.email }}
-    </div>
-    <div class="profile-info">
-        <span class="profile-label">Telefon:</span> {{ user.telefon|default:"- kiritilmagan -" }}
-    </div>
-    <div class="profile-info">
-        <span class="profile-label">Turi:</span> {{ user.type|title }}
+
+    <!-- Info Grid -->
+    <div class="profile-info-grid">
+        <div class="info-item">
+            <div class="info-label">👤 Foydalanuvchi nomi</div>
+            <div class="info-value">{{ user.username }}</div>
+        </div>
+
+        <div class="info-item">
+            <div class="info-label">✉️ Email</div>
+            <div class="info-value {% if not user.email %}empty{% endif %}">
+                {{ user.email|default:"Kiritilmagan" }}
+            </div>
+        </div>
+
+        <div class="info-item">
+            <div class="info-label">📞 Telefon raqami</div>
+            <div class="info-value {% if not user.tel_raqami %}empty{% endif %}">
+                {{ user.tel_raqami|default:"Kiritilmagan" }}
+            </div>
+        </div>
+
+        <div class="info-item">
+            <div class="info-label">🏢 Lavozim</div>
+            <div class="info-value">{{ user.get_type_display }}</div>
+        </div>
     </div>
 </div>
+
 {% endblock %}

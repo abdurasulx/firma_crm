@@ -42,6 +42,8 @@ class HaridorDukon(models.Model):
     nomi = models.CharField(max_length=255)
     egasi = models.CharField(max_length=255)
     joylashuvi = models.TextField()
+    latitude = models.FloatField(null=True, blank=True)  # Kenglik
+    longitude = models.FloatField(null=True, blank=True)  # Uzunlik
     dukon_rasmi = models.ImageField(upload_to='dukons/')
     egasining_rasmi = models.ImageField(upload_to='egalar/')
 
