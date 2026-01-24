@@ -1,12 +1,14 @@
 from django.conf import settings
 from django.conf.urls.static import static
-from .views import login, main, add_haridor, profile_view, crtuser, editusr, sotish , seemahsulot, createmahsulot, deleteprdct, addmiqdor, add_yuklama
+from .views import login, main, add_haridor, profile_view, crtuser, editusr, sotish, seemahsulot, createmahsulot, deleteprdct, addmiqdor, add_yuklama, logout_view
+from .hisobot_views import hisobotlar_view
 from django.urls import path
 
 urlpatterns = [
     path('login/', login, name='login'),
     path('', main, name='main'),
-    path('logout/', login, name='logout'),
+    path('logout/', logout_view, name='logout'),
+    path('hisobotlar/', hisobotlar_view, name='hisobotlar'),
     path('add/haridor/', add_haridor, name='add_haridor'),
     path('profile/<str:username>', profile_view, name='profile'),
     path('createuser/', crtuser , name='crtuser'),

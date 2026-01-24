@@ -1,0 +1,210 @@
+{% extends 'egabase.html' %}
+{% load static %}
+
+{% block title %}Hisobotlar{% endblock %}
+
+{% block content %}
+<style>
+.hisobot-container {
+    padding: 20px;
+}
+
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.stat-card.success {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+}
+
+.stat-card.warning {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.stat-card.info {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.stat-label {
+    font-size: 14px;
+    opacity: 0.9;
+    margin-bottom: 8px;
+}
+
+.stat-value {
+    font-size: 32px;
+    font-weight: bold;
+}
+
+.stat-subvalue {
+    font-size: 14px;
+    opacity: 0.8;
+    margin-top: 5px;
+}
+
+.section-title {
+    font-size: 24px;
+    font-weight: bold;
+    margin: 30px 0 15px 0;
+    color: #333;
+}
+
+.table-responsive {
+    overflow-x: auto;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th {
+    background: #007acc;
+    color: white;
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+}
+
+td {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+}
+
+tr:hover {
+    background: #f5f5f5;
+}
+
+.status-paid {
+    color: #28a745;
+    font-weight: bold;
+}
+
+.status-unpaid {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+@media (max-width: 768px) {
+    .stat-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stat-value {
+        font-size: 24px;
+    }
+}
+</style>
+
+<div class="hisobot-container">
+    <h1 style="font-size: 32px; margin-bottom: 20px;">📊 Hisobotlar</h1>
+    
+    <!-- Statistika Kartochkalari -->
+    <div class="stat-grid">
+        <div class="stat-card">
+            <div class="stat-label">Bugungi Savdolar</div>
+            <div class="stat-value">{{ bugungi_summa|floatformat:0 }}</div>
+            <div class="stat-subvalue">{{ bugungi_soni }} ta savdo</div>
+        </div>
+        
+        <div class="stat-card success">
+            <div class="stat-label">Haftalik Savdolar</div>
+            <div class="stat-value">{{ haftalik_summa|floatformat:0 }}</div>
+            <div class="stat-subvalue">{{ haftalik_soni }} ta savdo</div>
+        </div>
+        
+        <div class="stat-card info">
+            <div class="stat-label">Oylik Savdolar</div>
+            <div class="stat-value">{{ oylik_summa|floatformat:0 }}</div>
+            <div class="stat-subvalue">{{ oylik_soni }} ta savdo</div>
+        </div>
+        
+        <div class="stat-card warning">
+            <div class="stat-label">Nasiya Qarzlari</div>
+            <div class="stat-value">{{ nasiya_summa|floatformat:0 }}</div>
+            <div class="stat-subvalue">{{ nasiya_soni }} ta nasiya</div>
+        </div>
+    </div>
+    
+    <!-- Yetkazib Beruvchilar Hisoboti -->
+    <h2 class="section-title">Yetkazib Beruvchilar Bo'yicha Hisobot</h2>
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Yetkazib Beruvchi</th>
+                    <th>Savdolar Soni</th>
+                    <th>Jami Summa</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for yt in yt_hisobot %}
+                <tr>
+                    <td>{{ yt.ism }}</td>
+                    <td>{{ yt.savdo_soni }}</td>
+                    <td>{{ yt.jami_summa|floatformat:0 }} so'm</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" style="text-align: center; color: #888;">Ma'lumot yo'q</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Oxirgi Savdolar -->
+    <h2 class="section-title">Oxirgi Savdolar</h2>
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Sana</th>
+                    <th>Haridor</th>
+                    <th>Yetkazib Beruvchi</th>
+                    <th>Summa</th>
+                    <th>To'lov Turi</th>
+                    <th>Holat</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for savdo in oxirgi_savdolar %}
+                <tr>
+                    <td>{{ savdo.vaqt_sana|date:"d.m.Y H:i" }}</td>
+                    <td>{{ savdo.haridor_dukon.nomi }}</td>
+                    <td>{{ savdo.yetkazib_beruvchi.tuliq_ismi }}</td>
+                    <td>{{ savdo.summa|floatformat:0 }} so'm</td>
+                    <td>{{ savdo.get_st_display }}</td>
+                    <td>
+                        {% if savdo.tulandi %}
+                            <span class="status-paid">✓ To'landi</span>
+                        {% else %}
+                            <span class="status-unpaid">✗ To'lanmagan</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align: center; color: #888;">Savdolar yo'q</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

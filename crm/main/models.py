@@ -162,3 +162,19 @@ class YuklamaSorov(models.Model):
 
     def __str__(self):
         return f"{self.user.user.login} - {self.miqdor}"
+
+# --- NASIYA TO'LOV ---
+class NasiyaTolov(models.Model):
+    savdo = models.ForeignKey(Savdo, on_delete=models.CASCADE, related_name='tolovlar')
+    tolov_summasi = models.FloatField()
+    tolov_sanasi = models.DateTimeField(auto_now_add=True)
+    izoh = models.TextField(blank=True, null=True)
+    qabul_qilgan_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+
+    def __str__(self):
+        return f"{self.savdo.haridor_dukon.nomi} - {self.tolov_summasi}"
+
+    class Meta:
+        verbose_name = "Nasiya To'lov"
+        verbose_name_plural = "Nasiya To'lovlar"
+        ordering = ['-tolov_sanasi']

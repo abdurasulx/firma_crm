@@ -1,13 +1,13 @@
 from django.contrib import admin
 from .models import (
     User, HaridorDukon, Pazanda, YetkazibBeruvchi,
-    MahsulotTuri, Mahsulot, MiqdorQoshish, Savdo, YuklamaSorov
+    MahsulotTuri, Mahsulot, MiqdorQoshish, Savdo, YuklamaSorov, NasiyaTolov
 )
 
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from .forms import CustomUserCreationForm, CustomUserChangeForm
 
-# --- User modelini admin panelga qo‘shish ---
+# --- User modelini admin panelga qo'shish ---
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     add_form = CustomUserCreationForm
@@ -67,7 +67,7 @@ class MahsulotAdmin(admin.ModelAdmin):
     search_fields = ('nomi',)
 
 
-# --- Miqdor Qo‘shish ---
+# --- Miqdor Qo'shish ---
 @admin.register(MiqdorQoshish)
 class MiqdorQoshishAdmin(admin.ModelAdmin):
     list_display = ('pazanda', 'mahsulot', 'vaqt_sana', 'miqdor', 'tasdiqlangan')
@@ -83,3 +83,10 @@ class SavdoAdmin(admin.ModelAdmin):
 @admin.register(YuklamaSorov)
 class yuklama(admin.ModelAdmin):
     list_display = ( 'id','mahsulot','miqdor','pazanda', 'mode', 'user', 'sana', 'tasdiq')
+
+# --- Nasiya To'lov ---
+@admin.register(NasiyaTolov)
+class NasiyaTolovAdmin(admin.ModelAdmin):
+    list_display = ('savdo', 'tolov_summasi', 'tolov_sanasi', 'qabul_qilgan_user')
+    list_filter = ('tolov_sanasi',)
+    search_fields = ('savdo__haridor_dukon__nomi', 'izoh')

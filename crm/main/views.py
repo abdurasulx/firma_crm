@@ -1,10 +1,10 @@
 from django.shortcuts import render, get_list_or_404, get_object_or_404
-from django.contrib.auth import authenticate, login as auth_login, logout, get_user_model
+from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout, get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages 
 from django.utils import timezone
 from django.shortcuts import redirect
-from .models import HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri, Savdo, YuklamaSorov, MiqdorQoshish, HaridorDukon
+from .models import HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri, Savdo, YuklamaSorov, MiqdorQoshish, HaridorDukon, AmalLog
 from .functions import mahsulotlar_miqdori, makenewform, yuklama_maker, accptyuk, sotishm, sotuv_new_form ,yetkazuvchi_mahsulot_filter, get_bugungi_savdo_summ
 import datetime as dt
 
@@ -25,7 +25,7 @@ def login(request):
             auth_login(request, user)
             return redirect('main')  # 'main' - asosiy sahifa URL nomi
         else:
-            messages.error(request, "Login yoki parol noto‘g‘ri!")
+            messages.error(request, "Login yoki parol noto'g'ri!")
 
     return render(request, 'login.html',data)
 @login_required(login_url='login')
@@ -76,7 +76,12 @@ def main(request):
                     yk_id=yk_id.replace('accept','')
                     yk=YuklamaSorov.objects.get(id=yk_id)
                    
-                    accptyuk(request.user,yk)    
+                    accptyuk(request.user,yk)
+                    # Activity log
+                    AmalLog.objects.create(
+                        user=request.user,
+                        amal_shifri=f"yuklama_qabul|{yk.mahsulot.nomi}|{yk.miqdor}"
+                    )    
 
 
                 elif 'reject' in yk_id:
@@ -86,6 +91,11 @@ def main(request):
                     yk.mode='rejected'
                     yk.tasdiq=True
                     yk.save()
+                    # Activity log
+                    AmalLog.objects.create(
+                        user=request.user,
+                        amal_shifri=f"yuklama_rad|{yk.mahsulot.nomi}|{yk.miqdor}"
+                    )
                     
 
                 
@@ -151,8 +161,11 @@ def main(request):
     payload['msoni'] = msoni
     
     return render(request, 'main.html',payload)
-def logout(request):
-    logout(request)
+
+@login_required(login_url='login')
+def logout_view(request):
+    """Foydalanuvchini tizimdan chiqarish"""
+    auth_logout(request)
     return redirect('login')
 @login_required(login_url='login')
 def add_haridor(request):
@@ -369,6 +382,11 @@ def createmahsulot(request):
         narxi=request.POST.get('narxi')
         mh=Mahsulot.objects.create(nomi=nomi, miqdori=miqdori, turi=turi,narxi=narxi, rasmi=rasmi)
         mh.save()
+        # Activity log
+        AmalLog.objects.create(
+            user=request.user,
+            amal_shifri=f"mahsulot_yaratish|{nomi}|{miqdori}|{narxi}"
+        )
         return redirect('main')
     return render(request, 'crtmahsulot.html',payload)
 
@@ -463,6 +481,11 @@ def sotish(request):
                     svd.save()
     
                 sotishm(txt,yt)
+                # Activity log
+                AmalLog.objects.create(
+                    user=request.user,
+                    amal_shifri=f"savdo_yaratish|{haridor.nomi}|{summa}"
+                )
                 # svd=Savdo.objects.create(yetkazuvchi=yt,haridor=request.POST.get('haridor'),mahsulotlar=txt)
                 # Istasa: Savdo modelga yozish
 
