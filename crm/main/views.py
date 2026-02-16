@@ -508,3 +508,64 @@ def sotish(request):
         return redirect('main')
 
     return render(request, 'ytsot.html', {'mahsulotlar': mahsulotlar,'haridorlar':xaridorlar})
+
+
+# ============================================
+# API Endpoint for Browser Notifications
+# ============================================
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+
+@login_required(login_url='login')
+@require_http_methods(["GET"])
+def check_new_deliveries(request):
+    """
+    API endpoint to check for new delivery requests for delivery personnel.
+    Returns JSON with count and details of new deliveries since last check.
+    """
+    if request.user.type != 'yetkazib_beruvchi':
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+    
+    try:
+        yetkazuvchi = YetkazibBeruvchi.objects.get(user=request.user)
+        
+        # Get last check time from session or default to 1 minute ago
+        last_check_str = request.session.get('last_delivery_check')
+        if last_check_str:
+            from datetime import datetime
+            last_check = timezone.make_aware(datetime.fromisoformat(last_check_str))
+        else:
+            # Default: check last 1 minute
+            last_check = timezone.now() - timezone.timedelta(minutes=1)
+        
+        # Get new delivery requests since last check
+        new_deliveries = YuklamaSorov.objects.filter(
+            user=yetkazuvchi,
+            sana__gt=last_check,
+            tasdiq=False
+        ).select_related('pazanda__user').order_by('-sana')
+        
+        deliveries_data = []
+        for delivery in new_deliveries:
+            pazanda_name = delivery.pazanda.user.tuliq_ismi if delivery.pazanda else "Noma'lum"
+            deliveries_data.append({
+                'id': delivery.id,
+                'pazanda': pazanda_name,
+                'sana': delivery.sana.strftime('%H:%M'),
+                'mahsulot': delivery.mahsulot.nom if delivery.mahsulot else "Mahsulot",
+                'miqdor': delivery.miqdor
+            })
+        
+        # Update last check time
+        request.session['last_delivery_check'] = timezone.now().isoformat()
+        
+        return JsonResponse({
+            'success': True,
+            'count': len(deliveries_data),
+            'deliveries': deliveries_data
+        })
+        
+    except YetkazibBeruvchi.DoesNotExist:
+        return JsonResponse({'error': 'Delivery user not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

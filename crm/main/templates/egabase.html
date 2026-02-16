@@ -5,7 +5,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Ega paneli{% endblock %}</title>
+    <title>{% block title %}Firma CRM{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
             margin: 0;
@@ -13,491 +14,487 @@
             box-sizing: border-box;
         }
 
+        :root {
+            --primary-color: #10b981;
+            --primary-dark: #059669;
+            --secondary-color: #667eea;
+            --danger-color: #ef4444;
+            --success-color: #22c55e;
+            --warning-color: #f59e0b;
+            --text-dark: #1f2937;
+            --text-light: #6b7280;
+            --bg-light: #f9fafb;
+            --bg-white: #ffffff;
+            --border-color: #e5e7eb;
+            --sidebar-width: 260px;
+            --sidebar-collapsed: 70px;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+            background: var(--bg-light);
             min-height: 100vh;
         }
 
-        /* Modern Navbar */
-        header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
-            position: sticky;
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            left: 0;
             top: 0;
+            bottom: 0;
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, #1f2937 0%, #111827 100%);
+            transition: all 0.3s ease;
             z-index: 1000;
+            overflow-x: hidden;
+            overflow-y: auto;
         }
 
-        .navbar-container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 0 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            height: 70px;
+        .sidebar.collapsed {
+            width: var(--sidebar-collapsed);
         }
 
-        /* Brand/Logo */
-        .brand {
+        .sidebar-header {
+            padding: 24px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             display: flex;
             align-items: center;
             gap: 12px;
-            text-decoration: none;
+        }
+
+        .sidebar-logo {
+            font-size: 28px;
+            flex-shrink: 0;
+        }
+
+        .sidebar-brand {
             color: white;
-            font-size: 24px;
+            font-size: 20px;
             font-weight: 700;
+            white-space: nowrap;
+            opacity: 1;
             transition: opacity 0.3s ease;
         }
 
-        .brand:hover {
-            opacity: 0.9;
+        .sidebar.collapsed .sidebar-brand {
+            opacity: 0;
+            width: 0;
         }
 
-        .brand-icon {
-            font-size: 32px;
-        }
-
-        /* Navigation Links */
-        .nav-links {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-
-        .nav-item {
-            position: relative;
-        }
-
-        .nav-link,
-        .nav-toggle {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px 16px;
-            color: white;
-            text-decoration: none;
-            border-radius: 8px;
-            font-weight: 500;
-            font-size: 15px;
-            transition: all 0.3s ease;
-            background: none;
-            border: none;
-            cursor: pointer;
-        }
-
-        .nav-link:hover,
-        .nav-toggle:hover {
-            background: rgba(255, 255, 255, 0.15);
-            transform: translateY(-2px);
-        }
-
-        /* Dropdown Menu */
-        .dropdown-menu {
-            display: none;
+        .sidebar-toggle {
             position: absolute;
-            top: calc(100% + 8px);
-            left: 0;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-            min-width: 220px;
-            overflow: hidden;
-            animation: slideDown 0.3s ease;
+            right: -12px;
+            top: 32px;
+            width: 24px;
+            height: 24px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: white;
+            font-size: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
         }
 
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .sidebar-menu {
+            padding: 20px 0;
+            list-style: none;
         }
 
-        .nav-item.active .dropdown-menu {
-            display: block;
+        .menu-item {
+            margin: 4px 12px;
         }
 
-        .dropdown-menu a {
+        .menu-link {
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 14px 18px;
-            color: #374151;
+            padding: 12px 16px;
+            color: rgba(255, 255, 255, 0.7);
             text-decoration: none;
-            transition: all 0.2s ease;
-            border-left: 3px solid transparent;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            position: relative;
         }
 
-        .dropdown-menu a:hover {
-            background: #f3f4f6;
-            border-left-color: #667eea;
-            padding-left: 22px;
+        .menu-link:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
         }
 
-        /* Right Section */
-        .nav-right {
+        .menu-link.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .menu-icon {
+            font-size: 20px;
+            width: 24px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .menu-text {
+            white-space: nowrap;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+
+        .sidebar.collapsed .menu-text {
+            opacity: 0;
+            width: 0;
+        }
+
+        /* Main Content */
+        .main-wrapper {
+            margin-left: var(--sidebar-width);
+            transition: margin-left 0.3s ease;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar.collapsed~.main-wrapper {
+            margin-left: var(--sidebar-collapsed);
+        }
+
+        /* Top Header */
+        .top-header {
+            background: white;
+            padding: 16px 30px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .header-actions {
             display: flex;
             align-items: center;
             gap: 16px;
         }
 
-        /* Notification Icon */
-        .notif-btn {
-            position: relative;
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.15);
-            border: none;
-            color: white;
-            font-size: 20px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .notif-btn:hover {
-            background: rgba(255, 255, 255, 0.25);
-            transform: scale(1.1);
-        }
-
-        .nav-link {
-            padding: 12px 20px;
-            color: rgba(255, 255, 255, 0.9);
-            text-decoration: none;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 500;
-        }
-
-        .nav-link:hover {
-            background: rgba(255, 255, 255, 0.15);
-            color: white;
-        }
-
-        .nav-link.active {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            font-weight: 600;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .nav-toggle {
-            padding: 12px 20px;
-            background: transparent;
-            border: none;
-            color: rgba(255, 255, 255, 0.9);
-            cursor: pointer;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 500;
-            font-size: 15px;
-        }
-
-        .nav-toggle:hover {
-            background: rgba(255, 255, 255, 0.15);
-            color: white;
-        }
-
-        .nav-toggle.active {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            font-weight: 600;
-        }
-
-        /* Profile Menu */
-        .profile-menu {
-            position: relative;
-        }
-
-        .profile-trigger {
+        .user-profile {
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 6px 12px 6px 6px;
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 50px;
+            padding: 8px 16px;
+            background: var(--bg-light);
+            border-radius: 10px;
             cursor: pointer;
             transition: all 0.3s ease;
-            border: 2px solid rgba(255, 255, 255, 0.2);
+            position: relative;
         }
 
-        .profile-trigger:hover {
-            background: rgba(255, 255, 255, 0.25);
-            border-color: rgba(255, 255, 255, 0.4);
+        .user-profile:hover {
+            background: var(--border-color);
         }
 
-        .profile-avatar {
+        .user-avatar {
             width: 40px;
             height: 40px;
             border-radius: 50%;
             object-fit: cover;
-            border: 2px solid white;
+            border: 2px solid var(--primary-color);
         }
 
-        .profile-name {
-            color: white;
+        .user-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-name {
             font-weight: 600;
+            color: var(--text-dark);
             font-size: 14px;
-            max-width: 150px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
 
-        .profile-dropdown {
-            display: none;
+        .user-role {
+            font-size: 12px;
+            color: var(--text-light);
+        }
+
+        .dropdown-toggle {
+            font-size: 12px;
+            color: var(--text-light);
+        }
+
+        .user-dropdown {
             position: absolute;
-            top: calc(100% + 8px);
+            top: calc(100% + 10px);
             right: 0;
             background: white;
             border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
             min-width: 200px;
-            overflow: hidden;
-            animation: slideDown 0.3s ease;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
         }
 
-        .profile-menu.active .profile-dropdown {
-            display: block;
+        .user-profile.active .user-dropdown {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
         }
 
-        .profile-dropdown a {
+        .dropdown-item {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 14px 18px;
-            color: #374151;
+            gap: 10px;
+            padding: 12px 20px;
+            color: var(--text-dark);
             text-decoration: none;
             transition: all 0.2s ease;
         }
 
-        .profile-dropdown a:hover {
-            background: #f3f4f6;
+        .dropdown-item:first-child {
+            border-radius: 12px 12px 0 0;
         }
 
-        .profile-dropdown a.logout {
-            color: #dc3545;
-            border-top: 1px solid #e5e7eb;
+        .dropdown-item:last-child {
+            border-radius: 0 0 12px 12px;
+            border-top: 1px solid var(--border-color);
         }
 
-        .profile-dropdown a.logout:hover {
-            background: #fee;
+        .dropdown-item:hover {
+            background: var(--bg-light);
         }
 
-        /* Mobile Menu */
-        .mobile-menu-btn {
+        /* Main Content Area */
+        .main-content {
+            flex: 1;
+            padding: 30px;
+        }
+
+        /* Mobile Responsive */
+        .mobile-overlay {
             display: none;
-            width: 44px;
-            height: 44px;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.15);
-            border: none;
-            color: white;
-            font-size: 24px;
-            cursor: pointer;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
 
-        /* Content Container */
-        .content-container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 24px;
+        .mobile-overlay.active {
+            opacity: 1;
         }
 
-        /* Responsive */
         @media (max-width: 768px) {
-            .navbar-container {
-                height: 60px;
-                padding: 0 16px;
+            .sidebar {
+                transform: translateX(-100%);
             }
 
-            .nav-links {
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+
+            .main-wrapper {
+                margin-left: 0 !important;
+            }
+
+            .mobile-overlay {
+                display: block;
+            }
+
+            .mobile-overlay.active {
+                display: block;
+            }
+
+            .top-header {
+                padding: 12px 15px;
+            }
+
+            .header-title {
+                font-size: 18px;
+            }
+
+            .user-info {
                 display: none;
             }
 
-            .mobile-menu-btn {
-                display: flex;
-                align-items: center;
-                justify-content: center;
+            .main-content {
+                padding: 20px 15px;
             }
 
-            .brand-text {
-                display: none;
+            .hamburger {
+                display: flex !important;
             }
+        }
 
-            .profile-name {
-                display: none;
-            }
+        .hamburger {
+            display: none;
+            flex-direction: column;
+            gap: 4px;
+            cursor: pointer;
+            padding: 8px;
+        }
 
-            .content-container {
-                padding: 16px;
-            }
+        .hamburger span {
+            width: 24px;
+            height: 3px;
+            background: var(--text-dark);
+            border-radius: 2px;
+            transition: all 0.3s ease;
         }
     </style>
 </head>
 
 <body>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <span class="sidebar-logo"><i class="fa-solid fa-building"></i></span>
+            <span class="sidebar-brand">Firma CRM</span>
+        </div>
+        <div class="sidebar-toggle" onclick="toggleSidebar()"><i class="fa-solid fa-chevron-right"></i></div>
 
-    <header>
-        <div class="navbar-container">
-            <!-- Brand -->
-            <a href="{% url 'main' %}" class="brand">
-                <span class="brand-icon">🏢</span>
-                <span class="brand-text">Firma CRM</span>
-            </a>
-
-            <!-- Navigation Links -->
-            <nav class="nav-links">
-                <div class="nav-item">
-                    <button
-                        class="nav-toggle {% if request.path == '/hodimlar/' or request.path|slice:':9' == '/profile/' or 'edituser' in request.path or 'createuser' in request.path %}active{% endif %}"
-                        onclick="toggleDropdown(this)">
-                        <span>👥</span>
-                        <span>Xodimlar</span>
-                    </button>
-                    <div class="dropdown-menu">
-                        <a href="{% url 'hodimlar_list' %}">
-                            <span>👨‍💼</span>
-                            <span>Barcha Xodimlar</span>
-                        </a>
-                        <a href="{% url 'crtuser' %}">
-                            <span>➕</span>
-                            <span>Yangi Xodim</span>
-                        </a>
-                    </div>
-                </div>
-
-                <div class="nav-item">
-                    <button
-                        class="nav-toggle {% if request.path == '/mahsulotlar/' or 'product' in request.path %}active{% endif %}"
-                        onclick="toggleDropdown(this)">
-                        <span>📦</span>
-                        <span>Mahsulotlar</span>
-                    </button>
-                    <div class="dropdown-menu">
-                        <a href="{% url 'mahsulotlar_list' %}">
-                            <span>📋</span>
-                            <span>Barcha Mahsulotlar</span>
-                        </a>
-                        <a href="{% url 'createproduct' %}">
-                            <span>➕</span>
-                            <span>Yangi Mahsulot</span>
-                        </a>
-                    </div>
-                </div>
-
-                <a href="{% url 'mijozlar_list' %}" class="nav-link {% if '/mijoz' in request.path %}active{% endif %}">
-                    <span>🏪</span>
-                    <span>Mijozlar</span>
+        <ul class="sidebar-menu">
+            <li class="menu-item">
+                <a href="{% url 'main' %}" class="menu-link {% if request.path == '/' %}active{% endif %}">
+                    <span class="menu-icon"><i class="fa-solid fa-house"></i></span>
+                    <span class="menu-text">Dashboard</span>
                 </a>
-
+            </li>
+            <li class="menu-item">
+                <a href="{% url 'hodimlar_list' %}"
+                    class="menu-link {% if '/hodimlar/' in request.path %}active{% endif %}">
+                    <span class="menu-icon"><i class="fa-solid fa-users"></i></span>
+                    <span class="menu-text">Hodimlar</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="{% url 'mahsulotlar_list' %}"
+                    class="menu-link {% if '/mahsulotlar/' in request.path or '/product/' in request.path %}active{% endif %}">
+                    <span class="menu-icon"><i class="fa-solid fa-box"></i></span>
+                    <span class="menu-text">Mahsulotlar</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="{% url 'mijozlar_list' %}"
+                    class="menu-link {% if '/mijozlar/' in request.path or '/mijoz/' in request.path %}active{% endif %}">
+                    <span class="menu-icon"><i class="fa-solid fa-store"></i></span>
+                    <span class="menu-text">Mijozlar</span>
+                </a>
+            </li>
+            <li class="menu-item">
                 <a href="{% url 'hisobotlar' %}"
-                    class="nav-link {% if request.path == '/hisobotlar/' %}active{% endif %}">
-                    <span>📊</span>
-                    <span>Hisobotlar</span>
+                    class="menu-link {% if '/hisobotlar/' in request.path %}active{% endif %}">
+                    <span class="menu-icon"><i class="fa-solid fa-chart-bar"></i></span>
+                    <span class="menu-text">Hisobotlar</span>
                 </a>
-
+            </li>
+            <li class="menu-item">
                 <a href="{% url 'nasiya_savdolar' %}"
-                    class="nav-link {% if 'nasiya' in request.path %}active{% endif %}">
-                    <span>💳</span>
-                    <span>Nasiya</span>
+                    class="menu-link {% if '/nasiya-savdolar/' in request.path %}active{% endif %}">
+                    <span class="menu-icon"><i class="fa-solid fa-credit-card"></i></span>
+                    <span class="menu-text">Nasiya Savdolar</span>
                 </a>
-            </nav>
+            </li>
+        </ul>
+    </aside>
 
-            <!-- Right Section -->
-            <div class="nav-right">
-                <button class="mobile-menu-btn">☰</button>
+    <!-- Mobile Overlay -->
+    <div class="mobile-overlay" id="mobileOverlay" onclick="closeMobileSidebar()"></div>
 
-                <a href="{% url 'main' %}">
-                    <button class="notif-btn" title="Dashboard">🏠</button>
-                </a>
+    <!-- Main Wrapper -->
+    <div class="main-wrapper">
+        <!-- Top Header -->
+        <header class="top-header">
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <div class="hamburger" onclick="openMobileSidebar()">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+                <h1 class="header-title">{% block page_title %}Dashboard{% endblock %}</h1>
+            </div>
 
-                <div class="profile-menu" onclick="toggleProfile(this)">
-                    <div class="profile-trigger">
-                        {% if request.user.rasmi %}
-                        <img src="{{ request.user.rasmi }}" alt="{{ request.user.tuliq_ismi }}" class="profile-avatar">
-                        {% else %}
-                        <div class="profile-avatar"
-                            style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 18px;">
-                            {{ request.user.tuliq_ismi|first|upper }}
-                        </div>
-                        {% endif %}
-                        <span class="profile-name">{{ request.user.tuliq_ismi }}</span>
+            <div class="header-actions">
+                <div class="user-profile" id="userProfile" onclick="toggleUserDropdown()">
+                    <img src="{% if request.user.rasmi %}{{ request.user.rasmi.url }}{% else %}{% static 'images/default_avatar.jpg' %}{% endif %}"
+                        alt="Avatar" class="user-avatar">
+                    <div class="user-info">
+                        <span class="user-name">{{ request.user.tuliq_ismi }}</span>
+                        <span class="user-role">Ega</span>
                     </div>
-                    <div class="profile-dropdown">
-                        <a href="{% url 'profile' request.user.username %}">
-                            <span>👤</span>
-                            <span>Profil</span>
+                    <span class="dropdown-toggle"><i class="fa-solid fa-chevron-down"></i></span>
+                    <div class="user-dropdown">
+                        <a href="{% url 'profile' request.user.username %}" class="dropdown-item">
+                            <i class="fa-solid fa-user"></i> Profil
                         </a>
-                        <a href="{% url 'hisobotlar' %}">
-                            <span>📊</span>
-                            <span>Hisobotlar</span>
-                        </a>
-                        <a href="{% url 'logout' %}" class="logout">
-                            <span>🚪</span>
-                            <span>Chiqish</span>
+                        <a href="{% url 'logout' %}" class="dropdown-item">
+                            <i class="fa-solid fa-right-from-bracket"></i> Chiqish
                         </a>
                     </div>
                 </div>
             </div>
-        </div>
-    </header>
+        </header>
 
-    <div class="content-container">
-        {% block content %}
-        <!-- Kontent bu yerda ko'rinadi -->
-        {% endblock %}
+        <!-- Main Content -->
+        <main class="main-content">
+            {% block content %}
+            {% endblock %}
+        </main>
     </div>
 
     <script>
-        function toggleDropdown(button) {
-            const navItem = button.closest('.nav-item');
-            const wasActive = navItem.classList.contains('active');
+        // Toggle sidebar collapse
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('collapsed');
 
-            // Close all dropdowns
-            document.querySelectorAll('.nav-item').forEach(item => {
-                item.classList.remove('active');
-            });
-
-            // Toggle current
-            if (!wasActive) {
-                navItem.classList.add('active');
-            }
+            // Save state to localStorage
+            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
         }
 
-        function toggleProfile(menu) {
-            menu.classList.toggle('active');
-        }
-
-        // Close dropdowns when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.nav-item')) {
-                document.querySelectorAll('.nav-item').forEach(item => {
-                    item.classList.remove('active');
-                });
-            }
-            if (!e.target.closest('.profile-menu')) {
-                document.querySelectorAll('.profile-menu').forEach(menu => {
-                    menu.classList.remove('active');
-                });
+        // Load sidebar state
+        window.addEventListener('load', function () {
+            const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+            if (isCollapsed) {
+                document.getElementById('sidebar').classList.add('collapsed');
             }
         });
-    </script>
 
+        // Toggle user dropdown
+        function toggleUserDropdown() {
+            const userProfile = document.getElementById('userProfile');
+            userProfile.classList.toggle('active');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function (event) {
+            const userProfile = document.getElementById('userProfile');
+            if (!userProfile.contains(event.target)) {
+                userProfile.classList.remove('active');
+            }
+        });
+
+        // Mobile sidebar functions
+        function openMobileSidebar() {
+            document.getElementById('sidebar').classList.add('mobile-open');
+            document.getElementById('mobileOverlay').classList.add('active');
+        }
+
+        function closeMobileSidebar() {
+            document.getElementById('sidebar').classList.remove('mobile-open');
+            document.getElementById('mobileOverlay').classList.remove('active');
+        }
+    </script>
 </body>
 
 </html>

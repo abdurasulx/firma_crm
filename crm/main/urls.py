@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.conf.urls.static import static
-from .views import login, main, add_haridor, profile_view, crtuser, editusr, sotish, seemahsulot, createmahsulot, deleteprdct, addmiqdor, add_yuklama, logout_view
+from .views import login, main, add_haridor, profile_view, crtuser, editusr, sotish, seemahsulot, createmahsulot, deleteprdct, addmiqdor, add_yuklama, logout_view, check_new_deliveries
 from .hisobot_views import hisobotlar_view
 from .list_views import hodimlar_list, mahsulotlar_list
 from .nasiya_views import nasiya_savdolar_view, add_nasiya_payment
@@ -28,4 +28,5 @@ urlpatterns = [
     path('add/miqdor/', addmiqdor, name='add_miqdor'),
     path('add/yuklama', add_yuklama, name='add_yuklama'),
     path('sotish/' , sotish, name='sotish'),
+    path('api/check-new-deliveries/', check_new_deliveries, name='api_check_deliveries'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

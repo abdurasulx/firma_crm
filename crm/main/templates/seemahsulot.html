@@ -1,63 +1,165 @@
 {% extends 'egabase.html' %}
 {% load static %}
 
-{% block title %}Mahsulotni Tahrirlash{% endblock %}
+{% block title %}{{ mahsulot.nomi }} - Mahsulot Tafsilotlari{% endblock %}
 
 {% block content %}
 <style>
-    /* Modern Product Edit Page */
-    .page-header {
-        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-        color: white;
-        padding: 30px;
-        border-radius: 16px;
-        margin-bottom: 30px;
-        box-shadow: 0 8px 32px rgba(245, 158, 11, 0.3);
-    }
-
-    .page-header h1 {
-        margin: 0;
-        font-size: 24px;
-        font-weight: 700;
-    }
-
-    .edit-card {
+    /* Page Wrapper */
+    .page-wrapper {
         background: white;
-        padding: 40px;
-        border-radius: 16px;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-        max-width: 700px;
-        margin: 0 auto;
+        border-radius: 12px;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+        padding: 24px;
+        min-height: 80vh;
     }
 
-    .image-preview-section {
-        text-align: center;
+    /* Header Section */
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
         margin-bottom: 32px;
+        padding-bottom: 24px;
+        border-bottom: 2px solid #e5e7eb;
     }
 
-    .product-image-preview {
-        width: 200px;
-        height: 200px;
+    .header-left h1 {
+        font-size: 28px;
+        color: #1f2937;
+        margin: 0 0 8px 0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .breadcrumb {
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    .breadcrumb a {
+        color: #f59e0b;
+        text-decoration: none;
+    }
+
+    .breadcrumb a:hover {
+        text-decoration: underline;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 12px;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+    }
+
+    .btn-back {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .btn-back:hover {
+        background: #e5e7eb;
+    }
+
+    .btn-danger {
+        background: #ef4444;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background: #dc2626;
+        transform: translateY(-2px);
+    }
+
+    /* Product Content */
+    .product-content {
+        display: grid;
+        grid-template-columns: 350px 1fr;
+        gap: 32px;
+    }
+
+    /* Image Section */
+    .product-image-section {
+        position: sticky;
+        top: 24px;
+        height: fit-content;
+    }
+
+    .product-image-wrapper {
+        background: #f9fafb;
         border-radius: 16px;
-        object-fit: cover;
-        border: 4px solid #f59e0b;
-        box-shadow: 0 8px 24px rgba(245, 158, 11, 0.3);
+        padding: 24px;
+        text-align: center;
+        border: 2px solid #e5e7eb;
         cursor: pointer;
         transition: all 0.3s ease;
     }
 
-    .product-image-preview:hover {
-        transform: scale(1.05);
+    .product-image-wrapper:hover {
+        border-color: #f59e0b;
+        background: #fffbf0;
     }
 
-    .upload-hint {
+    .product-image {
+        width: 100%;
+        height: 300px;
+        object-fit: cover;
+        border-radius: 12px;
+        margin-bottom: 16px;
+        transition: transform 0.3s ease;
+        pointer-events: none;
+    }
+
+    .product-image-wrapper:hover .product-image {
+        transform: scale(1.02);
+    }
+
+    .image-upload-hint {
         color: #6b7280;
-        font-size: 14px;
+        font-size: 13px;
         margin-top: 8px;
+        pointer-events: none;
+    }
+
+    /* Details Section */
+    .product-details {
+        background: white;
+    }
+
+    .details-card {
+        background: #f9fafb;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        border: 1px solid #e5e7eb;
+    }
+
+    .card-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
 
     .form-group {
-        margin-bottom: 24px;
+        margin-bottom: 20px;
     }
 
     .form-label {
@@ -72,148 +174,197 @@
         width: 100%;
         padding: 12px 16px;
         border: 2px solid #e5e7eb;
-        border-radius: 10px;
+        border-radius: 8px;
         font-size: 16px;
         transition: all 0.3s ease;
-        background: #f9fafb;
+        background: white;
     }
 
     .form-control:focus {
         outline: none;
         border-color: #f59e0b;
-        background: white;
         box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.1);
     }
 
-    .action-buttons {
+    .form-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 12px;
-        margin-top: 32px;
+        gap: 20px;
     }
 
-    .btn {
-        padding: 16px;
-        border: none;
-        border-radius: 12px;
-        font-size: 16px;
-        font-weight: 700;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        text-decoration: none;
-        display: inline-block;
-        text-align: center;
+    /* Stock Badge */
+    .stock-info {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 16px;
+        background: white;
+        border-radius: 8px;
+        border: 2px solid #e5e7eb;
+    }
+
+    .stock-badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .stock-low {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+
+    .stock-medium {
+        background: #fef3c7;
+        color: #d97706;
+    }
+
+    .stock-high {
+        background: #d1fae5;
+        color: #059669;
+    }
+
+    /* Submit Section */
+    .submit-section {
+        display: flex;
+        gap: 12px;
+        padding-top: 24px;
+        border-top: 2px solid #e5e7eb;
     }
 
     .btn-primary {
-        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        background: #f59e0b;
         color: white;
-        grid-column: 1 / -1;
+        padding: 14px 32px;
+        flex: 1;
     }
 
     .btn-primary:hover {
+        background: #d97706;
         transform: translateY(-2px);
-        box-shadow: 0 10px 30px rgba(245, 158, 11, 0.3);
+        box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3);
     }
 
-    .btn-danger {
-        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-        color: white;
-    }
-
-    .btn-danger:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 30px rgba(239, 68, 68, 0.3);
-    }
-
-    .btn-back {
-        background: #f3f4f6;
-        color: #374151;
-    }
-
-    .btn-back:hover {
-        background: #e5e7eb;
-    }
-
-    @media (max-width: 768px) {
-        .edit-card {
-            padding: 24px;
-        }
-
-        .action-buttons {
+    @media (max-width: 968px) {
+        .product-content {
             grid-template-columns: 1fr;
         }
 
-        .btn-primary {
-            grid-column: 1;
+        .product-image-section {
+            position: relative;
+            top: 0;
+        }
+
+        .form-grid {
+            grid-template-columns: 1fr;
         }
     }
 </style>
 
-<!-- Page Header -->
-<div class="page-header">
-    <h1>✏️ Mahsulotni Tahrirlash</h1>
-</div>
+<div class="page-wrapper">
+    <!-- Header -->
+    <div class="page-header">
+        <div class="header-left">
+            <h1>📦 {{ mahsulot.nomi }}</h1>
+            <div class="breadcrumb">
+                <a href="{% url 'mahsulotlar_list' %}">Mahsulotlar</a> / Tahrirlash
+            </div>
+        </div>
+        <div class="action-buttons">
+            <a href="{% url 'mahsulotlar_list' %}" class="btn btn-back">
+                <i class="fa-solid fa-arrow-left"></i> Orqaga
+            </a>
+            <a href="{% url 'delprdct' mahsulot.id %}" class="btn btn-danger"
+                onclick="return confirm('Rostdan ham o\'chirmoqchimisiz?')">
+                <i class="fa-solid fa-trash"></i> O'chirish
+            </a>
+        </div>
+    </div>
 
-<!-- Edit Card -->
-<div class="edit-card">
+    <!-- Product Content -->
     <form method="POST" enctype="multipart/form-data">
         {% csrf_token %}
+        <div class="product-content">
+            <!-- Image Section -->
+            <div class="product-image-section">
+                <div class="product-image-wrapper" onclick="document.getElementById('rasmi_input').click();">
+                    <img src="{% if mahsulot.rasmi %}{{ mahsulot.rasmi.url }}{% else %}{% static 'images/default_product.jpg' %}{% endif %}"
+                        alt="{{ mahsulot.nomi }}" id="preview-rasm" class="product-image">
+                    <div class="image-upload-hint">
+                        📸 Rasmni o'zgartirish uchun bosing
+                    </div>
+                    <input type="file" id="rasmi_input" name="rasmi" accept="image/*" style="display: none;"
+                        onchange="showPreview(event)">
+                </div>
+            </div>
 
-        <!-- Image Preview -->
-        <div class="image-preview-section">
-            <img src="{% if mahsulot.rasmi %}{{ mahsulot.rasmi.url }}{% else %}{% static 'images/default_product.jpg' %}{% endif %}"
-                alt="Mahsulot rasmi" id="preview-rasm" class="product-image-preview">
-            <div class="upload-hint">📸 Rasmni o'zgartirish uchun bosing</div>
-            <input type="file" id="rasmi_input" name="rasmi" accept="image/*" style="display: none;"
-                onchange="showPreview(event)">
-        </div>
+            <!-- Details Section -->
+            <div class="product-details">
+                <!-- Basic Info -->
+                <div class="details-card">
+                    <h3 class="card-title">📋 Asosiy Ma'lumotlar</h3>
 
-        <!-- Form Fields -->
-        <div class="form-group">
-            <label for="nomi" class="form-label">📦 Mahsulot nomi</label>
-            <input type="text" id="nomi" name="nomi" class="form-control" value="{{ mahsulot.nomi }}" required>
-        </div>
+                    <div class="form-group">
+                        <label for="nomi" class="form-label">Mahsulot nomi</label>
+                        <input type="text" id="nomi" name="nomi" class="form-control" value="{{ mahsulot.nomi }}"
+                            required>
+                    </div>
 
-        <div class="form-group">
-            <label for="miqdori" class="form-label">📊 Miqdori</label>
-            <input type="number" id="miqdori" name="miqdori" class="form-control" value="{{ mahsulot.miqdori }}"
-                step="0.01" required>
-        </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="narxi" class="form-label">� Narxi (so'm)</label>
+                            <input type="number" id="narxi" name="narxi" class="form-control"
+                                value="{{ mahsulot.narxi }}" step="0.01" required>
+                        </div>
 
-        <div class="form-group">
-            <label for="turi" class="form-label">📏 O'lchov birligi</label>
-            <select id="turi" name="turi" class="form-control" required>
-                {% for tur in turs %}
-                <option value="{{ tur.nomi }}" {% if mahsulot.turi.nomi==tur.nomi %}selected{% endif %}>
-                    {{ tur.nomi }}
-                </option>
-                {% endfor %}
-            </select>
-        </div>
+                        <div class="form-group">
+                            <label for="turi" class="form-label">📏 O'lchov birligi</label>
+                            <select id="turi" name="turi" class="form-control" required>
+                                {% for tur in turs %}
+                                <option value="{{ tur.nomi }}" {% if mahsulot.turi.nomi == tur.nomi %}selected{% endif %}>
+                                    {{ tur.nomi }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
 
-        <div class="form-group">
-            <label for="narxi" class="form-label">💰 Narxi (so'm)</label>
-            <input type="number" id="narxi" name="narxi" class="form-control" value="{{ mahsulot.narxi }}" step="0.01"
-                required>
-        </div>
+                <!-- Stock Info -->
+                <div class="details-card">
+                    <h3 class="card-title">📊 Zaxira Ma'lumotlari</h3>
 
-        <!-- Action Buttons -->
-        <div class="action-buttons">
-            <button type="submit" class="btn btn-primary">
-                ✅ Saqlash
-            </button>
-            <a href="{% url 'delprdct' mahsulot.id %}" class="btn btn-danger">
-                🗑️ O'chirish
-            </a>
-            <a href="{% url 'main' %}" class="btn btn-back">
-                🔙 Orqaga
-            </a>
+                    <div class="form-group">
+                        <label for="miqdori" class="form-label">Miqdori</label>
+                        <input type="number" id="miqdori" name="miqdori" class="form-control"
+                            value="{{ mahsulot.miqdori }}" step="0.01" required>
+                    </div>
+
+                    <div class="stock-info">
+                        <span style="color: #6b7280;">Joriy holat:</span>
+                        {% if mahsulot.miqdori < 10 %} <span class="stock-badge stock-low">Kam qoldi ({{ mahsulot.miqdori|floatformat:0 }})</span>
+                            {% elif mahsulot.miqdori < 50 %} <span class="stock-badge stock-medium">O'rtacha ({{ mahsulot.miqdori|floatformat:0 }})</span>
+                                {% else %}
+                                <span class="stock-badge stock-high">Yetarli ({{ mahsulot.miqdori|floatformat:0 }})
+                                </span>
+                                {% endif %}
+                    </div>
+                </div>
+
+                <!-- Submit Section -->
+                <div class="submit-section">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-check"></i> O'zgarishlarni Saqlash
+                    </button>
+                </div>
+            </div>
         </div>
     </form>
 </div>
 
 <script>
+    // Image preview functionality
     document.getElementById('preview-rasm').addEventListener('click', function () {
         document.getElementById('rasmi_input').click();
     });
@@ -229,23 +380,23 @@
         }
     }
 
+    // Format numeric values
     document.addEventListener('DOMContentLoaded', function () {
-        // Format numeric values
         let mahsulotNarxi = "{{ mahsulot.narxi }}";
         let mahsulotMiqdori = "{{ mahsulot.miqdori }}";
 
         function formatNumber(value) {
-            if (typeof value === 'string' && value.includes(',')) {
-                return parseFloat(value.replace(',', '.')).toFixed(2);
-            }
-            return parseFloat(value).toFixed(2);
+            if (typeof value  ==  = 'string' && value.includes(',')) {
+        return parseFloat(value.replace(',', '.')).toFixed(2);
+    }
+    return parseFloat(value).toFixed(2);
         }
 
-        const narxiInput = document.getElementById('narxi');
-        const miqdoriInput = document.getElementById('miqdori');
+    const narxiInput = document.getElementById('narxi');
+    const miqdoriInput = document.getElementById('miqdori');
 
-        if (narxiInput) narxiInput.value = formatNumber(mahsulotNarxi);
-        if (miqdoriInput) miqdoriInput.value = formatNumber(mahsulotMiqdori);
+    if (narxiInput) narxiInput.value = formatNumber(mahsulotNarxi);
+    if (miqdoriInput) miqdoriInput.value = formatNumber(mahsulotMiqdori);
     });
 </script>
 

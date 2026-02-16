@@ -5,179 +5,389 @@
 
 {% block content %}
 <style>
-    .page-header {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        color: white;
-        padding: 30px;
-        border-radius: 16px;
-        margin-bottom: 30px;
-        box-shadow: 0 10px 40px rgba(240, 147, 251, 0.3);
-    }
-
-    .page-header h1 {
-        margin: 0 0 8px 0;
-        font-size: 28px;
-    }
-
-    .page-header p {
-        margin: 0;
-        opacity: 0.9;
-    }
-
-    .products-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-        gap: 24px;
-        margin-bottom: 30px;
-    }
-
-    .product-card {
+    /* Page Layout */
+    .page-wrapper {
         background: white;
-        border-radius: 16px;
+        border-radius: 12px;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
         padding: 24px;
-        text-align: center;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        transition: all 0.3s ease;
-        text-decoration: none;
+        min-height: 80vh;
+    }
+
+    /* Header Section */
+    .page-header-actions {
         display: flex;
-        flex-direction: column;
+        justify-content: space-between;
         align-items: center;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+        gap: 16px;
     }
 
-    .product-card:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
-    }
-
-    .product-image-wrapper {
-        width: 120px;
-        height: 120px;
-        border-radius: 50%;
-        overflow: hidden;
-        border: 4px solid #f3f4f6;
-        margin-bottom: 16px;
-        transition: all 0.3s ease;
-    }
-
-    .product-card:hover .product-image-wrapper {
-        border-color: #f093fb;
-        box-shadow: 0 8px 20px rgba(240, 147, 251, 0.4);
-    }
-
-    .product-image {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-
-    .product-name {
-        font-size: 15px;
-        font-weight: 700;
+    .header-title h2 {
+        font-size: 24px;
         color: #1f2937;
-        margin-bottom: 8px;
-    }
-
-    .product-info {
-        font-size: 13px;
-        color: #6b7280;
-    }
-
-    .product-stock {
-        display: inline-block;
-        padding: 4px 12px;
-        background: #e5e7eb;
-        border-radius: 20px;
-        font-size: 12px;
-        margin-top: 8px;
-    }
-
-    /* Pagination */
-    .pagination {
+        margin: 0;
         display: flex;
-        justify-content: center;
-        gap: 8px;
-        margin-top: 30px;
+        align-items: center;
+        gap: 10px;
     }
 
-    .pagination a,
-    .pagination span {
-        padding: 10px 16px;
-        border-radius: 8px;
-        text-decoration: none;
+    .product-count {
+        background: #fef3c7;
+        color: #d97706;
+        font-size: 14px;
+        padding: 4px 12px;
+        border-radius: 20px;
         font-weight: 600;
+    }
+
+    .add-product-btn {
+        background: #f59e0b;
+        color: white;
+        text-decoration: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
         transition: all 0.3s ease;
     }
 
-    .pagination a {
-        background: white;
-        color: #f5576c;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    }
-
-    .pagination a:hover {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        color: white;
+    .add-product-btn:hover {
+        background: #d97706;
         transform: translateY(-2px);
     }
 
-    .pagination span.current {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    /* Filter Bar */
+    .filter-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #f9fafb;
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 24px;
+        border: 1px solid #e5e7eb;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .search-box {
+        position: relative;
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 10px 10px 10px 40px;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        outline: none;
+        transition: all 0.3s;
+    }
+
+    .search-input:focus {
+        border-color: #f59e0b;
+        box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #9ca3af;
+    }
+
+    /* Table Styles */
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    .custom-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .custom-table th {
+        background: #f9fafb;
+        color: #374151;
+        font-weight: 600;
+        padding: 16px;
+        text-align: left;
+        border-bottom: 2px solid #e5e7eb;
+        font-size: 14px;
+    }
+
+    .custom-table td {
+        padding: 16px;
+        border-bottom: 1px solid #f3f4f6;
+        vertical-align: middle;
+        color: #4b5563;
+        font-size: 14px;
+    }
+
+    .custom-table tr:hover td {
+        background: #f9fafb;
+    }
+
+    /* Product Cell */
+    .product-cell {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .product-image {
+        width: 50px;
+        height: 50px;
+        border-radius: 8px;
+        object-fit: cover;
+        border: 2px solid #f3f4f6;
+    }
+
+    .product-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .product-name {
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    .product-category {
+        font-size: 12px;
+        color: #6b7280;
+    }
+
+    /* Stock Badge */
+    .stock-badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        display: inline-block;
+    }
+
+    .stock-low {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+
+    .stock-medium {
+        background: #fef3c7;
+        color: #d97706;
+    }
+
+    .stock-high {
+        background: #d1fae5;
+        color: #059669;
+    }
+
+    /* Action Buttons */
+    .action-cell {
+        display: flex;
+        gap: 8px;
+    }
+
+    .table-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        transition: all 0.2s;
+        border: 1px solid #e5e7eb;
+        background: white;
+        color: #6b7280;
+    }
+
+    .table-btn:hover.edit {
+        background: #eff6ff;
+        color: #3b82f6;
+        border-color: #3b82f6;
+    }
+
+    .table-btn:hover.delete {
+        background: #fef2f2;
+        color: #ef4444;
+        border-color: #ef4444;
+    }
+
+    /* Pagination */
+    .pagination-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 24px;
+        padding-top: 20px;
+        border-top: 1px solid #e5e7eb;
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    .page-numbers {
+        display: flex;
+        gap: 6px;
+    }
+
+    .page-btn {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        text-decoration: none;
+        color: #6b7280;
+        transition: all 0.2s;
+    }
+
+    .page-btn.active {
+        background: #f59e0b;
         color: white;
     }
 
-    @media (max-width: 768px) {
-        .products-grid {
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-            gap: 16px;
-        }
-
-        .product-image-wrapper {
-            width: 90px;
-            height: 90px;
-        }
+    .page-btn:hover:not(.active) {
+        background: #f3f4f6;
     }
 </style>
 
-<div class="page-header">
-    <h1>📦 Barcha Mahsulotlar</h1>
-    <p>Jami: {{ total }} ta mahsulot</p>
-</div>
-
-<div class="products-grid">
-    {% for mahsulot in mahsulotlar %}
-    <a href="{% url 'seeproduct' mahsulot.id %}" class="product-card">
-        <div class="product-image-wrapper">
-            <img src="{{ mahsulot.rasmi.url }}" alt="{{ mahsulot.nomi }}" class="product-image">
+<div class="page-wrapper">
+    <!-- Header -->
+    <div class="page-header-actions">
+        <div class="header-title">
+            <h2>📦 Mahsulotlar <span class="product-count">{{ total }}</span></h2>
         </div>
-        <div class="product-name">{{ mahsulot.nomi }}</div>
-        <div class="product-info">{{ mahsulot.narxi }} so'm</div>
-        <span class="product-stock">{{ mahsulot.miqdori }} {{ mahsulot.turi }}</span>
-    </a>
-    {% empty %}
-    <div style="grid-column: 1/-1; text-align: center; padding: 60px; color: #9ca3af;">
-        <div style="font-size: 48px; margin-bottom: 16px;">📦</div>
-        <p>Hozircha mahsulotlar yo'q</p>
+        <a href="{% url 'createproduct' %}" class="add-product-btn">
+            <i class="fa-solid fa-plus"></i> Mahsulot Qo'shish
+        </a>
     </div>
-    {% endfor %}
-</div>
 
-<!-- Pagination -->
-{% if mahsulotlar.has_other_pages %}
-<div class="pagination">
-    {% if mahsulotlar.has_previous %}
-    <a href="?page=1">⏮️ Birinchi</a>
-    <a href="?page={{ mahsulotlar.previous_page_number }}">⬅️ Oldingi</a>
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+        <form method="GET" action="."
+            style="display: flex; gap: 12px; align-items: center; width: 100%; flex-wrap: wrap;">
+            <div class="search-box">
+                <i class="fa-solid fa-search search-icon"></i>
+                <input type="text" name="q" placeholder="Qidiruv..." class="search-input" value="{{ search_query }}">
+            </div>
+
+            <select name="tur" onchange="this.form.submit()"
+                style="padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; outline: none; background: white;">
+                <option value="">Barcha turlar</option>
+                {% for tur in mahsulot_turlari %}
+                <option value="{{ tur.id }}" {% if tur_filter == tur.id|stringformat:"s" %}selected{% endif %}>{{ tur.nomi
+                    }}</option>
+                {% endfor %}
+            </select>
+
+            <select name="sort" onchange="this.form.submit()"
+                style="padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; outline: none; background: white;">
+                <option value="name" {% if sort_order == 'name' %}selected{% endif %}>Nomi (A-Z)</option>
+                <option value="price_high" {% if sort_order == 'price_high' %}selected{% endif %}>Narx (Yuqori)</option>
+                <option value="price_low" {% if sort_order == 'price_low' %}selected{% endif %}>Narx (Past)</option>
+                <option value="stock" {% if sort_order == 'stock' %}selected{% endif %}>Zaxira</option>
+            </select>
+
+            <button type="submit"
+                style="padding: 10px 16px; background: #f59e0b; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                <i class="fa-solid fa-search"></i>
+            </button>
+        </form>
+    </div>
+
+    <!-- Table -->
+    <div class="table-responsive">
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th>Mahsulot</th>
+                    <th>Narxi</th>
+                    <th>Zaxira</th>
+                    <th>O'lchov</th>
+                    <th>Harakatlar</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for mahsulot in mahsulotlar %}
+                <tr>
+                    <td>
+                        <div class="product-cell">
+                            <img src="{{ mahsulot.rasmi.url }}" alt="{{ mahsulot.nomi }}" class="product-image">
+                            <div class="product-info">
+                                <span class="product-name">{{ mahsulot.nomi }}</span>
+                                <span class="product-category">{{ mahsulot.turi }}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>{{ mahsulot.narxi|floatformat:0 }} so'm</td>
+                    <td>
+                        {% if mahsulot.miqdori < 10 %} <span class="stock-badge stock-low">{{                             mahsulot.miqdori|floatformat:0 }}</span>
+                            {% elif mahsulot.miqdori < 50 %} <span class="stock-badge stock-medium">{{ mahsulot.miqdori|floatformat:0 }}</span>
+                                {% else %}
+                                <span class="stock-badge stock-high">{{ mahsulot.miqdori|floatformat:0 }}</span>
+                                {% endif %}
+                    </td>
+                    <td>{{ mahsulot.turi.nomi }}</td>
+                    <td>
+                        <div class="action-cell">
+                            <a href="{% url 'seeproduct' mahsulot.id %}" class="table-btn edit" title="Ko'rish">
+                                <i class="fa-solid fa-eye"></i>
+                            </a>
+                            <a href="{% url 'delprdct' mahsulot.id %}" class="table-btn delete" title="O'chirish"
+                                onclick="return confirm('Rostdan ham o\'chirmoqchimisiz?')">
+                                <i class="fa-solid fa-trash"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 40px;">
+                        <i class="fa-solid fa-box-open"
+                            style="font-size: 48px; color: #d1d5db; margin-bottom: 16px;"></i>
+                        <p>Hozircha mahsulotlar yo'q</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if mahsulotlar.has_other_pages %}
+    <div class="pagination-container">
+        <div>Showing {{ mahsulotlar.start_index }} to {{ mahsulotlar.end_index }} of {{ total }} entries</div>
+        <div class="page-numbers">
+            {% if mahsulotlar.has_previous %}
+            <a href="?page={{ mahsulotlar.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if tur_filter %}&tur={{ tur_filter }}{% endif %}{% if sort_order %}&sort={{ sort_order }}{% endif %}"
+                class="page-btn" style="width: auto; padding: 0 10px;">Prev</a>
+            {% endif %}
+
+            {% for i in mahsulotlar.paginator.page_range %}
+            {% if mahsulotlar.number  ==  i %}
+            <a href="#" class="page-btn active">{{ i }}</a>
+            {% else %}
+            <a href="?page={{ i }}{% if search_query %}&q={{ search_query }}{% endif %}{% if tur_filter %}&tur={{ tur_filter }}{% endif %}{% if sort_order %}&sort={{ sort_order }}{% endif %}"
+                class="page-btn">{{ i }}</a>
+            {% endif %}
+            {% endfor %}
+
+            {% if mahsulotlar.has_next %}
+            <a href="?page={{ mahsulotlar.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if tur_filter %}&tur={{ tur_filter }}{% endif %}{% if sort_order %}&sort={{ sort_order }}{% endif %}"
+                class="page-btn" style="width: auto; padding: 0 10px;">Next</a>
+            {% endif %}
+        </div>
+    </div>
     {% endif %}
-
-    <span class="current">
-        Sahifa {{ mahsulotlar.number }} / {{ mahsulotlar.paginator.num_pages }}
-    </span>
-
-    {% if mahsulotlar.has_next %}
-    <a href="?page={{ mahsulotlar.next_page_number }}">Keyingi ➡️</a>
-    <a href="?page={{ mahsulotlar.paginator.num_pages }}">Oxirgi ⏭️</a>
-    {% endif %}
 </div>
-{% endif %}
 
 {% endblock %}

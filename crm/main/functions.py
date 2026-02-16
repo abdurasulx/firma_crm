@@ -168,6 +168,7 @@ class sotuv_new_form:
         self.tasdiq_kutilmoqda=savdo.tasdiq_kutilmoqda
         self.summa=savdo.summa
         self.smm=savdo.smm
+        print(savdo.smm)
         self.smr=savdo.smr.url
         self.vaqt_sana=savdo.vaqt_sana
 
