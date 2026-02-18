@@ -97,9 +97,11 @@
         width: 100%;
         padding: 10px 10px 10px 40px;
         border: 1px solid #e5e7eb;
-        border-radius: 6px;
+        border-radius: 8px;
         outline: none;
         transition: all 0.3s;
+        font-size: 14px;
+        background: white;
     }
 
     .search-input:focus {
@@ -144,17 +146,22 @@
 
     .top-search-input {
         width: 100%;
-        padding: 12px 12px 12px 45px;
+        padding: 14px 14px 14px 48px;
         border: 2px solid #10b981;
-        border-radius: 8px;
+        border-radius: 12px;
         font-size: 16px;
         outline: none;
-        box-shadow: 0 4px 8px rgba(16, 185, 129, 0.15);
+        box-shadow: 0 4px 16px rgba(16, 185, 129, 0.2);
+        transition: all 0.3s ease;
+    }
+
+    .top-search-input:focus {
+        box-shadow: 0 6px 24px rgba(16, 185, 129, 0.3);
     }
 
     .top-search-icon {
         position: absolute;
-        left: 15px;
+        left: 16px;
         top: 50%;
         transform: translateY(-50%);
         color: #10b981;
@@ -162,30 +169,32 @@
     }
 
     .close-search-btn {
-        background: none;
+        background: #f3f4f6;
         border: none;
-        font-size: 28px;
-        color: #9ca3af;
+        font-size: 22px;
+        color: #6b7280;
         cursor: pointer;
-        padding: 4px 8px;
-        transition: color 0.2s;
+        padding: 8px 14px;
+        border-radius: 10px;
+        transition: all 0.2s;
     }
 
     .close-search-btn:hover {
+        background: #fee2e2;
         color: #ef4444;
     }
 
     /* Search Results Dropdown */
     .search-results-dropdown {
         position: absolute;
-        top: calc(100% + 8px);
+        top: calc(100% + 6px);
         left: 0;
         width: 100%;
         background: white;
         border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-        max-height: 400px;
+        border-radius: 14px;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
+        max-height: 420px;
         overflow-y: auto;
         display: none;
         z-index: 1000;
@@ -193,6 +202,19 @@
 
     .search-results-dropdown.active {
         display: block;
+        animation: slideDown 0.2s ease;
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-8px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     .search-result-item {
@@ -202,15 +224,20 @@
         border-bottom: 1px solid #f3f4f6;
         text-decoration: none;
         color: inherit;
-        transition: background 0.2s;
+        transition: background 0.15s;
+    }
+
+    .search-result-item:first-child {
+        border-radius: 14px 14px 0 0;
     }
 
     .search-result-item:last-child {
         border-bottom: none;
+        border-radius: 0 0 14px 14px;
     }
 
     .search-result-item:hover {
-        background: #f9fafb;
+        background: #f0fdf4;
     }
 
     .result-avatar {
@@ -219,29 +246,45 @@
         border-radius: 50%;
         margin-right: 12px;
         object-fit: cover;
+        border: 2px solid #e5e7eb;
+        flex-shrink: 0;
     }
 
     .result-info {
         flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
 
     .result-name {
         font-weight: 600;
         color: #1f2937;
         font-size: 14px;
-        margin-bottom: 2px;
     }
 
     .result-role {
-        font-size: 12px;
+        font-size: 13px;
         color: #6b7280;
+        background: #f3f4f6;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-weight: 500;
     }
 
-    .result-status {
-        font-size: 11px;
-        padding: 3px 8px;
-        border-radius: 12px;
-        margin-left: 8px;
+    .result-highlight {
+        background: #fef3c7;
+        padding: 0 2px;
+        border-radius: 2px;
+    }
+
+    .search-results-count {
+        padding: 8px 16px;
+        font-size: 12px;
+        color: #9ca3af;
+        border-bottom: 1px solid #f3f4f6;
+        background: #f9fafb;
+        border-radius: 14px 14px 0 0;
     }
 
     /* Hide bottom search when top is active */
@@ -368,14 +411,6 @@
         border-color: #ef4444;
     }
 
-    /* Checkbox */
-    .custom-checkbox {
-        width: 18px;
-        height: 18px;
-        border: 2px solid #d1d5db;
-        border-radius: 4px;
-        cursor: pointer;
-    }
 
     /* Pagination */
     .pagination-container {
@@ -482,7 +517,6 @@
         <table class="custom-table">
             <thead>
                 <tr>
-                    <th style="width: 40px;"><input type="checkbox" class="custom-checkbox"></th>
                     <th>Name</th>
                     <th>Phone</th>
                     <th>Username</th>
@@ -495,7 +529,6 @@
             <tbody>
                 {% for x in hodimlar %}
                 <tr>
-                    <td><input type="checkbox" class="custom-checkbox"></td>
                     <td>
                         <div class="user-cell">
                             {% if x.rasmi %}
@@ -557,9 +590,11 @@
                 class="page-btn" style="width: auto; padding: 0 10px;">Prev</a>
             {% endif %}
 
-            {% for i in hodimlar.paginator.page_range %}
-            {% if hodimlar.number  ==  i %}
+            {% for i in page_range %}
+            {% if i  ==  hodimlar.number %}
             <a href="#" class="page-btn active">{{ i }}</a>
+            {% elif i  ==  '…' %}
+            <span class="page-btn" style="cursor: default; border: none;">...</span>
             {% else %}
             <a href="?page={{ i }}{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if role_filter %}&role={{ role_filter }}{% endif %}{% if sort_order %}&sort={{ sort_order }}{% endif %}"
                 class="page-btn">{{ i }}</a>
@@ -586,16 +621,21 @@
         const topSearchInput = document.getElementById('topSearchInput');
         const searchResultsDropdown = document.getElementById('searchResultsDropdown');
         let searchTimeout;
+        let justOpened = false;
 
         // Show top search
         function showTopSearch(e) {
-            if (e) e.preventDefault();
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
             topSearchContainer.classList.add('active');
             normalHeader.classList.add('hidden');
             filterBar.classList.add('search-hidden');
             topSearchInput.focus();
+            justOpened = true;
+            setTimeout(() => { justOpened = false; }, 200);
 
-            // Transfer value if exists
             if (bottomSearchInput && bottomSearchInput.value) {
                 topSearchInput.value = bottomSearchInput.value;
                 performSearch(bottomSearchInput.value);
@@ -615,12 +655,19 @@
         if (bottomSearchBtn) bottomSearchBtn.addEventListener('click', showTopSearch);
         if (bottomSearchInput) {
             bottomSearchInput.addEventListener('click', showTopSearch);
-            bottomSearchInput.addEventListener('focus', showTopSearch);
+            bottomSearchInput.addEventListener('focus', function (e) {
+                e.stopPropagation();
+                showTopSearch(e);
+            });
         }
-        if (closeSearchBtn) closeSearchBtn.addEventListener('click', closeTopSearch);
+        if (closeSearchBtn) closeSearchBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            closeTopSearch();
+        });
 
         // Close on outside click
         document.addEventListener('click', function (e) {
+            if (justOpened) return;
             if (topSearchContainer.classList.contains('active') &&
                 !topSearchContainer.contains(e.target) &&
                 !bottomSearchInput?.contains(e.target) &&
@@ -629,17 +676,28 @@
             }
         });
 
-        // Live search on input
+        // Close on Escape key
+        document.addEventListener('keydown', function (e) {
+            if (e.key  ==  'Escape' && topSearchContainer.classList.contains('active')) {
+                closeTopSearch();
+            }
+        });
+
+        // Live search on every keystroke
         topSearchInput.addEventListener('input', function () {
             const query = this.value.trim();
             clearTimeout(searchTimeout);
 
-            if (query.length  == = 0) {
+            if (query.length  ==  0) {
                 searchResultsDropdown.classList.remove('active');
                 return;
             }
 
-            searchTimeout = setTimeout(() => performSearch(query), 300);
+            // Show loading state
+            searchResultsDropdown.innerHTML = '<div class="search-results-count"><i class="fa-solid fa-spinner fa-spin"></i> Qidirilmoqda...</div>';
+            searchResultsDropdown.classList.add('active');
+
+            searchTimeout = setTimeout(() => performSearch(query), 150);
         });
 
         // Perform AJAX search
@@ -650,35 +708,37 @@
 
             fetch(`${window.location.pathname}?${params.toString()}`)
                 .then(response => response.json())
-                .then(data => renderResults(data.results))
+                .then(data => renderResults(data.results, query))
                 .catch(error => console.error('Search error:', error));
         }
 
+        // Highlight matching text
+        function highlightMatch(text, query) {
+            if (!text || !query) return text;
+            const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+            return text.replace(regex, '<span class="result-highlight">$1</span>');
+        }
+
         // Render search results
-        function renderResults(results) {
-            if (!results || results.length  == = 0) {
+        function renderResults(results, query) {
+            if (!results || results.length  ==  0) {
                 searchResultsDropdown.innerHTML =
-                    '<div class="search-result-item" style="justify-content: center; color: #9ca3af;">Natija topilmadi</div>';
+                    '<div class="search-result-item" style="justify-content: center; color: #9ca3af; padding: 24px;"><i class="fa-solid fa-search" style="margin-right: 8px;"></i> Natija topilmadi</div>';
                 searchResultsDropdown.classList.add('active');
                 return;
             }
 
-            let html = '';
+            let html = `<div class="search-results-count">${results.length} ta natija topildi</div>`;
             results.forEach(user => {
-                const avatar = user.rasmi_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.tuliq_ismi)}&background=10b981&color=fff`;
-                const statusStyle = user.status  == = 'Active'
-                    ? 'background: #d1fae5; color: #059669'
-                    : 'background: #fee2e2; color: #dc2626';
+                const avatar = user.rasmi_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.tuliq_ismi)}&background=10b981&color=fff&rounded=true&size=40`;
+                const highlightedName = highlightMatch(user.tuliq_ismi, query);
 
                 html += `
-                    <a href="/profile/${user.username}/" class="search-result-item">
+                    <a href="/edituser/${user.username}" class="search-result-item">
                         <img src="${avatar}" class="result-avatar" alt="${user.tuliq_ismi}">
                         <div class="result-info">
-                            <div class="result-name">
-                                ${user.tuliq_ismi}
-                                <span class="result-status" style="${statusStyle}">${user.status}</span>
-                            </div>
-                            <div class="result-role">${user.type}</div>
+                            <span class="result-name">${highlightedName}</span>
+                            <span class="result-role">${user.type}</span>
                         </div>
                     </a>
                 `;

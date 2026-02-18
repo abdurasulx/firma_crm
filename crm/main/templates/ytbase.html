@@ -355,7 +355,7 @@
                 </li>
                 <!-- Mobile only links -->
                 <li class="mobile-only">
-                    <a href="{% url 'profile' request.user.username %}" class="nav-link">
+                    <a href="{% url 'profile' user.username %}" class="nav-link">
                         👤 Profil
                     </a>
                 </li>
@@ -368,13 +368,13 @@
 
             <div class="user-menu desktop-only" id="userMenu">
                 <div class="user-toggle" onclick="toggleUserMenu()">
-                    <img src="{% if request.user.rasmi %}{{ request.user.rasmi.url }}{% else %}{% static 'images/default_avatar.jpg' %}{% endif %}"
+                    <img src="{% if user.rasmi.url %}{{ user.rasmi.url }}{% else %}{% static 'images/default_avatar.jpg' %}{% endif %}"
                         alt="Avatar" class="user-avatar">
-                    <span>{{ request.user.tuliq_ismi }}</span>
+                    <span>{{ user.tuliq_ismi }}</span>
                     <span>▼</span>
                 </div>
                 <div class="dropdown-menu">
-                    <a href="{% url 'profile' request.user.username %}" class="dropdown-item">
+                    <a href="{% url 'profile' user.username %}" class="dropdown-item">
                         👤 Profil
                     </a>
                     <a href="{% url 'logout' %}" class="dropdown-item">

@@ -5,6 +5,8 @@ from .hisobot_views import hisobotlar_view
 from .list_views import hodimlar_list, mahsulotlar_list
 from .nasiya_views import nasiya_savdolar_view, add_nasiya_payment
 from .mijoz_views import mijozlar_list, mijoz_detail
+from . import analytics
+from .analytics_views import analytics_dashboard
 from django.urls import path
 
 urlpatterns = [
@@ -29,4 +31,12 @@ urlpatterns = [
     path('add/yuklama', add_yuklama, name='add_yuklama'),
     path('sotish/' , sotish, name='sotish'),
     path('api/check-new-deliveries/', check_new_deliveries, name='api_check_deliveries'),
+    
+    # Analytics Dashboard
+    path('analytics/', analytics_dashboard, name='analytics_dashboard'),
+    
+    # Analytics API endpoints
+    path('api/analytics/product-demand/', analytics.product_demand_api, name='api_product_demand'),
+    path('api/analytics/products/', analytics.products_list_api, name='api_products_list'),
+    path('api/analytics/shop-recommendations/', analytics.shop_recommendations_api, name='api_shop_recommendations'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

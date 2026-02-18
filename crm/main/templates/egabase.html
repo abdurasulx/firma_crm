@@ -17,21 +17,24 @@
         :root {
             --primary-color: #10b981;
             --primary-dark: #059669;
+            --primary-glow: rgba(16, 185, 129, 0.3);
             --secondary-color: #667eea;
             --danger-color: #ef4444;
             --success-color: #22c55e;
             --warning-color: #f59e0b;
             --text-dark: #1f2937;
             --text-light: #6b7280;
-            --bg-light: #f9fafb;
+            --bg-light: #f0f2f5;
             --bg-white: #ffffff;
             --border-color: #e5e7eb;
-            --sidebar-width: 260px;
-            --sidebar-collapsed: 70px;
+            --sidebar-width: 270px;
+            --sidebar-collapsed: 78px;
+            --sidebar-bg: #0f172a;
+            --sidebar-hover: rgba(255, 255, 255, 0.06);
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: var(--bg-light);
             min-height: 100vh;
         }
@@ -43,11 +46,20 @@
             top: 0;
             bottom: 0;
             width: var(--sidebar-width);
-            background: linear-gradient(180deg, #1f2937 0%, #111827 100%);
-            transition: all 0.3s ease;
+            background: var(--sidebar-bg);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 1000;
             overflow-x: hidden;
             overflow-y: auto;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .sidebar {
+            scrollbar-width: none;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            display: none;
         }
 
         .sidebar.collapsed {
@@ -56,15 +68,40 @@
 
         .sidebar-header {
             padding: 24px 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 14px;
+        }
+
+        .sidebar-inner {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .sidebar-menu-wrapper {
+            flex: 1;
+            overflow-y: auto;
+            scrollbar-width: none;
+        }
+
+        .sidebar-menu-wrapper::-webkit-scrollbar {
+            display: none;
         }
 
         .sidebar-logo {
-            font-size: 28px;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary-color), #34d399);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: white;
             flex-shrink: 0;
+            box-shadow: 0 4px 12px var(--primary-glow);
         }
 
         .sidebar-brand {
@@ -74,6 +111,7 @@
             white-space: nowrap;
             opacity: 1;
             transition: opacity 0.3s ease;
+            letter-spacing: -0.3px;
         }
 
         .sidebar.collapsed .sidebar-brand {
@@ -82,58 +120,104 @@
         }
 
         .sidebar-toggle {
-            position: absolute;
-            right: -12px;
-            top: 32px;
-            width: 24px;
-            height: 24px;
-            background: var(--primary-color);
-            border-radius: 50%;
             display: flex;
             align-items: center;
-            justify-content: center;
+            gap: 12px;
+            padding: 16px 20px;
+            margin: 8px 12px 12px;
             cursor: pointer;
             color: white;
-            font-size: 12px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.25s ease;
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            border-radius: 10px;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px var(--primary-glow);
+        }
+
+        .sidebar-toggle:hover {
+            color: white;
+            background: linear-gradient(135deg, #34d399, var(--primary-color));
+            box-shadow: 0 6px 20px var(--primary-glow);
+            transform: translateY(-1px);
+        }
+
+        .sidebar-toggle i {
+            font-size: 15px;
+            width: 24px;
+            text-align: center;
+        }
+
+        .sidebar-toggle .toggle-text {
+            white-space: nowrap;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+
+        .sidebar.collapsed .sidebar-toggle .toggle-text {
+            opacity: 0;
+            width: 0;
+        }
+
+        .sidebar-section-label {
+            padding: 20px 20px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .sidebar.collapsed .sidebar-section-label {
+            opacity: 0;
         }
 
         .sidebar-menu {
-            padding: 20px 0;
+            padding: 12px 0;
             list-style: none;
         }
 
         .menu-item {
-            margin: 4px 12px;
+            margin: 2px 12px;
         }
 
         .menu-link {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 14px;
             padding: 12px 16px;
-            color: rgba(255, 255, 255, 0.7);
+            color: rgba(255, 255, 255, 0.55);
             text-decoration: none;
-            border-radius: 8px;
-            transition: all 0.3s ease;
+            border-radius: 10px;
+            transition: all 0.2s ease;
             position: relative;
+            font-size: 14px;
+            font-weight: 500;
         }
 
         .menu-link:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
+            background: var(--sidebar-hover);
+            color: rgba(255, 255, 255, 0.9);
         }
 
         .menu-link.active {
-            background: var(--primary-color);
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white;
+            box-shadow: 0 4px 16px var(--primary-glow);
+            font-weight: 600;
+        }
+
+        .menu-link.active .menu-icon {
             color: white;
         }
 
         .menu-icon {
-            font-size: 20px;
+            font-size: 18px;
             width: 24px;
             text-align: center;
             flex-shrink: 0;
+            transition: color 0.2s ease;
         }
 
         .menu-text {
@@ -147,10 +231,14 @@
             width: 0;
         }
 
+        .sidebar.collapsed .sidebar-section-label {
+            display: none;
+        }
+
         /* Main Content */
         .main-wrapper {
             margin-left: var(--sidebar-width);
-            transition: margin-left 0.3s ease;
+            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -162,7 +250,7 @@
 
         /* Top Header */
         .top-header {
-            background: white;
+            background: var(--bg-white);
             padding: 16px 30px;
             border-bottom: 1px solid var(--border-color);
             display: flex;
@@ -171,18 +259,33 @@
             position: sticky;
             top: 0;
             z-index: 100;
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
         }
 
         .header-title {
-            font-size: 24px;
+            font-size: 22px;
             font-weight: 700;
             color: var(--text-dark);
+            letter-spacing: -0.3px;
+        }
+
+        .header-breadcrumb {
+            font-size: 13px;
+            color: var(--text-light);
+            margin-top: 2px;
         }
 
         .header-actions {
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 12px;
         }
 
         .user-profile {
@@ -191,20 +294,23 @@
             gap: 12px;
             padding: 8px 16px;
             background: var(--bg-light);
-            border-radius: 10px;
+            border-radius: 12px;
             cursor: pointer;
             transition: all 0.3s ease;
             position: relative;
+            border: 1px solid transparent;
         }
 
         .user-profile:hover {
-            background: var(--border-color);
+            background: var(--bg-white);
+            border-color: var(--border-color);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
         }
 
         .user-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
             object-fit: cover;
             border: 2px solid var(--primary-color);
         }
@@ -226,22 +332,29 @@
         }
 
         .dropdown-toggle {
-            font-size: 12px;
+            font-size: 10px;
             color: var(--text-light);
+            transition: transform 0.3s ease;
+        }
+
+        .user-profile.active .dropdown-toggle {
+            transform: rotate(180deg);
         }
 
         .user-dropdown {
             position: absolute;
-            top: calc(100% + 10px);
+            top: calc(100% + 8px);
             right: 0;
             background: white;
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            border-radius: 14px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
             min-width: 200px;
             opacity: 0;
             visibility: hidden;
-            transform: translateY(-10px);
-            transition: all 0.3s ease;
+            transform: translateY(-8px);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid var(--border-color);
+            overflow: hidden;
         }
 
         .user-profile.active .user-dropdown {
@@ -258,15 +371,17 @@
             color: var(--text-dark);
             text-decoration: none;
             transition: all 0.2s ease;
+            font-size: 14px;
         }
 
         .dropdown-item:first-child {
-            border-radius: 12px 12px 0 0;
+            border-radius: 14px 14px 0 0;
         }
 
         .dropdown-item:last-child {
-            border-radius: 0 0 12px 12px;
+            border-radius: 0 0 14px 14px;
             border-top: 1px solid var(--border-color);
+            color: var(--danger-color);
         }
 
         .dropdown-item:hover {
@@ -276,7 +391,7 @@
         /* Main Content Area */
         .main-content {
             flex: 1;
-            padding: 30px;
+            padding: 28px;
         }
 
         /* Mobile Responsive */
@@ -288,6 +403,7 @@
             z-index: 999;
             opacity: 0;
             transition: opacity 0.3s ease;
+            backdrop-filter: blur(4px);
         }
 
         .mobile-overlay.active {
@@ -316,11 +432,15 @@
             }
 
             .top-header {
-                padding: 12px 15px;
+                padding: 12px 16px;
             }
 
             .header-title {
-                font-size: 18px;
+                font-size: 17px;
+            }
+
+            .header-breadcrumb {
+                display: none;
             }
 
             .user-info {
@@ -328,25 +448,35 @@
             }
 
             .main-content {
-                padding: 20px 15px;
+                padding: 16px;
             }
 
             .hamburger {
                 display: flex !important;
+            }
+
+            .sidebar-toggle {
+                display: none;
             }
         }
 
         .hamburger {
             display: none;
             flex-direction: column;
-            gap: 4px;
+            gap: 5px;
             cursor: pointer;
             padding: 8px;
+            border-radius: 8px;
+            transition: background 0.2s ease;
+        }
+
+        .hamburger:hover {
+            background: var(--bg-light);
         }
 
         .hamburger span {
-            width: 24px;
-            height: 3px;
+            width: 22px;
+            height: 2.5px;
             background: var(--text-dark);
             border-radius: 2px;
             transition: all 0.3s ease;
@@ -357,55 +487,80 @@
 <body>
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <span class="sidebar-logo"><i class="fa-solid fa-building"></i></span>
-            <span class="sidebar-brand">Firma CRM</span>
-        </div>
-        <div class="sidebar-toggle" onclick="toggleSidebar()"><i class="fa-solid fa-chevron-right"></i></div>
+        <div class="sidebar-inner">
+            <div class="sidebar-header">
+                <div class="sidebar-logo"><i class="fa-solid fa-building"></i></div>
+                <span class="sidebar-brand">Firma CRM</span>
+            </div>
+            <div class="sidebar-menu-wrapper">
 
-        <ul class="sidebar-menu">
-            <li class="menu-item">
-                <a href="{% url 'main' %}" class="menu-link {% if request.path == '/' %}active{% endif %}">
-                    <span class="menu-icon"><i class="fa-solid fa-house"></i></span>
-                    <span class="menu-text">Dashboard</span>
-                </a>
-            </li>
-            <li class="menu-item">
-                <a href="{% url 'hodimlar_list' %}"
-                    class="menu-link {% if '/hodimlar/' in request.path %}active{% endif %}">
-                    <span class="menu-icon"><i class="fa-solid fa-users"></i></span>
-                    <span class="menu-text">Hodimlar</span>
-                </a>
-            </li>
-            <li class="menu-item">
-                <a href="{% url 'mahsulotlar_list' %}"
-                    class="menu-link {% if '/mahsulotlar/' in request.path or '/product/' in request.path %}active{% endif %}">
-                    <span class="menu-icon"><i class="fa-solid fa-box"></i></span>
-                    <span class="menu-text">Mahsulotlar</span>
-                </a>
-            </li>
-            <li class="menu-item">
-                <a href="{% url 'mijozlar_list' %}"
-                    class="menu-link {% if '/mijozlar/' in request.path or '/mijoz/' in request.path %}active{% endif %}">
-                    <span class="menu-icon"><i class="fa-solid fa-store"></i></span>
-                    <span class="menu-text">Mijozlar</span>
-                </a>
-            </li>
-            <li class="menu-item">
-                <a href="{% url 'hisobotlar' %}"
-                    class="menu-link {% if '/hisobotlar/' in request.path %}active{% endif %}">
-                    <span class="menu-icon"><i class="fa-solid fa-chart-bar"></i></span>
-                    <span class="menu-text">Hisobotlar</span>
-                </a>
-            </li>
-            <li class="menu-item">
-                <a href="{% url 'nasiya_savdolar' %}"
-                    class="menu-link {% if '/nasiya-savdolar/' in request.path %}active{% endif %}">
-                    <span class="menu-icon"><i class="fa-solid fa-credit-card"></i></span>
-                    <span class="menu-text">Nasiya Savdolar</span>
-                </a>
-            </li>
-        </ul>
+                <div class="sidebar-section-label">Asosiy</div>
+                <ul class="sidebar-menu">
+                    <li class="menu-item">
+                        <a href="{% url 'main' %}" class="menu-link {% if request.path == '/' %}active{% endif %}"
+                            data-title="Dashboard">
+                            <span class="menu-icon"><i class="fa-solid fa-house"></i></span>
+                            <span class="menu-text">Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{% url 'hodimlar_list' %}"
+                            class="menu-link {% if '/hodimlar/' in request.path or '/edituser/' in request.path or '/createuser/' in request.path %}active{% endif %}"
+                            data-title="Hodimlar">
+                            <span class="menu-icon"><i class="fa-solid fa-users"></i></span>
+                            <span class="menu-text">Hodimlar</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{% url 'mahsulotlar_list' %}"
+                            class="menu-link {% if '/mahsulotlar/' in request.path or '/product/' in request.path %}active{% endif %}"
+                            data-title="Mahsulotlar">
+                            <span class="menu-icon"><i class="fa-solid fa-box"></i></span>
+                            <span class="menu-text">Mahsulotlar</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{% url 'mijozlar_list' %}"
+                            class="menu-link {% if '/mijozlar/' in request.path or '/mijoz/' in request.path %}active{% endif %}"
+                            data-title="Mijozlar">
+                            <span class="menu-icon"><i class="fa-solid fa-store"></i></span>
+                            <span class="menu-text">Mijozlar</span>
+                        </a>
+                    </li>
+                </ul>
+                <div class="sidebar-section-label">Boshqaruv</div>
+                <ul class="sidebar-menu">
+                    <li class="menu-item">
+                        <a href="{% url 'hisobotlar' %}"
+                            class="menu-link {% if '/hisobotlar/' in request.path %}active{% endif %}"
+                            data-title="Hisobotlar">
+                            <span class="menu-icon"><i class="fa-solid fa-chart-bar"></i></span>
+                            <span class="menu-text">Hisobotlar</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{% url 'analytics_dashboard' %}"
+                            class="menu-link {% if '/analytics/' in request.path %}active{% endif %}"
+                            data-title="AI Analytics">
+                            <span class="menu-icon"><i class="fa-solid fa-robot"></i></span>
+                            <span class="menu-text">AI Analytics</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{% url 'nasiya_savdolar' %}"
+                            class="menu-link {% if '/nasiya-savdolar/' in request.path %}active{% endif %}"
+                            data-title="Nasiya Savdolar">
+                            <span class="menu-icon"><i class="fa-solid fa-credit-card"></i></span>
+                            <span class="menu-text">Nasiya Savdolar</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <div class="sidebar-toggle" onclick="toggleSidebar()">
+                <i class="fa-solid fa-angles-left"></i>
+                <span class="toggle-text">Yig'ish</span>
+            </div>
+        </div>
     </aside>
 
     <!-- Mobile Overlay -->
@@ -415,13 +570,15 @@
     <div class="main-wrapper">
         <!-- Top Header -->
         <header class="top-header">
-            <div style="display: flex; align-items: center; gap: 16px;">
+            <div class="header-left">
                 <div class="hamburger" onclick="openMobileSidebar()">
                     <span></span>
                     <span></span>
                     <span></span>
                 </div>
-                <h1 class="header-title">{% block page_title %}Dashboard{% endblock %}</h1>
+                <div>
+                    <h1 class="header-title" id="pageTitle">{% block page_title %}Dashboard{% endblock %}</h1>
+                </div>
             </div>
 
             <div class="header-actions">
@@ -456,17 +613,34 @@
         // Toggle sidebar collapse
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
+            const icon = sidebar.querySelector('.sidebar-toggle i');
             sidebar.classList.toggle('collapsed');
-
-            // Save state to localStorage
+            if (sidebar.classList.contains('collapsed')) {
+                icon.className = 'fa-solid fa-angles-right';
+            } else {
+                icon.className = 'fa-solid fa-angles-left';
+            }
             localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
         }
 
-        // Load sidebar state
-        window.addEventListener('load', function () {
+        // Load sidebar state & set dynamic page title
+        window.addEventListener('DOMContentLoaded', function () {
             const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
             if (isCollapsed) {
-                document.getElementById('sidebar').classList.add('collapsed');
+                const sidebar = document.getElementById('sidebar');
+                sidebar.classList.add('collapsed');
+                const icon = sidebar.querySelector('.sidebar-toggle i');
+                icon.className = 'fa-solid fa-angles-right';
+            }
+
+            // Set page title from active sidebar link
+            const activeLink = document.querySelector('.menu-link.active');
+            const pageTitle = document.getElementById('pageTitle');
+            if (activeLink && pageTitle) {
+                const title = activeLink.getAttribute('data-title');
+                if (title && pageTitle.textContent.trim() === 'Dashboard') {
+                    pageTitle.textContent = title;
+                }
             }
         });
 

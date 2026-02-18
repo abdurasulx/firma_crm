@@ -163,6 +163,101 @@
         cursor: pointer;
     }
 
+    /* Mobile image upload buttons */
+    .mobile-upload-btns {
+        display: none;
+        gap: 12px;
+    }
+
+    .upload-btn {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        padding: 20px 16px;
+        border: 2px dashed #d1d5db;
+        border-radius: 12px;
+        background: #f9fafb;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        color: #374151;
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .upload-btn:active {
+        transform: scale(0.97);
+    }
+
+    .upload-btn .btn-icon {
+        font-size: 32px;
+    }
+
+    .upload-btn.camera-btn {
+        border-color: #3b82f6;
+        background: #eff6ff;
+        color: #2563eb;
+    }
+
+    .upload-btn.gallery-btn {
+        border-color: #10b981;
+        background: #ecfdf5;
+        color: #059669;
+    }
+
+    .upload-btn.camera-btn:active {
+        background: #dbeafe;
+    }
+
+    .upload-btn.gallery-btn:active {
+        background: #d1fae5;
+    }
+
+    .img-preview {
+        display: none;
+        margin-top: 12px;
+        border-radius: 10px;
+        overflow: hidden;
+        border: 2px solid #e5e7eb;
+        position: relative;
+    }
+
+    .img-preview img {
+        width: 100%;
+        max-height: 250px;
+        object-fit: cover;
+        display: block;
+    }
+
+    .img-preview .remove-img {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 32px;
+        height: 32px;
+        background: rgba(239, 68, 68, 0.9);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        font-size: 18px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    @media (max-width: 768px) {
+        .mobile-upload-btns {
+            display: flex;
+        }
+
+        .desktop-upload {
+            display: none;
+        }
+    }
+
     .btn-submit {
         width: 100%;
         padding: 16px;
@@ -282,8 +377,27 @@
         <div class="form-group">
             <label for="dukon_rasmi" class="form-label required">🏪 Do'kon rasmi</label>
             <div class="file-upload-wrapper">
-                <div class="file-upload">
+                <!-- Desktop: oddiy file input -->
+                <div class="file-upload desktop-upload">
                     <input type="file" id="dukon_rasmi" name="dukon_rasmi" accept="image/*" required>
+                </div>
+                <!-- Mobile: kamera + galeriya tugmalari -->
+                <div class="mobile-upload-btns">
+                    <div class="upload-btn camera-btn" onclick="openCamera('dukon_rasmi_mobile')">
+                        <span class="btn-icon">📸</span>
+                        <span>Kameradan olish</span>
+                    </div>
+                    <div class="upload-btn gallery-btn" onclick="openGallery('dukon_rasmi_mobile')">
+                        <span class="btn-icon">🖼️</span>
+                        <span>Rasmni tanlash</span>
+                    </div>
+                </div>
+                <input type="file" id="dukon_rasmi_mobile" name="dukon_rasmi" accept="image/*" capture="environment"
+                    style="display:none;">
+                <input type="file" id="dukon_rasmi_gallery" name="dukon_rasmi" accept="image/*" style="display:none;">
+                <div class="img-preview" id="preview_dukon_rasmi">
+                    <img src="" alt="Preview">
+                    <button type="button" class="remove-img" onclick="removeImage('dukon_rasmi')">✕</button>
                 </div>
             </div>
         </div>
@@ -291,8 +405,28 @@
         <div class="form-group">
             <label for="egasining_rasmi" class="form-label required">👤 Egasining rasmi</label>
             <div class="file-upload-wrapper">
-                <div class="file-upload">
+                <!-- Desktop -->
+                <div class="file-upload desktop-upload">
                     <input type="file" id="egasining_rasmi" name="egasining_rasmi" accept="image/*" required>
+                </div>
+                <!-- Mobile -->
+                <div class="mobile-upload-btns">
+                    <div class="upload-btn camera-btn" onclick="openCamera('egasining_rasmi_mobile')">
+                        <span class="btn-icon">📸</span>
+                        <span>Kameradan olish</span>
+                    </div>
+                    <div class="upload-btn gallery-btn" onclick="openGallery('egasining_rasmi_mobile')">
+                        <span class="btn-icon">🖼️</span>
+                        <span>Rasmni tanlash</span>
+                    </div>
+                </div>
+                <input type="file" id="egasining_rasmi_mobile" name="egasining_rasmi" accept="image/*"
+                    capture="environment" style="display:none;">
+                <input type="file" id="egasining_rasmi_gallery" name="egasining_rasmi" accept="image/*"
+                    style="display:none;">
+                <div class="img-preview" id="preview_egasining_rasmi">
+                    <img src="" alt="Preview">
+                    <button type="button" class="remove-img" onclick="removeImage('egasining_rasmi')">✕</button>
                 </div>
             </div>
         </div>
@@ -307,6 +441,99 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
+    // === Image Upload Functions ===
+    function openCamera(inputId) {
+        const input = document.getElementById(inputId);
+        input.setAttribute('capture', 'environment');
+        input.click();
+    }
+
+    function openGallery(inputId) {
+        const galleryId = inputId.replace('_mobile', '_gallery');
+        const galleryInput = document.getElementById(galleryId);
+        galleryInput.click();
+    }
+
+    function removeImage(fieldName) {
+        const preview = document.getElementById('preview_' + fieldName);
+        preview.style.display = 'none';
+        preview.querySelector('img').src = '';
+
+        // Reset all related file inputs
+        const mobileInput = document.getElementById(fieldName + '_mobile');
+        const galleryInput = document.getElementById(fieldName + '_gallery');
+        const desktopInput = document.getElementById(fieldName);
+        if (mobileInput) mobileInput.value = '';
+        if (galleryInput) galleryInput.value = '';
+        if (desktopInput) desktopInput.value = '';
+    }
+
+    function showPreview(file, fieldName) {
+        if (!file) return;
+        const preview = document.getElementById('preview_' + fieldName);
+        const img = preview.querySelector('img');
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            img.src = e.target.result;
+            preview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // Listen for file changes on mobile inputs
+    ['dukon_rasmi', 'egasining_rasmi'].forEach(function (field) {
+        const mobileInput = document.getElementById(field + '_mobile');
+        const galleryInput = document.getElementById(field + '_gallery');
+
+        if (mobileInput) {
+            mobileInput.addEventListener('change', function () {
+                if (this.files[0]) {
+                    showPreview(this.files[0], field);
+                    // Clear the other input
+                    if (galleryInput) galleryInput.value = '';
+                }
+            });
+        }
+        if (galleryInput) {
+            galleryInput.addEventListener('change', function () {
+                if (this.files[0]) {
+                    showPreview(this.files[0], field);
+                    // Clear the other input
+                    if (mobileInput) mobileInput.value = '';
+                }
+            });
+        }
+    });
+
+    // Form submit: ensure mobile inputs are used correctly
+    document.querySelector('form').addEventListener('submit', function (e) {
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+            ['dukon_rasmi', 'egasining_rasmi'].forEach(function (field) {
+                const mobileInput = document.getElementById(field + '_mobile');
+                const galleryInput = document.getElementById(field + '_gallery');
+                const desktopInput = document.getElementById(field);
+
+                // Disable desktop input so it doesn't override mobile
+                if (desktopInput) desktopInput.disabled = true;
+
+                // Keep only the input that has a file
+                if (galleryInput && galleryInput.files.length > 0) {
+                    if (mobileInput) mobileInput.disabled = true;
+                } else if (mobileInput && mobileInput.files.length > 0) {
+                    if (galleryInput) galleryInput.disabled = true;
+                }
+            });
+        } else {
+            // Desktop: disable mobile inputs
+            ['dukon_rasmi', 'egasining_rasmi'].forEach(function (field) {
+                const mobileInput = document.getElementById(field + '_mobile');
+                const galleryInput = document.getElementById(field + '_gallery');
+                if (mobileInput) mobileInput.disabled = true;
+                if (galleryInput) galleryInput.disabled = true;
+            });
+        }
+    });
     // Initialize map - default to Tashkent
     let map = L.map('map').setView([41.2995, 69.2401], 13);
     let marker = null;
@@ -338,6 +565,7 @@
             marker.on('dragend', function (e) {
                 const position = marker.getLatLng();
                 updateCoordinates(position.lat, position.lng);
+                reverseGeocode(position.lat, position.lng);
             });
         }
 
@@ -348,24 +576,65 @@
     // Click on map to set location
     map.on('click', function (e) {
         addMarker(e.latlng.lat, e.latlng.lng);
+        reverseGeocode(e.latlng.lat, e.latlng.lng);
     });
+
+    // Reverse geocoding - koordinatalardan manzil olish
+    function reverseGeocode(lat, lng) {
+        const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=uz`;
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data && data.display_name) {
+                    const addressField = document.getElementById('joylashuvi');
+                    if (addressField) {
+                        addressField.value = data.display_name;
+                    }
+                }
+            })
+            .catch(err => console.log('Geocoding xato:', err));
+    }
 
     // Get current location
     function getCurrentLocation() {
+        const btn = document.querySelector('.btn-location');
+        const origText = btn.innerHTML;
+        btn.innerHTML = '⏳ Aniqlanmoqda...';
+        btn.disabled = true;
+
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 function (position) {
                     const lat = position.coords.latitude;
                     const lng = position.coords.longitude;
                     addMarker(lat, lng);
+                    reverseGeocode(lat, lng);
+                    btn.innerHTML = origText;
+                    btn.disabled = false;
                 },
                 function (error) {
-                    alert('Lokatsiyani olishda xato: ' + error.message);
+                    let msg = 'Lokatsiyani olishda xato: ';
+                    switch (error.code) {
+                        case 1: msg += 'Ruxsat berilmadi. Brauzer sozlamalaridan joylashuvga ruxsat bering.'; break;
+                        case 2: msg += 'Joylashuv aniqlanmadi.'; break;
+                        case 3: msg += 'Vaqt tugadi, qayta urinib ko\'ring.'; break;
+                        default: msg += error.message;
+                    }
+                    alert(msg);
+                    btn.innerHTML = origText;
+                    btn.disabled = false;
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
                 }
             );
         } else {
-            alert('Brauzeringiz geolokatsiyani qo'llab - quvvatlamaydi');
-    }
+            alert('Brauzeringiz geolokatsiyani qollab-quvvatlamaydi');
+            btn.innerHTML = origText;
+            btn.disabled = false;
+        }
     }
 
     // Try to get location on page load

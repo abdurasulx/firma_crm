@@ -1,2 +1,7 @@
 Django>=5.1.0,<5.2.0
 Pillow>=10.0.0
+python-telegram-bot>=20.0
+
+# Analytics dependencies for demand forecasting
+pandas>=2.0.0
+numpy>=1.24.0

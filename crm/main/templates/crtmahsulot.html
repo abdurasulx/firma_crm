@@ -3,112 +3,356 @@
 
 {% block title %}Mahsulotni Yaratish{% endblock %}
 
+{% block page_title %}Mahsulotlar{% endblock %}
+
 {% block content %}
-<div style="max-width: 600px; margin: 30px auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+<style>
+    :root {
+        --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+    }
 
-    <h2 style="color: #007acc; text-align: center; margin-bottom: 20px;">Mahsulotni Yaratish</h2>
+    .edit-grid {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 24px;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
 
+    @media (max-width: 992px) {
+        .edit-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .edit-card {
+        background: white;
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: var(--card-shadow);
+        border: 1px solid var(--border-color);
+        margin-bottom: 24px;
+        animation: fadeIn 0.4s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .card-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .card-title i {
+        color: var(--primary-color);
+    }
+
+    /* Photo Upload Card */
+    .photo-upload-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .photo-card {
+        width: 100%;
+        text-align: center;
+        padding: 30px;
+        background: #f9fafb;
+        border: 2px dashed #e5e7eb;
+        border-radius: 20px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .photo-card:hover {
+        border-color: var(--primary-color);
+        background: #f0fdf4;
+    }
+
+    .photo-card.active {
+        border-color: var(--primary-color);
+        background: white;
+        box-shadow: 0 0 0 4px var(--primary-glow);
+    }
+
+    .photo-preview-wrap {
+        position: relative;
+        width: 180px;
+        height: 180px;
+        margin: 0 auto 16px;
+    }
+
+    .photo-preview {
+        width: 100%;
+        height: 100%;
+        border-radius: 16px;
+        object-fit: cover;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        border: 3px solid white;
+        transition: opacity .2s ease;
+    }
+
+    .edit-badge {
+        position: absolute;
+        bottom: -5px;
+        right: -5px;
+        background: var(--primary-color);
+        color: white;
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 10px var(--primary-glow);
+        border: 3px solid white;
+    }
+
+    /* Form Styles */
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-label {
+        display: block;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-dark);
+        margin-bottom: 8px;
+    }
+
+    .input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .input-wrapper i {
+        position: absolute;
+        left: 16px;
+        color: var(--text-light);
+        font-size: 16px;
+        pointer-events: none;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 12px 16px 12px 46px;
+        font-size: 15px;
+        color: var(--text-dark);
+        background: #f9fafb;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        transition: all 0.2s ease;
+    }
+
+    .form-control:focus {
+        background: white;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 4px var(--primary-glow);
+        outline: none;
+    }
+
+    select.form-control {
+        padding-left: 46px;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 16px center;
+        background-size: 16px;
+    }
+
+    .submit-btn {
+        width: 100%;
+        padding: 14px;
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        color: white;
+        font-size: 16px;
+        font-weight: 700;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px var(--primary-glow);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px var(--primary-glow);
+    }
+
+    .back-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        margin-top: 20px;
+        color: var(--text-light);
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 500;
+        transition: color 0.2s;
+    }
+
+    .back-link:hover {
+        color: var(--primary-color);
+    }
+</style>
+
+<div class="main-container">
     <form method="POST" enctype="multipart/form-data">
         {% csrf_token %}
+        <div class="edit-grid">
+            <!-- Left Side: Product Image -->
+            <div class="edit-left">
+                <div class="edit-card">
+                    <h3 class="card-title"><i class="fa-solid fa-image"></i> Mahsulot Rasmi</h3>
 
-        <label for="nomi" style="font-weight: bold;">Mahsulot nomi</label>
-        <input type="text" id="nomi" name="nomi" value="{{ nomi }}" required
-               style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                    <div class="photo-upload-container">
+                        <div class="photo-card" onclick="document.getElementById('rasmi_input').click()">
+                            <div class="photo-preview-wrap">
+                                <img id="preview-rasm" src="{% static 'images/default.png' %}" class="photo-preview"
+                                    alt="Mahsulot">
+                                <div class="edit-badge"><i class="fa-solid fa-camera"></i></div>
+                            </div>
+                            <span
+                                style="font-size: 14px; font-weight: 600; color: var(--text-dark); display: block;">Rasm
+                                yuklash</span>
+                            <span style="font-size: 12px; color: var(--text-light); margin-top: 4px;">Tiniq va yorug'
+                                surat tanlang</span>
+                            <input type="file" required id="rasmi_input" name="rasmi" accept="image/*"
+                                style="display: none;" onchange="showPreview(this)">
+                        </div>
+                    </div>
+                </div>
 
-        <label for="miqdori" style="font-weight: bold;">Miqdori</label>
-        <input type="number" id="miqdori" name="miqdori" value="{{ miqdori }}" required
-               style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                <a href="{% url 'main' %}" class="back-link">
+                    <i class="fa-solid fa-arrow-left"></i> Bosh sahifaga qaytish
+                </a>
+            </div>
 
-        <label for="turi" style="font-weight: bold;">Turi (o‘lchov birligi) {{ turi }}  </label>
-       <select id="turi" name="turi" required 
-               style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
-               {% for tur in turs%} 
-               <option value="{{ tur.nomi }}"  >{{ tur.nomi }}</option> 
-               {% endfor %}
-               </select>
+            <!-- Right Side: Product Details -->
+            <div class="edit-right">
+                <div class="edit-card">
+                    <h3 class="card-title"><i class="fa-solid fa-box-open"></i> Mahsulot Ma'lumotlari</h3>
 
-        <label for="narxi" style="font-weight: bold;">Narxi</label>
-        <input type="number" id="narxi" name="narxi" value="{{ narxi }}" step="0.01" required
-               style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                    <div class="form-group">
+                        <label class="form-label">Mahsulot nomi</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-tag"></i>
+                            <input type="text" id="nomi" name="nomi" class="form-control" value="{{ nomi }}"
+                                placeholder="Masalan: Paxta yog'i" required>
+                        </div>
+                    </div>
 
-        <label for="rasmi_input" style="display: block; font-weight: bold;">Rasmi</label>
-        <img src="{% static 'images\default.png' %}"
-             alt="Mahsulot rasmi"
-             id="preview-rasm"
-             style="width: 200px; height: 200px; object-fit: cover; border-radius: 50%; border: 2px solid #007acc; margin: 10px auto; display: block; cursor: pointer;">
-        <input type="file" required id="rasmi_input" name="rasmi" accept="image/*" style="display: none;" onchange="showPreview(event)">
-        
-        <button type="submit"
-                style="margin-top: 20px; width: 100%; padding: 12px; background: #007acc; color: #fff; border: none; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer;">
-            Saqlash
-        </button>
+                    <div class="form-group">
+                        <label class="form-label">Miqdori</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-layer-group"></i>
+                            <input type="number" id="miqdori" name="miqdori" class="form-control" value="{{ miqdori }}"
+                                placeholder="0.00" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Turi (O'lchov birligi)</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-scale-balanced"></i>
+                            <select id="turi" name="turi" class="form-control" required>
+                                {% for tur in turs %}
+                                <option value="{{ tur.nomi }}" {% if turi == tur.nomi %}selected{% endif %}>{{ tur.nomi }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Narxi</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-money-bill-wave"></i>
+                            <input type="number" id="narxi" name="narxi" class="form-control" value="{{ narxi }}"
+                                step="0.01" placeholder="0.00" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="submit-btn" style="margin-top: 10px;">
+                        <i class="fa-solid fa-save"></i> Mahsulotni saqlash
+                    </button>
+                </div>
+            </div>
+        </div>
     </form>
-
-    <a href="{% url 'main' %}" style="display: inline-block; margin-top: 15px; text-align: center; width: 100%; text-decoration: none; color: #007acc;">
-        🔙 Orqaga
-    </a>
-
 </div>
 
 <script>
-document.getElementById('preview-rasm').addEventListener('click', function() {
-    document.getElementById('rasmi_input').click();
-});
+    function showPreview(input) {
+        const preview = document.getElementById('preview-rasm');
+        const card = input.closest('.photo-card');
 
-function showPreview(event) {
-    const input = event.target;
-    if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            document.getElementById('preview-rasm').src = e.target.result;
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                preview.style.opacity = '0';
+                setTimeout(() => {
+                    preview.src = e.target.result;
+                    preview.style.opacity = '1';
+                    card.classList.add('active');
+                }, 120);
+            }
+            reader.readAsDataURL(input.files[0]);
         }
-        reader.readAsDataURL(input.files[0]);
-    }
-}
-document.addEventListener('DOMContentLoaded', function() {
-    // Backenddan kelgan mahsulot narxi va miqdori
-    // Ular string holatda keladi, masalan: "123.45" yoki "123,45"
-    let mahsulotNarxi = "{{ narxi }}";
-    let mahsulotMiqdori = "{{ miqdori }}"; // Yangi qo'shilgan o'zgaruvchi
-
-    // --- Narxni formatlash ---
-    let formattedNarx;
-    if (typeof mahsulotNarxi === 'string' && mahsulotNarxi.includes(',')) {
-        formattedNarx = mahsulotNarxi.replace(',', '.');
-    } else {
-        formattedNarx = mahsulotNarxi;
-    }
-    // Narxni floatga aylantirib, 2 kasr xonasigacha yaxlitlash (nuqta bilan)
-    formattedNarx = parseFloat(formattedNarx).toFixed(2);
-
-    // --- Miqdorni formatlash ---
-    let formattedMiqdor;
-    // Agar miqdor ham o'nlik kasr bo'lishi mumkin bo'lsa:
-    if (typeof mahsulotMiqdori === 'string' && mahsulotMiqdori.includes(',')) {
-        formattedMiqdor = mahsulotMiqdori.replace(',', '.');
-    } else {
-        formattedMiqdor = mahsulotMiqdori;
-    }
-    // Miqdorni floatga aylantirib, agar kerak bo'lsa, 2 kasr xonasigacha yaxlitlash.
-    // Agar miqdor doim butun son bo'lsa, parseInt() yoki Math.floor() ishlatish yaxshiroq.
-    // Misol uchun, agar 3 kasr xonasi bo'lishi mumkin bo'lsa, .toFixed(3) qilasiz.
-    // Agar doim butun son bo'lsa, Math.round() yoki parseInt() ishlatish mumkin.
-    formattedMiqdor = parseFloat(formattedMiqdor).toFixed(2); // Agar miqdor ham kasrli bo'lsa
-    // Yoki agar miqdor doim butun son bo'lsa:
-    // formattedMiqdor = parseInt(formattedMiqdor);
-
-
-    // HTML input maydonlariga formatlangan qiymatlarni joylashtiramiz
-    const narxiInput = document.getElementById('narxi');
-    if (narxiInput) {
-        narxiInput.value = formattedNarx;
     }
 
-    // Miqdor uchun yangi input maydoni ID'si (masalan, 'miqdori')
-    const miqdoriInput = document.getElementById('miqdori');
-    if (miqdoriInput) {
-        miqdoriInput.value = formattedMiqdor;
-    }
-});
+    document.addEventListener('DOMContentLoaded', function () {
+        // Backenddan kelgan mahsulot narxi va miqdori
+        let mahsulotNarxi = "{{ narxi }}";
+        let mahsulotMiqdori = "{{ miqdori }}";
+
+        // Narxni formatlash
+        function formatValue(val) {
+            if (!val || val  === "None") return "";
+            let formatted = val;
+            if (typeof val  === 'string' && val.includes(',')) {
+                formatted = val.replace(',', '.');
+            }
+            return parseFloat(formatted).toFixed(2);
+        }
+
+        const narxiInput = document.getElementById('narxi');
+        if (narxiInput && mahsulotNarxi) {
+            const fv = formatValue(mahsulotNarxi);
+            if (!isNaN(fv)) narxiInput.value = fv;
+        }
+
+        const miqdoriInput = document.getElementById('miqdori');
+        if (miqdoriInput && mahsulotMiqdori) {
+            const fv = formatValue(mahsulotMiqdori);
+            if (!isNaN(fv)) miqdoriInput.value = fv;
+        }
+    });
 </script>
 {% endblock %}

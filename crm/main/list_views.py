@@ -44,25 +44,33 @@ def hodimlar_list(request):
     # Check for AJAX/JSON request
     if request.GET.get('data_format') == 'json':
         from django.http import JsonResponse
+        from django.utils.timesince import timesince
         data = []
-        for h in hodimlar[:10]:  # Limit to 10 results for dropdown
+        for h in hodimlar[:7]:  # Limit to 7 results for dropdown
             data.append({
                 'username': h.username,
-                'tuliq_ismi': h.tuliq_ismi,
-                'rasmi_url': h.rasmi.url if h.rasmi else None,
+                'tuliq_ismi': h.tuliq_ismi or h.username,
+                'rasmi_url': h.rasmi if h.rasmi else None,
+                'tel_raqami': h.tel_raqami or '',
                 'type': h.get_type_display(),
-                'status': 'Active' if h.is_active else 'Inactive'
+                'status': 'Active' if h.is_active else 'Inactive',
+                'date_joined': h.date_joined.strftime('%d %b %Y, %H:%M') if h.date_joined else '',
+                'last_activity': timesince(h.last_login) + ' oldin' if h.last_login else 'Noma\'lum',
             })
         return JsonResponse({'results': data})
     
     # Pagination - har sahifada 20 ta
     paginator = Paginator(hodimlar, 20)
-    page_number = request.GET.get('page')
+    page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
+    
+    # Get elided page range (e.g. 1 ... 4 5 6 ... 35)
+    elided_range = paginator.get_elided_page_range(page_number, on_each_side=2, on_ends=1)
     
     context = {
         'hodimlar': page_obj,
         'total': hodimlar.count(),
+        'page_range': elided_range,
         'search_query': search_query,
         'status_filter': status_filter,
         'role_filter': role_filter,
