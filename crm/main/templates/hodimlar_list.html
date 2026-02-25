@@ -3,25 +3,42 @@
 
 {% block title %}Barcha Xodimlar{% endblock %}
 
+{% block page_title %}Hodimlar{% endblock %}
+
 {% block content %}
 <style>
-    /* Page Layout */
-    .page-wrapper {
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
-        padding: 24px;
-        min-height: 80vh;
+    :root {
+        --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
     }
 
-    /* Header Section */
+    .page-card {
+        background: white;
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: var(--card-shadow);
+        border: 1px solid var(--border-color);
+        animation: fadeIn 0.4s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Header & Actions */
     .page-header-actions {
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 24px;
-        flex-wrap: wrap;
-        gap: 16px;
+        gap: 20px;
         position: relative;
         min-height: 50px;
     }
@@ -41,83 +58,46 @@
     }
 
     .header-title h2 {
-        font-size: 24px;
-        color: #1f2937;
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--text-dark);
         margin: 0;
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 12px;
     }
 
     .user-count {
-        background: #fee2e2;
-        color: #ef4444;
+        background: var(--primary-glow);
+        color: var(--primary-color);
         font-size: 14px;
         padding: 4px 12px;
         border-radius: 20px;
         font-weight: 600;
+        border: 1px solid var(--primary-color);
     }
 
     .add-user-btn {
-        background: #ef4444;
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
         color: white;
         text-decoration: none;
         padding: 10px 20px;
-        border-radius: 8px;
-        font-weight: 600;
+        border-radius: 12px;
+        font-weight: 700;
         display: flex;
         align-items: center;
         gap: 8px;
         transition: all 0.3s ease;
+        box-shadow: 0 4px 12px var(--primary-glow);
     }
 
     .add-user-btn:hover {
-        background: #dc2626;
         transform: translateY(-2px);
+        box-shadow: 0 6px 20px var(--primary-glow);
+        color: white;
     }
 
-    /* Filter Bar */
-    .filter-bar {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background: #f9fafb;
-        padding: 12px;
-        border-radius: 8px;
-        margin-bottom: 24px;
-        border: 1px solid #e5e7eb;
-    }
-
-    .search-box {
-        position: relative;
-        width: 300px;
-    }
-
-    .search-input {
-        width: 100%;
-        padding: 10px 10px 10px 40px;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        outline: none;
-        transition: all 0.3s;
-        font-size: 14px;
-        background: white;
-    }
-
-    .search-input:focus {
-        border-color: #10b981;
-        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
-    }
-
-    .search-icon {
-        position: absolute;
-        left: 12px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #9ca3af;
-    }
-
-    /* Top Search Bar */
+    /* Top Search Bar (AJAX) */
     .top-search-container {
         position: absolute;
         top: 0;
@@ -146,69 +126,332 @@
 
     .top-search-input {
         width: 100%;
-        padding: 14px 14px 14px 48px;
-        border: 2px solid #10b981;
-        border-radius: 12px;
+        padding: 14px 14px 14px 50px;
+        border: 2px solid var(--primary-color);
+        border-radius: 14px;
         font-size: 16px;
         outline: none;
-        box-shadow: 0 4px 16px rgba(16, 185, 129, 0.2);
-        transition: all 0.3s ease;
-    }
-
-    .top-search-input:focus {
-        box-shadow: 0 6px 24px rgba(16, 185, 129, 0.3);
+        box-shadow: 0 4px 16px var(--primary-glow);
+        background: white;
     }
 
     .top-search-icon {
         position: absolute;
-        left: 16px;
+        left: 18px;
         top: 50%;
         transform: translateY(-50%);
-        color: #10b981;
+        color: var(--primary-color);
         font-size: 18px;
     }
 
-    .close-search-btn {
-        background: #f3f4f6;
-        border: none;
-        font-size: 22px;
-        color: #6b7280;
-        cursor: pointer;
-        padding: 8px 14px;
+    /* Filter Tools */
+    .filter-bar {
+        background: #f9fafb;
+        padding: 16px;
+        border-radius: 14px;
+        margin-bottom: 24px;
+        border: 1px solid var(--border-color);
+    }
+
+    .filter-form {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .search-box {
+        position: relative;
+        flex: 1;
+        min-width: 240px;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 10px 16px 10px 42px;
+        border: 1px solid var(--border-color);
         border-radius: 10px;
+        background: white;
+        transition: all 0.2s;
+        font-size: 14px;
+    }
+
+    .search-input:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 4px var(--primary-glow);
+        outline: none;
+    }
+
+    .search-icon-btn {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: var(--text-light);
+        cursor: pointer;
+        font-size: 15px;
+    }
+
+    .filter-select {
+        padding: 10px 16px;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        background: white;
+        font-size: 14px;
+        color: var(--text-dark);
+        outline: none;
+        cursor: pointer;
         transition: all 0.2s;
     }
 
-    .close-search-btn:hover {
-        background: #fee2e2;
+    .filter-select:focus {
+        border-color: var(--primary-color);
+    }
+
+    /* Table Design */
+    .table-container {
+        overflow-x: auto;
+        border-radius: 12px;
+        border: 1px solid #f1f5f9;
+        margin-bottom: 8px;
+    }
+
+    .custom-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .custom-table th {
+        background: #f8fafc;
+        color: var(--text-light);
+        font-weight: 600;
+        padding: 14px 16px;
+        text-align: left;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .custom-table td {
+        padding: 16px;
+        border-bottom: 1px solid #f1f5f9;
+        vertical-align: middle;
+        font-size: 14px;
+        color: var(--text-dark);
+    }
+
+    .custom-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .custom-table tr:hover td {
+        background: #fdfdfd;
+    }
+
+    /* User Component in Table */
+    .user-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .avatar-wrap {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 2px solid white;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .avatar-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .avatar-initial {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 16px;
+    }
+
+    .user-text {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .user-name {
+        font-weight: 600;
+        color: var(--text-dark);
+    }
+
+    .user-role {
+        font-size: 12px;
+        color: var(--text-light);
+    }
+
+    /* Status Badges */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .status-active {
+        background: #ecfdf5;
+        color: #10b981;
+    }
+
+    .status-inactive {
+        background: #fef2f2;
         color: #ef4444;
     }
 
-    /* Search Results Dropdown */
+    .status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+    }
+
+    .status-active .status-dot {
+        background: #10b981;
+    }
+
+    .status-inactive .status-dot {
+        background: #ef4444;
+    }
+
+    /* Action Buttons */
+    .action-btns {
+        display: flex;
+        gap: 8px;
+    }
+
+    .action-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        border: 1px solid var(--border-color);
+        background: white;
+        color: var(--text-light);
+        text-decoration: none;
+    }
+
+    .action-btn:hover {
+        transform: translateY(-2px);
+    }
+
+    .action-btn.edit:hover {
+        background: #eff6ff;
+        color: #3b82f6;
+        border-color: #bfdbfe;
+    }
+
+    .action-btn.delete:hover {
+        background: #fef2f2;
+        color: #ef4444;
+        border-color: #fecaca;
+    }
+
+    /* Pagination */
+    .pagination-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid var(--border-color);
+        color: var(--text-light);
+        font-size: 14px;
+        flex-wrap: wrap;
+        gap: 20px;
+    }
+
+    .page-list {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .page-link {
+        min-width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        text-decoration: none;
+        color: var(--text-dark);
+        border: 1px solid var(--border-color);
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+
+    .page-link.active {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        color: white;
+        border-color: transparent;
+        box-shadow: 0 4px 10px var(--primary-glow);
+    }
+
+    .page-link:hover:not(.active) {
+        background: #f8fafc;
+        border-color: var(--text-light);
+    }
+
+    .page-link.disabled {
+        opacity: 0.5;
+        pointer-events: none;
+        background: #f1f5f9;
+    }
+
+    /* AJAX Dropdown Styles */
     .search-results-dropdown {
         position: absolute;
-        top: calc(100% + 6px);
+        top: calc(100% + 8px);
         left: 0;
         width: 100%;
         background: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 14px;
-        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
-        max-height: 420px;
+        border-radius: 16px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
+        max-height: 400px;
         overflow-y: auto;
         display: none;
         z-index: 1000;
+        border: 1px solid var(--border-color);
     }
 
     .search-results-dropdown.active {
         display: block;
-        animation: slideDown 0.2s ease;
+        animation: slideDown 0.3s ease;
     }
 
     @keyframes slideDown {
         from {
             opacity: 0;
-            transform: translateY(-8px);
+            transform: translateY(-10px);
         }
 
         to {
@@ -217,295 +460,82 @@
         }
     }
 
-    .search-result-item {
+    .result-item {
         display: flex;
         align-items: center;
         padding: 12px 16px;
-        border-bottom: 1px solid #f3f4f6;
+        gap: 12px;
         text-decoration: none;
-        color: inherit;
-        transition: background 0.15s;
+        color: var(--text-dark);
+        transition: background 0.2s;
+        border-bottom: 1px solid #f1f5f9;
     }
 
-    .search-result-item:first-child {
-        border-radius: 14px 14px 0 0;
-    }
-
-    .search-result-item:last-child {
-        border-bottom: none;
-        border-radius: 0 0 14px 14px;
-    }
-
-    .search-result-item:hover {
+    .result-item:hover {
         background: #f0fdf4;
     }
 
-    .result-avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        margin-right: 12px;
-        object-fit: cover;
-        border: 2px solid #e5e7eb;
-        flex-shrink: 0;
+    .result-item:last-child {
+        border-bottom: none;
     }
 
-    .result-info {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .result-name {
-        font-weight: 600;
-        color: #1f2937;
-        font-size: 14px;
-    }
-
-    .result-role {
-        font-size: 13px;
-        color: #6b7280;
-        background: #f3f4f6;
-        padding: 2px 8px;
-        border-radius: 12px;
-        font-weight: 500;
-    }
-
-    .result-highlight {
-        background: #fef3c7;
-        padding: 0 2px;
-        border-radius: 2px;
-    }
-
-    .search-results-count {
-        padding: 8px 16px;
-        font-size: 12px;
-        color: #9ca3af;
-        border-bottom: 1px solid #f3f4f6;
-        background: #f9fafb;
-        border-radius: 14px 14px 0 0;
-    }
-
-    /* Hide bottom search when top is active */
-    .filter-bar.search-hidden .search-box {
+    /* Helper styles for filter hidding */
+    .filter-bar.search-active .search-box {
         opacity: 0;
         visibility: hidden;
-        width: 0;
-        min-width: 0 !important;
-        flex: 0 !important;
-        padding: 0;
-        margin: 0;
-        overflow: hidden;
-    }
-
-    /* Table Styles */
-    .table-responsive {
-        overflow-x: auto;
-    }
-
-    .custom-table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
-    }
-
-    .custom-table th {
-        background: #f9fafb;
-        color: #374151;
-        font-weight: 600;
-        padding: 16px;
-        text-align: left;
-        border-bottom: 2px solid #e5e7eb;
-        font-size: 14px;
-    }
-
-    .custom-table td {
-        padding: 16px;
-        border-bottom: 1px solid #f3f4f6;
-        vertical-align: middle;
-        color: #4b5563;
-        font-size: 14px;
-    }
-
-    .custom-table tr:hover td {
-        background: #f9fafb;
-    }
-
-    /* User Profile Cell */
-    .user-cell {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-
-    .table-avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        object-fit: cover;
-    }
-
-    .user-details {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .table-user-name {
-        font-weight: 600;
-        color: #1f2937;
-    }
-
-    .table-user-role {
-        font-size: 12px;
-        color: #6b7280;
-    }
-
-    /* Status Badges */
-    .status-badge {
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 600;
-    }
-
-    .status-active {
-        background: #d1fae5;
-        color: #059669;
-    }
-
-    .status-inactive {
-        background: #fee2e2;
-        color: #dc2626;
-    }
-
-    /* Action Buttons */
-    .action-cell {
-        display: flex;
-        gap: 8px;
-    }
-
-    .table-btn {
-        width: 32px;
-        height: 32px;
-        border-radius: 6px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        text-decoration: none;
-        transition: all 0.2s;
-        border: 1px solid #e5e7eb;
-        background: white;
-        color: #6b7280;
-    }
-
-    .table-btn:hover.edit {
-        background: #eff6ff;
-        color: #3b82f6;
-        border-color: #3b82f6;
-    }
-
-    .table-btn:hover.delete {
-        background: #fef2f2;
-        color: #ef4444;
-        border-color: #ef4444;
-    }
-
-
-    /* Pagination */
-    .pagination-container {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: 24px;
-        padding-top: 20px;
-        border-top: 1px solid #e5e7eb;
-        color: #6b7280;
-        font-size: 14px;
-    }
-
-    .page-numbers {
-        display: flex;
-        gap: 6px;
-    }
-
-    .page-btn {
-        width: 32px;
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 6px;
-        text-decoration: none;
-        color: #6b7280;
-        transition: all 0.2s;
-    }
-
-    .page-btn.active {
-        background: #ef4444;
-        color: white;
-    }
-
-    .page-btn:hover:not(.active) {
-        background: #f3f4f6;
     }
 </style>
 
-<div class="page-wrapper">
+<div class="page-card">
     <!-- Header -->
     <div class="page-header-actions">
-        <!-- Normal Header -->
         <div class="header-content" id="normalHeader">
             <div class="header-title">
                 <h2>Hodimlar Ro'yxati <span class="user-count">{{ total }}</span></h2>
             </div>
             <a href="{% url 'crtuser' %}" class="add-user-btn">
-                <i class="fa-solid fa-plus"></i> Add User
+                <i class="fa-solid fa-plus"></i> Yangi hodim qo'shish
             </a>
         </div>
 
-        <!-- Top Search Bar -->
+        <!-- Top Search Bar (Hidden by default, triggered by click or shortcut) -->
         <div class="top-search-container" id="topSearchContainer">
             <div class="top-search-wrapper">
+                
                 <i class="fa-solid fa-search top-search-icon"></i>
-                <input type="text" id="topSearchInput" class="top-search-input" placeholder="Hodimni qidiring..."
-                    autocomplete="off">
-                <!-- Results Dropdown -->
-                <div class="search-results-dropdown" id="searchResultsDropdown">
-                    <!-- Results will be injected here by JavaScript -->
-                </div>
+                <input type="text" id="topSearchInput" class="top-search-input"
+                    placeholder="Hodim ismini yoki username'ini yozing..." autocomplete="off">
+                <input type="hidden" id="editUrlTemplate" value="{% url 'edituser' '___USERNAME___' %}">
+                <div class="search-results-dropdown" id="searchResultsDropdown"></div>
+
             </div>
-            <button class="close-search-btn" id="closeSearchBtn">×</button>
+            <button class="action-btn" id="closeSearchBtn" title="Yopish"><i class="fa-solid fa-xmark"></i></button>
         </div>
     </div>
 
     <!-- Filter Bar -->
     <div class="filter-bar">
-        <form method="GET" action="." class="search-form"
-            style="display: flex; gap: 12px; align-items: center; width: 100%; flex-wrap: wrap;">
-            <div class="search-box" style="flex: 1; min-width: 200px;">
-                <button type="submit" style="background: none; border: none; padding: 0;"><i
-                        class="fa-solid fa-search search-icon"></i></button>
-                <input type="text" name="q" placeholder="Qidiruv..." class="search-input" value="{{ search_query }}">
+        <form method="GET" action="." class="filter-form">
+            <div class="search-box">
+                <button type="submit" class="search-icon-btn"><i class="fa-solid fa-magnifying-glass"></i></button>
+                <input type="text" name="q" placeholder="Qidirish (ism, tel, username)..." class="search-input"
+                    value="{{ search_query }}">
             </div>
 
-            <select name="role" class="status-filter" onchange="this.form.submit()"
-                style="padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; outline: none; background: white;">
-                <option value="">Barcha Lavozimlar</option>
+            <select name="role" class="filter-select" onchange="this.form.submit()">
+                <option value="">Barcha lavozimlar</option>
                 <option value="pazanda" {% if role_filter == 'pazanda' %}selected{% endif %}>Pazanda</option>
                 <option value="yetkazib_beruvchi" {% if role_filter == 'yetkazib_beruvchi' %}selected{% endif %}>Yetkazib
-                    Beruvchi</option>
+                    beruvchi</option>
             </select>
 
-            <select name="status" class="status-filter" onchange="this.form.submit()"
-                style="padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; outline: none; background: white;">
-                <option value="">Barcha Statuslar</option>
+            <select name="status" class="filter-select" onchange="this.form.submit()">
+                <option value="">Statuslar</option>
                 <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
                 <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
             </select>
 
-            <select name="sort" class="status-filter" onchange="this.form.submit()"
-                style="padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; outline: none; background: white;">
+            <select name="sort" class="filter-select" onchange="this.form.submit()">
                 <option value="newest" {% if sort_order == 'newest' %}selected{% endif %}>Eng yangi</option>
                 <option value="oldest" {% if sort_order == 'oldest' %}selected{% endif %}>Eng eski</option>
             </select>
@@ -513,66 +543,60 @@
     </div>
 
     <!-- Table -->
-    <div class="table-responsive">
+    <div class="table-container">
         <table class="custom-table">
             <thead>
                 <tr>
-                    <th>Name</th>
-                    <th>Phone</th>
+                    <th>Hodim</th>
+                    <th>Telefon</th>
                     <th>Username</th>
-                    <th>Joined</th>
-                    <th>Last Activity</th>
+                    <th>Qo'shilgan</th>
                     <th>Status</th>
-                    <th>Action</th>
+                    <th style="text-align: right;">Amallar</th>
                 </tr>
             </thead>
             <tbody>
                 {% for x in hodimlar %}
                 <tr>
                     <td>
-                        <div class="user-cell">
-                            {% if x.rasmi %}
-                            <img src="{{ x.rasmi }}" alt="{{ x.tuliq_ismi }}" class="table-avatar">
-                            {% else %}
-                            <div class="table-avatar"
-                                style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
-                                {{ x.tuliq_ismi|first|upper }}
+                        <div class="user-info">
+                            <div class="avatar-wrap">
+                                {% if x.rasmi %}<img src="{{ x.rasmi }}" class="avatar-img" alt="">
+                                {% else %}<div class="avatar-initial">{{ x.tuliq_ismi|first|upper }}</div>{% endif %}
                             </div>
-                            {% endif %}
-                            <div class="user-details">
-                                <span class="table-user-name">{{ x.tuliq_ismi }}</span>
-                                <span class="table-user-role">{{ x.get_type_display }}</span>
+                            <div class="user-text">
+                                <span class="user-name">{{ x.tuliq_ismi }}</span>
+                                <span class="user-role">{{ x.get_type_display }}</span>
                             </div>
                         </div>
                     </td>
-                    <td>{{ x.tel_raqami|default:"No phone" }}</td>
-                    <td>@{{ x.username }}</td>
-                    <td>{{ x.date_joined|date:"d M Y, H:i" }}</td>
-                    <td>{{ x.last_login|timesince }} oldin</td>
+                    <td><span style="font-weight: 500;">{{ x.tel_raqami|default:"--" }}</span></td>
+                    <td><code style="color: var(--primary-color);">@{{ x.username }}</code></td>
+                    <td><span style="color: var(--text-light); font-size: 13px;">{{ x.date_joined|date:"d.m.Y, H:i" }}</span></td>
                     <td>
                         {% if x.is_active %}
-                        <span class="status-badge status-active">Active</span>
+                        <span class="status-badge status-active"><span class="status-dot"></span> Active</span>
                         {% else %}
-                        <span class="status-badge status-inactive">Inactive</span>
+                        <span class="status-badge status-inactive"><span class="status-dot"></span> Inactive</span>
                         {% endif %}
                     </td>
                     <td>
-                        <div class="action-cell">
-                            <a href="{% url 'edituser' x.username %}" class="table-btn edit" title="Tahrirlash">
+                        <div class="action-btns" style="justify-content: flex-end;">
+                            <a href="{% url 'edituser' x.username %}" class="action-btn edit" title="Tahrirlash">
                                 <i class="fa-solid fa-pen"></i>
                             </a>
-                            <a href="#" class="table-btn delete" title="O'chirish">
-                                <i class="fa-solid fa-trash"></i>
+                            <a href="#" class="action-btn delete" title="O'chirish">
+                                <i class="fa-solid fa-trash-can"></i>
                             </a>
                         </div>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="8" style="text-align: center; padding: 40px;">
-                        <i class="fa-solid fa-users-slash"
-                            style="font-size: 48px; color: #d1d5db; margin-bottom: 16px;"></i>
-                        <p>Hozircha xodimlar yo'q</p>
+                    <td colspan="6" style="text-align: center; padding: 60px;">
+                        <div style="opacity: 0.3; margin-bottom: 20px;"><i class="fa-solid fa-users-slash"
+                                style="font-size: 48px;"></i></div>
+                        <p style="color: var(--text-light); font-weight: 500;">Xodimlar topilmadi</p>
                     </td>
                 </tr>
                 {% endfor %}
@@ -582,28 +606,28 @@
 
     <!-- Pagination -->
     {% if hodimlar.has_other_pages %}
-    <div class="pagination-container">
-        <div>Showing {{ hodimlar.start_index }} to {{ hodimlar.end_index }} of {{ total }} entries</div>
-        <div class="page-numbers">
+    <div class="pagination-bar">
+        <div>{{ total }} ta xodindan <b>{{ hodimlar.start_index }}-{{ hodimlar.end_index }}</b> ko'rsatilmoqda</div>
+        <div class="page-list">
             {% if hodimlar.has_previous %}
             <a href="?page={{ hodimlar.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if role_filter %}&role={{ role_filter }}{% endif %}{% if sort_order %}&sort={{ sort_order }}{% endif %}"
-                class="page-btn" style="width: auto; padding: 0 10px;">Prev</a>
+                class="page-link"><i class="fa-solid fa-chevron-left"></i></a>
             {% endif %}
 
             {% for i in page_range %}
             {% if i  ==  hodimlar.number %}
-            <a href="#" class="page-btn active">{{ i }}</a>
+            <span class="page-link active">{{ i }}</span>
             {% elif i  ==  '…' %}
-            <span class="page-btn" style="cursor: default; border: none;">...</span>
+            <span class="page-link disabled" style="border: none;">...</span>
             {% else %}
             <a href="?page={{ i }}{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if role_filter %}&role={{ role_filter }}{% endif %}{% if sort_order %}&sort={{ sort_order }}{% endif %}"
-                class="page-btn">{{ i }}</a>
+                class="page-link">{{ i }}</a>
             {% endif %}
             {% endfor %}
 
             {% if hodimlar.has_next %}
             <a href="?page={{ hodimlar.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if role_filter %}&role={{ role_filter }}{% endif %}{% if sort_order %}&sort={{ sort_order }}{% endif %}"
-                class="page-btn" style="width: auto; padding: 0 10px;">Next</a>
+                class="page-link"><i class="fa-solid fa-chevron-right"></i></a>
             {% endif %}
         </div>
     </div>
@@ -611,142 +635,169 @@
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const bottomSearchBtn = document.querySelector('.search-box button');
-        const bottomSearchInput = document.querySelector('.search-box input');
-        const topSearchContainer = document.getElementById('topSearchContainer');
-        const normalHeader = document.getElementById('normalHeader');
-        const filterBar = document.querySelector('.filter-bar');
-        const closeSearchBtn = document.getElementById('closeSearchBtn');
-        const topSearchInput = document.getElementById('topSearchInput');
-        const searchResultsDropdown = document.getElementById('searchResultsDropdown');
-        let searchTimeout;
-        let justOpened = false;
+document.addEventListener('DOMContentLoaded', () => {
+    const bottomSearchInput = document.querySelector('.search-input');
+    const topSearchContainer = document.getElementById('topSearchContainer');
+    const normalHeader = document.getElementById('normalHeader');
+    const filterBar = document.querySelector('.filter-bar');
+    const closeSearchBtn = document.getElementById('closeSearchBtn');
 
-        // Show top search
-        function showTopSearch(e) {
-            if (e) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-            topSearchContainer.classList.add('active');
-            normalHeader.classList.add('hidden');
-            filterBar.classList.add('search-hidden');
-            topSearchInput.focus();
-            justOpened = true;
-            setTimeout(() => { justOpened = false; }, 200);
+    const topSearchInput = document.getElementById('topSearchInput');
+    const searchResultsDropdown = document.getElementById('searchResultsDropdown');
+    const editUrlTemplate = document.getElementById('editUrlTemplate')?.value || '/edituser/___USERNAME___';
 
-            if (bottomSearchInput && bottomSearchInput.value) {
-                topSearchInput.value = bottomSearchInput.value;
-                performSearch(bottomSearchInput.value);
-            }
+    let searchTimeout = null;
+    let abortController = null;
+
+    function showTopSearch() {
+        topSearchContainer.classList.add('active');
+        normalHeader.classList.add('hidden');
+        filterBar.classList.add('search-active');
+
+        // old q ni ko'chirish
+        if (bottomSearchInput && bottomSearchInput.value) {
+            topSearchInput.value = bottomSearchInput.value;
+            performSearch(topSearchInput.value.trim());
         }
 
-        // Close top search
-        function closeTopSearch() {
-            topSearchContainer.classList.remove('active');
-            normalHeader.classList.remove('hidden');
-            filterBar.classList.remove('search-hidden');
-            searchResultsDropdown.classList.remove('active');
-            topSearchInput.value = '';
-        }
+        setTimeout(() => topSearchInput.focus(), 50);
+    }
 
-        // Event listeners
-        if (bottomSearchBtn) bottomSearchBtn.addEventListener('click', showTopSearch);
-        if (bottomSearchInput) {
-            bottomSearchInput.addEventListener('click', showTopSearch);
-            bottomSearchInput.addEventListener('focus', function (e) {
-                e.stopPropagation();
-                showTopSearch(e);
-            });
-        }
-        if (closeSearchBtn) closeSearchBtn.addEventListener('click', function (e) {
-            e.stopPropagation();
+    function closeTopSearch() {
+        topSearchContainer.classList.remove('active');
+        normalHeader.classList.remove('hidden');
+        filterBar.classList.remove('search-active');
+        searchResultsDropdown.classList.remove('active');
+        searchResultsDropdown.innerHTML = '';
+        topSearchInput.value = '';
+    }
+
+    // pastdagi qidiruvga bosilsa overlay ochiladi
+    if (bottomSearchInput) {
+        bottomSearchInput.addEventListener('focus', (e) => {
+            e.preventDefault();
+            showTopSearch();
+        });
+    }
+
+    closeSearchBtn.addEventListener('click', closeTopSearch);
+
+    // ESC bilan yopish
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && topSearchContainer.classList.contains('active')) {
             closeTopSearch();
-        });
+        }
+    });
 
-        // Close on outside click
-        document.addEventListener('click', function (e) {
-            if (justOpened) return;
-            if (topSearchContainer.classList.contains('active') &&
-                !topSearchContainer.contains(e.target) &&
-                !bottomSearchInput?.contains(e.target) &&
-                !bottomSearchBtn?.contains(e.target)) {
-                closeTopSearch();
-            }
-        });
+    // tashqariga bosilsa dropdown yopiladi (overlay qoladi)
+    document.addEventListener('click', (e) => {
+        if (!topSearchContainer.classList.contains('active')) return;
+        const wrapper = topSearchContainer.querySelector('.top-search-wrapper');
+        if (wrapper && !wrapper.contains(e.target) && e.target !== bottomSearchInput) {
+            searchResultsDropdown.classList.remove('active');
+        }
+    });
 
-        // Close on Escape key
-        document.addEventListener('keydown', function (e) {
-            if (e.key  ==  'Escape' && topSearchContainer.classList.contains('active')) {
-                closeTopSearch();
-            }
-        });
+    // input realtime search
+    topSearchInput.addEventListener('input', () => {
+        const query = topSearchInput.value.trim();
 
-        // Live search on every keystroke
-        topSearchInput.addEventListener('input', function () {
-            const query = this.value.trim();
-            clearTimeout(searchTimeout);
+        clearTimeout(searchTimeout);
 
-            if (query.length  ==  0) {
-                searchResultsDropdown.classList.remove('active');
-                return;
-            }
+        if (!query) {
+            searchResultsDropdown.classList.remove('active');
+            searchResultsDropdown.innerHTML = '';
+            return;
+        }
 
-            // Show loading state
-            searchResultsDropdown.innerHTML = '<div class="search-results-count"><i class="fa-solid fa-spinner fa-spin"></i> Qidirilmoqda...</div>';
-            searchResultsDropdown.classList.add('active');
+        searchResultsDropdown.innerHTML =
+            '<div style="padding: 20px; text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Qidirilmoqda...</div>';
+        searchResultsDropdown.classList.add('active');
 
-            searchTimeout = setTimeout(() => performSearch(query), 150);
-        });
+        searchTimeout = setTimeout(() => performSearch(query), 200);
+    });
 
-        // Perform AJAX search
-        function performSearch(query) {
+    async function performSearch(query) {
+        try {
+            // old requestni to'xtatish (ketma-ket yozganda)
+            if (abortController) abortController.abort();
+            abortController = new AbortController();
+
             const params = new URLSearchParams(window.location.search);
             params.set('q', query);
             params.set('data_format', 'json');
 
-            fetch(`${window.location.pathname}?${params.toString()}`)
-                .then(response => response.json())
-                .then(data => renderResults(data.results, query))
-                .catch(error => console.error('Search error:', error));
-        }
+            const url = `${window.location.pathname}?${params.toString()}`;
 
-        // Highlight matching text
-        function highlightMatch(text, query) {
-            if (!text || !query) return text;
-            const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-            return text.replace(regex, '<span class="result-highlight">$1</span>');
-        }
+            const res = await fetch(url, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                signal: abortController.signal
+            });
 
-        // Render search results
-        function renderResults(results, query) {
-            if (!results || results.length  ==  0) {
-                searchResultsDropdown.innerHTML =
-                    '<div class="search-result-item" style="justify-content: center; color: #9ca3af; padding: 24px;"><i class="fa-solid fa-search" style="margin-right: 8px;"></i> Natija topilmadi</div>';
-                searchResultsDropdown.classList.add('active');
-                return;
+            if (!res.ok) {
+                throw new Error(`Server error: ${res.status}`);
             }
 
-            let html = `<div class="search-results-count">${results.length} ta natija topildi</div>`;
-            results.forEach(user => {
-                const avatar = user.rasmi_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.tuliq_ismi)}&background=10b981&color=fff&rounded=true&size=40`;
-                const highlightedName = highlightMatch(user.tuliq_ismi, query);
+            const data = await res.json();
+            renderResults(data.results || [], query);
 
-                html += `
-                    <a href="/edituser/${user.username}" class="search-result-item">
-                        <img src="${avatar}" class="result-avatar" alt="${user.tuliq_ismi}">
-                        <div class="result-info">
-                            <span class="result-name">${highlightedName}</span>
-                            <span class="result-role">${user.type}</span>
-                        </div>
-                    </a>
-                `;
-            });
-            searchResultsDropdown.innerHTML = html;
+        } catch (err) {
+            if (err.name === 'AbortError') return; // normal holat
             searchResultsDropdown.classList.add('active');
+            searchResultsDropdown.innerHTML =
+                `<div style="padding: 18px; color: #ef4444; font-size: 13px;">
+                    <b>Xatolik:</b> Qidiruv ishlamadi. (JSON qaytmadi yoki server xato)
+                 </div>`;
+            console.error(err);
         }
-    });
+    }
+
+    function renderResults(results, query) {
+        if (!results.length) {
+            searchResultsDropdown.innerHTML =
+                '<div style="padding: 24px; text-align:center; color: var(--text-light);">Natija topilmadi</div>';
+            return;
+        }
+
+        let html = `
+            <div style="padding: 10px 16px; font-size: 12px; color: var(--text-light);
+                        border-bottom: 1px solid #f1f5f9; background: #f8fafc; border-radius: 16px 16px 0 0;">
+                ${results.length} ta natija topildi
+            </div>
+        `;
+
+        results.forEach(user => {
+            const avatar = user.rasmi_url
+                ? user.rasmi_url
+                : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.tuliq_ismi || user.username)}&background=10b981&color=fff&rounded=true&size=42`;
+
+            const editUrl = editUrlTemplate.replace('___USERNAME___', encodeURIComponent(user.username));
+
+            html += `
+                <a href="${editUrl}" class="result-item">
+                    <img src="${avatar}" style="width:36px; height:36px; border-radius:10px; object-fit:cover;">
+                    <div style="flex:1">
+                        <div style="font-weight:600; font-size:14px;">${escapeHtml(user.tuliq_ismi || '')}</div>
+                        <div style="font-size:12px; color:var(--text-light);">${escapeHtml(user.type || '')}</div>
+                    </div>
+                    <div style="font-size:12px; color:var(--text-light);">@${escapeHtml(user.username || '')}</div>
+                </a>
+            `;
+        });
+
+        searchResultsDropdown.innerHTML = html;
+        searchResultsDropdown.classList.add('active');
+    }
+
+    function escapeHtml(str) {
+        return String(str)
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
+    }
+});
 </script>
 
 {% endblock %}

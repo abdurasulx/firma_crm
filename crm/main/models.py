@@ -180,3 +180,47 @@ class NasiyaTolov(models.Model):
         verbose_name = "Nasiya To'lov"
         verbose_name_plural = "Nasiya To'lovlar"
         ordering = ['-tolov_sanasi']
+
+
+# --- DELIVERY STOCK (Yangi qatlam) ---
+class DeliveryStock(models.Model):
+    yetkazib_beruvchi = models.ForeignKey(YetkazibBeruvchi, on_delete=models.CASCADE, related_name='stocks')
+    mahsulot = models.ForeignKey(Mahsulot, on_delete=models.CASCADE)
+    qty = models.FloatField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('yetkazib_beruvchi', 'mahsulot')
+        verbose_name = "Yetkazib beruvchi zaxirasi"
+        verbose_name_plural = "Yetkazib beruvchilar zaxiralari"
+
+    def __str__(self):
+        return f"{self.yetkazib_beruvchi.tuliq_ismi} - {self.mahsulot.nomi}: {self.qty}"
+
+
+# --- STOCK HISTORY (Loglar) ---
+class StockHistory(models.Model):
+    EVENT_TYPES = (
+        ('ADD', 'Qo\'shildi (Pazanda tomonidan)'),
+        ('DEDUCT', 'Kamaytirildi (Savdo/Yuklash)'),
+        ('RETURN', 'Qaytarildi'),
+        ('REQUEST_APPROVED', 'Sorov tasdiqlandi'),
+        ('ADJUST', 'Admin tomonidan tuzatildi'),
+    )
+
+    actor_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    yetkazib_beruvchi = models.ForeignKey(YetkazibBeruvchi, on_delete=models.CASCADE, null=True, blank=True)
+    mahsulot = models.ForeignKey(Mahsulot, on_delete=models.CASCADE)
+    event_type = models.CharField(max_length=20, choices=EVENT_TYPES)
+    old_qty = models.FloatField()
+    new_qty = models.FloatField()
+    delta = models.FloatField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Zaxira tarixi"
+        verbose_name_plural = "Zaxira tarixlari"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.event_type} - {self.mahsulot.nomi} ({self.delta})"

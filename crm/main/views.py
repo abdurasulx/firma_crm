@@ -5,10 +5,17 @@ from django.contrib import messages
 from django.utils import timezone
 from django.shortcuts import redirect
 from .models import HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri, Savdo, YuklamaSorov, MiqdorQoshish, HaridorDukon, AmalLog
-from .functions import mahsulotlar_miqdori, makenewform, yuklama_maker, accptyuk, sotishm, sotuv_new_form ,yetkazuvchi_mahsulot_filter, get_bugungi_savdo_summ
+from .functions import mahsulotlar_miqdori, makenewform, yuklama_maker, accptyuk, sotishm, sotuv_new_form ,yetkazuvchi_mahsulot_filter, get_bugungi_savdo_summ, add_spctoint
 import datetime as dt
 
 
+
+from .services.stock_service import (
+    approve_miqdor_qoshish_service, 
+    approve_yuklama_sorov_service
+)
+from .services.auth_service import create_user_service, update_user_service
+from .analytics.services import get_dashboard_stats
 
 User = get_user_model()
 # Create your views here.
@@ -74,18 +81,14 @@ def main(request):
                
                 if 'accept' in yk_id:
                     yk_id=yk_id.replace('accept','')
-                    yk=YuklamaSorov.objects.get(id=yk_id)
-                   
-                    accptyuk(request.user,yk)
-                    # Activity log
-                    AmalLog.objects.create(
-                        user=request.user,
-                        amal_shifri=f"yuklama_qabul|{yk.mahsulot.nomi}|{yk.miqdor}"
-                    )    
-
+                    # Refactored to use Service
+                    success, message = approve_yuklama_sorov_service(yk_id, request.user)
+                    if success:
+                        messages.success(request, message)
+                    else:
+                        messages.error(request, message)
 
                 elif 'reject' in yk_id:
-                   
                     yk_id=yk_id.replace('reject','')
                     yk=YuklamaSorov.objects.get(id=yk_id)
                     yk.mode='rejected'
@@ -96,11 +99,7 @@ def main(request):
                         user=request.user,
                         amal_shifri=f"yuklama_rad|{yk.mahsulot.nomi}|{yk.miqdor}"
                     )
-                    
-
                 
-                
-               
                 return redirect('main')
             yuklamalar = mahsulotlar_miqdori( YetkazibBeruvchi.objects.get(user=request.user).mahsulotlar) or []
             savdo=Savdo.objects.filter(yetkazib_beruvchi=YetkazibBeruvchi.objects.get(user=request.user))
@@ -147,7 +146,6 @@ def main(request):
     today_end = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.max))
     bsavdo=Savdo.objects.filter(vaqt_sana__range=(today_start, today_end)).all()
     
-    
 
     # Oyning 1-kunining 00:00:00 va bugungi 23:59:59
     month_start = timezone.make_aware(dt.datetime.combine(now.replace(day=1).date(), dt.time.min))
@@ -159,8 +157,10 @@ def main(request):
     payload['bsavdo'] = bsavdo
 
     payload['savdo'] = savdo
-    payload['usumma']=get_bugungi_savdo_summ(savdo)
-    payload['bsumma'] = get_bugungi_savdo_summ(bsavdo)
+    # Use Analytics Service
+    stats = get_dashboard_stats()
+    payload['usumma'] = add_spctoint(stats['total_sales_month'])
+    payload['bsumma'] = add_spctoint(stats['total_sales_today'])
     
     payload['ishchilar_soni'] = soni
     payload['msoni'] = msoni
@@ -218,6 +218,8 @@ def profile_view(request, username):
         if request.user.type == 'ega':
             res=''
             if user.type == 'yetkazib_beruvchi':
+                # Note: Keeping legacy stock adjustment for now as a fallback, 
+                # but ideally this should also use a service.
                 for i in request.POST:
                     
                     nomi=Mahsulot.objects.filter(nomi=i)
@@ -234,150 +236,125 @@ def profile_view(request, username):
                 return render(request, 'egayt.html',{'user': user,'yuklamalar': yuklamalar})
 @login_required(login_url='login')
 def crtuser(request):
-    payload = {}
-   
     if request.method == 'POST':
-       
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-        fullname = request.POST.get('tuliq_ismi')
-        type = request.POST.get('turi')
-        telefon = request.POST.get('telefon')
-        rasmi = request.FILES.get('rasmi')
-        payload['username'] = username
-        payload['password'] = password
-        payload['tuliq_ismi'] = fullname
-        payload['turi'] = type
-        payload['telefon'] = telefon
+        user, message = create_user_service(
+            username=request.POST.get('username'),
+            password=request.POST.get('password'),
+            fullname=request.POST.get('tuliq_ismi'),
+            user_type=request.POST.get('turi'),
+            phone=request.POST.get('telefon'),
+            profile_photo=request.FILES.get('rasmi'),
+            car_info=request.POST.get('mashina_nomi'),
+            car_photo=request.FILES.get('mashina_rasmi')
+        )
+        if user:
+            messages.success(request, message)
+            return redirect('hodimlar_list')
+        else:
+            messages.error(request, message)
+            return render(request, 'useryaratish.html', request.POST)
 
-        if User.objects.filter(username=username).exists():
-            messages.error(request, "Bu login allaqachon mavjud!")
-            return render(request, 'useryaratish.html',payload)
-
-        
-
-        if type == 'yetkazib_beruvchi':
-            mn=request.POST.get('mashina_nomi')
-            payload['mashina_nomi'] = mn
-            if 'mashina_rasmi' in request.FILES:
-                mr=request.FILES.get('mashina_rasmi')
-                user = User.objects.create_user(username=username, password=password,tel_raqami=telefon, tuliq_ismi=fullname)
-                user.type = type  # Agar User modelida type bo'lsa
-                user.save()
-            else:
-                messages.error(request, "Mashina rasmini tanlang!")
-                return render(request, 'useryaratish.html',payload)
-            
-            
-            YetkazibBeruvchi.objects.create(user=user, tuliq_ismi=fullname ,rasmi=rasmi,bmr=mr,bmh=mn)
-        elif type == 'pazanda':
-            
-            Pazanda.objects.create(user=user, tuliq_ismi=fullname, rasmi=rasmi)
-
-        
-        return redirect('main')
-    
-    
     return render(request, 'useryaratish.html')
+
 @login_required(login_url='login')
 def editusr(request, username):
-
     user_edit = get_object_or_404(User, username=username)
-    mn=''
-    mr=''
+    mn = ''
+    mr = ''
+    all_mahsulotlar = []
+    current_yuklamalar_dict = {}
+
     if user_edit.type == 'yetkazib_beruvchi':
-        mn=YetkazibBeruvchi.objects.get(user=user_edit).bmh
-        mr=YetkazibBeruvchi.objects.get(user=user_edit).bmr.url
-    
+        yb = YetkazibBeruvchi.objects.get(user=user_edit)
+        mn = yb.bmh
+        mr = yb.bmr.url if yb.bmr else ''
+        all_mahsulotlar = Mahsulot.objects.all().order_by('nomi')
+        
+        # Parse current stock string into dict {nom: miqdor}
+        from .functions import mahsulotlar_miqdori
+        yuklamalar_list = mahsulotlar_miqdori(yb.mahsulotlar)
+        for y in yuklamalar_list:
+            current_yuklamalar_dict[y.nom] = y.miqdor
+
     if request.method == 'POST':
         action_type = request.POST.get('action_type')
-        if user_edit.type == 'yetkazib_beruvchi':
-            su=YetkazibBeruvchi.objects.get(user=user_edit)
-        elif user_edit.type == 'pazanda':
-            su=Pazanda.objects.get(user=user_edit)
-
+        
         if action_type == 'delete_account':
-            confirm_text = request.POST.get('confirm_text')
-            if confirm_text == 'OCHIR':
+            if request.POST.get('confirm_text') == 'OCHIR':
                 user_edit.delete()
-                su.delete()
-             
-                return redirect('main')  # O'chirilgandan keyin qaysi sahifaga yo'naltirilishini belgilang
+                messages.success(request, "Foydalanuvchi o'chirildi.")
+                return redirect('hodimlar_list')
             else:
                 messages.error(request, "Tasdiq matni noto'g'ri.")
+                return redirect('edituser', username=username)
 
+        # Refactored to Auth Service
+        user, message = update_user_service(
+            user=user_edit,
+            username=request.POST.get('username'),
+            fullname=request.POST.get('tuliq_ismi'),
+            phone=request.POST.get('telefon'),
+            password=request.POST.get('password'),
+            profile_photo=request.FILES.get('rasmi'),
+            car_info=request.POST.get('mashina_nomi'),
+            car_photo=request.FILES.get('mashina_rasmi1'),
+            is_active=(request.POST.get('is_active') == "1")
+        )
 
-    if request.method == 'POST':
-        
-        user_edit.username = request.POST.get('username')
-        user_edit.tuliq_ismi = request.POST.get('tuliq_ismi')
-        user_edit.tel_raqami = request.POST.get('telefon')
-        new_password = request.POST.get('password')
-        is_active = request.POST.get('is_active')=="True"
-        
-        if is_active!=user_edit.is_active:
-            user_edit.is_active=is_active
-
-        if new_password:
-            user_edit.set_password(new_password)
-
-        user_edit.save()
-
-        if user_edit.type == 'yetkazib_beruvchi':
-            
-            yb = YetkazibBeruvchi.objects.get(user=user_edit)
-            yb.mashina_nomi = request.POST.get('mashina_nomi')
-            yb.tuliq_ismi=request.POST.get('tuliq_ismi')
-            yb.user.tuliq_ismi=request.POST.get('tuliq_ismi')
-            if 'mashina_rasmi1' in request.FILES:
-                
-                yb.bmr = request.FILES['mashina_rasmi1']
-               
-            if 'rasmi' in request.FILES:
-                yb.rasmi = request.FILES['rasmi']
+        # Handle manual stock override for delivery users if they are not using sorov flow
+        if user.type == 'yetkazib_beruvchi':
+            yb = YetkazibBeruvchi.objects.get(user=user)
+            new_yuklamalar_str = ""
+            all_mahs = Mahsulot.objects.all()
+            for m in all_mahs:
+                miqdor = request.POST.get(f'qty_{m.id}') # Use ID as sent from updated template
+                if miqdor and float(miqdor) > 0:
+                    new_yuklamalar_str += f"{m.nomi} {int(float(miqdor))},"
+            yb.mahsulotlar = new_yuklamalar_str
             yb.save()
 
-        if user_edit.type == 'pazanda':
-            pz = Pazanda.objects.get(user=user_edit)
-            if 'rasmi' in request.FILES:
-                pz.rasmi = request.FILES['rasmi']
-            pz.save()
+        messages.success(request, message)
+        return redirect('hodimlar_list')
 
-        
-        return redirect('main')
-
-    return render(request, 'editusr.html', {'user_edit': user_edit,'mn':mn,'mr':mr})
+    return render(request, 'editusr.html', {
+        'user_edit': user_edit,
+        'mn': mn,
+        'mr': mr,
+        'all_mahsulotlar': all_mahsulotlar,
+        'current_yuklamalar': current_yuklamalar_dict
+    })
 @login_required(login_url='login')
 def seemahsulot(request, mahsulot_id):
     mahsulot = Mahsulot.objects.get(id=mahsulot_id)
-    turs=MahsulotTuri.objects.all()
+    turs = MahsulotTuri.objects.all()
     if request.method == 'POST':
         if 'nomi' in request.POST:
-            nnomi=request.POST.get('nomi')
-            yts=YetkazibBeruvchi.objects.all()
+            nnomi = request.POST.get('nomi')
+            yts = YetkazibBeruvchi.objects.all()
             for yt in yts:
-                mahs= mahsulotlar_miqdori(yt.mahsulotlar)
-                
+                mahs = mahsulotlar_miqdori(yt.mahsulotlar)
                 for m in mahs:
-
-                    if m.nom==mahsulot.nomi:
-                        
-
-                        m.nom=nnomi
-                    
-                yt.mahsulotlar=yuklama_maker(mahs)
+                    if m.nom == mahsulot.nomi:
+                        m.nom = nnomi
+                yt.mahsulotlar = yuklama_maker(mahs)
                 yt.save()
-            mahsulot.nomi = request.POST.get('nomi')
+            mahsulot.nomi = nnomi
 
         mahsulot.miqdori = request.POST.get('miqdori')
-        turi=MahsulotTuri.objects.get(nomi=request.POST.get('turi'))
-        mahsulot.turi = turi
+        mahsulot.narxi = request.POST.get('narxi')
+        
+        # Look up by ID as sent from the template <option value="{{ tur.id }}">
+        turi_id = request.POST.get('turi')
+        if turi_id:
+            mahsulot.turi = MahsulotTuri.objects.get(id=turi_id)
+            
+        if 'rasmi' in request.FILES:
+            mahsulot.rasmi = request.FILES['rasmi']
+        
         mahsulot.save()
-        if 'mahsulot_rasmi' in request.FILES:
-            mahsulot.rasmi = request.FILES['mahsulot_rasmi']
-            mahsulot.save()
-        return redirect('main')
-    return render(request, 'seemahsulot.html', {'mahsulot': mahsulot,'turs':turs})
+        messages.success(request, "Mahsulot muvaffaqiyatli saqlandi.")
+        return redirect('mahsulotlar_list')
+    return render(request, 'seemahsulot.html', {'mahsulot': mahsulot, 'turs': turs})
 @login_required(login_url='login')
 def createmahsulot(request):
     tur=MahsulotTuri.objects.all()
@@ -400,12 +377,17 @@ def createmahsulot(request):
     return render(request, 'crtmahsulot.html',payload)
 
 @login_required(login_url='login')
-def deleteprdct(request,product_id):
-    mhs=get_object_or_404(Mahsulot,id=product_id)
-    if mhs:
-        mhs.delete()
-        return redirect('main')
-    return redirect('main')
+def deleteprdct(request, product_id):
+    mhs = get_object_or_404(Mahsulot, id=product_id)
+    if request.method == 'POST':
+        confirm_text = request.POST.get('confirm_text')
+        if confirm_text == 'OCHIR':
+            mhs.delete()
+            messages.success(request, "Mahsulot o'chirildi.")
+            return redirect('mahsulotlar_list')
+        else:
+            messages.error(request, "Tasdiqlash matni noto'g'ri.")
+    return redirect('seeproduct', mahsulot_id=product_id)
 @login_required(login_url='login')
 def addmiqdor(request):
     if request.user.type=='pazanda':        

@@ -1,403 +1,516 @@
 {% extends 'egabase.html' %}
 {% load static %}
 
-{% block title %}{{ mahsulot.nomi }} - Mahsulot Tafsilotlari{% endblock %}
+{% block title %}{{ mahsulot.nomi }} | Mahsulot{% endblock %}
+{% block page_title %}Mahsulotni tahrirlash{% endblock %}
 
 {% block content %}
 <style>
-    /* Page Wrapper */
-    .page-wrapper {
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
-        padding: 24px;
-        min-height: 80vh;
+    :root {
+        --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+        --input-focus: #10b981;
     }
 
-    /* Header Section */
-    .page-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 32px;
-        padding-bottom: 24px;
-        border-bottom: 2px solid #e5e7eb;
-    }
-
-    .header-left h1 {
-        font-size: 28px;
-        color: #1f2937;
-        margin: 0 0 8px 0;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-
-    .breadcrumb {
-        color: #6b7280;
-        font-size: 14px;
-    }
-
-    .breadcrumb a {
-        color: #f59e0b;
-        text-decoration: none;
-    }
-
-    .breadcrumb a:hover {
-        text-decoration: underline;
-    }
-
-    .action-buttons {
-        display: flex;
-        gap: 12px;
-    }
-
-    .btn {
-        padding: 10px 20px;
-        border-radius: 8px;
-        font-weight: 600;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        transition: all 0.3s ease;
-        border: none;
-        cursor: pointer;
-        font-size: 14px;
-    }
-
-    .btn-back {
-        background: #f3f4f6;
-        color: #374151;
-    }
-
-    .btn-back:hover {
-        background: #e5e7eb;
-    }
-
-    .btn-danger {
-        background: #ef4444;
-        color: white;
-    }
-
-    .btn-danger:hover {
-        background: #dc2626;
-        transform: translateY(-2px);
-    }
-
-    /* Product Content */
-    .product-content {
+    .edit-grid {
         display: grid;
-        grid-template-columns: 350px 1fr;
-        gap: 32px;
+        grid-template-columns: 1fr 2fr;
+        gap: 24px;
+        max-width: 1200px;
+        margin: 0 auto;
     }
 
-    /* Image Section */
-    .product-image-section {
-        position: sticky;
-        top: 24px;
-        height: fit-content;
+    @media (max-width: 992px) {
+        .edit-grid { grid-template-columns: 1fr; }
     }
 
-    .product-image-wrapper {
-        background: #f9fafb;
-        border-radius: 16px;
-        padding: 24px;
-        text-align: center;
-        border: 2px solid #e5e7eb;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-
-    .product-image-wrapper:hover {
-        border-color: #f59e0b;
-        background: #fffbf0;
-    }
-
-    .product-image {
-        width: 100%;
-        height: 300px;
-        object-fit: cover;
-        border-radius: 12px;
-        margin-bottom: 16px;
-        transition: transform 0.3s ease;
-        pointer-events: none;
-    }
-
-    .product-image-wrapper:hover .product-image {
-        transform: scale(1.02);
-    }
-
-    .image-upload-hint {
-        color: #6b7280;
-        font-size: 13px;
-        margin-top: 8px;
-        pointer-events: none;
-    }
-
-    /* Details Section */
-    .product-details {
+    .edit-card {
         background: white;
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: var(--card-shadow);
+        border: 1px solid var(--border-color);
+        margin-bottom: 24px;
+        animation: fadeIn 0.4s ease-out;
     }
 
-    .details-card {
-        background: #f9fafb;
-        border-radius: 12px;
-        padding: 24px;
-        margin-bottom: 24px;
-        border: 1px solid #e5e7eb;
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
     }
 
     .card-title {
         font-size: 18px;
-        font-weight: 700;
-        color: #1f2937;
-        margin-bottom: 20px;
+        font-weight: 800;
+        color: var(--text-dark);
+        margin-bottom: 18px;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
     }
 
-    .form-group {
-        margin-bottom: 20px;
+    .card-title i { color: var(--primary-color); }
+
+    /* Top (breadcrumb + actions) */
+    .page-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
     }
+
+    .page-top .title {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .page-top h2 {
+        margin: 0;
+        font-size: 22px;
+        font-weight: 900;
+        color: var(--text-dark);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .breadcrumb {
+        font-size: 13px;
+        color: var(--text-light);
+    }
+
+    .breadcrumb a {
+        color: var(--primary-color);
+        text-decoration: none;
+        font-weight: 800;
+    }
+
+    .breadcrumb a:hover { text-decoration: underline; }
+
+    .top-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .btn {
+        border: none;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        border-radius: 12px;
+        font-weight: 800;
+        transition: all 0.2s ease;
+        border: 1px solid var(--border-color);
+        background: white;
+        color: var(--text-dark);
+    }
+
+    .btn:hover { transform: translateY(-2px); }
+
+    .btn.primary {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        border-color: transparent;
+        color: white;
+        box-shadow: 0 4px 12px var(--primary-glow);
+    }
+
+    .btn.primary:hover { box-shadow: 0 6px 20px var(--primary-glow); }
+
+    /* Photo card */
+    .photo-card {
+        text-align: center;
+        padding: 24px;
+        background: #f9fafb;
+        border: 2px dashed #e5e7eb;
+        border-radius: 16px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .photo-card:hover {
+        border-color: var(--primary-color);
+        background: #f0fdf4;
+    }
+
+    .photo-preview-wrap {
+        position: relative;
+        width: 180px;
+        height: 180px;
+        margin: 0 auto 14px;
+    }
+
+    .photo-preview {
+        width: 100%;
+        height: 100%;
+        border-radius: 16px;
+        object-fit: cover;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.10);
+        border: 3px solid white;
+        transition: opacity .2s ease;
+        pointer-events: none;
+    }
+
+    .edit-badge {
+        position: absolute;
+        bottom: -6px;
+        right: -6px;
+        background: var(--primary-color);
+        color: white;
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 10px var(--primary-glow);
+        border: 3px solid white;
+    }
+
+    .photo-label {
+        font-size: 14px;
+        font-weight: 800;
+        color: var(--text-dark);
+        display: block;
+    }
+
+    .photo-hint {
+        font-size: 12px;
+        color: var(--text-light);
+        margin-top: 4px;
+    }
+
+    /* Form */
+    .form-group { margin-bottom: 18px; }
 
     .form-label {
         display: block;
-        font-weight: 600;
-        color: #374151;
-        margin-bottom: 8px;
         font-size: 14px;
+        font-weight: 800;
+        color: var(--text-dark);
+        margin-bottom: 8px;
+    }
+
+    .input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .input-wrapper i {
+        position: absolute;
+        left: 16px;
+        color: var(--text-light);
+        font-size: 16px;
+        pointer-events: none;
     }
 
     .form-control {
         width: 100%;
-        padding: 12px 16px;
-        border: 2px solid #e5e7eb;
-        border-radius: 8px;
-        font-size: 16px;
-        transition: all 0.3s ease;
-        background: white;
+        padding: 12px 16px 12px 46px;
+        font-size: 15px;
+        color: var(--text-dark);
+        background: #f9fafb;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        transition: all 0.2s ease;
     }
 
     .form-control:focus {
+        background: white;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 4px var(--primary-glow);
         outline: none;
-        border-color: #f59e0b;
-        box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.1);
     }
 
-    .form-grid {
+    .grid-2 {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 20px;
+        gap: 16px;
     }
 
-    /* Stock Badge */
+    @media (max-width: 992px) {
+        .grid-2 { grid-template-columns: 1fr; }
+    }
+
+    /* Stock info */
     .stock-info {
-        display: inline-flex;
+        display: flex;
         align-items: center;
-        gap: 12px;
-        padding: 8px 16px;
-        background: white;
-        border-radius: 8px;
-        border: 2px solid #e5e7eb;
+        gap: 10px;
+        padding: 12px 14px;
+        background: #f9fafb;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        margin-top: 10px;
+        flex-wrap: wrap;
     }
 
     .stock-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
         padding: 6px 12px;
         border-radius: 20px;
-        font-size: 13px;
-        font-weight: 600;
+        font-size: 12px;
+        font-weight: 800;
+        white-space: nowrap;
     }
 
-    .stock-low {
-        background: #fee2e2;
-        color: #dc2626;
-    }
+    .stock-low { background: #fef2f2; color: #ef4444; }
+    .stock-medium { background: #fef3c7; color: #d97706; }
+    .stock-high { background: #ecfdf5; color: #10b981; }
 
-    .stock-medium {
-        background: #fef3c7;
-        color: #d97706;
-    }
+    /* Danger Zone */
+    .danger-zone { border-color: #fee2e2; background: #fffafa; }
+    .danger-title { color: var(--danger-color); }
 
-    .stock-high {
-        background: #d1fae5;
-        color: #059669;
-    }
-
-    /* Submit Section */
-    .submit-section {
-        display: flex;
-        gap: 12px;
-        padding-top: 24px;
-        border-top: 2px solid #e5e7eb;
-    }
-
-    .btn-primary {
-        background: #f59e0b;
+    .delete-btn {
+        background: #ef4444;
         color: white;
-        padding: 14px 32px;
-        flex: 1;
+        border: none;
+        padding: 12px;
+        width: 100%;
+        border-radius: 10px;
+        font-weight: 900;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-top: 10px;
     }
 
-    .btn-primary:hover {
-        background: #d97706;
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3);
-    }
+    .delete-btn:hover { background: #dc2626; }
 
-    @media (max-width: 968px) {
-        .product-content {
-            grid-template-columns: 1fr;
-        }
-
-        .product-image-section {
-            position: relative;
-            top: 0;
-        }
-
-        .form-grid {
-            grid-template-columns: 1fr;
-        }
+    .confirm-input {
+        padding: 10px;
+        border: 1px solid #fca5a5;
+        border-radius: 8px;
+        width: 100%;
+        margin-bottom: 10px;
     }
 </style>
 
-<div class="page-wrapper">
-    <!-- Header -->
-    <div class="page-header">
-        <div class="header-left">
-            <h1>📦 {{ mahsulot.nomi }}</h1>
+<div class="main-container">
+    <div class="page-top">
+        <div class="title">
+            <h2><i class="fa-solid fa-box"></i> {{ mahsulot.nomi }}</h2>
             <div class="breadcrumb">
                 <a href="{% url 'mahsulotlar_list' %}">Mahsulotlar</a> / Tahrirlash
             </div>
         </div>
-        <div class="action-buttons">
-            <a href="{% url 'mahsulotlar_list' %}" class="btn btn-back">
+
+        <div class="top-actions">
+            <a href="{% url 'mahsulotlar_list' %}" class="btn">
                 <i class="fa-solid fa-arrow-left"></i> Orqaga
-            </a>
-            <a href="{% url 'delprdct' mahsulot.id %}" class="btn btn-danger"
-                onclick="return confirm('Rostdan ham o\'chirmoqchimisiz?')">
-                <i class="fa-solid fa-trash"></i> O'chirish
             </a>
         </div>
     </div>
 
-    <!-- Product Content -->
-    <form method="POST" enctype="multipart/form-data">
+    <!-- Main Edit Form -->
+    <form id="editProductForm" method="POST" enctype="multipart/form-data">
         {% csrf_token %}
-        <div class="product-content">
-            <!-- Image Section -->
-            <div class="product-image-section">
-                <div class="product-image-wrapper" onclick="document.getElementById('rasmi_input').click();">
-                    <img src="{% if mahsulot.rasmi %}{{ mahsulot.rasmi.url }}{% else %}{% static 'images/default_product.jpg' %}{% endif %}"
-                        alt="{{ mahsulot.nomi }}" id="preview-rasm" class="product-image">
-                    <div class="image-upload-hint">
-                        📸 Rasmni o'zgartirish uchun bosing
+        <div class="edit-grid">
+            <!-- Left -->
+            <div>
+                <div class="edit-card">
+                    <h3 class="card-title"><i class="fa-solid fa-camera"></i> Rasm</h3>
+
+                    <div class="photo-card" id="photoCard">
+                        <div class="photo-preview-wrap">
+                            <img id="preview-rasm"
+                                 src="{% if mahsulot.rasmi %}{{ mahsulot.rasmi.url }}{% else %}{% static 'images/default_product.jpg' %}{% endif %}"
+                                 class="photo-preview" alt="{{ mahsulot.nomi }}">
+                            <div class="edit-badge"><i class="fa-solid fa-pen"></i></div>
+                        </div>
+                        <span class="photo-label">Mahsulot rasmi</span>
+                        <span class="photo-hint">O'zgartirish uchun bosing</span>
+
+                        <input type="file" id="rasmi_input" name="rasmi" accept="image/*" style="display:none;">
                     </div>
-                    <input type="file" id="rasmi_input" name="rasmi" accept="image/*" style="display: none;"
-                        onchange="showPreview(event)">
+                </div>
+
+                <!-- Danger Zone (left, like screenshot) -->
+                <div class="edit-card danger-zone">
+                    <h3 class="card-title danger-title">
+                        <i class="fa-solid fa-triangle-exclamation"></i> Danger Zone
+                    </h3>
+
+                    <p style="font-size: 13px; color: #7f1d1d; margin-bottom: 15px;">
+                        Mahsulotni o'chirish qaytarib bo'lmaydigan amal.
+                    </p>
+
+                    <div id="deleteFormSection">
+                        <button type="button" class="delete-btn"
+                                style="background:#fee2e2; color:#ef4444; border:1px solid #fecaca;"
+                                id="showDeleteBtn">
+                            Mahsulotni o'chirish
+                        </button>
+                    </div>
+
+                    <div id="confirmDeleteSection" style="display:none;">
+                        <input type="text" id="confirm_text_input" placeholder="OCHIR deb yozing" class="confirm-input">
+                        <button type="button" class="delete-btn" id="finalDeleteBtn">Tasdiqlash va O'chirish</button>
+                        <button type="button"
+                                style="background:none; border:none; color:#6b7280; font-size:12px; margin-top:10px; cursor:pointer;"
+                                id="cancelDeleteBtn">
+                            Bekor qilish
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <!-- Details Section -->
-            <div class="product-details">
-                <!-- Basic Info -->
-                <div class="details-card">
-                    <h3 class="card-title">📋 Asosiy Ma'lumotlar</h3>
+            <!-- Right -->
+            <div>
+                <div class="edit-card">
+                    <h3 class="card-title"><i class="fa-solid fa-pen-to-square"></i> Ma'lumotlar</h3>
 
                     <div class="form-group">
-                        <label for="nomi" class="form-label">Mahsulot nomi</label>
-                        <input type="text" id="nomi" name="nomi" class="form-control" value="{{ mahsulot.nomi }}"
-                            required>
+                        <label class="form-label">Mahsulot nomi</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-tag"></i>
+                            <input type="text" name="nomi" class="form-control" value="{{ mahsulot.nomi }}" required>
+                        </div>
                     </div>
 
-                    <div class="form-grid">
+                    <div class="grid-2">
                         <div class="form-group">
-                            <label for="narxi" class="form-label">� Narxi (so'm)</label>
-                            <input type="number" id="narxi" name="narxi" class="form-control"
-                                value="{{ mahsulot.narxi }}" step="0.01" required>
+                            <label class="form-label">Narxi (so'm)</label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-money-bill-1-wave"></i>
+                                <input type="number" id="narxi" name="narxi" class="form-control"
+                                       value="{{ mahsulot.narxi|floatformat:0 }}" step="0.01" required>
+                            </div>
                         </div>
 
                         <div class="form-group">
-                            <label for="turi" class="form-label">📏 O'lchov birligi</label>
-                            <select id="turi" name="turi" class="form-control" required>
-                                {% for tur in turs %}
-                                <option value="{{ tur.nomi }}" {% if mahsulot.turi.nomi == tur.nomi %}selected{% endif %}>
-                                    {{ tur.nomi }}
-                                </option>
-                                {% endfor %}
-                            </select>
+                            <label class="form-label">O'lchov birligi</label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-ruler-combined"></i>
+                                <select id="turi" name="turi" class="form-control" required>
+                                    {% for tur in turs %}
+                                    <option value="{{ tur.id }}" {% if mahsulot.turi.id == tur.id %}selected{% endif %}>
+                                        {{ tur.nomi }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
                         </div>
                     </div>
-                </div>
-
-                <!-- Stock Info -->
-                <div class="details-card">
-                    <h3 class="card-title">📊 Zaxira Ma'lumotlari</h3>
 
                     <div class="form-group">
-                        <label for="miqdori" class="form-label">Miqdori</label>
-                        <input type="number" id="miqdori" name="miqdori" class="form-control"
-                            value="{{ mahsulot.miqdori }}" step="0.01" required>
+                        <label class="form-label">Miqdori</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-cubes-stacked"></i>
+                            <input type="number" id="miqdori" name="miqdori" class="form-control"
+                                   value="{{ mahsulot.miqdori|floatformat:0 }}" step="0.01" required>
+                        </div>
+
+                        <div class="stock-info">
+                            <span style="color:var(--text-light); font-weight:800;">Joriy holat:</span>
+                            {% if mahsulot.miqdori < 10 %}
+                                <span class="stock-badge stock-low">Kam qoldi ({{ mahsulot.miqdori|floatformat:0 }})</span>
+                            {% elif mahsulot.miqdori < 50 %}
+                                <span class="stock-badge stock-medium">O'rtacha ({{ mahsulot.miqdori|floatformat:0 }})</span>
+                            {% else %}
+                                <span class="stock-badge stock-high">Yetarli ({{ mahsulot.miqdori|floatformat:0 }})</span>
+                            {% endif %}
+                        </div>
                     </div>
 
-                    <div class="stock-info">
-                        <span style="color: #6b7280;">Joriy holat:</span>
-                        {% if mahsulot.miqdori < 10 %} <span class="stock-badge stock-low">Kam qoldi ({{ mahsulot.miqdori|floatformat:0 }})</span>
-                            {% elif mahsulot.miqdori < 50 %} <span class="stock-badge stock-medium">O'rtacha ({{ mahsulot.miqdori|floatformat:0 }})</span>
-                                {% else %}
-                                <span class="stock-badge stock-high">Yetarli ({{ mahsulot.miqdori|floatformat:0 }})
-                                </span>
-                                {% endif %}
-                    </div>
-                </div>
-
-                <!-- Submit Section -->
-                <div class="submit-section">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fa-solid fa-check"></i> O'zgarishlarni Saqlash
+                    <button type="submit" class="btn primary" style="width:100%; justify-content:center;">
+                        <i class="fa-solid fa-floppy-disk"></i> O'zgarishlarni saqlash
                     </button>
                 </div>
+
+                {% if messages %}
+                    {% for message in messages %}
+                    <div style="padding:16px; border-radius:12px; background:#fee2e2; color:#991b1b; border:1px solid #fecaca; margin-bottom:15px; font-size:14px;">
+                        <i class="fa-solid fa-circle-exclamation" style="margin-right:8px;"></i> {{ message }}
+                    </div>
+                    {% endfor %}
+                {% endif %}
             </div>
         </div>
     </form>
 </div>
 
+<!-- Hidden delete form (outside main form) -->
+<form id="hiddenDeleteForm" method="POST" action="{% url 'delprdct' mahsulot.id %}" style="display:none;">
+    {% csrf_token %}
+    <input type="hidden" name="confirm_text" id="hidden_confirm_text">
+</form>
+
 <script>
-    // Image preview functionality
-    document.getElementById('preview-rasm').addEventListener('click', function () {
-        document.getElementById('rasmi_input').click();
-    });
+document.addEventListener('DOMContentLoaded', () => {
+    // Image upload + preview
+    const photoCard = document.getElementById('photoCard');
+    const fileInput = document.getElementById('rasmi_input');
+    const preview = document.getElementById('preview-rasm');
 
-    function showPreview(event) {
-        const input = event.target;
-        if (input.files && input.files[0]) {
+    if (photoCard && fileInput) {
+        photoCard.addEventListener('click', () => fileInput.click());
+    }
+
+    if (fileInput && preview) {
+        fileInput.addEventListener('change', () => {
+            const f = fileInput.files && fileInput.files[0];
+            if (!f) return;
+
             const reader = new FileReader();
-            reader.onload = function (e) {
-                document.getElementById('preview-rasm').src = e.target.result;
+            reader.onload = (e) => {
+                preview.style.opacity = '0';
+                setTimeout(() => {
+                    preview.src = e.target.result;
+                    preview.style.opacity = '1';
+                }, 120);
+            };
+            reader.readAsDataURL(f);
+        });
+    }
+
+    // Delete confirmation
+    const showDeleteBtn = document.getElementById('showDeleteBtn');
+    const confirmDeleteSection = document.getElementById('confirmDeleteSection');
+    const deleteFormSection = document.getElementById('deleteFormSection');
+    const finalDeleteBtn = document.getElementById('finalDeleteBtn');
+    const confirmInput = document.getElementById('confirm_text_input');
+    const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+
+    if (showDeleteBtn) {
+        showDeleteBtn.addEventListener('click', () => {
+            deleteFormSection.style.display = 'none';
+            confirmDeleteSection.style.display = 'block';
+            confirmInput.focus();
+        });
+    }
+
+    if (cancelDeleteBtn) {
+        cancelDeleteBtn.addEventListener('click', () => {
+            deleteFormSection.style.display = 'block';
+            confirmDeleteSection.style.display = 'none';
+            confirmInput.value = '';
+            confirmInput.style.borderColor = '';
+        });
+    }
+
+    if (finalDeleteBtn) {
+        finalDeleteBtn.addEventListener('click', () => {
+            const text = (confirmInput.value || '').trim();
+            if (text === 'OCHIR') {
+                document.getElementById('hidden_confirm_text').value = text;
+                document.getElementById('hiddenDeleteForm').submit();
+            } else {
+                alert("Iltimos, tasdiqlash uchun 'OCHIR' deb yozing.");
+                confirmInput.style.borderColor = '#ef4444';
             }
-            reader.readAsDataURL(input.files[0]);
-        }
+        });
     }
-
-    // Format numeric values
-    document.addEventListener('DOMContentLoaded', function () {
-        let mahsulotNarxi = "{{ mahsulot.narxi }}";
-        let mahsulotMiqdori = "{{ mahsulot.miqdori }}";
-
-        function formatNumber(value) {
-            if (typeof value  ==  = 'string' && value.includes(',')) {
-        return parseFloat(value.replace(',', '.')).toFixed(2);
-    }
-    return parseFloat(value).toFixed(2);
-        }
-
-    const narxiInput = document.getElementById('narxi');
-    const miqdoriInput = document.getElementById('miqdori');
-
-    if (narxiInput) narxiInput.value = formatNumber(mahsulotNarxi);
-    if (miqdoriInput) miqdoriInput.value = formatNumber(mahsulotMiqdori);
-    });
+});
 </script>
-
 {% endblock %}

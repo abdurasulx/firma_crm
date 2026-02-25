@@ -112,6 +112,21 @@ def mahsulotlar_list(request):
     else:
         mahsulotlar = mahsulotlar.order_by('nomi')
     
+    # Check for AJAX/JSON request
+    if request.GET.get('data_format') == 'json':
+        from django.http import JsonResponse
+        data = []
+        # Limit to 7 results for the search dropdown
+        for m in mahsulotlar[:7]:
+            data.append({
+                'id': m.id,
+                'nomi': m.nomi,
+                'turi': m.turi.nomi if m.turi else 'Kategoriya yo\'q',
+                'narxi': f"{m.narxi:,.0f} so'm".replace(',', ' '),
+                'rasmi_url': m.rasmi.url if m.rasmi else None,
+            })
+        return JsonResponse({'results': data})
+
     # Pagination - har sahifada 24 ta
     paginator = Paginator(mahsulotlar, 24)
     page_number = request.GET.get('page')

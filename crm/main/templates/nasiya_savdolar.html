@@ -5,398 +5,400 @@
 
 {% block content %}
 <style>
-    /* Modern Credit Sales Page */
-    .page-header {
-        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-        color: white;
+    :root{
+        --card-shadow: 0 10px 25px -5px rgba(0,0,0,.05), 0 8px 10px -6px rgba(0,0,0,.05);
+    }
+
+    /* Header */
+    .page-header{
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+        color: #fff;
         padding: 40px 30px;
-        border-radius: 16px;
-        margin-bottom: 30px;
-        box-shadow: 0 8px 32px rgba(245, 158, 11, 0.3);
+        border-radius: 20px;
+        margin-bottom: 24px;
+        box-shadow: 0 10px 40px var(--primary-glow);
+        border: 1px solid rgba(255,255,255,.18);
     }
-
-    .page-header h1 {
-        margin: 0 0 12px 0;
-        font-size: 32px;
-        font-weight: 700;
+    .page-header h1{
+        margin: 0 0 10px 0;
+        font-size: 30px;
+        font-weight: 800;
+        letter-spacing: .2px;
     }
-
-    .page-header p {
+    .page-header p{
         margin: 0;
-        opacity: 0.9;
+        opacity: .9;
+        font-size: 15px;
     }
 
     /* Filter Tabs */
-    .filter-tabs {
-        display: flex;
-        gap: 12px;
-        margin-bottom: 30px;
+    .filter-tabs{
+        display:flex;
+        gap:12px;
+        margin-bottom: 22px;
         flex-wrap: wrap;
     }
-
-    .filter-tab {
-        padding: 12px 24px;
-        background: white;
-        border-radius: 10px;
+    .filter-tab{
+        padding: 10px 18px;
+        background: #fff;
+        border-radius: 12px;
         text-decoration: none;
-        color: #6b7280;
-        font-weight: 600;
-        font-size: 15px;
-        border: 2px solid #e5e7eb;
-        transition: all 0.3s ease;
+        color: var(--text-light);
+        font-weight: 800;
+        font-size: 14px;
+        border: 1px solid var(--border-color);
+        transition: all .2s ease;
+        box-shadow: 0 4px 12px rgba(0,0,0,.04);
+        display:inline-flex;
+        align-items:center;
+        gap:8px;
     }
-
-    .filter-tab:hover {
-        border-color: #f59e0b;
-        color: #f59e0b;
+    .filter-tab:hover{
+        border-color: var(--primary-color);
+        color: var(--primary-color);
         transform: translateY(-2px);
+        box-shadow: 0 8px 18px rgba(0,0,0,.06);
     }
-
-    .filter-tab.active {
-        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-        color: white;
+    .filter-tab.active{
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        color:#fff;
         border-color: transparent;
+        box-shadow: 0 10px 25px var(--primary-glow);
     }
 
     /* Stats Grid */
-    .stats-grid {
-        display: grid;
+    .stats-grid{
+        display:grid;
         grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-        gap: 20px;
-        margin-bottom: 30px;
+        gap: 18px;
+        margin-bottom: 24px;
     }
-
-    .stat-card {
-        background: white;
-        padding: 24px;
-        border-radius: 12px;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    .stat-card{
+        background:#fff;
+        padding: 22px;
+        border-radius: 18px;
+        box-shadow: var(--card-shadow);
+        border: 1px solid var(--border-color);
         border-left: 4px solid;
-        transition: all 0.3s ease;
+        transition: all .2s ease;
     }
-
-    .stat-card:hover {
-        transform: translateY(-6px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    .stat-card:hover{
+        transform: translateY(-4px);
+        box-shadow: 0 16px 35px rgba(0,0,0,.08);
     }
+    .stat-card.primary{ border-left-color: var(--primary-color); }
+    .stat-card.success{ border-left-color: #10b981; }
+    .stat-card.danger{ border-left-color: #ef4444; }
+    .stat-card.info{ border-left-color: #3b82f6; }
 
-    .stat-card.warning {
-        border-left-color: #f59e0b;
-    }
-
-    .stat-card.danger {
-        border-left-color: #ef4444;
-    }
-
-    .stat-card.success {
-        border-left-color: #10b981;
-    }
-
-    .stat-card.info {
-        border-left-color: #3b82f6;
-    }
-
-    .stat-label {
-        font-size: 13px;
-        color: #6b7280;
-        font-weight: 600;
+    .stat-label{
+        font-size: 12px;
+        color: var(--text-light);
+        font-weight: 800;
         text-transform: uppercase;
+        letter-spacing: .6px;
         margin-bottom: 8px;
     }
-
-    .stat-value {
-        font-size: 28px;
-        font-weight: 700;
-        color: #1f2937;
+    .stat-value{
+        font-size: 26px;
+        font-weight: 900;
+        color: var(--text-dark);
     }
 
-    /* Credit Sale Card */
-    .credit-card {
-        background: white;
-        border-radius: 12px;
-        padding: 24px;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-        border-left: 4px solid;
-        transition: all 0.3s ease;
-    }
-
-    .credit-card.paid {
-        border-left-color: #10b981;
-        background: #f0fdf4;
-    }
-
-    .credit-card.unpaid {
-        border-left-color: #ef4444;
-    }
-
-    .credit-card:hover {
-        transform: translateX(8px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-    }
-
-    .credit-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+    /* Credit Card */
+    .credit-card{
+        background:#fff;
+        border-radius: 18px;
+        padding: 22px;
         margin-bottom: 16px;
-        padding-bottom: 16px;
-        border-bottom: 2px solid #f3f4f6;
+        box-shadow: var(--card-shadow);
+        border: 1px solid var(--border-color);
+        border-left: 4px solid var(--primary-color);
+        transition: all .2s ease;
+        overflow:hidden;
+        position:relative;
+    }
+    .credit-card:hover{
+        transform: translateY(-3px);
+        box-shadow: 0 18px 40px rgba(0,0,0,.08);
+    }
+    .credit-card.paid{
+        border-left-color:#10b981;
+        background: #f7fffb;
+    }
+    .credit-card.unpaid{
+        border-left-color:#ef4444;
     }
 
-    .credit-client {
-        font-size: 20px;
-        font-weight: 700;
-        color: #1f2937;
+    .credit-header{
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap: 12px;
+        margin-bottom: 14px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid #eef2f7;
+    }
+    .credit-client{
+        font-size: 18px;
+        font-weight: 900;
+        color: var(--text-dark);
+    }
+    .credit-date{
+        font-size: 13px;
+        color: var(--text-light);
+        margin-top: 4px;
     }
 
-    .credit-date {
-        font-size: 14px;
-        color: #6b7280;
+    .credit-info{
+        display:grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 14px;
+        margin-bottom: 14px;
     }
-
-    .credit-info {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 16px;
-        margin-bottom: 16px;
-    }
-
-    .info-item {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .info-label {
-        font-size: 12px;
-        color: #6b7280;
-        font-weight: 600;
+    .info-item{ display:flex; flex-direction:column; }
+    .info-label{
+        font-size: 11px;
+        color: var(--text-light);
+        font-weight: 800;
         text-transform: uppercase;
+        letter-spacing: .5px;
         margin-bottom: 4px;
     }
-
-    .info-value {
-        font-size: 16px;
-        font-weight: 700;
-        color: #1f2937;
+    .info-value{
+        font-size: 15px;
+        font-weight: 900;
+        color: var(--text-dark);
     }
+    .info-value.debt{ color:#ef4444; }
+    .info-value.paid{ color:#10b981; }
 
-    .info-value.debt {
-        color: #ef4444;
-    }
-
-    .info-value.paid {
-        color: #10b981;
-    }
-
-    /* Progress Bar */
-    .progress-bar {
-        height: 8px;
+    /* Progress */
+    .progress-bar{
+        height: 10px;
         background: #e5e7eb;
-        border-radius: 10px;
-        overflow: hidden;
-        margin: 16px 0;
+        border-radius: 999px;
+        overflow:hidden;
+        margin: 10px 0 14px 0;
     }
-
-    .progress-fill {
+    .progress-fill{
         height: 100%;
         background: linear-gradient(90deg, #10b981 0%, #059669 100%);
-        transition: width 0.5s ease;
+        transition: width .5s ease;
+        border-radius: 999px;
     }
 
-    /* Payment History */
-    .payment-history {
-        margin-top: 16px;
-        padding-top: 16px;
-        border-top: 2px solid #f3f4f6;
+    /* Payment history */
+    .payment-history{
+        margin-top: 12px;
+        padding-top: 14px;
+        border-top: 1px solid #eef2f7;
     }
-
-    .payment-history-title {
-        font-size: 14px;
-        font-weight: 700;
-        color: #6b7280;
-        margin-bottom: 12px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
+    .payment-history-title{
+        font-size: 13px;
+        font-weight: 900;
+        color: var(--text-light);
+        margin-bottom: 10px;
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap: 10px;
     }
-
-    .payment-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+    .payment-item{
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap: 10px;
         padding: 10px 12px;
         background: #f9fafb;
-        border-radius: 8px;
+        border-radius: 12px;
+        border: 1px solid #eef2f7;
         margin-bottom: 8px;
     }
-
-    .payment-date {
-        font-size: 13px;
-        color: #6b7280;
-    }
-
-    .payment-amount {
-        font-size: 15px;
-        font-weight: 700;
-        color: #10b981;
-    }
-
-    .payment-user {
-        font-size: 12px;
-        color: #9ca3af;
-    }
-
-    /* Add Payment Button */
-    .btn-add-payment {
-        padding: 10px 20px;
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s ease;
+    .payment-date{ font-size: 12px; color: var(--text-light); }
+    .payment-user{ font-size: 12px; color: #9ca3af; }
+    .payment-amount{
         font-size: 14px;
+        font-weight: 900;
+        color:#10b981;
+        white-space:nowrap;
     }
 
-    .btn-add-payment:hover {
-        transform: scale(1.05);
-        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+    /* Buttons */
+    .btn-add-payment{
+        padding: 10px 16px;
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        color:#fff;
+        border:none;
+        border-radius: 12px;
+        font-weight: 900;
+        cursor:pointer;
+        transition: all .2s ease;
+        font-size: 14px;
+        box-shadow: 0 10px 25px var(--primary-glow);
+    }
+    .btn-add-payment:hover{
+        transform: translateY(-2px);
+        box-shadow: 0 16px 35px var(--primary-glow);
     }
 
-    .btn-toggle-history {
-        padding: 6px 12px;
-        background: #e5e7eb;
-        color: #6b7280;
-        border: none;
-        border-radius: 6px;
-        font-weight: 600;
-        cursor: pointer;
-        font-size: 13px;
-    }
-
-    .btn-toggle-history:hover {
-        background: #d1d5db;
-    }
-
-    /* Badge */
-    .badge {
-        padding: 4px 12px;
-        border-radius: 20px;
+    .btn-toggle-history{
+        padding: 7px 10px;
+        background: #fff;
+        color: var(--text-dark);
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        font-weight: 900;
+        cursor:pointer;
         font-size: 12px;
-        font-weight: 600;
-        display: inline-block;
+        transition: all .2s ease;
+    }
+    .btn-toggle-history:hover{
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+        transform: translateY(-1px);
     }
 
-    .badge.success {
+    /* Badges */
+    .badge{
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 900;
+        display:inline-flex;
+        align-items:center;
+        gap:6px;
+        border: 1px solid transparent;
+        white-space:nowrap;
+    }
+    .badge.success{
         background: #d1fae5;
         color: #065f46;
+        border-color: #a7f3d0;
     }
-
-    .badge.danger {
+    .badge.danger{
         background: #fee2e2;
         color: #991b1b;
+        border-color: #fecaca;
     }
 
-    /* Responsive */
-    @media (max-width: 768px) {
-        .credit-header {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 8px;
-        }
-
-        .credit-info {
-            grid-template-columns: 1fr;
-        }
+    /* Empty */
+    .empty-wrap{
+        text-align:center;
+        padding: 60px;
+        background:#fff;
+        border-radius: 18px;
+        border: 1px solid var(--border-color);
+        box-shadow: var(--card-shadow);
     }
 
     /* Modal */
-    .modal {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
+    .modal{
+        display:none;
+        position:fixed;
+        top:0; left:0;
+        width:100%; height:100%;
+        background: rgba(15, 23, 42, .55);
         z-index: 1000;
-        align-items: center;
-        justify-content: center;
+        align-items:center;
+        justify-content:center;
+        padding: 18px;
+    }
+    .modal.active{ display:flex; }
+
+    .modal-content{
+        background:#fff;
+        border-radius: 20px;
+        padding: 26px;
+        max-width: 520px;
+        width: 100%;
+        box-shadow: 0 30px 80px rgba(0,0,0,.35);
+        border: 1px solid var(--border-color);
+        animation: pop .18s ease-out;
+    }
+    @keyframes pop{
+        from{ transform: translateY(10px); opacity:.6; }
+        to{ transform: translateY(0); opacity:1; }
+    }
+    .modal-header{
+        font-size: 20px;
+        font-weight: 900;
+        margin-bottom: 18px;
+        color: var(--text-dark);
+        display:flex;
+        align-items:center;
+        gap: 10px;
     }
 
-    .modal.active {
-        display: flex;
-    }
-
-    .modal-content {
-        background: white;
-        border-radius: 16px;
-        padding: 32px;
-        max-width: 500px;
-        width: 90%;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    }
-
-    .modal-header {
-        font-size: 24px;
-        font-weight: 700;
-        margin-bottom: 24px;
-        color: #1f2937;
-    }
-
-    .form-group {
-        margin-bottom: 20px;
-    }
-
-    .form-group label {
-        display: block;
-        font-size: 14px;
-        font-weight: 600;
-        color: #374151;
+    .form-group{ margin-bottom: 16px; }
+    .form-group label{
+        display:block;
+        font-size: 13px;
+        font-weight: 900;
+        color: var(--text-dark);
         margin-bottom: 8px;
     }
-
     .form-group input,
-    .form-group textarea {
-        width: 100%;
-        padding: 12px;
-        border: 2px solid #e5e7eb;
-        border-radius: 8px;
+    .form-group textarea{
+        width:100%;
+        padding: 12px 12px;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
         font-size: 14px;
+        background: #f9fafb;
+        transition: all .2s ease;
     }
-
     .form-group input:focus,
-    .form-group textarea:focus {
-        outline: none;
-        border-color: #10b981;
+    .form-group textarea:focus{
+        outline:none;
+        background:#fff;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 4px var(--primary-glow);
     }
 
-    .modal-actions {
-        display: flex;
-        gap: 12px;
-        justify-content: flex-end;
+    .modal-actions{
+        display:flex;
+        gap: 10px;
+        justify-content:flex-end;
+        margin-top: 8px;
+    }
+    .btn-cancel{
+        padding: 10px 14px;
+        background: #fff;
+        color: var(--text-dark);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        font-weight: 900;
+        cursor:pointer;
+        transition: all .2s ease;
+    }
+    .btn-cancel:hover{
+        border-color: var(--text-light);
+        background:#f9fafb;
+        transform: translateY(-1px);
     }
 
-    .btn-cancel {
-        padding: 10px 20px;
-        background: #e5e7eb;
-        color: #6b7280;
-        border: none;
-        border-radius: 8px;
-        font-weight: 600;
-        cursor: pointer;
+    .btn-submit{
+        padding: 10px 14px;
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        color:#fff;
+        border:none;
+        border-radius: 12px;
+        font-weight: 900;
+        cursor:pointer;
+        box-shadow: 0 10px 25px var(--primary-glow);
+        transition: all .2s ease;
+    }
+    .btn-submit:hover{
+        transform: translateY(-1px);
+        box-shadow: 0 16px 35px var(--primary-glow);
     }
 
-    .btn-submit {
-        padding: 10px 20px;
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-weight: 600;
-        cursor: pointer;
+    /* Responsive */
+    @media (max-width: 768px){
+        .credit-header{ flex-direction:column; align-items:flex-start; }
+        .credit-info{ grid-template-columns: 1fr; }
+        .page-header{ padding: 28px 20px; border-radius: 18px; }
     }
 </style>
 
@@ -407,20 +409,14 @@
 
 <!-- Filter Tabs -->
 <div class="filter-tabs">
-    <a href="?status=all" class="filter-tab {% if status_filter == 'all' %}active{% endif %}">
-        📊 Barchasi
-    </a>
-    <a href="?status=unpaid" class="filter-tab {% if status_filter == 'unpaid' %}active{% endif %}">
-        ❌ To'lanmaganlar
-    </a>
-    <a href="?status=paid" class="filter-tab {% if status_filter == 'paid' %}active{% endif %}">
-        ✅ To'langanlar
-    </a>
+    <a href="?status=all" class="filter-tab {% if status_filter == 'all' %}active{% endif %}">📊 Barchasi</a>
+    <a href="?status=unpaid" class="filter-tab {% if status_filter == 'unpaid' %}active{% endif %}">❌ To'lanmaganlar</a>
+    <a href="?status=paid" class="filter-tab {% if status_filter == 'paid' %}active{% endif %}">✅ To'langanlar</a>
 </div>
 
 <!-- Statistics -->
 <div class="stats-grid">
-    <div class="stat-card warning">
+    <div class="stat-card primary">
         <div class="stat-label">💳 Jami Nasiya Savdolar</div>
         <div class="stat-value">{{ total_nasiya_count }}</div>
     </div>
@@ -451,9 +447,9 @@
         </div>
         <div>
             {% if item.is_fully_paid %}
-            <span class="badge success">✅ To'langan</span>
+                <span class="badge success">✅ To'langan</span>
             {% else %}
-            <span class="badge danger">⏳ Qarz bor</span>
+                <span class="badge danger">⏳ Qarz bor</span>
             {% endif %}
         </div>
     </div>
@@ -477,23 +473,19 @@
         </div>
     </div>
 
-    <!-- Progress -->
     {% if item.savdo.summa > 0 %}
     <div class="progress-bar">
         <div class="progress-fill" style="width: {% widthratio item.total_payments 1 item.savdo.summa %}%"></div>
     </div>
     {% endif %}
 
-    <!-- Payment History -->
     {% if item.payments %}
     <div class="payment-history">
         <div class="payment-history-title">
             <span>📋 To'lov Tarixi</span>
-            <button class="btn-toggle-history" onclick="toggleHistory({{ item.savdo.id }})">
-                Ko'rish
-            </button>
+            <button class="btn-toggle-history" onclick="toggleHistory({{ item.savdo.id }})">Ko'rish</button>
         </div>
-        <div id="history-{{ item.savdo.id }}" style="display: none;">
+        <div id="history-{{ item.savdo.id }}" style="display:none;">
             {% for payment in item.payments %}
             <div class="payment-item">
                 <div>
@@ -507,7 +499,6 @@
     </div>
     {% endif %}
 
-    <!-- Add Payment Button -->
     {% if not item.is_fully_paid %}
     <button class="btn-add-payment"
         onclick="openPaymentModal({{ item.savdo.id }}, '{{ item.savdo.haridor_dukon.nomi }}', {{ item.remaining }})">
@@ -516,9 +507,9 @@
     {% endif %}
 </div>
 {% empty %}
-<div style="text-align: center; padding: 60px; background: white; border-radius: 12px;">
-    <div style="font-size: 64px; margin-bottom: 16px;">💳</div>
-    <p style="color: #9ca3af; font-size: 18px;">Nasiya savdolar topilmadi</p>
+<div class="empty-wrap">
+    <div style="font-size:64px; margin-bottom:16px;">💳</div>
+    <p style="color:var(--text-light); font-size:18px; font-weight:800;">Nasiya savdolar topilmadi</p>
 </div>
 {% endfor %}
 
@@ -530,12 +521,12 @@
             {% csrf_token %}
             <div class="form-group">
                 <label>Haridor</label>
-                <input type="text" id="modal-client" readonly style="background: #f3f4f6;">
+                <input type="text" id="modal-client" readonly style="background:#f3f4f6;">
             </div>
             <div class="form-group">
                 <label>To'lov Summasi (so'm)</label>
                 <input type="number" name="payment_amount" id="payment_amount" required min="1" step="0.01">
-                <small id="remaining-amount" style="color: #6b7280; font-size: 12px;"></small>
+                <small id="remaining-amount" style="color:var(--text-light); font-size:12px;"></small>
             </div>
             <div class="form-group">
                 <label>Izoh (ixtiyoriy)</label>
@@ -571,11 +562,8 @@
         document.getElementById('paymentForm').reset();
     }
 
-    // Close modal on outside click
     document.getElementById('paymentModal').addEventListener('click', function (e) {
-        if (e.target === this) {
-            closePaymentModal();
-        }
+        if (e.target === this) closePaymentModal();
     });
 </script>
 

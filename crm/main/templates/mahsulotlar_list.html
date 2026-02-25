@@ -2,310 +2,404 @@
 {% load static %}
 
 {% block title %}Barcha Mahsulotlar{% endblock %}
+{% block page_title %}Mahsulotlar{% endblock %}
 
 {% block content %}
 <style>
-    /* Page Layout */
-    .page-wrapper {
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
-        padding: 24px;
-        min-height: 80vh;
+    :root {
+        --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
     }
 
-    /* Header Section */
-    .page-header-actions {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 24px;
-        flex-wrap: wrap;
-        gap: 16px;
+    .page-card{
+        background:#fff;
+        border-radius:20px;
+        padding:30px;
+        box-shadow:var(--card-shadow);
+        border:1px solid var(--border-color);
+        animation:fadeIn .4s ease-out;
     }
 
-    .header-title h2 {
-        font-size: 24px;
-        color: #1f2937;
-        margin: 0;
-        display: flex;
-        align-items: center;
-        gap: 10px;
+    @keyframes fadeIn {
+        from {opacity:0; transform:translateY(10px)}
+        to {opacity:1; transform:translateY(0)}
     }
 
-    .product-count {
-        background: #fef3c7;
-        color: #d97706;
-        font-size: 14px;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-weight: 600;
+    /* Header */
+    .page-header-actions{
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        margin-bottom:24px;
+        gap:20px;
+        position:relative;
+        min-height:50px;
     }
 
-    .add-product-btn {
-        background: #f59e0b;
-        color: white;
-        text-decoration: none;
-        padding: 10px 20px;
-        border-radius: 8px;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        transition: all 0.3s ease;
+    .header-content{
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        width:100%;
+        transition:opacity .3s ease;
+    }
+    .header-content.hidden{ opacity:0; pointer-events:none; position:absolute; }
+
+    .header-title h2{
+        font-size:22px;
+        font-weight:700;
+        color:var(--text-dark);
+        margin:0;
+        display:flex;
+        align-items:center;
+        gap:12px;
     }
 
-    .add-product-btn:hover {
-        background: #d97706;
-        transform: translateY(-2px);
+    .count-badge{
+        background:var(--primary-glow);
+        color:var(--primary-color);
+        font-size:14px;
+        padding:4px 12px;
+        border-radius:20px;
+        font-weight:600;
+        border:1px solid var(--primary-color);
     }
 
-    /* Filter Bar */
-    .filter-bar {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background: #f9fafb;
-        padding: 12px;
-        border-radius: 8px;
-        margin-bottom: 24px;
-        border: 1px solid #e5e7eb;
-        flex-wrap: wrap;
-        gap: 12px;
+    .add-btn{
+        background:linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        color:#fff;
+        text-decoration:none;
+        padding:10px 20px;
+        border-radius:12px;
+        font-weight:700;
+        display:flex;
+        align-items:center;
+        gap:8px;
+        transition:all .3s ease;
+        box-shadow:0 4px 12px var(--primary-glow);
+    }
+    .add-btn:hover{ transform:translateY(-2px); box-shadow:0 6px 20px var(--primary-glow); color:#fff; }
+
+    /* Top Search Overlay */
+    .top-search-container{
+        position:absolute;
+        top:0; left:0;
+        width:100%;
+        display:flex;
+        align-items:center;
+        gap:12px;
+        opacity:0;
+        pointer-events:none;
+        transform:translateY(-5px);
+        transition:all .3s ease;
+        z-index:100;
+    }
+    .top-search-container.active{
+        opacity:1;
+        pointer-events:auto;
+        transform:translateY(0);
+    }
+    .top-search-wrapper{ flex:1; position:relative; }
+    .top-search-input{
+        width:100%;
+        padding:14px 14px 14px 50px;
+        border:2px solid var(--primary-color);
+        border-radius:14px;
+        font-size:16px;
+        outline:none;
+        box-shadow:0 4px 16px var(--primary-glow);
+        background:#fff;
+    }
+    .top-search-icon{
+        position:absolute;
+        left:18px;
+        top:50%;
+        transform:translateY(-50%);
+        color:var(--primary-color);
+        font-size:18px;
     }
 
-    .search-box {
-        position: relative;
-        flex: 1;
-        min-width: 200px;
+    .action-btn{
+        width:36px;
+        height:36px;
+        border-radius:10px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        transition:all .2s;
+        border:1px solid var(--border-color);
+        background:#fff;
+        color:var(--text-light);
+        text-decoration:none;
+        cursor:pointer;
+    }
+    .action-btn:hover{ transform:translateY(-2px); }
+
+    /* Filter */
+    .filter-bar{
+        background:#f9fafb;
+        padding:16px;
+        border-radius:14px;
+        margin-bottom:24px;
+        border:1px solid var(--border-color);
+    }
+    .filter-form{
+        display:flex;
+        gap:12px;
+        align-items:center;
+        flex-wrap:wrap;
+    }
+    .search-box{ position:relative; flex:1; min-width:240px; }
+    .search-input{
+        width:100%;
+        padding:10px 16px 10px 42px;
+        border:1px solid var(--border-color);
+        border-radius:10px;
+        background:#fff;
+        transition:all .2s;
+        font-size:14px;
+    }
+    .search-input:focus{
+        border-color:var(--primary-color);
+        box-shadow:0 0 0 4px var(--primary-glow);
+        outline:none;
+    }
+    .search-icon-btn{
+        position:absolute;
+        left:14px;
+        top:50%;
+        transform:translateY(-50%);
+        background:none;
+        border:none;
+        color:var(--text-light);
+        cursor:pointer;
+        font-size:15px;
+    }
+    .filter-select{
+        padding:10px 16px;
+        border:1px solid var(--border-color);
+        border-radius:10px;
+        background:#fff;
+        font-size:14px;
+        color:var(--text-dark);
+        outline:none;
+        cursor:pointer;
+        transition:all .2s;
+    }
+    .filter-select:focus{ border-color:var(--primary-color); }
+
+    .submit-filter-btn{
+        padding:10px 16px;
+        background:linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        color:#fff;
+        border:none;
+        border-radius:10px;
+        font-weight:700;
+        cursor:pointer;
+        box-shadow:0 4px 12px var(--primary-glow);
+        display:flex;
+        align-items:center;
+        gap:8px;
     }
 
-    .search-input {
-        width: 100%;
-        padding: 10px 10px 10px 40px;
-        border: 1px solid #e5e7eb;
-        border-radius: 6px;
-        outline: none;
-        transition: all 0.3s;
+    /* Table */
+    .table-container{
+        overflow-x:auto;
+        border-radius:12px;
+        border:1px solid #f1f5f9;
+        margin-bottom:8px;
     }
+    .custom-table{ width:100%; border-collapse:collapse; }
+    .custom-table th{
+        background:#f8fafc;
+        color:var(--text-light);
+        font-weight:600;
+        padding:14px 16px;
+        text-align:left;
+        font-size:13px;
+        text-transform:uppercase;
+        letter-spacing:.5px;
+        border-bottom:1px solid var(--border-color);
+        white-space:nowrap;
+    }
+    .custom-table td{
+        padding:16px;
+        border-bottom:1px solid #f1f5f9;
+        vertical-align:middle;
+        font-size:14px;
+        color:var(--text-dark);
+    }
+    .custom-table tr:last-child td{ border-bottom:none; }
+    .custom-table tr:hover td{ background:#fdfdfd; }
 
-    .search-input:focus {
-        border-color: #f59e0b;
-        box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+    /* Product cell */
+    .product-cell{ display:flex; align-items:center; gap:12px; }
+    .product-img-wrap{
+        width:42px; height:42px; border-radius:12px;
+        overflow:hidden;
+        border:2px solid #fff;
+        box-shadow:0 2px 8px rgba(0,0,0,.08);
+        flex-shrink:0;
+        display:flex; align-items:center; justify-content:center;
+        background:#f3f4f6;
     }
+    .product-img{ width:100%; height:100%; object-fit:cover; }
+    .product-initial{
+        width:100%; height:100%;
+        background:linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        color:#fff; display:flex; align-items:center; justify-content:center;
+        font-weight:800; font-size:16px;
+    }
+    .product-text{ display:flex; flex-direction:column; }
+    .product-name{ font-weight:700; color:var(--text-dark); }
+    .product-meta{ font-size:12px; color:var(--text-light); }
 
-    .search-icon {
-        position: absolute;
-        left: 12px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #9ca3af;
+    /* Stock badges */
+    .stock-badge{
+        display:inline-flex;
+        align-items:center;
+        gap:6px;
+        padding:6px 12px;
+        border-radius:20px;
+        font-size:12px;
+        font-weight:700;
+        white-space:nowrap;
     }
+    .stock-low{ background:#fef2f2; color:#ef4444; }
+    .stock-medium{ background:#fef3c7; color:#d97706; }
+    .stock-high{ background:#ecfdf5; color:#10b981; }
 
-    /* Table Styles */
-    .table-responsive {
-        overflow-x: auto;
-    }
-
-    .custom-table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
-    }
-
-    .custom-table th {
-        background: #f9fafb;
-        color: #374151;
-        font-weight: 600;
-        padding: 16px;
-        text-align: left;
-        border-bottom: 2px solid #e5e7eb;
-        font-size: 14px;
-    }
-
-    .custom-table td {
-        padding: 16px;
-        border-bottom: 1px solid #f3f4f6;
-        vertical-align: middle;
-        color: #4b5563;
-        font-size: 14px;
-    }
-
-    .custom-table tr:hover td {
-        background: #f9fafb;
-    }
-
-    /* Product Cell */
-    .product-cell {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-
-    .product-image {
-        width: 50px;
-        height: 50px;
-        border-radius: 8px;
-        object-fit: cover;
-        border: 2px solid #f3f4f6;
-    }
-
-    .product-info {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .product-name {
-        font-weight: 600;
-        color: #1f2937;
-    }
-
-    .product-category {
-        font-size: 12px;
-        color: #6b7280;
-    }
-
-    /* Stock Badge */
-    .stock-badge {
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 600;
-        display: inline-block;
-    }
-
-    .stock-low {
-        background: #fee2e2;
-        color: #dc2626;
-    }
-
-    .stock-medium {
-        background: #fef3c7;
-        color: #d97706;
-    }
-
-    .stock-high {
-        background: #d1fae5;
-        color: #059669;
-    }
-
-    /* Action Buttons */
-    .action-cell {
-        display: flex;
-        gap: 8px;
-    }
-
-    .table-btn {
-        width: 32px;
-        height: 32px;
-        border-radius: 6px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        text-decoration: none;
-        transition: all 0.2s;
-        border: 1px solid #e5e7eb;
-        background: white;
-        color: #6b7280;
-    }
-
-    .table-btn:hover.edit {
-        background: #eff6ff;
-        color: #3b82f6;
-        border-color: #3b82f6;
-    }
-
-    .table-btn:hover.delete {
-        background: #fef2f2;
-        color: #ef4444;
-        border-color: #ef4444;
-    }
+    /* Action buttons */
+    .action-btns{ display:flex; gap:8px; justify-content:flex-end; }
+    .action-btn.edit:hover{ background:#eff6ff; color:#3b82f6; border-color:#bfdbfe; }
+    .action-btn.delete:hover{ background:#fef2f2; color:#ef4444; border-color:#fecaca; }
 
     /* Pagination */
-    .pagination-container {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: 24px;
-        padding-top: 20px;
-        border-top: 1px solid #e5e7eb;
-        color: #6b7280;
-        font-size: 14px;
+    .pagination-bar{
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        margin-top:30px;
+        padding-top:20px;
+        border-top:1px solid var(--border-color);
+        color:var(--text-light);
+        font-size:14px;
+        flex-wrap:wrap;
+        gap:20px;
     }
+    .page-list{ display:flex; gap:8px; align-items:center; }
+    .page-link{
+        min-width:36px; height:36px;
+        display:flex; align-items:center; justify-content:center;
+        border-radius:10px;
+        text-decoration:none;
+        color:var(--text-dark);
+        border:1px solid var(--border-color);
+        font-weight:700;
+        transition:all .2s;
+    }
+    .page-link.active{
+        background:linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        color:#fff;
+        border-color:transparent;
+        box-shadow:0 4px 10px var(--primary-glow);
+    }
+    .page-link:hover:not(.active){ background:#f8fafc; border-color:var(--text-light); }
+    .page-link.disabled{ opacity:.5; pointer-events:none; background:#f1f5f9; }
 
-    .page-numbers {
-        display: flex;
-        gap: 6px;
+    /* Dropdown (AJAX results) */
+    .search-results-dropdown{
+        position:absolute;
+        top:calc(100% + 8px);
+        left:0;
+        width:100%;
+        background:#fff;
+        border-radius:16px;
+        box-shadow:0 15px 35px rgba(0,0,0,.12);
+        max-height:400px;
+        overflow-y:auto;
+        display:none;
+        z-index:1000;
+        border:1px solid var(--border-color);
     }
+    .search-results-dropdown.active{ display:block; animation:slideDown .25s ease; }
+    @keyframes slideDown{ from{opacity:0; transform:translateY(-10px)} to{opacity:1; transform:translateY(0)} }
 
-    .page-btn {
-        width: 32px;
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 6px;
-        text-decoration: none;
-        color: #6b7280;
-        transition: all 0.2s;
+    .result-item{
+        display:flex;
+        align-items:center;
+        padding:12px 16px;
+        gap:12px;
+        text-decoration:none;
+        color:var(--text-dark);
+        transition:background .2s;
+        border-bottom:1px solid #f1f5f9;
     }
-
-    .page-btn.active {
-        background: #f59e0b;
-        color: white;
-    }
-
-    .page-btn:hover:not(.active) {
-        background: #f3f4f6;
-    }
+    .result-item:hover{ background:#f0fdf4; }
+    .result-item:last-child{ border-bottom:none; }
 </style>
 
-<div class="page-wrapper">
+<div class="page-card">
     <!-- Header -->
     <div class="page-header-actions">
-        <div class="header-title">
-            <h2>📦 Mahsulotlar <span class="product-count">{{ total }}</span></h2>
+        <div class="header-content" id="normalHeader">
+            <div class="header-title">
+                <h2>Mahsulotlar <span class="count-badge">{{ total }}</span></h2>
+            </div>
+            <a href="{% url 'createproduct' %}" class="add-btn">
+                <i class="fa-solid fa-plus"></i> Mahsulot qo'shish
+            </a>
         </div>
-        <a href="{% url 'createproduct' %}" class="add-product-btn">
-            <i class="fa-solid fa-plus"></i> Mahsulot Qo'shish
-        </a>
+
+        <!-- Top Search (overlay) -->
+        <div class="top-search-container" id="topSearchContainer">
+            <div class="top-search-wrapper">
+                <i class="fa-solid fa-search top-search-icon"></i>
+                <input type="text" id="topSearchInput" class="top-search-input"
+                       placeholder="Mahsulot nomini yozing..." autocomplete="off">
+                <input type="hidden" id="seeUrlTemplate" value="{% url 'seeproduct' 0 %}">
+                <div class="search-results-dropdown" id="searchResultsDropdown"></div>
+            </div>
+            <button type="button" class="action-btn" id="closeSearchBtn" title="Yopish">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
     </div>
 
     <!-- Filter Bar -->
     <div class="filter-bar">
-        <form method="GET" action="."
-            style="display: flex; gap: 12px; align-items: center; width: 100%; flex-wrap: wrap;">
+        <form method="GET" action="." class="filter-form">
             <div class="search-box">
-                <i class="fa-solid fa-search search-icon"></i>
-                <input type="text" name="q" placeholder="Qidiruv..." class="search-input" value="{{ search_query }}">
+                <button type="submit" class="search-icon-btn" title="Qidirish">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </button>
+                <input type="text" name="q" placeholder="Qidirish (nom, tur)..." class="search-input"
+                       value="{{ search_query }}">
             </div>
 
-            <select name="tur" onchange="this.form.submit()"
-                style="padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; outline: none; background: white;">
+            <select name="tur" class="filter-select" onchange="this.form.submit()">
                 <option value="">Barcha turlar</option>
                 {% for tur in mahsulot_turlari %}
-                <option value="{{ tur.id }}" {% if tur_filter == tur.id|stringformat:"s" %}selected{% endif %}>{{ tur.nomi
-                    }}</option>
+                <option value="{{ tur.id }}" {% if tur_filter == tur.id|stringformat:"s" %}selected{% endif %}>
+                    {{ tur.nomi }}
+                </option>
                 {% endfor %}
             </select>
 
-            <select name="sort" onchange="this.form.submit()"
-                style="padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; outline: none; background: white;">
+            <select name="sort" class="filter-select" onchange="this.form.submit()">
                 <option value="name" {% if sort_order == 'name' %}selected{% endif %}>Nomi (A-Z)</option>
                 <option value="price_high" {% if sort_order == 'price_high' %}selected{% endif %}>Narx (Yuqori)</option>
                 <option value="price_low" {% if sort_order == 'price_low' %}selected{% endif %}>Narx (Past)</option>
                 <option value="stock" {% if sort_order == 'stock' %}selected{% endif %}>Zaxira</option>
             </select>
 
-            <button type="submit"
-                style="padding: 10px 16px; background: #f59e0b; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
-                <i class="fa-solid fa-search"></i>
+            <button type="submit" class="submit-filter-btn">
+                <i class="fa-solid fa-filter"></i> Filter
             </button>
         </form>
     </div>
 
     <!-- Table -->
-    <div class="table-responsive">
+    <div class="table-container">
         <table class="custom-table">
             <thead>
                 <tr>
@@ -313,7 +407,7 @@
                     <th>Narxi</th>
                     <th>Zaxira</th>
                     <th>O'lchov</th>
-                    <th>Harakatlar</th>
+                    <th style="text-align:right;">Harakatlar</th>
                 </tr>
             </thead>
             <tbody>
@@ -321,40 +415,53 @@
                 <tr>
                     <td>
                         <div class="product-cell">
-                            <img src="{{ mahsulot.rasmi.url }}" alt="{{ mahsulot.nomi }}" class="product-image">
-                            <div class="product-info">
+                            <div class="product-img-wrap">
+                                {% if mahsulot.rasmi %}
+                                    <img src="{{ mahsulot.rasmi.url }}" class="product-img" alt="">
+                                {% else %}
+                                    <div class="product-initial">{{ mahsulot.nomi|first|upper }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="product-text">
                                 <span class="product-name">{{ mahsulot.nomi }}</span>
-                                <span class="product-category">{{ mahsulot.turi }}</span>
+                                <span class="product-meta">{{ mahsulot.turi.nomi }}</span>
                             </div>
                         </div>
                     </td>
-                    <td>{{ mahsulot.narxi|floatformat:0 }} so'm</td>
+
+                    <td><b>{{ mahsulot.narxi|floatformat:0 }}</b> so'm</td>
+
                     <td>
-                        {% if mahsulot.miqdori < 10 %} <span class="stock-badge stock-low">{{                             mahsulot.miqdori|floatformat:0 }}</span>
-                            {% elif mahsulot.miqdori < 50 %} <span class="stock-badge stock-medium">{{ mahsulot.miqdori|floatformat:0 }}</span>
-                                {% else %}
-                                <span class="stock-badge stock-high">{{ mahsulot.miqdori|floatformat:0 }}</span>
-                                {% endif %}
+                        {% if mahsulot.miqdori < 10 %}
+                            <span class="stock-badge stock-low">{{ mahsulot.miqdori|floatformat:0 }}</span>
+                        {% elif mahsulot.miqdori < 50 %}
+                            <span class="stock-badge stock-medium">{{ mahsulot.miqdori|floatformat:0 }}</span>
+                        {% else %}
+                            <span class="stock-badge stock-high">{{ mahsulot.miqdori|floatformat:0 }}</span>
+                        {% endif %}
                     </td>
+
                     <td>{{ mahsulot.turi.nomi }}</td>
+
                     <td>
-                        <div class="action-cell">
-                            <a href="{% url 'seeproduct' mahsulot.id %}" class="table-btn edit" title="Ko'rish">
+                        <div class="action-btns">
+                            <a href="{% url 'seeproduct' mahsulot.id %}" class="action-btn edit" title="Ko'rish">
                                 <i class="fa-solid fa-eye"></i>
                             </a>
-                            <a href="{% url 'delprdct' mahsulot.id %}" class="table-btn delete" title="O'chirish"
-                                onclick="return confirm('Rostdan ham o\'chirmoqchimisiz?')">
-                                <i class="fa-solid fa-trash"></i>
+                            <a href="{% url 'delprdct' mahsulot.id %}" class="action-btn delete" title="O'chirish"
+                               onclick="return confirm('Rostdan ham o\\'chirmoqchimisiz?')">
+                                <i class="fa-solid fa-trash-can"></i>
                             </a>
                         </div>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="5" style="text-align: center; padding: 40px;">
-                        <i class="fa-solid fa-box-open"
-                            style="font-size: 48px; color: #d1d5db; margin-bottom: 16px;"></i>
-                        <p>Hozircha mahsulotlar yo'q</p>
+                    <td colspan="5" style="text-align:center; padding:60px;">
+                        <div style="opacity:.3; margin-bottom:20px;">
+                            <i class="fa-solid fa-box-open" style="font-size:48px;"></i>
+                        </div>
+                        <p style="color:var(--text-light); font-weight:600;">Hozircha mahsulotlar yo'q</p>
                     </td>
                 </tr>
                 {% endfor %}
@@ -364,30 +471,173 @@
 
     <!-- Pagination -->
     {% if mahsulotlar.has_other_pages %}
-    <div class="pagination-container">
-        <div>Showing {{ mahsulotlar.start_index }} to {{ mahsulotlar.end_index }} of {{ total }} entries</div>
-        <div class="page-numbers">
+    <div class="pagination-bar">
+        <div>{{ total }} ta mahsulotdan <b>{{ mahsulotlar.start_index }}-{{ mahsulotlar.end_index }}</b> ko'rsatilmoqda</div>
+        <div class="page-list">
             {% if mahsulotlar.has_previous %}
             <a href="?page={{ mahsulotlar.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if tur_filter %}&tur={{ tur_filter }}{% endif %}{% if sort_order %}&sort={{ sort_order }}{% endif %}"
-                class="page-btn" style="width: auto; padding: 0 10px;">Prev</a>
+               class="page-link"><i class="fa-solid fa-chevron-left"></i></a>
             {% endif %}
 
             {% for i in mahsulotlar.paginator.page_range %}
-            {% if mahsulotlar.number  ==  i %}
-            <a href="#" class="page-btn active">{{ i }}</a>
-            {% else %}
-            <a href="?page={{ i }}{% if search_query %}&q={{ search_query }}{% endif %}{% if tur_filter %}&tur={{ tur_filter }}{% endif %}{% if sort_order %}&sort={{ sort_order }}{% endif %}"
-                class="page-btn">{{ i }}</a>
-            {% endif %}
+                {% if mahsulotlar.number == i %}
+                    <span class="page-link active">{{ i }}</span>
+                {% else %}
+                    <a href="?page={{ i }}{% if search_query %}&q={{ search_query }}{% endif %}{% if tur_filter %}&tur={{ tur_filter }}{% endif %}{% if sort_order %}&sort={{ sort_order }}{% endif %}"
+                       class="page-link">{{ i }}</a>
+                {% endif %}
             {% endfor %}
 
             {% if mahsulotlar.has_next %}
             <a href="?page={{ mahsulotlar.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if tur_filter %}&tur={{ tur_filter }}{% endif %}{% if sort_order %}&sort={{ sort_order }}{% endif %}"
-                class="page-btn" style="width: auto; padding: 0 10px;">Next</a>
+               class="page-link"><i class="fa-solid fa-chevron-right"></i></a>
             {% endif %}
         </div>
     </div>
     {% endif %}
 </div>
 
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const bottomSearchInput = document.querySelector('.search-input');
+    const topSearchContainer = document.getElementById('topSearchContainer');
+    const normalHeader = document.getElementById('normalHeader');
+    const filterBar = document.querySelector('.filter-bar');
+    const closeSearchBtn = document.getElementById('closeSearchBtn');
+
+    const topSearchInput = document.getElementById('topSearchInput');
+    const searchResultsDropdown = document.getElementById('searchResultsDropdown');
+    const seeUrlTemplate = document.getElementById('seeUrlTemplate')?.value || '/seeproduct/0';
+
+    let searchTimeout = null;
+    let abortController = null;
+
+    function showTopSearch() {
+        topSearchContainer.classList.add('active');
+        normalHeader.classList.add('hidden');
+        topSearchInput.focus();
+
+        if (bottomSearchInput && bottomSearchInput.value) {
+            topSearchInput.value = bottomSearchInput.value;
+            performSearch(topSearchInput.value.trim());
+        }
+    }
+
+    function closeTopSearch() {
+        topSearchContainer.classList.remove('active');
+        normalHeader.classList.remove('hidden');
+        searchResultsDropdown.classList.remove('active');
+        searchResultsDropdown.innerHTML = '';
+        topSearchInput.value = '';
+    }
+
+    if (bottomSearchInput) {
+        bottomSearchInput.addEventListener('focus', (e) => {
+            e.preventDefault();
+            showTopSearch();
+        });
+    }
+
+    closeSearchBtn.addEventListener('click', closeTopSearch);
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && topSearchContainer.classList.contains('active')) closeTopSearch();
+    });
+
+    topSearchInput.addEventListener('input', () => {
+        const query = topSearchInput.value.trim();
+        clearTimeout(searchTimeout);
+
+        if (!query) {
+            searchResultsDropdown.classList.remove('active');
+            searchResultsDropdown.innerHTML = '';
+            return;
+        }
+
+        searchResultsDropdown.innerHTML =
+            '<div style="padding: 20px; text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Qidirilmoqda...</div>';
+        searchResultsDropdown.classList.add('active');
+
+        searchTimeout = setTimeout(() => performSearch(query), 200);
+    });
+
+    async function performSearch(query) {
+        try {
+            if (abortController) abortController.abort();
+            abortController = new AbortController();
+
+            const params = new URLSearchParams(window.location.search);
+            params.set('q', query);
+            params.set('data_format', 'json');
+
+            const url = `${window.location.pathname}?${params.toString()}`;
+
+            const res = await fetch(url, {
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                signal: abortController.signal
+            });
+
+            if (!res.ok) throw new Error(`Server error: ${res.status}`);
+
+            const data = await res.json();
+            renderResults(data.results || []);
+        } catch (err) {
+            if (err.name === 'AbortError') return;
+            console.error(err);
+            searchResultsDropdown.classList.add('active');
+            searchResultsDropdown.innerHTML =
+                `<div style="padding: 18px; color: #ef4444; font-size: 13px;">
+                    <b>Xatolik:</b> JSON qaytmadi yoki server xato.
+                 </div>`;
+        }
+    }
+
+    function renderResults(results) {
+        if (!results.length) {
+            searchResultsDropdown.innerHTML =
+                '<div style="padding: 24px; text-align:center; color: var(--text-light);">Natija topilmadi</div>';
+            return;
+        }
+
+        let html = `<div style="padding: 10px 16px; font-size: 12px; color: var(--text-light);
+                            border-bottom: 1px solid #f1f5f9; background: #f8fafc; border-radius: 16px 16px 0 0;">
+                        ${results.length} ta natija topildi
+                    </div>`;
+
+        results.forEach(p => {
+            const img = p.rasmi_url
+                ? `<img src="${p.rasmi_url}" style="width:36px;height:36px;border-radius:10px;object-fit:cover;">`
+                : `<div style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+                            background:linear-gradient(135deg, var(--primary-color), var(--primary-dark));color:white;font-weight:800;">
+                        ${(p.nomi || 'M').slice(0,1).toUpperCase()}
+                   </div>`;
+
+            const seeUrl = seeUrlTemplate.replace('/0', `/${encodeURIComponent(p.id)}`);
+
+            html += `
+                <a href="${seeUrl}" class="result-item">
+                    ${img}
+                    <div style="flex:1">
+                        <div style="font-weight:700; font-size:14px;">${escapeHtml(p.nomi || '')}</div>
+                        <div style="font-size:12px; color:var(--text-light);">${escapeHtml(p.turi || '')}</div>
+                    </div>
+                    <div style="font-size:12px; color:var(--text-light);">${escapeHtml(p.narxi || '')}</div>
+                </a>
+            `;
+        });
+
+        searchResultsDropdown.innerHTML = html;
+        searchResultsDropdown.classList.add('active');
+    }
+
+    function escapeHtml(str) {
+        return String(str)
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
+    }
+});
+</script>
 {% endblock %}

@@ -7,6 +7,7 @@ from .nasiya_views import nasiya_savdolar_view, add_nasiya_payment
 from .mijoz_views import mijozlar_list, mijoz_detail
 from . import analytics
 from .analytics_views import analytics_dashboard
+from .api import dashboard_stats_api
 from django.urls import path
 
 urlpatterns = [

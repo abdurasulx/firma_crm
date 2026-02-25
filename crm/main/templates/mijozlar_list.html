@@ -1,246 +1,282 @@
 {% extends 'egabase.html' %}
 {% load static %}
 
-{% block title %}🏪 Mijozlar{% endblock %}
+{% block title %}Mijozlar{% endblock %}
+{% block page_title %}Mijozlar{% endblock %}
 
 {% block content %}
 <style>
-    .page-header {
-        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-        color: white;
-        padding: 40px 30px;
-        border-radius: 16px;
-        margin-bottom: 30px;
-        box-shadow: 0 8px 32px rgba(59, 130, 246, 0.3);
+    :root {
+        --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05),
+                       0 8px 10px -6px rgba(0, 0, 0, 0.05);
     }
 
-    .page-header h1 {
-        margin: 0 0 12px 0;
-        font-size: 32px;
-        font-weight: 700;
+    .page-card{
+        background:#fff;
+        border-radius:20px;
+        padding:30px;
+        box-shadow:var(--card-shadow);
+        border:1px solid var(--border-color);
+        animation:fadeIn .4s ease-out;
     }
 
+    @keyframes fadeIn {
+        from {opacity:0; transform:translateY(10px)}
+        to {opacity:1; transform:translateY(0)}
+    }
+
+    /* Header */
+    .page-header-block{
+        margin-bottom:30px;
+    }
+
+    .page-header-title{
+        font-size:26px;
+        font-weight:700;
+        color:var(--text-dark);
+        margin-bottom:6px;
+    }
+
+    .page-header-sub{
+        color:var(--text-light);
+        font-size:14px;
+    }
+
+    /* Stats */
     .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-        gap: 20px;
-        margin-bottom: 30px;
+        display:grid;
+        grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+        gap:20px;
+        margin-bottom:35px;
     }
 
-    .stat-card {
-        background: white;
-        padding: 24px;
-        border-radius: 12px;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-        border-left: 4px solid;
+    .stat-card{
+        background:#fff;
+        padding:22px;
+        border-radius:16px;
+        box-shadow:var(--card-shadow);
+        border:1px solid var(--border-color);
+        display:flex;
+        flex-direction:column;
+        gap:6px;
     }
 
-    .stat-card.primary {
-        border-left-color: #3b82f6;
+    .stat-label{
+        font-size:12px;
+        text-transform:uppercase;
+        font-weight:600;
+        color:var(--text-light);
     }
 
-    .stat-card.danger {
-        border-left-color: #ef4444;
+    .stat-value{
+        font-size:28px;
+        font-weight:800;
+        color:var(--text-dark);
     }
 
-    .stat-card.warning {
-        border-left-color: #f59e0b;
+    .stat-value.primary{ color:var(--primary-color); }
+    .stat-value.danger{ color:#ef4444; }
+    .stat-value.warning{ color:#f59e0b; }
+
+    /* Customers Grid */
+    .customers-grid{
+        display:grid;
+        grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+        gap:20px;
     }
 
-    .stat-label {
-        font-size: 13px;
-        color: #6b7280;
-        font-weight: 600;
-        text-transform: uppercase;
-        margin-bottom: 8px;
+    .customer-card{
+        background:#fff;
+        border-radius:16px;
+        padding:22px;
+        box-shadow:var(--card-shadow);
+        border:1px solid var(--border-color);
+        transition:all .3s ease;
+        display:flex;
+        flex-direction:column;
+        gap:16px;
     }
 
-    .stat-value {
-        font-size: 28px;
-        font-weight: 700;
-        color: #1f2937;
+    .customer-card:hover{
+        transform:translateY(-5px);
+        box-shadow:0 14px 28px rgba(0,0,0,.08);
     }
 
-    /* Customer Cards */
-    .customers-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-        gap: 20px;
+    .customer-card.has-debt{
+        border-left:4px solid #ef4444;
     }
 
-    .customer-card {
-        background: white;
-        border-radius: 12px;
-        padding: 24px;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-        transition: all 0.3s ease;
-        border-left: 4px solid #3b82f6;
+    .customer-name{
+        font-size:18px;
+        font-weight:700;
+        color:var(--text-dark);
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:10px;
     }
 
-    .customer-card.has-debt {
-        border-left-color: #ef4444;
+    .badge{
+        padding:4px 10px;
+        border-radius:20px;
+        font-size:11px;
+        font-weight:700;
     }
 
-    .customer-card:hover {
-        transform: translateY(-6px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    .badge.danger{
+        background:#fee2e2;
+        color:#991b1b;
     }
 
-    .customer-name {
-        font-size: 20px;
-        font-weight: 700;
-        color: #1f2937;
-        margin-bottom: 16px;
+    .badge.success{
+        background:#d1fae5;
+        color:#065f46;
     }
 
-    .customer-stats {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
-        margin-bottom: 16px;
+    .customer-stats{
+        display:grid;
+        grid-template-columns:repeat(2,1fr);
+        gap:12px;
     }
 
-    .stat-item {
-        background: #f9fafb;
-        padding: 12px;
-        border-radius: 8px;
+    .stat-item{
+        background:#f9fafb;
+        padding:12px;
+        border-radius:10px;
     }
 
-    .stat-item-label {
-        font-size: 11px;
-        color: #6b7280;
-        font-weight: 600;
-        text-transform: uppercase;
-        margin-bottom: 4px;
+    .stat-item-label{
+        font-size:10px;
+        text-transform:uppercase;
+        font-weight:600;
+        color:var(--text-light);
+        margin-bottom:4px;
     }
 
-    .stat-item-value {
-        font-size: 16px;
-        font-weight: 700;
-        color: #1f2937;
+    .stat-item-value{
+        font-size:15px;
+        font-weight:700;
+        color:var(--text-dark);
     }
 
-    .stat-item-value.debt {
-        color: #ef4444;
+    .stat-item-value.debt{ color:#ef4444; }
+    .stat-item-value.success{ color:#10b981; }
+
+    .btn-detail{
+        padding:10px;
+        background:linear-gradient(135deg,var(--primary-color),var(--primary-dark));
+        color:#fff;
+        border-radius:10px;
+        font-weight:700;
+        text-align:center;
+        text-decoration:none;
+        transition:all .3s ease;
+        box-shadow:0 4px 12px var(--primary-glow);
     }
 
-    .stat-item-value.success {
-        color: #10b981;
+    .btn-detail:hover{
+        transform:translateY(-2px);
+        box-shadow:0 6px 18px var(--primary-glow);
+        color:#fff;
     }
 
-    .btn-detail {
-        width: 100%;
-        padding: 10px 20px;
-        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        text-decoration: none;
-        display: block;
-        text-align: center;
+    .empty-box{
+        grid-column:1/-1;
+        text-align:center;
+        padding:60px;
+        background:#fff;
+        border-radius:16px;
+        border:1px solid var(--border-color);
+        box-shadow:var(--card-shadow);
     }
 
-    .btn-detail:hover {
-        transform: scale(1.02);
-        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.3);
-    }
-
-    .badge {
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 600;
-        display: inline-block;
-    }
-
-    .badge.danger {
-        background: #fee2e2;
-        color: #991b1b;
-    }
-
-    .badge.success {
-        background: #d1fae5;
-        color: #065f46;
-    }
-
-    @media (max-width: 768px) {
-        .customers-grid {
-            grid-template-columns: 1fr;
-        }
+    @media(max-width:768px){
+        .customers-grid{ grid-template-columns:1fr; }
     }
 </style>
 
-<div class="page-header">
-    <h1>🏪 Mijozlar (Do'konlar)</h1>
-    <p>Barcha mijozlar va ularning savdolari</p>
-</div>
+<div class="page-card">
 
-<!-- Statistics -->
-<div class="stats-grid">
-    <div class="stat-card primary">
-        <div class="stat-label">🏪 Jami Mijozlar</div>
-        <div class="stat-value">{{ total_customers }}</div>
+    <div class="page-header-block">
+        <div class="page-header-title">🏪 Mijozlar (Do'konlar)</div>
+        <div class="page-header-sub">Barcha mijozlar va ularning savdo statistikasi</div>
     </div>
 
-    <div class="stat-card danger">
-        <div class="stat-label">⏳ Qarzdorlar</div>
-        <div class="stat-value">{{ customers_with_debt }}</div>
-    </div>
-
-    <div class="stat-card warning">
-        <div class="stat-label">💰 Jami Qarz</div>
-        <div class="stat-value">{{ total_debt_sum|floatformat:0 }}</div>
-    </div>
-</div>
-
-<!-- Customers Grid -->
-<div class="customers-grid">
-    {% for item in mijoz_stats %}
-    <div class="customer-card {% if item.has_debt %}has-debt{% endif %}">
-        <div class="customer-name">
-            {{ item.mijoz.nomi }}
-            {% if item.has_debt %}
-            <span class="badge danger">⏳ Qarz</span>
-            {% else %}
-            <span class="badge success">✅ Qarz yo'q</span>
-            {% endif %}
+    <!-- Statistics -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">Jami Mijozlar</div>
+            <div class="stat-value primary">{{ total_customers }}</div>
         </div>
 
-        <div class="customer-stats">
-            <div class="stat-item">
-                <div class="stat-item-label">Savdolar</div>
-                <div class="stat-item-value">{{ item.total_sales }} ta</div>
-            </div>
-
-            <div class="stat-item">
-                <div class="stat-item-label">Jami Summa</div>
-                <div class="stat-item-value success">{{ item.total_amount|floatformat:0 }}</div>
-            </div>
-
-            <div class="stat-item">
-                <div class="stat-item-label">Nasiya</div>
-                <div class="stat-item-value">{{ item.total_credit|floatformat:0 }}</div>
-            </div>
-
-            <div class="stat-item">
-                <div class="stat-item-label">Qarz</div>
-                <div class="stat-item-value debt">{{ item.debt|floatformat:0 }}</div>
-            </div>
+        <div class="stat-card">
+            <div class="stat-label">Qarzdorlar</div>
+            <div class="stat-value danger">{{ customers_with_debt }}</div>
         </div>
 
-        <a href="{% url 'mijoz_detail' item.mijoz.id %}" class="btn-detail">
-            👁️ Batafsil Ko'rish
-        </a>
+        <div class="stat-card">
+            <div class="stat-label">Jami Qarz</div>
+            <div class="stat-value warning">{{ total_debt_sum|floatformat:0 }} so'm</div>
+        </div>
     </div>
-    {% empty %}
-    <div style="grid-column: 1/-1; text-align: center; padding: 60px; background: white; border-radius: 12px;">
-        <div style="font-size: 64px; margin-bottom: 16px;">🏪</div>
-        <p style="color: #9ca3af; font-size: 18px;">Mijozlar topilmadi</p>
+
+    <!-- Customers -->
+    <div class="customers-grid">
+        {% for item in mijoz_stats %}
+        <div class="customer-card {% if item.has_debt %}has-debt{% endif %}">
+
+            <div class="customer-name">
+                {{ item.mijoz.nomi }}
+                {% if item.has_debt %}
+                    <span class="badge danger">Qarz bor</span>
+                {% else %}
+                    <span class="badge success">To'liq to'langan</span>
+                {% endif %}
+            </div>
+
+            <div class="customer-stats">
+                <div class="stat-item">
+                    <div class="stat-item-label">Savdolar</div>
+                    <div class="stat-item-value">{{ item.total_sales }} ta</div>
+                </div>
+
+                <div class="stat-item">
+                    <div class="stat-item-label">Jami Summa</div>
+                    <div class="stat-item-value success">
+                        {{ item.total_amount|floatformat:0 }} so'm
+                    </div>
+                </div>
+
+                <div class="stat-item">
+                    <div class="stat-item-label">Nasiya</div>
+                    <div class="stat-item-value">
+                        {{ item.total_credit|floatformat:0 }} so'm
+                    </div>
+                </div>
+
+                <div class="stat-item">
+                    <div class="stat-item-label">Qarz</div>
+                    <div class="stat-item-value debt">
+                        {{ item.debt|floatformat:0 }} so'm
+                    </div>
+                </div>
+            </div>
+
+            <a href="{% url 'mijoz_detail' item.mijoz.id %}" class="btn-detail">
+                👁️ Batafsil Ko'rish
+            </a>
+
+        </div>
+        {% empty %}
+        <div class="empty-box">
+            <div style="font-size:60px; margin-bottom:10px;">🏪</div>
+            <div style="color:var(--text-light); font-weight:600;">
+                Mijozlar topilmadi
+            </div>
+        </div>
+        {% endfor %}
     </div>
-    {% endfor %}
+
 </div>
 
 {% endblock %}
