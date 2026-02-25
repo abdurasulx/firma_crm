@@ -547,6 +547,22 @@
                         </a>
                     </li>
                     <li class="menu-item">
+                        <a href="{% url 'amallog' %}"
+                            class="menu-link {% if '/amallar/' in request.path %}active{% endif %}"
+                            data-title="Amallar Jurnali">
+                            <span class="menu-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
+                            <span class="menu-text">Amallar Jurnali</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{% url 'qaytarishlar' %}"
+                            class="menu-link {% if '/qaytarishlar/' in request.path %}active{% endif %}"
+                            data-title="Qaytarilgan Mahsulotlar">
+                            <span class="menu-icon"><i class="fa-solid fa-rotate-left"></i></span>
+                            <span class="menu-text">Qaytarilgan Mahsulotlar</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
                         <a href="{% url 'nasiya_savdolar' %}"
                             class="menu-link {% if '/nasiya-savdolar/' in request.path %}active{% endif %}"
                             data-title="Nasiya Savdolar">

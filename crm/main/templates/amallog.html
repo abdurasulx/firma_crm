@@ -1,0 +1,333 @@
+{% extends 'egabase.html' %}
+{% load static %}
+
+{% block page_title %}Amallar Jurnali{% endblock %}
+
+{% block content %}
+<style>
+    .filter-bar {
+        background: white;
+        border-radius: 14px;
+        padding: 18px 22px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: flex-end;
+        margin-bottom: 22px;
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .filter-group label {
+        font-size: 11px;
+        font-weight: 700;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .filter-control {
+        padding: 9px 14px;
+        border: 1.5px solid #e5e7eb;
+        border-radius: 9px;
+        font-size: 13px;
+        font-family: inherit;
+        color: #1f2937;
+        background: white;
+        outline: none;
+        min-width: 160px;
+        transition: border-color 0.2s;
+    }
+
+    .filter-control:focus {
+        border-color: #10b981;
+    }
+
+    .btn {
+        padding: 9px 18px;
+        border-radius: 9px;
+        border: none;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-family: inherit;
+        transition: all 0.2s;
+    }
+
+    .btn-primary {
+        background: #10b981;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #059669;
+    }
+
+    .btn-csv {
+        background: #f0fdf4;
+        color: #15803d;
+        border: 1.5px solid #86efac;
+    }
+
+    .btn-csv:hover {
+        background: #dcfce7;
+    }
+
+    .summary-row {
+        display: flex;
+        gap: 14px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+
+    .sbox {
+        background: white;
+        border-radius: 12px;
+        padding: 16px 22px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .sbox-icon {
+        font-size: 24px;
+    }
+
+    .sbox-val {
+        font-size: 24px;
+        font-weight: 800;
+        color: #1f2937;
+    }
+
+    .sbox-lbl {
+        font-size: 11px;
+        color: #6b7280;
+        font-weight: 500;
+    }
+
+    .log-table-card {
+        background: white;
+        border-radius: 14px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+        overflow: hidden;
+    }
+
+    .log-table-head {
+        padding: 16px 22px;
+        border-bottom: 1px solid #f3f4f6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .log-table-head h3 {
+        font-size: 15px;
+        font-weight: 700;
+        color: #1f2937;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+
+    th {
+        background: #f9fafb;
+        padding: 11px 16px;
+        text-align: left;
+        font-weight: 700;
+        color: #6b7280;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    td {
+        padding: 12px 16px;
+        border-bottom: 1px solid #f3f4f6;
+        color: #1f2937;
+        font-weight: 500;
+    }
+
+    tr:last-child td {
+        border-bottom: none;
+    }
+
+    tr:hover td {
+        background: #f9fafb;
+    }
+
+    .user-cell {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .user-dot {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        font-size: 11px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .amal-cell {
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        color: #374151;
+        background: #f3f4f6;
+        padding: 3px 8px;
+        border-radius: 5px;
+        display: inline-block;
+        max-width: 400px;
+        word-break: break-all;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #9ca3af;
+    }
+
+    .empty-state-icon {
+        font-size: 48px;
+        margin-bottom: 12px;
+        opacity: 0.4;
+    }
+
+    @media (max-width: 768px) {
+        .filter-bar {
+            flex-direction: column;
+        }
+
+        .filter-control {
+            min-width: 100%;
+        }
+
+        table {
+            font-size: 12px;
+        }
+
+        th,
+        td {
+            padding: 10px 12px;
+        }
+    }
+</style>
+
+<!-- Summary -->
+<div class="summary-row">
+    <div class="sbox">
+        <div class="sbox-icon">📋</div>
+        <div>
+            <div class="sbox-val">{{ jami }}</div>
+            <div class="sbox-lbl">Jami yozuv</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Bar -->
+<form method="GET" class="filter-bar">
+    <div class="filter-group">
+        <label>Foydalanuvchi</label>
+        <select name="user" class="filter-control">
+            <option value="">Barchasi</option>
+            {% for u in all_users %}
+            <option value="{{ u.username }}" {% if user_filter == u.username %}selected{% endif %}>
+                {{ u.tuliq_ismi|default:u.username }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-group">
+        <label>Dan (sana)</label>
+        <input type="date" name="from" class="filter-control" value="{{ from_date }}">
+    </div>
+    <div class="filter-group">
+        <label>Gacha (sana)</label>
+        <input type="date" name="to" class="filter-control" value="{{ to_date }}">
+    </div>
+    <button type="submit" class="btn btn-primary">🔍 Filter</button>
+    <a href="?{{ request.GET.urlencode }}&export=csv" class="btn btn-csv">⬇ CSV Export</a>
+</form>
+
+<!-- Log Table -->
+<div class="log-table-card">
+    <div class="log-table-head">
+        <h3>📋 Amallar Jurnali</h3>
+        <span style="font-size:12px; color:#6b7280; font-weight:600;">{{ logs|length }} ta ko'rsatilmoqda</span>
+    </div>
+
+    {% if logs %}
+    <div style="overflow-x:auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Sana / Vaqt</th>
+                    <th>Foydalanuvchi</th>
+                    <th>Rol</th>
+                    <th>Amal</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td style="color:#9ca3af;">{{ forloop.counter }}</td>
+                    <td style="white-space:nowrap; color:#374151;">
+                        {{ log.sana_vaqti|date:"d.m.Y" }}<br>
+                        <span style="font-size:11px; color:#9ca3af;">{{ log.sana_vaqti|date:"H:i:s" }}</span>
+                    </td>
+                    <td>
+                        <div class="user-cell">
+                            <div class="user-dot">{{
+                                log.user.tuliq_ismi|first|upper|default:log.user.username|first|upper }}</div>
+                            <div>
+                                <div style="font-weight:600;">{{ log.user.tuliq_ismi|default:log.user.username }}</div>
+                                <div style="font-size:11px; color:#9ca3af;">@{{ log.user.username }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        {% if log.user.type  ==  'ega' %}
+                        <span
+                            style="background:#dbeafe; color:#1d4ed8; padding:3px 9px; border-radius:999px; font-size:11px; font-weight:700;">Admin</span>
+                        {% elif log.user.type  ==  'pazanda' %}
+                        <span
+                            style="background:#fef3c7; color:#b45309; padding:3px 9px; border-radius:999px; font-size:11px; font-weight:700;">Pazanda</span>
+                        {% else %}
+                        <span
+                            style="background:#dcfce7; color:#15803d; padding:3px 9px; border-radius:999px; font-size:11px; font-weight:700;">Yetkazuvchi</span>
+                        {% endif %}
+                    </td>
+                    <td><span class="amal-cell">{{ log.amal_shifri }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">📋</div>
+        <p>Hozircha amallar yo'q</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

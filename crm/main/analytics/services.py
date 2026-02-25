@@ -9,11 +9,16 @@ def get_dashboard_stats():
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
+    # Low stock: mahsulotlar that are below their individual min_miqdori threshold
+    all_products = Mahsulot.objects.all()
+    low_stock_list = [m for m in all_products if m.past_zaxira]
+
     stats = {
         'total_sales_today': Savdo.objects.filter(vaqt_sana__gte=today_start).aggregate(total=Sum('summa'))['total'] or 0,
         'total_sales_month': Savdo.objects.filter(vaqt_sana__gte=month_start).aggregate(total=Sum('summa'))['total'] or 0,
-        'low_stock_products': Mahsulot.objects.filter(miqdori__lt=10).count(),
-        'top_products_by_summa': [], # Requires more complex logic if not using SMM, but we can't use SMM as per rules.
+        'low_stock_products': len(low_stock_list),
+        'low_stock_list': low_stock_list,
+        'top_products_by_summa': [],
         'active_delivery_users': User.objects.filter(type='yetkazib_beruvchi', is_active=True).count()
     }
     return stats

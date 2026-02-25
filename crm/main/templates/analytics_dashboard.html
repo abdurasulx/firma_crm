@@ -5,14 +5,14 @@
 
 {% block content %}
 <style>
-    :root{
+    :root {
         --accent: var(--primary-color);
         --accent-dark: var(--primary-dark);
         --accent-glow: var(--primary-glow);
         --t-dark: var(--text-dark);
         --t-light: var(--text-light);
         --bdr: var(--border-color);
-        --shadow-soft: 0 10px 25px -5px rgba(0,0,0,.06), 0 8px 10px -6px rgba(0,0,0,.06);
+        --shadow-soft: 0 10px 25px -5px rgba(0, 0, 0, .06), 0 8px 10px -6px rgba(0, 0, 0, .06);
     }
 
     /* Analytics Dashboard Styles */
@@ -102,8 +102,15 @@
     }
 
     @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(20px); }
-        to   { opacity: 1; transform: translateY(0); }
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     .stats-grid {
@@ -125,16 +132,23 @@
         transition: transform .2s ease, box-shadow .2s ease;
     }
 
-    .stat-card:hover{
+    .stat-card:hover {
         transform: translateY(-4px);
-        box-shadow: 0 14px 30px rgba(0,0,0,.08);
+        box-shadow: 0 14px 30px rgba(0, 0, 0, .08);
     }
 
-    .stat-card.trend-up { border-color: #10b981; }
-    .stat-card.trend-down { border-color: #ef4444; }
+    .stat-card.trend-up {
+        border-color: #10b981;
+    }
+
+    .stat-card.trend-down {
+        border-color: #ef4444;
+    }
 
     /* ✅ stable ni base theme’ga mos qilamiz */
-    .stat-card.trend-stable { border-color: var(--accent); }
+    .stat-card.trend-stable {
+        border-color: var(--accent);
+    }
 
     .stat-label {
         font-size: 13px;
@@ -311,8 +325,13 @@
     }
 
     @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
     }
 
     .error-message {
@@ -411,56 +430,56 @@
 <script>
     // Load products on page load
     document.addEventListener('DOMContentLoaded', function () {
-    console.log("DOM loaded");
-    loadProducts();
-});
+        console.log("DOM loaded");
+        loadProducts();
+    });
 
     async function loadProducts() {
-    try {
-        const response = await fetch('/api/analytics/products/');
-        const data = await response.json();
+        try {
+            const response = await fetch('/api/analytics/products/');
+            const data = await response.json();
 
-        const select = document.getElementById('product-select');
-        select.innerHTML = '<option value="">Mahsulotni tanlang...</option>';
+            const select = document.getElementById('product-select');
+            select.innerHTML = '<option value="">Mahsulotni tanlang...</option>';
 
-        // 🔥 Asosiy fix shu yerda
-        if (data.products && Array.isArray(data.products)) {
-            data.products.forEach(product => {
-                const option = document.createElement('option');
-                option.value = product;
-                option.textContent = product;
-                select.appendChild(option);
-            });
+            // 🔥 Asosiy fix shu yerda
+            if (data.products && Array.isArray(data.products)) {
+                data.products.forEach(product => {
+                    const option = document.createElement('option');
+                    option.value = product;
+                    option.textContent = product;
+                    select.appendChild(option);
+                });
+            }
+
+        } catch (error) {
+            console.error('Error loading products:', error);
+            showError('Mahsulotlar ro\'yxatini yuklashda xatolik');
         }
-
-    } catch (error) {
-        console.error('Error loading products:', error);
-        showError('Mahsulotlar ro\'yxatini yuklashda xatolik');
     }
-}
-async function loadProducts() {
-    try {
-        const response = await fetch('/api/analytics/products/');
-        const data = await response.json();
+    async function loadProducts() {
+        try {
+            const response = await fetch('/api/analytics/products/');
+            const data = await response.json();
 
-        const select = document.getElementById('product-select');
-        select.innerHTML = '<option value="">Mahsulotni tanlang...</option>';
+            const select = document.getElementById('product-select');
+            select.innerHTML = '<option value="">Mahsulotni tanlang...</option>';
 
-        // 🔥 Asosiy fix shu yerda
-        if (data.products && Array.isArray(data.products)) {
-            data.products.forEach(product => {
-                const option = document.createElement('option');
-                option.value = product;
-                option.textContent = product;
-                select.appendChild(option);
-            });
+            // 🔥 Asosiy fix shu yerda
+            if (data.products && Array.isArray(data.products)) {
+                data.products.forEach(product => {
+                    const option = document.createElement('option');
+                    option.value = product;
+                    option.textContent = product;
+                    select.appendChild(option);
+                });
+            }
+
+        } catch (error) {
+            console.error('Error loading products:', error);
+            showError('Mahsulotlar ro\'yxatini yuklashda xatolik');
         }
-
-    } catch (error) {
-        console.error('Error loading products:', error);
-        showError('Mahsulotlar ro\'yxatini yuklashda xatolik');
     }
-} 
     async function analyzeProduct() {
         const select = document.getElementById('product-select');
         const product = select.value;
@@ -576,5 +595,108 @@ async function loadProducts() {
             errorDiv.classList.remove('show');
         }, 5000);
     }
+</script>
+
+<!-- ═══════════════════════════════════════════════════════
+     TOP DO'KONLAR BAR CHART — Feature #8
+══════════════════════════════════════════════════════════ -->
+<div style="background:white; border-radius:16px; box-shadow:var(--shadow-soft);
+            border:1px solid var(--bdr); padding:28px 28px 20px; margin-top:28px;">
+    <div
+        style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
+        <h3 style="font-size:18px; font-weight:900; color:var(--t-dark); margin:0;">
+            🏆 Top Do'konlar (Savdo hajmi)
+        </h3>
+        <div style="display:flex; gap:8px; align-items:center;">
+            <label style="font-size:12px; font-weight:700; color:var(--t-light);">Davr:</label>
+            <select id="top-period" onchange="loadTopShops()" style="padding:7px 12px; border:1.5px solid var(--bdr); border-radius:9px;
+                           font-size:13px; font-family:inherit; color:var(--t-dark); outline:none;">
+                <option value="7">7 kun</option>
+                <option value="30" selected>30 kun</option>
+                <option value="90">90 kun</option>
+            </select>
+        </div>
+    </div>
+    <canvas id="topShopsChart" style="max-height:320px;"></canvas>
+    <p id="topShopsEmpty" style="text-align:center; color:var(--t-light); display:none; padding:40px 0;">
+        Bu davrda savdo ma'lumotlari yo'q
+    </p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    let topChart = null;
+
+    async function loadTopShops() {
+        const days = document.getElementById('top-period').value;
+        try {
+            const resp = await fetch(`/api/analytics/top-shops/?days=${days}&limit=8`);
+            const data = await resp.json();
+
+            const canvas = document.getElementById('topShopsChart');
+            const emptyEl = document.getElementById('topShopsEmpty');
+
+            if (!data.items || data.items.length === 0) {
+                canvas.style.display = 'none';
+                emptyEl.style.display = 'block';
+                return;
+            }
+
+            canvas.style.display = 'block';
+            emptyEl.style.display = 'none';
+
+            const labels = data.items.map(i => i.name);
+            const values = data.items.map(i => i.summa);
+
+            const colors = [
+                'rgba(16,185,129,0.85)', 'rgba(59,130,246,0.85)',
+                'rgba(245,158,11,0.85)', 'rgba(139,92,246,0.85)',
+                'rgba(239,68,68,0.85)', 'rgba(20,184,166,0.85)',
+                'rgba(249,115,22,0.85)', 'rgba(99,102,241,0.85)'
+            ];
+
+            if (topChart) topChart.destroy();
+
+            topChart = new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: "Savdo (so'm)",
+                        data: values,
+                        backgroundColor: colors.slice(0, labels.length),
+                        borderRadius: 8,
+                        borderWidth: 0,
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => ` ${ctx.parsed.x.toLocaleString()} so'm`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                callback: v => v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : v >= 1e3 ? (v / 1e3).toFixed(0) + 'K' : v
+                            },
+                            grid: { color: '#f3f4f6' }
+                        },
+                        y: { grid: { display: false } }
+                    }
+                }
+            });
+
+        } catch (e) {
+            console.error('Top shops error:', e);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadTopShops);
 </script>
 {% endblock %}

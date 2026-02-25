@@ -2,393 +2,496 @@
 {% load static %}
 
 {% block title %}Pazanda Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}Bugungi faoliyatingiz haqida umumiy ma'lumot{% endblock %}
+{% block nav_main %}active{% endblock %}
 
-{% block content %}
+{% block extra_head %}
 <style>
-    /* Modern Chef Dashboard */
-    .dashboard-hero {
-        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-        color: white;
-        padding: 40px 30px;
-        border-radius: 16px;
-        margin-bottom: 30px;
-        box-shadow: 0 8px 32px rgba(245, 158, 11, 0.3);
-    }
-
-    .dashboard-hero h1 {
-        margin: 0 0 10px 0;
-        font-size: 28px;
-        font-weight: 700;
-    }
-
-    .dashboard-hero p {
-        margin: 0;
-        opacity: 0.9;
-        font-size: 15px;
-    }
-
-    /* Stats Grid */
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-        gap: 20px;
-        margin-bottom: 30px;
-    }
-
-    .stat-card {
-        background: white;
-        padding: 24px;
-        border-radius: 12px;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-        border-left: 4px solid;
-        transition: all 0.3s ease;
-    }
-
-    .stat-card:hover {
-        transform: translateY(-6px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-    }
-
-    .stat-card.warning {
-        border-left-color: #f59e0b;
-    }
-
-    .stat-card.success {
-        border-left-color: #10b981;
-    }
-
-    .stat-card.info {
-        border-left-color: #3b82f6;
-    }
-
-    .stat-label {
-        font-size: 13px;
-        color: #6b7280;
-        font-weight: 600;
-        text-transform: uppercase;
-        margin-bottom: 8px;
-    }
-
-    .stat-value {
-        font-size: 32px;
-        font-weight: 700;
-        color: #1f2937;
-        margin-bottom: 4px;
-    }
-
-    /* Section */
-    .section {
-        background: white;
-        border-radius: 12px;
-        padding: 0;
-        margin-bottom: 30px;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-        overflow: hidden;
-    }
-
-    .section-header {
-        padding: 20px 24px;
-        background: linear-gradient(to right, #f8f9fa, #fff);
-        border-bottom: 2px solid #f3f4f6;
-        cursor: pointer;
+    /* ─── HERO CARD ─── */
+    .hero-card {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 60%, #b45309 100%);
+        border-radius: var(--radius);
+        padding: 32px 36px;
+        color: #fff;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        transition: all 0.3s ease;
+        margin-bottom: 28px;
+        box-shadow: 0 12px 40px rgba(245, 158, 11, 0.35);
+        overflow: hidden;
+        position: relative;
     }
 
-    .section-header:hover {
-        background: linear-gradient(to right, #f3f4f6, #fff);
+    .hero-card::after {
+        content: '🍳';
+        position: absolute;
+        right: 32px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 80px;
+        opacity: 0.2;
     }
 
-    .section-title {
-        font-size: 18px;
-        font-weight: 700;
-        color: #1f2937;
-        margin: 0;
+    .hero-card h1 {
+        font-size: 26px;
+        font-weight: 800;
+        margin-bottom: 6px;
     }
 
-    .toggle-icon {
-        font-size: 20px;
-        transition: transform 0.3s ease;
+    .hero-card p {
+        font-size: 14px;
+        opacity: 0.85;
     }
 
-    .toggle-icon.open {
-        transform: rotate(180deg);
+    .hero-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+        flex-wrap: wrap;
     }
 
-    .section-content {
-        padding: 24px;
-        display: none;
+    .btn-hero {
+        padding: 10px 20px;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
     }
 
-    .section-content.show {
-        display: block;
+    .btn-hero.primary {
+        background: #fff;
+        color: #d97706;
     }
 
-    /* Product Grid */
-    .product-grid {
+    .btn-hero.secondary {
+        background: rgba(255, 255, 255, 0.2);
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+    }
+
+    .btn-hero:hover {
+        transform: translateY(-2px);
+    }
+
+    /* ─── STATS ROW ─── */
+    .stats-row {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
         gap: 16px;
-        margin-bottom: 20px;
+        margin-bottom: 28px;
     }
 
-    .product-card {
-        background: #f9fafb;
-        padding: 16px;
-        border-radius: 8px;
-        border: 2px solid #e5e7eb;
-        transition: all 0.3s ease;
+    .stat-box {
+        background: var(--bg-card);
+        border-radius: var(--radius);
+        padding: 22px;
+        box-shadow: var(--shadow);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        transition: transform 0.2s;
     }
 
-    .product-card:hover {
-        border-color: #f59e0b;
+    .stat-box:hover {
         transform: translateY(-4px);
     }
 
-    .product-name {
-        font-size: 16px;
-        font-weight: 700;
-        color: #1f2937;
-        margin-bottom: 8px;
-    }
-
-    .product-quantity {
-        font-size: 14px;
-        color: #6b7280;
-    }
-
-    /* Activity List */
-    .activity-list {
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
         display: flex;
-        flex-direction: column;
-        gap: 12px;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        flex-shrink: 0;
     }
 
-    .activity-item {
-        background: #f9fafb;
-        padding: 16px;
-        border-radius: 8px;
-        border-left: 4px solid #10b981;
+    .stat-icon.amber {
+        background: #fef3c7;
     }
 
-    .activity-row {
+    .stat-icon.green {
+        background: #dcfce7;
+    }
+
+    .stat-icon.blue {
+        background: #dbeafe;
+    }
+
+    .stat-text .value {
+        font-size: 28px;
+        font-weight: 800;
+        color: var(--text-dark);
+        line-height: 1;
+    }
+
+    .stat-text .label {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-top: 4px;
+        font-weight: 500;
+    }
+
+    /* ─── CONTENT GRID ─── */
+    .content-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+
+    .content-card {
+        background: var(--bg-card);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+    }
+
+    .card-head {
+        padding: 18px 22px;
+        border-bottom: 1px solid var(--border);
         display: flex;
         justify-content: space-between;
-        margin-bottom: 8px;
+        align-items: center;
+    }
+
+    .card-head h3 {
+        font-size: 15px;
+        font-weight: 700;
+    }
+
+    .card-badge {
+        background: var(--primary-light);
+        color: var(--primary-dark);
+        font-size: 12px;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 999px;
+    }
+
+    .card-body {
+        padding: 16px 22px;
+    }
+
+    /* ─── PRODUCT LIST ─── */
+    .product-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--border);
         font-size: 14px;
     }
 
-    .activity-row:last-child {
-        margin-bottom: 0;
+    .product-row:last-child {
+        border-bottom: none;
     }
 
-    .activity-label {
-        color: #6b7280;
+    .product-row .p-name {
         font-weight: 600;
+        color: var(--text-dark);
     }
 
-    .activity-value {
-        color: #1f2937;
+    .product-row .p-qty {
+        background: #f0fdf4;
+        color: #15803d;
+        font-weight: 700;
+        font-size: 12px;
+        padding: 4px 10px;
+        border-radius: 999px;
+    }
+
+    /* ─── ACTIVITY LIST ─── */
+    .act-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--border);
+        font-size: 13px;
+    }
+
+    .act-item:last-child {
+        border-bottom: none;
+    }
+
+    .act-dot {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+
+    .act-dot.add {
+        background: #dcfce7;
+    }
+
+    .act-dot.send {
+        background: #dbeafe;
+    }
+
+    .act-info .act-title {
         font-weight: 600;
+        color: var(--text-dark);
     }
 
-    /* Primary Button */
-    .btn-primary {
+    .act-info .act-sub {
+        color: var(--text-muted);
+        margin-top: 2px;
+    }
+
+    /* ─── EMPTY STATE ─── */
+    .empty {
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--text-muted);
+    }
+
+    .empty i {
+        font-size: 48px;
+        opacity: 0.3;
+        margin-bottom: 12px;
         display: block;
-        width: 100%;
-        padding: 14px 24px;
-        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-        color: white;
+    }
+
+    .empty p {
+        font-size: 14px;
+    }
+
+    /* ─── QUICK ACTIONS ─── */
+    .quick-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        padding: 16px 22px;
+    }
+
+    .qa-btn {
+        padding: 14px;
+        border-radius: 12px;
+        border: 2px solid var(--border);
+        text-align: center;
         text-decoration: none;
-        text-align: center;
-        border-radius: 8px;
+        font-size: 13px;
         font-weight: 600;
-        font-size: 16px;
-        transition: all 0.3s ease;
-        border: none;
-        cursor: pointer;
+        color: var(--text-dark);
+        transition: all 0.2s;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
     }
 
-    .btn-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(245, 158, 11, 0.3);
+    .qa-btn i {
+        font-size: 22px;
     }
 
-    /* Empty State */
-    .empty-state {
-        text-align: center;
-        padding: 60px 20px;
-        color: #9ca3af;
+    .qa-btn.amber {
+        border-color: #f59e0b;
+        color: #d97706;
+        background: #fffbeb;
     }
 
-    .empty-state-icon {
-        font-size: 64px;
-        margin-bottom: 16px;
-        opacity: 0.5;
+    .qa-btn.blue {
+        border-color: #3b82f6;
+        color: #1d4ed8;
+        background: #eff6ff;
     }
 
-    .empty-state-text {
-        font-size: 16px;
+    .qa-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
     }
 
-    /* Responsive */
-    @media (max-width: 768px) {
-        .stats-grid {
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 900px) {
+        .content-grid {
             grid-template-columns: 1fr;
         }
+    }
 
-        .product-grid {
-            grid-template-columns: 1fr;
+    @media (max-width: 480px) {
+        .hero-card {
+            padding: 24px 20px;
         }
 
-        .dashboard-hero h1 {
-            font-size: 24px;
+        .hero-card h1 {
+            font-size: 20px;
+        }
+
+        .stats-row {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .quick-actions {
+            grid-template-columns: 1fr;
         }
     }
 </style>
+{% endblock %}
 
-<!-- Hero Section -->
-<div class="dashboard-hero">
-    <h1>👨‍🍳 Assalomu alaykum, {{ request.user.tuliq_ismi }}!</h1>
-    <p>Pazanda dashboard</p>
-</div>
+{% block content %}
 
-<!-- Stats Overview -->
-<div class="stats-grid">
-    <div class="stat-card warning">
-        <div class="stat-label">📦 Zaxiradagi Mahsulotlar</div>
-        <div class="stat-value">{{ zaxira_mahsulotlar|length }}</div>
-    </div>
-
-    <div class="stat-card success">
-        <div class="stat-label">📈 Bugungi Faollik</div>
-        <div class="stat-value">{{ bugungi_faollik|length|default:"0" }}</div>
-    </div>
-
-    <div class="stat-card info">
-        <div class="stat-label">📦 Yuborilgan Yuklamalar</div>
-        <div class="stat-value">{{ yuborilgan_yuklamalar|length|default:"0" }}</div>
+<!-- Hero -->
+<div class="hero-card">
+    <div>
+        <h1>Assalomu alaykum, {{ request.user.tuliq_ismi }}!</h1>
+        <p>Bugun ham mahsulotlarni boshqarish tayyor.</p>
+        <div class="hero-actions">
+            <a href="{% url 'add_miqdor' %}" class="btn-hero primary">
+                <i class="fa-solid fa-plus"></i> Miqdor Qo'shish
+            </a>
+            <a href="{% url 'add_yuklama' %}" class="btn-hero secondary">
+                <i class="fa-solid fa-truck-fast"></i> Yuklama Yaratish
+            </a>
+        </div>
     </div>
 </div>
 
-<!-- Inventory Section -->
-<div class="section">
-    <div class="section-header" onclick="toggleSection(this)">
-        <div class="section-title">📦 Zaxiradagi Mahsulotlar</div>
-        <span class="toggle-icon open">▼</span>
+<!-- Stats -->
+<div class="stats-row">
+    <div class="stat-box">
+        <div class="stat-icon amber">📦</div>
+        <div class="stat-text">
+            <div class="value">{{ zaxira_mahsulotlar|length }}</div>
+            <div class="label">Mahsulot turi</div>
+        </div>
     </div>
-    <div class="section-content show">
-        {% if zaxira_mahsulotlar %}
-        <div class="product-grid">
+    <div class="stat-box">
+        <div class="stat-icon green">✅</div>
+        <div class="stat-text">
+            <div class="value">{{ qms|default:"0" }}</div>
+            <div class="label">Bugungi qo'shimlar</div>
+        </div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-icon blue">🚚</div>
+        <div class="stat-text">
+            <div class="value">{{ sorovlar|length|default:"0" }}</div>
+            <div class="label">Yuborilgan so'rovlar</div>
+        </div>
+    </div>
+</div>
+
+<!-- Content Grid -->
+<div class="content-grid">
+
+    <!-- Inventory Card -->
+    <div class="content-card">
+        <div class="card-head">
+            <h3><i class="fa-solid fa-boxes-stacked" style="color:var(--primary);margin-right:8px;"></i>Zaxira
+                Mahsulotlar</h3>
+            <span class="card-badge">{{ zaxira_mahsulotlar|length }}</span>
+        </div>
+        <div class="card-body">
+            {% if zaxira_mahsulotlar %}
             {% for m in zaxira_mahsulotlar %}
-            <div class="product-card">
-                <div class="product-name">{{ m.nomi }}</div>
-                <div class="product-quantity">{{ m.miqdori }} {{ m.turi }}</div>
+            <div class="product-row">
+                <span class="p-name">{{ m.nomi }}</span>
+                <span class="p-qty">{{ m.miqdori }} {{ m.turi.nomi }}</span>
             </div>
             {% endfor %}
+            {% else %}
+            <div class="empty">
+                <i class="fa-solid fa-box-open"></i>
+                <p>Zaxira mahsulotlar mavjud emas</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Right Column -->
+    <div style="display:flex; flex-direction:column; gap:20px;">
+
+        <!-- Quick Actions -->
+        <div class="content-card">
+            <div class="card-head">
+                <h3><i class="fa-solid fa-bolt" style="color:var(--primary);margin-right:8px;"></i>Tezkor Harakatlar
+                </h3>
+            </div>
+            <div class="quick-actions">
+                <a href="{% url 'add_miqdor' %}" class="qa-btn amber">
+                    <i class="fa-solid fa-plus-circle"></i>
+                    Miqdor Qo'shish
+                </a>
+                <a href="{% url 'add_yuklama' %}" class="qa-btn blue">
+                    <i class="fa-solid fa-truck-fast"></i>
+                    Yuklama Yaratish
+                </a>
+            </div>
         </div>
 
-        <a href="{% url 'add_miqdor' %}" class="btn-primary">
-            ➕ Miqdor Qo'shish
-        </a>
-        {% else %}
-        <div class="empty-state">
-            <div class="empty-state-icon">📦</div>
-            <div class="empty-state-text">Zaxira mahsulotlar mavjud emas</div>
+        <!-- Today's Activity -->
+        <div class="content-card" style="flex:1;">
+            <div class="card-head">
+                <h3><i class="fa-solid fa-clock-rotate-left" style="color:var(--primary);margin-right:8px;"></i>Bugungi
+                    Faollik</h3>
+                <span class="card-badge">{{ qms|default:"0" }}</span>
+            </div>
+            <div class="card-body">
+                {% if kunlik_miqdorlar %}
+                {% for faol in kunlik_miqdorlar %}
+                <div class="act-item">
+                    <div class="act-dot add">➕</div>
+                    <div class="act-info">
+                        <div class="act-title">{{ faol.mahsulot.nomi }}</div>
+                        <div class="act-sub">+{{ faol.miqdor }} {{ faol.mahsulot.turi.nomi }} qo'shildi</div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="empty">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <p>Bugun hali faollik yo'q</p>
+                </div>
+                {% endif %}
+            </div>
         </div>
-        {% endif %}
     </div>
+
 </div>
 
-<!-- Today's Activity -->
-<div class="section">
-    <div class="section-header" onclick="toggleSection(this)">
-        <div class="section-title">📈 Bugungi Faollik</div>
-        <span class="toggle-icon">▼</span>
+<!-- Today's Requests/Deliveries Section -->
+{% if sorovlar %}
+<div class="content-card" style="margin-top:20px;">
+    <div class="card-head">
+        <h3><i class="fa-solid fa-paper-plane" style="color:#3b82f6;margin-right:8px;"></i>Bugungi So'rovlar</h3>
+        <span class="card-badge" style="background:#dbeafe;color:#1d4ed8;">{{ sorovlar|length }}</span>
     </div>
-    <div class="section-content">
-        {% if bugungi_faollik %}
-        <div class="activity-list">
-            {% for faol in bugungi_faollik %}
-            <div class="activity-item">
-                <div class="activity-row">
-                    <span class="activity-label">Mahsulot:</span>
-                    <span class="activity-value">{{ faol.mahsulot.nomi }}</span>
-                </div>
-                <div class="activity-row">
-                    <span class="activity-label">Qo'shilgan miqdor:</span>
-                    <span class="activity-value">{{ faol.miqdor }} {{ faol.mahsulot.turi }}</span>
+    <div class="card-body">
+        {% for sorov in sorovlar %}
+        <div class="act-item">
+            <div class="act-dot send">🚚</div>
+            <div class="act-info">
+                <div class="act-title">{{ sorov.mahsulot.nomi }} — {{ sorov.miqdor }} kg</div>
+                <div class="act-sub">
+                    Yetkazuvchi: {{ sorov.user.tuliq_ismi }}
+                    &nbsp;·&nbsp;
+                    {% if sorov.tasdiq %}
+                    <span style="color:#16a34a;font-weight:600;">✅ Tasdiqlandi</span>
+                    {% elif sorov.mode == 'rejected' %}
+                    <span style="color:#dc2626;font-weight:600;">❌ Rad etildi</span>
+                    {% else %}
+                    <span style="color:#d97706;font-weight:600;">⏳ Kutilmoqda</span>
+                    {% endif %}
                 </div>
             </div>
-            {% endfor %}
         </div>
-        {% else %}
-        <div class="empty-state">
-            <div class="empty-state-icon">📈</div>
-            <div class="empty-state-text">Bugun hali faollik yo'q</div>
-        </div>
-        {% endif %}
+        {% endfor %}
     </div>
 </div>
-
-<!-- Sent Deliveries -->
-<div class="section">
-    <div class="section-header" onclick="toggleSection(this)">
-        <div class="section-title">📦 Yuborilgan Yuklamalar</div>
-        <span class="toggle-icon">▼</span>
-    </div>
-    <div class="section-content">
-        {% if yuborilgan_yuklamalar %}
-        <div class="activity-list">
-            {% for yuklama in yuborilgan_yuklamalar %}
-            <div class="activity-item">
-                <div class="activity-row">
-                    <span class="activity-label">Yetkazuvchi:</span>
-                    <span class="activity-value">{{ yuklama.user.user.tuliq_ismi }}</span>
-                </div>
-                <div class="activity-row">
-                    <span class="activity-label">Mahsulot:</span>
-                    <span class="activity-value">{{ yuklama.mahsulot.nomi }}</span>
-                </div>
-                <div class="activity-row">
-                    <span class="activity-label">Miqdor:</span>
-                    <span class="activity-value">{{ yuklama.miqdor }} {{ yuklama.mahsulot.turi }}</span>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-
-        <a href="{% url 'add_yuklama' %}" class="btn-primary" style="margin-top: 20px;">
-            📦 Yangi Yuklama Yaratish
-        </a>
-        {% else %}
-        <div class="empty-state">
-            <div class="empty-state-icon">📦</div>
-            <div class="empty-state-text">Hozircha yuborilgan yuklamalar yo'q</div>
-        </div>
-
-        <a href="{% url 'add_yuklama' %}" class="btn-primary">
-            📦 Yuklama Yaratish
-        </a>
-        {% endif %}
-    </div>
-</div>
-
-<script>
-    function toggleSection(header) {
-        const content = header.nextElementSibling;
-        const icon = header.querySelector('.toggle-icon');
-
-        if (content.classList.contains('show')) {
-            content.classList.remove('show');
-            icon.classList.remove('open');
-        } else {
-            content.classList.add('show');
-            icon.classList.add('open');
-        }
-    }
-</script>
+{% endif %}
 
 {% endblock %}

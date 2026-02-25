@@ -8,12 +8,15 @@ No external APIs - 100% local processing.
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
+import datetime
 
 from main.services import (
     analyze_product_demand,
     recommend_shops_for_product,
     get_all_products
 )
+from main.models import Savdo, Mahsulot
 
 
 @require_http_methods(["GET"])
@@ -175,3 +178,50 @@ def shop_recommendations_api(request):
         return JsonResponse({
             'error': str(e)
         }, status=500)
+
+
+@require_http_methods(["GET"])
+def top_products_api(request):
+    """
+    Top mahsulotlar — Savdo.summa ga asoslangan reyting.
+    Query params:
+        days (optional): 7, 30, 90 (default: 30)
+        limit (optional): nechtasini qaytarish (default: 8)
+    """
+    try:
+        days  = int(request.GET.get('days',  30))
+        limit = int(request.GET.get('limit', 8))
+
+        from_dt = timezone.now() - datetime.timedelta(days=days)
+        savdolar = Savdo.objects.filter(vaqt_sana__gte=from_dt).select_related('haridor_dukon')
+
+        # Group by haridor_dukon (shop) by summa
+        from collections import defaultdict
+        shop_totals = defaultdict(float)
+        shop_counts = defaultdict(int)
+
+        for s in savdolar:
+            nm = s.haridor_dukon.nomi if s.haridor_dukon else "Noma'lum"
+            shop_totals[nm] += (s.summa or 0)
+            shop_counts[nm] += 1
+
+        # Sort descending
+        sorted_shops = sorted(shop_totals.items(), key=lambda x: x[1], reverse=True)
+
+        result = []
+        for i, (nm, total) in enumerate(sorted_shops[:limit]):
+            result.append({
+                'name':   nm,
+                'summa':  round(total, 0),
+                'count':  shop_counts[nm],
+                'rank':   i + 1,
+            })
+
+        return JsonResponse({
+            'days':   days,
+            'total':  len(sorted_shops),
+            'items':  result,
+        })
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

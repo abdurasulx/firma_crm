@@ -501,7 +501,7 @@
         <!-- Top Search Bar (Hidden by default, triggered by click or shortcut) -->
         <div class="top-search-container" id="topSearchContainer">
             <div class="top-search-wrapper">
-                
+
                 <i class="fa-solid fa-search top-search-icon"></i>
                 <input type="text" id="topSearchInput" class="top-search-input"
                     placeholder="Hodim ismini yoki username'ini yozing..." autocomplete="off">
@@ -582,6 +582,13 @@
                     </td>
                     <td>
                         <div class="action-btns" style="justify-content: flex-end;">
+                            {% if x.type  ==  'yetkazib_beruvchi' %}
+                            <a href="{% url 'yetkazuvchi_hisobot' x.username %}" class="action-btn"
+                                title="Hisobot ko'rish"
+                                style="background:#dbeafe; color:#1d4ed8; border:1px solid #bfdbfe;">
+                                <i class="fa-solid fa-chart-line"></i>
+                            </a>
+                            {% endif %}
                             <a href="{% url 'edituser' x.username %}" class="action-btn edit" title="Tahrirlash">
                                 <i class="fa-solid fa-pen"></i>
                             </a>
@@ -635,145 +642,145 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    const bottomSearchInput = document.querySelector('.search-input');
-    const topSearchContainer = document.getElementById('topSearchContainer');
-    const normalHeader = document.getElementById('normalHeader');
-    const filterBar = document.querySelector('.filter-bar');
-    const closeSearchBtn = document.getElementById('closeSearchBtn');
+    document.addEventListener('DOMContentLoaded', () => {
+        const bottomSearchInput = document.querySelector('.search-input');
+        const topSearchContainer = document.getElementById('topSearchContainer');
+        const normalHeader = document.getElementById('normalHeader');
+        const filterBar = document.querySelector('.filter-bar');
+        const closeSearchBtn = document.getElementById('closeSearchBtn');
 
-    const topSearchInput = document.getElementById('topSearchInput');
-    const searchResultsDropdown = document.getElementById('searchResultsDropdown');
-    const editUrlTemplate = document.getElementById('editUrlTemplate')?.value || '/edituser/___USERNAME___';
+        const topSearchInput = document.getElementById('topSearchInput');
+        const searchResultsDropdown = document.getElementById('searchResultsDropdown');
+        const editUrlTemplate = document.getElementById('editUrlTemplate')?.value || '/edituser/___USERNAME___';
 
-    let searchTimeout = null;
-    let abortController = null;
+        let searchTimeout = null;
+        let abortController = null;
 
-    function showTopSearch() {
-        topSearchContainer.classList.add('active');
-        normalHeader.classList.add('hidden');
-        filterBar.classList.add('search-active');
+        function showTopSearch() {
+            topSearchContainer.classList.add('active');
+            normalHeader.classList.add('hidden');
+            filterBar.classList.add('search-active');
 
-        // old q ni ko'chirish
-        if (bottomSearchInput && bottomSearchInput.value) {
-            topSearchInput.value = bottomSearchInput.value;
-            performSearch(topSearchInput.value.trim());
-        }
-
-        setTimeout(() => topSearchInput.focus(), 50);
-    }
-
-    function closeTopSearch() {
-        topSearchContainer.classList.remove('active');
-        normalHeader.classList.remove('hidden');
-        filterBar.classList.remove('search-active');
-        searchResultsDropdown.classList.remove('active');
-        searchResultsDropdown.innerHTML = '';
-        topSearchInput.value = '';
-    }
-
-    // pastdagi qidiruvga bosilsa overlay ochiladi
-    if (bottomSearchInput) {
-        bottomSearchInput.addEventListener('focus', (e) => {
-            e.preventDefault();
-            showTopSearch();
-        });
-    }
-
-    closeSearchBtn.addEventListener('click', closeTopSearch);
-
-    // ESC bilan yopish
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && topSearchContainer.classList.contains('active')) {
-            closeTopSearch();
-        }
-    });
-
-    // tashqariga bosilsa dropdown yopiladi (overlay qoladi)
-    document.addEventListener('click', (e) => {
-        if (!topSearchContainer.classList.contains('active')) return;
-        const wrapper = topSearchContainer.querySelector('.top-search-wrapper');
-        if (wrapper && !wrapper.contains(e.target) && e.target !== bottomSearchInput) {
-            searchResultsDropdown.classList.remove('active');
-        }
-    });
-
-    // input realtime search
-    topSearchInput.addEventListener('input', () => {
-        const query = topSearchInput.value.trim();
-
-        clearTimeout(searchTimeout);
-
-        if (!query) {
-            searchResultsDropdown.classList.remove('active');
-            searchResultsDropdown.innerHTML = '';
-            return;
-        }
-
-        searchResultsDropdown.innerHTML =
-            '<div style="padding: 20px; text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Qidirilmoqda...</div>';
-        searchResultsDropdown.classList.add('active');
-
-        searchTimeout = setTimeout(() => performSearch(query), 200);
-    });
-
-    async function performSearch(query) {
-        try {
-            // old requestni to'xtatish (ketma-ket yozganda)
-            if (abortController) abortController.abort();
-            abortController = new AbortController();
-
-            const params = new URLSearchParams(window.location.search);
-            params.set('q', query);
-            params.set('data_format', 'json');
-
-            const url = `${window.location.pathname}?${params.toString()}`;
-
-            const res = await fetch(url, {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                signal: abortController.signal
-            });
-
-            if (!res.ok) {
-                throw new Error(`Server error: ${res.status}`);
+            // old q ni ko'chirish
+            if (bottomSearchInput && bottomSearchInput.value) {
+                topSearchInput.value = bottomSearchInput.value;
+                performSearch(topSearchInput.value.trim());
             }
 
-            const data = await res.json();
-            renderResults(data.results || [], query);
+            setTimeout(() => topSearchInput.focus(), 50);
+        }
 
-        } catch (err) {
-            if (err.name === 'AbortError') return; // normal holat
-            searchResultsDropdown.classList.add('active');
+        function closeTopSearch() {
+            topSearchContainer.classList.remove('active');
+            normalHeader.classList.remove('hidden');
+            filterBar.classList.remove('search-active');
+            searchResultsDropdown.classList.remove('active');
+            searchResultsDropdown.innerHTML = '';
+            topSearchInput.value = '';
+        }
+
+        // pastdagi qidiruvga bosilsa overlay ochiladi
+        if (bottomSearchInput) {
+            bottomSearchInput.addEventListener('focus', (e) => {
+                e.preventDefault();
+                showTopSearch();
+            });
+        }
+
+        closeSearchBtn.addEventListener('click', closeTopSearch);
+
+        // ESC bilan yopish
+        document.addEventListener('keydown', (e) => {
+            if (e.key  == = 'Escape' && topSearchContainer.classList.contains('active')) {
+                closeTopSearch();
+            }
+        });
+
+        // tashqariga bosilsa dropdown yopiladi (overlay qoladi)
+        document.addEventListener('click', (e) => {
+            if (!topSearchContainer.classList.contains('active')) return;
+            const wrapper = topSearchContainer.querySelector('.top-search-wrapper');
+            if (wrapper && !wrapper.contains(e.target) && e.target ! ==  bottomSearchInput) {
+                searchResultsDropdown.classList.remove('active');
+            }
+        });
+
+        // input realtime search
+        topSearchInput.addEventListener('input', () => {
+            const query = topSearchInput.value.trim();
+
+            clearTimeout(searchTimeout);
+
+            if (!query) {
+                searchResultsDropdown.classList.remove('active');
+                searchResultsDropdown.innerHTML = '';
+                return;
+            }
+
             searchResultsDropdown.innerHTML =
-                `<div style="padding: 18px; color: #ef4444; font-size: 13px;">
+                '<div style="padding: 20px; text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Qidirilmoqda...</div>';
+            searchResultsDropdown.classList.add('active');
+
+            searchTimeout = setTimeout(() => performSearch(query), 200);
+        });
+
+        async function performSearch(query) {
+            try {
+                // old requestni to'xtatish (ketma-ket yozganda)
+                if (abortController) abortController.abort();
+                abortController = new AbortController();
+
+                const params = new URLSearchParams(window.location.search);
+                params.set('q', query);
+                params.set('data_format', 'json');
+
+                const url = `${window.location.pathname}?${params.toString()}`;
+
+                const res = await fetch(url, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    signal: abortController.signal
+                });
+
+                if (!res.ok) {
+                    throw new Error(`Server error: ${res.status}`);
+                }
+
+                const data = await res.json();
+                renderResults(data.results || [], query);
+
+            } catch (err) {
+                if (err.name  == = 'AbortError') return; // normal holat
+                searchResultsDropdown.classList.add('active');
+                searchResultsDropdown.innerHTML =
+                    `<div style="padding: 18px; color: #ef4444; font-size: 13px;">
                     <b>Xatolik:</b> Qidiruv ishlamadi. (JSON qaytmadi yoki server xato)
                  </div>`;
-            console.error(err);
-        }
-    }
-
-    function renderResults(results, query) {
-        if (!results.length) {
-            searchResultsDropdown.innerHTML =
-                '<div style="padding: 24px; text-align:center; color: var(--text-light);">Natija topilmadi</div>';
-            return;
+                console.error(err);
+            }
         }
 
-        let html = `
+        function renderResults(results, query) {
+            if (!results.length) {
+                searchResultsDropdown.innerHTML =
+                    '<div style="padding: 24px; text-align:center; color: var(--text-light);">Natija topilmadi</div>';
+                return;
+            }
+
+            let html = `
             <div style="padding: 10px 16px; font-size: 12px; color: var(--text-light);
                         border-bottom: 1px solid #f1f5f9; background: #f8fafc; border-radius: 16px 16px 0 0;">
                 ${results.length} ta natija topildi
             </div>
         `;
 
-        results.forEach(user => {
-            const avatar = user.rasmi_url
-                ? user.rasmi_url
-                : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.tuliq_ismi || user.username)}&background=10b981&color=fff&rounded=true&size=42`;
+            results.forEach(user => {
+                const avatar = user.rasmi_url
+                    ? user.rasmi_url
+                    : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.tuliq_ismi || user.username)}&background=10b981&color=fff&rounded=true&size=42`;
 
-            const editUrl = editUrlTemplate.replace('___USERNAME___', encodeURIComponent(user.username));
+                const editUrl = editUrlTemplate.replace('___USERNAME___', encodeURIComponent(user.username));
 
-            html += `
+                html += `
                 <a href="${editUrl}" class="result-item">
                     <img src="${avatar}" style="width:36px; height:36px; border-radius:10px; object-fit:cover;">
                     <div style="flex:1">
@@ -783,21 +790,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div style="font-size:12px; color:var(--text-light);">@${escapeHtml(user.username || '')}</div>
                 </a>
             `;
-        });
+            });
 
-        searchResultsDropdown.innerHTML = html;
-        searchResultsDropdown.classList.add('active');
-    }
+            searchResultsDropdown.innerHTML = html;
+            searchResultsDropdown.classList.add('active');
+        }
 
-    function escapeHtml(str) {
-        return String(str)
-            .replaceAll('&', '&amp;')
-            .replaceAll('<', '&lt;')
-            .replaceAll('>', '&gt;')
-            .replaceAll('"', '&quot;')
-            .replaceAll("'", '&#039;');
-    }
-});
+        function escapeHtml(str) {
+            return String(str)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+    });
 </script>
 
 {% endblock %}

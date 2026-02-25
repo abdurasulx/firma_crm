@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="uz">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hisobot — {{ yb.tuliq_ismi }}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --primary: #10b981;
+            --primary-dark: #059669;
+            --primary-glow: rgba(16, 185, 129, 0.18);
+            --sidebar-bg: #0f172a;
+            --bg: #f0f2f5;
+            --card: #ffffff;
+            --border: #e5e7eb;
+            --text: #1f2937;
+            --muted: #6b7280;
+            --radius: 14px;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.07);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            min-height: 100vh;
+        }
+
+        /* ─── TOP NAV ─────────────────────────── */
+        .topnav {
+            background: var(--sidebar-bg);
+            height: 62px;
+            display: flex;
+            align-items: center;
+            padding: 0 28px;
+            gap: 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .35);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .topnav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: white;
+            font-weight: 800;
+            font-size: 17px;
+            text-decoration: none;
+        }
+
+        .topnav-brand .dot {
+            width: 34px;
+            height: 34px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .topnav-sep {
+            flex: 1;
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 7px 16px;
+            border-radius: 9px;
+            border: 1.5px solid rgba(255, 255, 255, 0.2);
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        /* ─── LAYOUT ──────────────────────────── */
+        .page-wrap {
+            max-width: 1100px;
+            margin: 32px auto;
+            padding: 0 24px 48px;
+        }
+
+        /* ─── HERO HEADER CARD ────────────────── */
+        .hero-card {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: var(--radius);
+            padding: 28px 32px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 32px var(--primary-glow);
+            flex-wrap: wrap;
+        }
+
+        .hero-avatar {
+            width: 76px;
+            height: 76px;
+            border-radius: 50%;
+            border: 3px solid rgba(255, 255, 255, 0.45);
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+
+        .hero-info h2 {
+            font-size: 22px;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+
+        .hero-info p {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.75);
+        }
+
+        .hero-sep {
+            flex: 1;
+        }
+
+        .hero-badge {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 7px 16px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        /* ─── STAT GRID ───────────────────────── */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+
+        .stat-box {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 20px 22px;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            transition: transform 0.2s;
+        }
+
+        .stat-box:hover {
+            transform: translateY(-3px);
+        }
+
+        .stat-icon-wrap {
+            width: 46px;
+            height: 46px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .stat-box:nth-child(1) .stat-icon-wrap {
+            background: #d1fae5;
+        }
+
+        .stat-box:nth-child(2) .stat-icon-wrap {
+            background: #dbeafe;
+        }
+
+        .stat-box:nth-child(3) .stat-icon-wrap {
+            background: #f3e8ff;
+        }
+
+        .stat-box:nth-child(4) .stat-icon-wrap {
+            background: #fef3c7;
+        }
+
+        .stat-val {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--text);
+        }
+
+        .stat-lbl {
+            font-size: 12px;
+            color: var(--muted);
+            font-weight: 500;
+            margin-top: 2px;
+        }
+
+        /* ─── FILTER FORM ─────────────────────── */
+        .filter-card {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 16px 20px;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: flex-end;
+            margin-bottom: 22px;
+        }
+
+        .fg {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .fg label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .fc {
+            padding: 9px 13px;
+            border: 1.5px solid var(--border);
+            border-radius: 9px;
+            font-size: 13px;
+            font-family: inherit;
+            color: var(--text);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .fc:focus {
+            border-color: var(--primary);
+        }
+
+        .btn-filter {
+            padding: 9px 20px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 9px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            transition: background 0.2s;
+        }
+
+        .btn-filter:hover {
+            background: var(--primary-dark);
+        }
+
+        /* ─── SECTION CARDS ───────────────────── */
+        .section-card {
+            background: var(--card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            margin-bottom: 22px;
+        }
+
+        .section-head {
+            padding: 16px 22px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section-head h3 {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-count {
+            font-size: 12px;
+            color: var(--muted);
+            font-weight: 600;
+        }
+
+        /* ─── TABLE ───────────────────────────── */
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        thead th {
+            background: #f9fafb;
+            padding: 11px 16px;
+            text-align: left;
+            font-weight: 700;
+            color: var(--muted);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        tbody td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f3f4f6;
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:hover td {
+            background: #f9fafb;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .badge-green {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .badge-blue {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .badge-amber {
+            background: #fef3c7;
+            color: #b45309;
+        }
+
+        .badge-red {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .total-row td {
+            background: #f0fdf4;
+            font-weight: 800;
+            font-size: 14px;
+            color: var(--primary-dark);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px 20px;
+            color: var(--muted);
+        }
+
+        .empty-icon {
+            font-size: 44px;
+            opacity: 0.3;
+            margin-bottom: 10px;
+        }
+
+        /* ─── RESPONSIVE ──────────────────────── */
+        @media (max-width: 640px) {
+            .hero-card {
+                padding: 20px 18px;
+            }
+
+            .page-wrap {
+                padding: 0 12px 40px;
+            }
+
+            .stat-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .filter-card {
+                flex-direction: column;
+            }
+
+            .fc {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ─── TOP NAV ─────────────────────────────────────────────────────── -->
+    <nav class="topnav">
+        <a href="{% url 'main' %}" class="topnav-brand">
+            <div class="dot">🏢</div>
+            Firma CRM
+        </a>
+        <div class="topnav-sep"></div>
+        <a href="{% url 'hodimlar_list' %}" class="back-btn">
+            <i class="fa-solid fa-arrow-left"></i> Hodimlar ro'yxati
+        </a>
+    </nav>
+
+    <!-- ─── PAGE CONTENT ─────────────────────────────────────────────── -->
+    <div class="page-wrap">
+
+        <!-- Hero -->
+        <div class="hero-card">
+            <img class="hero-avatar"
+                src="{% if yb.rasmi %}{{ yb.rasmi.url }}{% else %}{% static 'images/default_avatar.jpg' %}{% endif %}"
+                alt="avatar">
+            <div class="hero-info">
+                <h2>{{ yb.tuliq_ismi }}</h2>
+                <p><i class="fa-solid fa-phone" style="opacity:.7;"></i>
+                    {{ yb.user.tel_raqami|default:"Raqam kiritilmagan" }}
+                    &nbsp;·&nbsp; @{{ yb.user.username }}
+                </p>
+            </div>
+            <div class="hero-sep"></div>
+            <span class="hero-badge"><i class="fa-solid fa-truck"></i> Yetkazib beruvchi hisoboti</span>
+        </div>
+
+        <!-- Stats -->
+        <div class="stat-grid">
+            <div class="stat-box">
+                <div class="stat-icon-wrap">💰</div>
+                <div>
+                    <div class="stat-val">{{ bugun_savdo|default:0|floatformat:0 }}</div>
+                    <div class="stat-lbl">Bugun savdo (so'm)</div>
+                </div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon-wrap">📅</div>
+                <div>
+                    <div class="stat-val">{{ oy_savdo|default:0|floatformat:0 }}</div>
+                    <div class="stat-lbl">Bu oy savdo (so'm)</div>
+                </div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon-wrap">🧾</div>
+                <div>
+                    <div class="stat-val">{{ jami_savdo_soni }}</div>
+                    <div class="stat-lbl">Jami tranzaksiya</div>
+                </div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon-wrap">💳</div>
+                <div>
+                    <div class="stat-val">{{ nasiya_qarz|default:0|floatformat:0 }}</div>
+                    <div class="stat-lbl">Nasiya qarz (so'm)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Date filter -->
+        <form method="GET" class="filter-card">
+            <div class="fg">
+                <label>Dan (sana)</label>
+                <input type="date" name="from" class="fc" value="{{ from_date }}">
+            </div>
+            <div class="fg">
+                <label>Gacha (sana)</label>
+                <input type="date" name="to" class="fc" value="{{ to_date }}">
+            </div>
+            <button type="submit" class="btn-filter">
+                <i class="fa-solid fa-magnifying-glass"></i> Filter
+            </button>
+        </form>
+
+        <!-- Savdolar -->
+        <div class="section-card">
+            <div class="section-head">
+                <h3><i class="fa-solid fa-money-bill-transfer" style="color:var(--primary);"></i> Savdolar Ro'yxati</h3>
+                <span class="section-count">{{ savdolar|length }} ta</span>
+            </div>
+            <div class="table-wrap">
+                {% if savdolar %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Sana</th>
+                            <th>Mijoz (do'kon)</th>
+                            <th>Turi</th>
+                            <th>Summa</th>
+                            <th>Holati</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in savdolar %}
+                        <tr>
+                            <td style="color:var(--muted);">{{ forloop.counter }}</td>
+                            <td style="white-space:nowrap;">{{ s.vaqt_sana|date:"d.m.Y" }}</td>
+                            <td>{{ s.haridor_dukon.nomi|default:"—" }}</td>
+                            <td>
+                                {% if s.st == 'naqd' %}<span class="badge badge-green">💵 Naqd</span>
+                                {% elif s.st == 'karta' %}<span class="badge badge-blue">💳 Karta</span>
+                                {% else %}<span class="badge badge-amber">📋 Nasiya</span>{% endif %}
+                            </td>
+                            <td><strong>{{ s.summa|default:0|floatformat:0 }}</strong> so'm</td>
+                            <td>
+                                {% if s.tulandi %}
+                                <span class="badge badge-green">✓ To'landi</span>
+                                {% else %}
+                                <span class="badge badge-red">⧖ Kutilmoqda</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        <tr class="total-row">
+                            <td colspan="4" style="text-align:right;">JAMI:</td>
+                            <td colspan="2"><strong>{{ savdolar_jami|floatformat:0 }} so'm</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon">💸</div>
+                    <p>Bu davrda savdo topilmadi</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Zaxira -->
+        <div class="section-card">
+            <div class="section-head">
+                <h3><i class="fa-solid fa-boxes-stacked" style="color:var(--primary);"></i> Joriy Zaxira</h3>
+            </div>
+            <div class="table-wrap">
+                {% if zaxira %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Mahsulot</th>
+                            <th>Miqdor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for z in zaxira %}
+                        <tr>
+                            <td>{{ z.nom }}</td>
+                            <td><span class="badge badge-green">{{ z.miqdor }} {{ z.sift }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon">📦</div>
+                    <p>Zaxira bo'sh</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+    </div><!-- /page-wrap -->
+</body>
+
+</html>

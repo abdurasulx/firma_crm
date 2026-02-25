@@ -353,6 +353,12 @@
                         🏪 Haridor qo'shish
                     </a>
                 </li>
+                <li>
+                    <a href="{% url 'qaytarish' %}"
+                        class="nav-link {% if request.path == '/qaytarish/' %}active{% endif %}">
+                        📦 Qaytarish
+                    </a>
+                </li>
                 <!-- Mobile only links -->
                 <li class="mobile-only">
                     <a href="{% url 'profile' user.username %}" class="nav-link">

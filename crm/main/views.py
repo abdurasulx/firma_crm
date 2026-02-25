@@ -161,11 +161,13 @@ def main(request):
     stats = get_dashboard_stats()
     payload['usumma'] = add_spctoint(stats['total_sales_month'])
     payload['bsumma'] = add_spctoint(stats['total_sales_today'])
+    payload['low_stock_list'] = stats['low_stock_list']
+    payload['low_stock_count'] = stats['low_stock_products']
     
     payload['ishchilar_soni'] = soni
     payload['msoni'] = msoni
     
-    return render(request, 'main.html',payload)
+    return render(request, 'main.html', payload)
 
 @login_required(login_url='login')
 def logout_view(request):
@@ -436,6 +438,7 @@ def add_yuklama(request):
         'mahsulotlar': mahsulotlar,
         'yetkazuvchilar': yetkazuvchilar,
     })
+@login_required(login_url='login')
 def sotish(request):
     
     if request.user.type == 'yetkazib_beruvchi':
@@ -551,3 +554,102 @@ def check_new_deliveries(request):
         return JsonResponse({'error': 'Delivery user not found'}, status=404)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+# ─── MVP: Pazanda — So'rovlar tarixi ─────────────────────────────────────────
+@login_required(login_url='login')
+def pz_sorov_tarixi(request):
+    """Pazanda uchun: o'zi yuborgan barcha YuklamaSorov larni ko'rish."""
+    if request.user.type != 'pazanda':
+        return redirect('main')
+
+    pazanda = Pazanda.objects.get(user=request.user)
+    filter_val = request.GET.get('filter', 'all')
+
+    qs = YuklamaSorov.objects.filter(pazanda=pazanda).order_by('-sana')
+
+    if filter_val == 'waiting':
+        qs = qs.filter(tasdiq=False, mode='waiting')
+    elif filter_val == 'approved':
+        qs = qs.filter(tasdiq=True)
+    elif filter_val == 'rejected':
+        qs = qs.filter(mode='rejected')
+
+    # Summary counts
+    all_qs = YuklamaSorov.objects.filter(pazanda=pazanda)
+    context = {
+        'sorovlar': qs,
+        'jami': all_qs.count(),
+        'tasdiqlangan': all_qs.filter(tasdiq=True).count(),
+        'kutilmoqda': all_qs.filter(tasdiq=False, mode='waiting').count(),
+        'rad_etilgan': all_qs.filter(mode='rejected').count(),
+    }
+    return render(request, 'pzsorovlar.html', context)
+
+
+# ─── MVP: Yetkazuvchi Hisobot ─────────────────────────────────────────────────
+@login_required(login_url='login')
+def yetkazuvchi_hisobot(request, username):
+    """Admin uchun: berilgan yetkazuvchining to'liq hisoboti."""
+    if request.user.type not in ('ega',):
+        return redirect('main')
+
+    target_user = get_object_or_404(User, username=username, type='yetkazib_beruvchi')
+    yb = get_object_or_404(YetkazibBeruvchi, user=target_user)
+
+    from django.db.models import Sum as DSum
+    import datetime as _dt
+
+    now = timezone.localtime()
+
+    # Date filtering
+    from_date_str = request.GET.get('from')
+    to_date_str   = request.GET.get('to')
+
+    try:
+        from_date = _dt.date.fromisoformat(from_date_str) if from_date_str else now.date().replace(day=1)
+        to_date   = _dt.date.fromisoformat(to_date_str)   if to_date_str   else now.date()
+    except ValueError:
+        from_date = now.date().replace(day=1)
+        to_date   = now.date()
+
+    from_dt = timezone.make_aware(_dt.datetime.combine(from_date, _dt.time.min))
+    to_dt   = timezone.make_aware(_dt.datetime.combine(to_date,   _dt.time.max))
+
+    savdolar = Savdo.objects.filter(
+        yetkazib_beruvchi=yb,
+        vaqt_sana__range=(from_dt, to_dt)
+    ).order_by('-vaqt_sana')
+
+    # Today stats
+    today_start = timezone.make_aware(_dt.datetime.combine(now.date(), _dt.time.min))
+    today_end   = timezone.make_aware(_dt.datetime.combine(now.date(), _dt.time.max))
+    month_start = timezone.make_aware(_dt.datetime.combine(now.date().replace(day=1), _dt.time.min))
+
+    bugun_savdo = Savdo.objects.filter(yetkazib_beruvchi=yb, vaqt_sana__range=(today_start, today_end)).aggregate(t=DSum('summa'))['t'] or 0
+    oy_savdo    = Savdo.objects.filter(yetkazib_beruvchi=yb, vaqt_sana__gte=month_start).aggregate(t=DSum('summa'))['t'] or 0
+
+    # Nasiya qarz
+    nasiya_savdolar = Savdo.objects.filter(yetkazib_beruvchi=yb, st='nasiya', tulandi=False)
+    nasiya_qarz = nasiya_savdolar.aggregate(t=DSum('summa'))['t'] or 0
+
+    # Savdolar jami for filter period
+    savdolar_jami = savdolar.aggregate(t=DSum('summa'))['t'] or 0
+
+    # Zaxira (legacy string parsed)
+    from .functions import mahsulotlar_miqdori
+    zaxira = mahsulotlar_miqdori(yb.mahsulotlar) or []
+
+    context = {
+        'yb': yb,
+        'savdolar': savdolar,
+        'savdolar_jami': savdolar_jami,
+        'jami_savdo_soni': savdolar.count(),
+        'bugun_savdo': bugun_savdo,
+        'oy_savdo': oy_savdo,
+        'nasiya_qarz': nasiya_qarz,
+        'zaxira': zaxira,
+        'from_date': from_date.isoformat(),
+        'to_date': to_date.isoformat(),
+    }
+    return render(request, 'yt_hisobot.html', context)

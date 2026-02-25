@@ -365,6 +365,26 @@
     </div>
 </div>
 
+{% if low_stock_list %}
+<div
+    style="background:#fef3c7; border-left:4px solid #f59e0b; border-radius:12px; padding:16px 20px; margin-bottom:24px; display:flex; align-items:flex-start; gap:14px;">
+    <div style="font-size:24px; flex-shrink:0;">⚠️</div>
+    <div>
+        <div style="font-size:14px; font-weight:700; color:#92400e; margin-bottom:6px;">
+            {{ low_stock_count }} ta mahsulot zaxirasi kritik darajaga yetdi!
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+            {% for m in low_stock_list %}
+            <a href="{% url 'seeproduct' m.id %}"
+                style="display:inline-flex; align-items:center; gap:5px; background:white; border:1px solid #fcd34d; border-radius:999px; padding:4px 12px; font-size:12px; font-weight:600; color:#b45309; text-decoration:none;">
+                📦 {{ m.nomi }} — {{ m.miqdori }} / {{ m.min_miqdori }} {{ m.turi.nomi }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- Quick Actions -->
 <div class="quick-actions">
     <a href="{% url 'crtuser' %}" class="action-btn">
@@ -412,7 +432,8 @@
         <h3 class="section-title">
             <i class="fa-solid fa-users-viewfinder"></i> So'nggi Hodimlar
             <span
-                style="background: #e5e7eb; padding: 4px 12px; border-radius: 6px; font-size: 14px; font-weight: 600;">{{ ishchilar_soni }} ta</span>
+                style="background: #e5e7eb; padding: 4px 12px; border-radius: 6px; font-size: 14px; font-weight: 600;">{{
+                ishchilar_soni }} ta</span>
         </h3>
         <a href="{% url 'hodimlar_list' %}" class="view-all-link">Barchasini ko'rish →</a>
     </div>
@@ -442,7 +463,8 @@
         <h3 class="section-title">
             📦 So'nggi Mahsulotlar
             <span
-                style="background: #e5e7eb; padding: 4px 12px; border-radius: 6px; font-size: 14px; font-weight: 600;">{{    msoni }} ta</span>
+                style="background: #e5e7eb; padding: 4px 12px; border-radius: 6px; font-size: 14px; font-weight: 600;">{{
+                msoni }} ta</span>
         </h3>
         <a href="{% url 'mahsulotlar_list' %}" class="view-all-link">Barchasini ko'rish →</a>
     </div>

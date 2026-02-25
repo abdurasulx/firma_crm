@@ -1,0 +1,302 @@
+{% extends 'egabase.html' %}
+{% load static %}
+
+{% block page_title %}Qaytarilgan Mahsulotlar{% endblock %}
+
+{% block content %}
+<style>
+    .summary-row {
+        display: flex;
+        gap: 14px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+
+    .sbox {
+        background: white;
+        border-radius: 12px;
+        padding: 16px 22px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .sbox-icon {
+        font-size: 24px;
+    }
+
+    .sbox-val {
+        font-size: 24px;
+        font-weight: 800;
+        color: #1f2937;
+    }
+
+    .sbox-lbl {
+        font-size: 11px;
+        color: #6b7280;
+        font-weight: 500;
+    }
+
+    .section-card {
+        background: white;
+        border-radius: 14px;
+        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+        overflow: hidden;
+        margin-bottom: 22px;
+    }
+
+    .section-head {
+        padding: 16px 22px;
+        border-bottom: 1px solid #f3f4f6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .section-head h3 {
+        font-size: 14px;
+        font-weight: 700;
+        color: #1f2937;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+
+    thead th {
+        background: #f9fafb;
+        padding: 11px 16px;
+        text-align: left;
+        font-weight: 700;
+        color: #6b7280;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    tbody td {
+        padding: 12px 16px;
+        border-bottom: 1px solid #f3f4f6;
+        color: #1f2937;
+        font-weight: 500;
+    }
+
+    tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    tbody tr:hover td {
+        background: #f9fafb;
+    }
+
+    .action-wrap {
+        display: flex;
+        gap: 7px;
+    }
+
+    .btn-tasdiq {
+        padding: 6px 14px;
+        background: #dcfce7;
+        color: #15803d;
+        border: 1.5px solid #86efac;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        font-family: inherit;
+        transition: all 0.2s;
+    }
+
+    .btn-tasdiq:hover {
+        background: #16a34a;
+        color: white;
+    }
+
+    .btn-rad {
+        padding: 6px 14px;
+        background: #fee2e2;
+        color: #b91c1c;
+        border: 1.5px solid #fca5a5;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        font-family: inherit;
+        transition: all 0.2s;
+    }
+
+    .btn-rad:hover {
+        background: #dc2626;
+        color: white;
+    }
+
+    .badge-done {
+        background: #dcfce7;
+        color: #15803d;
+        padding: 3px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    .badge-pending {
+        background: #fef3c7;
+        color: #b45309;
+        padding: 3px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 48px 20px;
+        color: #9ca3af;
+    }
+
+    .empty-icon {
+        font-size: 44px;
+        opacity: 0.3;
+        margin-bottom: 10px;
+    }
+
+    /* Alert messages */
+    .alert {
+        padding: 12px 16px;
+        border-radius: 10px;
+        margin-bottom: 18px;
+        font-size: 13px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .alert-success {
+        background: #d1fae5;
+        color: #065f46;
+        border-left: 4px solid #10b981;
+    }
+
+    .alert-error {
+        background: #fee2e2;
+        color: #991b1b;
+        border-left: 4px solid #ef4444;
+    }
+
+    .alert-warning {
+        background: #fef3c7;
+        color: #92400e;
+        border-left: 4px solid #f59e0b;
+    }
+</style>
+
+<!-- Messages -->
+{% for msg in messages %}
+<div
+    class="alert alert-{% if msg.tags == 'error' %}error{% elif msg.tags == 'warning' %}warning{% else %}success{% endif %}">
+    {% if msg.tags == 'error' %}❌{% elif msg.tags == 'warning' %}⚠️{% else %}✅{% endif %} {{ msg }}
+</div>
+{% endfor %}
+
+<!-- Summary -->
+<div class="summary-row">
+    <div class="sbox">
+        <div class="sbox-icon">⏳</div>
+        <div>
+            <div class="sbox-val">{{ pending_count }}</div>
+            <div class="sbox-lbl">Kutilmoqda</div>
+        </div>
+    </div>
+</div>
+
+<!-- Pending Returns -->
+<div class="section-card">
+    <div class="section-head">
+        <h3>⏳ Kutilayotgan Qaytarishlar</h3>
+        <span style="font-size:12px; color:#6b7280;">{{ pending|length }} ta</span>
+    </div>
+
+    {% if pending %}
+    <div style="overflow-x:auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Sana</th>
+                    <th>Mahsulot</th>
+                    <th>Miqdor</th>
+                    <th style="text-align:right;">Amal</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for q in pending %}
+                <tr>
+                    <td style="color:#9ca3af;">{{ forloop.counter }}</td>
+                    <td style="white-space:nowrap;">{{ q.sana|date:"d.m.Y H:i" }}</td>
+                    <td><strong>{{ q.mahsulot.nomi }}</strong></td>
+                    <td>{{ q.miqdor|floatformat:1 }} {{ q.mahsulot.turi }}</td>
+                    <td>
+                        <div class="action-wrap" style="justify-content:flex-end;">
+                            <form method="POST" action="{% url 'qaytarish_tasdiq' q.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-tasdiq">✅ Tasdiqlash</button>
+                            </form>
+                            <form method="POST" action="{% url 'qaytarish_rad' q.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-rad">❌ Rad</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">📦</div>
+        <p>Kutilayotgan qaytarishlar yo'q</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Done Returns -->
+<div class="section-card">
+    <div class="section-head">
+        <h3>✅ Tasdiqlangan / Rad Etilgan (oxirgi 50 ta)</h3>
+    </div>
+    {% if done %}
+    <div style="overflow-x:auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Sana</th>
+                    <th>Mahsulot</th>
+                    <th>Miqdor</th>
+                    <th>Holat</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for q in done %}
+                <tr>
+                    <td style="white-space:nowrap; color:#6b7280;">{{ q.sana|date:"d.m.Y" }}</td>
+                    <td>{{ q.mahsulot.nomi }}</td>
+                    <td>{{ q.miqdor|floatformat:1 }} {{ q.mahsulot.turi }}</td>
+                    <td><span class="badge-done">✓ Yopilgan</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <p>Tarix yo'q</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

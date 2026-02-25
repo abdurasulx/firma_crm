@@ -66,9 +66,15 @@ class Mahsulot(models.Model):
     narxi = models.DecimalField(max_digits=10, decimal_places=2)
     turi = models.ForeignKey(MahsulotTuri, on_delete=models.CASCADE)
     miqdori = models.FloatField(default=0)
+    min_miqdori = models.FloatField(default=10, help_text="Bu miqdordan kam bo'lsa ogohlantirish chiqadi")
 
     def __str__(self):
         return self.nomi
+
+    @property
+    def past_zaxira(self):
+        """Zaxira minimal chegaradan past bo'lsa True qaytaradi"""
+        return self.miqdori < self.min_miqdori
 
 
 # --- PAZANDA (User vorisi) ---

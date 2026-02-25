@@ -1,300 +1,437 @@
 {% extends 'ytbase.html' %}
 {% load static %}
 
-{% block title %}Mahsulot Sotish{% endblock %}
+{% block title %}Sotish{% endblock %}
 
 {% block content %}
 <style>
-    /* Modern Sales Form */
-    .page-header {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        color: white;
-        padding: 30px;
-        border-radius: 16px;
-        margin-bottom: 30px;
-        box-shadow: 0 8px 32px rgba(16, 185, 129, 0.3);
+    /* ═══════════════════════════════════════════
+       MOBILE-FIRST SOTISH UI — Feature #9
+    ═══════════════════════════════════════════ */
+
+    /* Reset paddings for full-width mobile feel */
+    .content-area,
+    .main-content {
+        padding: 0 !important;
     }
 
-    .page-header h1 {
-        margin: 0;
-        font-size: 24px;
-        font-weight: 700;
+    .sotish-wrap {
+        max-width: 520px;
+        margin: 0 auto;
+        padding: 16px 14px 120px;
+        /* bottom pad for sticky footer */
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
 
-    .form-section {
-        background: white;
-        padding: 30px;
-        border-radius: 12px;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-        margin-bottom: 24px;
-    }
-
-    .section-title {
-        font-size: 18px;
-        font-weight: 700;
+    /* ─── Page title ─── */
+    .page-title {
+        font-size: 20px;
+        font-weight: 800;
         color: #1f2937;
-        margin-bottom: 20px;
+        margin-bottom: 16px;
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 8px;
+    }
+
+    /* ─── Section labels ─── */
+    .section-lbl {
+        font-size: 11px;
+        font-weight: 700;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        margin-bottom: 8px;
+    }
+
+    /* ─── Select / Input ─── */
+    .big-select,
+    .big-input {
+        width: 100%;
+        padding: 14px 16px;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        font-size: 16px;
+        font-family: inherit;
+        color: #1f2937;
+        background: white;
+        outline: none;
+        transition: border-color 0.2s;
+        -webkit-appearance: none;
+    }
+
+    .big-select:focus,
+    .big-input:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12);
+    }
+
+    /* ─── Cards/Sections ─── */
+    .mb16 {
+        margin-bottom: 16px;
     }
 
     .product-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-        gap: 20px;
-    }
-
-    .product-item {
-        background: white;
-        padding: 20px;
-        border-radius: 12px;
-        border: 2px solid #e5e7eb;
-        transition: all 0.3s ease;
         display: flex;
         flex-direction: column;
+        gap: 10px;
     }
 
-    .product-item:hover {
-        border-color: #10b981;
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
-        transform: translateY(-2px);
+    .product-row {
+        background: white;
+        border-radius: 14px;
+        padding: 14px 16px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+        border: 2px solid #f3f4f6;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        transition: border-color 0.2s;
+    }
+
+    .product-row.has-qty {
+        border-color: #667eea;
+        background: #f5f3ff;
+    }
+
+    .product-info {
+        flex: 1;
+        min-width: 0;
     }
 
     .product-name {
+        font-size: 15px;
         font-weight: 700;
         color: #1f2937;
-        margin-bottom: 6px;
-        font-size: 16px;
+        margin-bottom: 2px;
     }
-
 
     .product-stock {
+        font-size: 12px;
+        color: #6b7280;
+        font-weight: 500;
+    }
+
+    /* ─── Stepper ─── */
+    .stepper {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 0;
+    }
+
+    .stepper-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: none;
+        font-size: 20px;
+        font-weight: 700;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s;
+        line-height: 1;
+    }
+
+    .stepper-btn.minus {
+        background: #f3f4f6;
+        color: #6b7280;
+    }
+
+    .stepper-btn.minus:active {
+        background: #e5e7eb;
+    }
+
+    .stepper-btn.plus {
+        background: #667eea;
+        color: white;
+        box-shadow: 0 3px 10px rgba(102, 126, 234, 0.35);
+    }
+
+    .stepper-btn.plus:active {
+        background: #5a6fd6;
+    }
+
+    .stepper-val {
+        width: 44px;
+        text-align: center;
+        font-size: 18px;
+        font-weight: 800;
+        color: #1f2937;
+    }
+
+    /* ─── Payment type buttons ─── */
+    .pay-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+
+    .pay-btn {
+        padding: 14px 8px;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        background: white;
+        text-align: center;
+        cursor: pointer;
         font-size: 13px;
-        color: #10b981;
-        margin-bottom: 12px;
-        margin-top: 8px;
-        font-weight: 600;
-        background: #d1fae5;
-        padding: 6px 12px;
-        border-radius: 6px;
+        font-weight: 700;
+        color: #6b7280;
+        transition: all 0.2s;
+    }
+
+    .pay-btn .pay-icon {
+        font-size: 22px;
         display: block;
-        width: fit-content;
+        margin-bottom: 4px;
     }
 
-    .product-input {
-        width: 100%;
-        padding: 12px 14px;
-        border: 2px solid #e5e7eb;
-        border-radius: 8px;
-        font-size: 16px;
-        transition: all 0.3s ease;
-        background: #f9fafb;
-        font-weight: 600;
-        box-sizing: border-box;
+    .pay-btn.active {
+        border-color: #667eea;
+        background: #ede9fe;
+        color: #4f46e5;
     }
 
-    .product-input:focus {
-        outline: none;
-        border-color: #10b981;
-        background: white;
-        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
-    }
-
-    .product-input::-webkit-inner-spin-button,
-    .product-input::-webkit-outer-spin-button {
-        opacity: 1;
-    }
-
-    .form-group {
-        margin-bottom: 20px;
-    }
-
-    .form-group label {
-        display: block;
-        font-weight: 600;
-        color: #374151;
-        margin-bottom: 8px;
+    /* ─── Image upload ─── */
+    .upload-label {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px;
+        border: 2px dashed #e5e7eb;
+        border-radius: 14px;
+        cursor: pointer;
+        color: #6b7280;
         font-size: 14px;
-    }
-
-    .form-control {
-        width: 100%;
-        padding: 12px 16px;
-        border: 2px solid #e5e7eb;
-        border-radius: 8px;
-        font-size: 16px;
-        transition: all 0.3s ease;
-        background: #f9fafb;
-    }
-
-    .form-control:focus {
-        outline: none;
-        border-color: #10b981;
+        font-weight: 600;
+        transition: all 0.2s;
         background: white;
-        box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
     }
 
-    .inline-group {
+    .upload-label:hover {
+        border-color: #667eea;
+        background: #f5f3ff;
+    }
+
+    .upload-label input {
+        display: none;
+    }
+
+    .upload-icon {
+        font-size: 28px;
+    }
+
+    /* ─── Summary bar (sticky bottom on mobile) ─── */
+    .summary-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        border-top: 1px solid #e5e7eb;
+        padding: 12px 16px;
         display: flex;
         gap: 12px;
-        align-items: flex-end;
+        align-items: center;
+        z-index: 200;
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
     }
 
-    .inline-group select {
+    .sum-info {
         flex: 1;
     }
 
-    .btn-add {
-        padding: 12px 20px;
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        color: white;
-        border: none;
-        border-radius: 8px;
+    .sum-label {
+        font-size: 11px;
+        color: #9ca3af;
         font-weight: 600;
-        cursor: pointer;
-        text-decoration: none;
-        display: inline-block;
-        transition: all 0.3s ease;
-        white-space: nowrap;
     }
 
-    .btn-add:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+    .sum-val {
+        font-size: 20px;
+        font-weight: 800;
+        color: #1f2937;
     }
 
-    .btn-submit {
-        width: 100%;
-        padding: 16px;
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    .submit-btn {
+        padding: 14px 24px;
+        background: linear-gradient(135deg, #667eea, #764ba2);
         color: white;
         border: none;
-        border-radius: 12px;
-        font-size: 18px;
-        font-weight: 700;
+        border-radius: 14px;
+        font-size: 15px;
+        font-weight: 800;
         cursor: pointer;
-        transition: all 0.3s ease;
-        margin-top: 8px;
+        font-family: inherit;
+        min-width: 140px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.35);
+        transition: all 0.2s;
     }
 
-    .btn-submit:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
+    .submit-btn:active {
+        transform: scale(0.97);
     }
 
-    .file-upload {
-        padding: 16px;
-        border: 2px dashed #d1d5db;
-        border-radius: 8px;
-        text-align: center;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        background: #f9fafb;
-    }
-
-    .file-upload:hover {
-        border-color: #10b981;
-        background: white;
-    }
-
-    .file-upload input[type="file"] {
-        padding: 0;
-        border: none;
-        background: none;
-    }
-
-    @media (max-width: 768px) {
-        .product-grid {
-            grid-template-columns: 1fr;
+    @media (min-width: 640px) {
+        .sotish-wrap {
+            padding-bottom: 32px;
         }
 
-        .inline-group {
-            flex-direction: column;
-            align-items: stretch;
-        }
-
-        .btn-add {
-            width: 100%;
+        .summary-bar {
+            position: static;
+            box-shadow: none;
+            border-top: none;
+            border-radius: 14px;
+            border: 1px solid #e5e7eb;
+            margin-top: 16px;
+            flex-direction: row;
         }
     }
 </style>
 
-<!-- Page Header -->
-<div class="page-header">
-    <h1>🛒 Mahsulot Sotish</h1>
-</div>
-
-<form method="POST" enctype="multipart/form-data">
+<form method="POST" enctype="multipart/form-data" id="sotish-form">
     {% csrf_token %}
+    <div class="sotish-wrap">
 
-    <!-- Products Section -->
-    <div class="form-section">
-        <div class="section-title">
-            📦 Mahsulotlar Ro'yxati
-        </div>
+        <div class="page-title">🛒 Sotish</div>
 
-        <div class="product-grid">
-            {% for m in mahsulotlar %}
-            <div class="product-item">
-                <div class="product-name">{{ m.nom }}</div>
-                <div class="product-stock">📦 {{ m.miqdor }} {{ m.turi }}</div>
-                <input type="number" name="miqdor_{{ m.nom }}" class="product-input" value="0" min="0"
-                    max="{{ m.miqdor }}" step="any" placeholder="0">
-            </div>
-            {% empty %}
-            <div style="grid-column: 1/-1; text-align: center; color: #9ca3af; padding: 40px;">
-                Hozircha mahsulotlar mavjud emas
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-
-    <!-- Customer Info Section -->
-    <div class="form-section">
-        <div class="section-title">
-            👤 Haridor Ma'lumotlari
-        </div>
-
-        <div class="form-group">
-            <label for="haridor">🏪 Haridor yoki Do'kon</label>
-            <div class="inline-group">
-                <select name="haridor" id="haridor" class="form-control" required>
-                    <option value="" selected disabled>Tanlang...</option>
-                    {% for h in haridorlar %}
-                    <option value="{{ h.id }}">{{ h.nomi }}</option>
-                    {% endfor %}
-                </select>
-                <a href="{% url 'add_haridor' %}" class="btn-add">+ Qo'shish</a>
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label for="oluvchi">📝 Oluvchi Ismi</label>
-            <input type="text" name="oluvchi" id="oluvchi" class="form-control" required
-                placeholder="Oluvchining to'liq ismini kiriting">
-        </div>
-
-        <div class="form-group">
-            <label for="st">💳 To'lov Turi</label>
-            <select name="st" id="st" class="form-control" required>
-                <option value="naqd">💵 Naqd</option>
-                <option value="karta">💳 Karta</option>
-                <option value="nasiya">🔄 Nasiya</option>
+        <!-- Haridor -->
+        <div class="mb16">
+            <div class="section-lbl">Do'kon / Haridor</div>
+            <select name="haridor" class="big-select" required>
+                <option value="">— Tanlang —</option>
+                {% for h in haridorlar %}
+                <option value="{{ h.id }}">{{ h.nomi }}</option>
+                {% endfor %}
             </select>
         </div>
 
-        <div class="form-group">
-            <label for="rasm">📸 Chek / Rasm</label>
-            <div class="file-upload">
-                <input type="file" name="rasm" id="rasm" accept="image/*" required>
+        <!-- Oluvchining ismi -->
+        <div class="mb16">
+            <div class="section-lbl">Oluvchining ismi</div>
+            <input type="text" name="oluvchi" class="big-input" placeholder="Ism kiritilsin" required>
+        </div>
+
+        <!-- Mahsulotlar -->
+        <div class="mb16">
+            <div class="section-lbl">Mahsulotlar</div>
+            <div class="product-grid" id="product-grid">
+                {% for m in mahsulotlar %}
+                <div class="product-row" id="row-{{ forloop.counter }}">
+                    <div class="product-info">
+                        <div class="product-name">{{ m.nom }}</div>
+                        <div class="product-stock">Mavjud: {{ m.miqdor }} {{ m.turi }}</div>
+                    </div>
+                    <div class="stepper">
+                        <button type="button" class="stepper-btn minus"
+                            onclick="step('{{ m.nom }}', {{ forloop.counter }}, -1, {{ m.miqdor }})">−</button>
+                        <div class="stepper-val" id="val-{{ forloop.counter }}">0</div>
+                        <button type="button" class="stepper-btn plus"
+                            onclick="step('{{ m.nom }}', {{ forloop.counter }}, 1, {{ m.miqdor }})">+</button>
+                    </div>
+                    <input type="hidden" name="miqdor_{{ m.nom }}" id="inp-{{ forloop.counter }}" value="0">
+                </div>
+                {% empty %}
+                <div style="text-align:center; padding:32px; color:#9ca3af;">
+                    <div style="font-size:40px; opacity:0.4;">📦</div>
+                    <p>Zaxirada mahsulot yo'q</p>
+                </div>
+                {% endfor %}
             </div>
         </div>
-    </div>
 
-    <button type="submit" class="btn-submit">
-        ✅ Sotishni Yakunlash
-    </button>
+        <!-- To'lov turi -->
+        <div class="mb16">
+            <div class="section-lbl">To'lov turi</div>
+            <div class="pay-row">
+                <div class="pay-btn active" onclick="setPay(this,'naqd')">
+                    <span class="pay-icon">💵</span>Naqd
+                </div>
+                <div class="pay-btn" onclick="setPay(this,'karta')">
+                    <span class="pay-icon">💳</span>Karta
+                </div>
+                <div class="pay-btn" onclick="setPay(this,'nasiya')">
+                    <span class="pay-icon">📋</span>Nasiya
+                </div>
+            </div>
+            <input type="hidden" name="st" id="pay-input" value="naqd">
+        </div>
+
+        <!-- Rasm -->
+        <div class="mb16">
+            <div class="section-lbl">Chek rasmi</div>
+            <label class="upload-label">
+                <span class="upload-icon">📷</span>
+                <span id="file-label">Rasm tanlash (ixtiyoriy)</span>
+                <input type="file" name="rasm" accept="image/*" capture="environment" onchange="setFileLabel(this)">
+            </label>
+        </div>
+
+    </div><!-- /sotish-wrap -->
+
+    <!-- Sticky bottom bar -->
+    <div class="summary-bar">
+        <div class="sum-info">
+            <div class="sum-label">Jami summa</div>
+            <div class="sum-val" id="total-display">0 so'm</div>
+        </div>
+        <button type="submit" class="submit-btn" id="submit-btn" disabled>
+            ✅ Sotishni Tasdiqlash
+        </button>
+    </div>
 </form>
 
+<script>
+    // Product prices map (from server)
+    const PRICES = {
+        {% for m in mahsulotlar %}
+    "{{ m.nom }}": { { m.narx |default: 0 } },
+    {% endfor %}
+    };
+
+    let totals = {};   // {nom: qty}
+
+    function step(nom, idx, delta, max) {
+        const cur = totals[nom] || 0;
+        const next = Math.max(0, Math.min(max, cur + delta));
+        totals[nom] = next;
+
+        document.getElementById(`val-${idx}`).textContent = next;
+        document.getElementById(`inp-${idx}`).value = next;
+
+        const row = document.getElementById(`row-${idx}`);
+        if (next > 0) row.classList.add('has-qty');
+        else row.classList.remove('has-qty');
+
+        recalc();
+    }
+
+    function recalc() {
+        let total = 0;
+        for (const [nom, qty] of Object.entries(totals)) {
+            total += qty * (PRICES[nom] || 0);
+        }
+        const hasItems = Object.values(totals).some(q => q > 0);
+        document.getElementById('total-display').textContent = total.toLocaleString() + " so'm";
+        document.getElementById('submit-btn').disabled = !hasItems;
+    }
+
+    function setPay(el, val) {
+        document.querySelectorAll('.pay-btn').forEach(b => b.classList.remove('active'));
+        el.classList.add('active');
+        document.getElementById('pay-input').value = val;
+    }
+
+    function setFileLabel(input) {
+        const lbl = document.getElementById('file-label');
+        lbl.textContent = input.files[0] ? input.files[0].name : 'Rasm tanlash (ixtiyoriy)';
+    }
+</script>
 {% endblock %}

@@ -1,8 +1,8 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.contrib import messages
-from .models import Savdo, NasiyaTolov, User
+from .models import Savdo, NasiyaTolov, User, AmalLog
 from django.db.models import Sum
 import datetime as dt
 
@@ -10,56 +10,72 @@ import datetime as dt
 @login_required(login_url='login')
 def nasiya_savdolar_view(request):
     """Nasiya savdolar sahifasi"""
-    
+
     if request.user.type != 'ega':
         return redirect('main')
-    
+
     # Get all credit sales
     nasiya_savdolar = Savdo.objects.filter(st='nasiya').order_by('-vaqt_sana')
-    
+
     # Filter options
-    status_filter = request.GET.get('status', 'all')  # all, paid, unpaid
-    
+    status_filter = request.GET.get('status', 'all')  # all, paid, unpaid, overdue
+
     if status_filter == 'paid':
         nasiya_savdolar = nasiya_savdolar.filter(tulandi=True)
     elif status_filter == 'unpaid':
         nasiya_savdolar = nasiya_savdolar.filter(tulandi=False)
-    
+    elif status_filter == 'overdue':
+        chegara = timezone.now() - dt.timedelta(days=7)
+        nasiya_savdolar = nasiya_savdolar.filter(tulandi=False, vaqt_sana__lte=chegara)
+
     # Calculate statistics for each sale
     nasiya_list = []
     total_debt = 0
     total_paid_amount = 0
-    
+    overdue_count = 0
+    overdue_total_debt = 0
+
+    chegara = timezone.now() - dt.timedelta(days=7)
+
     for savdo in nasiya_savdolar:
-        # Get all payments for this sale
         payments = NasiyaTolov.objects.filter(savdo=savdo).order_by('-tolov_sanasi')
         total_payments = sum([p.tolov_summasi for p in payments])
-        
+
         remaining = (savdo.summa or 0) - total_payments
-        
+        is_fully_paid = remaining <= 0
+
+        # Overdue check
+        days_ago = (timezone.now() - savdo.vaqt_sana).days
+        is_overdue = (not is_fully_paid) and (savdo.vaqt_sana <= chegara)
+
         nasiya_list.append({
             'savdo': savdo,
             'payments': payments,
             'total_payments': total_payments,
             'remaining': remaining,
-            'is_fully_paid': remaining <= 0
+            'is_fully_paid': is_fully_paid,
+            'is_overdue': is_overdue,
+            'days_ago': days_ago,
         })
-        
+
         if remaining > 0:
             total_debt += remaining
-        
+            if is_overdue:
+                overdue_count += 1
+                overdue_total_debt += remaining
+
         total_paid_amount += total_payments
-    
+
     # Overall statistics
     total_nasiya_count = nasiya_savdolar.count()
     total_nasiya_amount = sum([s.summa or 0 for s in nasiya_savdolar])
     paid_count = nasiya_savdolar.filter(tulandi=True).count()
     unpaid_count = nasiya_savdolar.filter(tulandi=False).count()
-    
+
     context = {
         'nasiya_list': nasiya_list,
         'status_filter': status_filter,
-        
+
         # Statistics
         'total_nasiya_count': total_nasiya_count,
         'total_nasiya_amount': total_nasiya_amount,
@@ -67,8 +83,12 @@ def nasiya_savdolar_view(request):
         'total_paid_amount': total_paid_amount,
         'paid_count': paid_count,
         'unpaid_count': unpaid_count,
+
+        # Overdue
+        'overdue_count': overdue_count,
+        'overdue_total_debt': overdue_total_debt,
     }
-    
+
     return render(request, 'nasiya_savdolar.html', context)
 
 

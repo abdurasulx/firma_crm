@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="uz">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Savdo Cheki #{{ savdo.id }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f1f5f9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 30px 16px;
+        }
+
+        /* ─── SCREEN-ONLY controls ───────────────── */
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        .btn-print {
+            padding: 11px 28px;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
+        }
+
+        .btn-print:hover {
+            background: #059669;
+        }
+
+        .btn-back {
+            padding: 11px 22px;
+            background: white;
+            color: #374151;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* ─── RECEIPT CARD ───────────────────────── */
+        .receipt {
+            width: 100%;
+            max-width: 420px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.10);
+            overflow: hidden;
+        }
+
+        /* Header */
+        .receipt-header {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 28px 28px 24px;
+            text-align: center;
+        }
+
+        .receipt-header .logo {
+            font-size: 36px;
+            margin-bottom: 6px;
+        }
+
+        .receipt-header h1 {
+            font-size: 20px;
+            font-weight: 800;
+            margin-bottom: 2px;
+        }
+
+        .receipt-header .sub {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        /* Body */
+        .receipt-body {
+            padding: 24px 28px;
+        }
+
+        .chek-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 9px 0;
+            border-bottom: 1px dashed #e5e7eb;
+            font-size: 14px;
+        }
+
+        .chek-row:last-child {
+            border-bottom: none;
+        }
+
+        .chek-row .lbl {
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .chek-row .val {
+            font-weight: 700;
+            color: #1f2937;
+            text-align: right;
+        }
+
+        .divider {
+            border: none;
+            border-top: 2px dashed #e5e7eb;
+            margin: 16px 0;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 18px;
+            font-weight: 800;
+            padding: 12px 0 0;
+        }
+
+        .total-row .total-val {
+            color: #10b981;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .status-naqd {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .status-karta {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .status-nasiya {
+            background: #fef3c7;
+            color: #b45309;
+        }
+
+        /* Footer */
+        .receipt-footer {
+            background: #f9fafb;
+            border-top: 1px solid #f3f4f6;
+            padding: 16px 28px;
+            text-align: center;
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        /* ─── PRINT STYLES ───────────────────────── */
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .controls {
+                display: none !important;
+            }
+
+            .receipt {
+                max-width: 100%;
+                box-shadow: none;
+                border-radius: 0;
+            }
+
+            .receipt-header {
+                background: #10b981 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Controls (screen only) -->
+    <div class="controls">
+        <a href="javascript:history.back()" class="btn-back">← Orqaga</a>
+        <button class="btn-print" onclick="window.print()">🖨️ Chop Etish</button>
+    </div>
+
+    <!-- Receipt -->
+    <div class="receipt">
+        <!-- Header -->
+        <div class="receipt-header">
+            <div class="logo">🧾</div>
+            <h1>StockFirm</h1>
+            <div class="sub">Savdo Cheki &nbsp;·&nbsp; #{{ savdo.id }}</div>
+        </div>
+
+        <!-- Body -->
+        <div class="receipt-body">
+            <div class="chek-row">
+                <span class="lbl">Sana</span>
+                <span class="val">{{ savdo.vaqt_sana|date:"d.m.Y H:i" }}</span>
+            </div>
+            <div class="chek-row">
+                <span class="lbl">Mijoz (do'kon)</span>
+                <span class="val">{{ savdo.haridor_dukon.nomi }}</span>
+            </div>
+            <div class="chek-row">
+                <span class="lbl">Qabul qiluvchi</span>
+                <span class="val">{{ savdo.oluvchining_ismi }}</span>
+            </div>
+            <div class="chek-row">
+                <span class="lbl">Yetkazib beruvchi</span>
+                <span class="val">{{ savdo.yetkazib_beruvchi.tuliq_ismi }}</span>
+            </div>
+
+            <hr class="divider">
+
+            <div class="chek-row">
+                <span class="lbl">To'lov turi</span>
+                <span class="val">
+                    {% if savdo.st == 'naqd' %}
+                    <span class="status-badge status-naqd">💵 Naqd</span>
+                    {% elif savdo.st == 'karta' %}
+                    <span class="status-badge status-karta">💳 Karta</span>
+                    {% else %}
+                    <span class="status-badge status-nasiya">📋 Nasiya</span>
+                    {% endif %}
+                </span>
+            </div>
+            <div class="chek-row">
+                <span class="lbl">To'lov holati</span>
+                <span class="val">
+                    {% if savdo.tulandi %}
+                    <span style="color:#15803d;">✅ To'langan</span>
+                    {% else %}
+                    <span style="color:#b45309;">⏳ Kutilmoqda</span>
+                    {% endif %}
+                </span>
+            </div>
+
+            <hr class="divider">
+
+            <div class="total-row">
+                <span>Jami summa:</span>
+                <span class="total-val">{{ savdo.summa|default:0|floatformat:0 }} so'm</span>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="receipt-footer">
+            Ushbu chek StockFirm CRM tizimi orqali chiqarildi.<br>
+            {{ savdo.vaqt_sana|date:"d.m.Y H:i:s" }}
+        </div>
+    </div>
+
+</body>
+
+</html>

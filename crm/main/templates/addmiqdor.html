@@ -1,121 +1,213 @@
 {% extends 'pzbase.html' %}
 {% load static %}
 
-{% block title %}Miqdor Qo‘shish{% endblock %}
+{% block title %}Miqdor Qo'shish{% endblock %}
+{% block page_title %}Miqdor Qo'shish{% endblock %}
+{% block page_subtitle %}Ombor zaxirasiga yangi mahsulot miqdori kiriting{% endblock %}
+{% block nav_miqdor %}active{% endblock %}
+
+{% block extra_head %}
+<style>
+    .form-card {
+        background: var(--bg-card);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        max-width: 580px;
+        overflow: hidden;
+    }
+
+    .form-card-head {
+        background: linear-gradient(135deg, #10b981, #059669);
+        padding: 24px 28px;
+        color: white;
+    }
+
+    .form-card-head h2 {
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 4px;
+    }
+
+    .form-card-head p {
+        font-size: 13px;
+        opacity: 0.85;
+    }
+
+    .form-card-body {
+        padding: 28px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text-muted);
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1.5px solid var(--border);
+        border-radius: 10px;
+        font-size: 14px;
+        font-family: 'Inter', sans-serif;
+        color: var(--text-dark);
+        background: #fff;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        outline: none;
+        appearance: none;
+    }
+
+    .form-control:focus {
+        border-color: #10b981;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+    }
+
+    /* Image upload area */
+    .upload-area {
+        border: 2px dashed var(--border);
+        border-radius: 12px;
+        padding: 24px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        position: relative;
+    }
+
+    .upload-area:hover {
+        border-color: #10b981;
+        background: #f0fdf4;
+    }
+
+    .upload-area input[type="file"] {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        cursor: pointer;
+        width: 100%;
+        height: 100%;
+    }
+
+    .upload-icon {
+        font-size: 36px;
+        margin-bottom: 8px;
+        opacity: 0.5;
+    }
+
+    .upload-text {
+        font-size: 13px;
+        color: var(--text-muted);
+        font-weight: 500;
+    }
+
+    .upload-hint {
+        font-size: 11px;
+        color: var(--text-muted);
+        margin-top: 4px;
+        opacity: 0.7;
+    }
+
+    .preview-wrap {
+        margin-top: 14px;
+        display: none;
+    }
+
+    .preview-wrap img {
+        max-width: 160px;
+        border-radius: 10px;
+        border: 2px solid #a7f3d0;
+        display: block;
+        margin: 0 auto;
+    }
+
+    .btn-submit {
+        width: 100%;
+        padding: 14px;
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: 'Inter', sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(16, 185, 129, 0.35);
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<style>
-.form-container {
-    max-width: 600px;
-    margin: 30px auto;
-    background: #fff;
-    padding: 25px;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
+<div class="form-card">
+    <div class="form-card-head">
+        <h2><i class="fa-solid fa-plus-circle"></i> Miqdor Qo'shish</h2>
+        <p>Ishlab chiqarilgan mahsulot miqdorini zaxiraga kiriting</p>
+    </div>
+    <div class="form-card-body">
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
 
-.form-container h2 {
-    text-align: center;
-    color: #007acc;
-    margin-bottom: 20px;
-}
+            <div class="form-group">
+                <label for="mahsulot">Mahsulot</label>
+                <select name="mahsulot" id="mahsulot" class="form-control" required>
+                    {% for m in mahsulotlar %}
+                    <option value="{{ m.nomi }}">{{ m.nomi }} ({{ m.turi.nomi }})</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-.form-group {
-    margin-bottom: 15px;
-}
+            <div class="form-group">
+                <label for="miqdor">Qo'shiladigan Miqdor</label>
+                <input type="number" name="miqdor" id="miqdor" class="form-control" required min="0.01" step="0.01"
+                    placeholder="0.00">
+            </div>
 
-.form-group label {
-    display: block;
-    font-weight: bold;
-    margin-bottom: 6px;
-}
+            <div class="form-group">
+                <label>Rasm (ixtiyoriy)</label>
+                <div class="upload-area" id="uploadArea">
+                    <input type="file" name="rasm" id="rasm" accept="image/*" onchange="showPreview(event)">
+                    <div class="upload-icon">📷</div>
+                    <div class="upload-text">Rasm yuklash uchun bosing</div>
+                    <div class="upload-hint">JPG, PNG, WEBP — max 5MB</div>
+                </div>
+                <div class="preview-wrap" id="previewWrap">
+                    <img id="preview" src="" alt="preview">
+                </div>
+            </div>
 
-.form-group input,
-.form-group select {
-    width: 100%;
-    padding: 10px;
-    font-size: 15px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-}
-
-.preview-img {
-    display: block;
-    max-width: 150px;
-    margin: 10px auto;
-    border-radius: 6px;
-    border: 1px solid #ddd;
-}
-
-.submit-btn {
-    width: 100%;
-    padding: 12px;
-    background: #007acc;
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-.submit-btn:hover {
-    background: #005fa3;
-}
-</style>
-
-<div class="form-container">
-    <h2>Miqdor Qo‘shish</h2>
-    <form method="POST" enctype="multipart/form-data">
-        {% csrf_token %}
-        <div class="form-group">
-            <label for="mahsulot">Mahsulot tanlang</label>
-            <select name="mahsulot" id="mahsulot" required >
-                {% for m in mahsulotlar %}
-                    <option value="{{ m.nomi }}">{{ m.nomi }} ({{ m.turi }})</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label for="miqdor">Miqdor</label>
-            <input type="number" step="0.01" name="miqdor" id="miqdor" required placeholder="Miqdor kiriting">
-        </div>
-
-        <div class="form-group">
-            <label for="rasm">Rasm yuklash (ixtiyoriy)</label>
-            <input type="file" required name="rasm" id="rasm" accept="image/*" onchange="showPreview(event)">
-            <img id="preview" class="preview-img" style="display: none;">
-        </div>
-
-        <button type="submit" class="submit-btn">Qo‘shish</button>
-    </form>
+            <button type="submit" class="btn-submit">
+                <i class="fa-solid fa-check-circle"></i>
+                Qo'shish
+            </button>
+        </form>
+    </div>
 </div>
+{% endblock %}
 
+{% block extra_scripts %}
 <script>
-let mahsulotDict = {};
-
-
-    console.log("Barcha miqdorlar:", mahsulotDict);
-document.addEventListener('DOMContentLoaded', function () {
-    // Mahsulot IDlari asosida miqdorlar ro'yxati
-
-
-    // Select elementi
-    const select = document.getElementById("mahsulot");
-
-    // Hodisani ulaymiz
-    const tanlangan = select.value;
-
-    // Rasm preview funksiyasi (o'zi ishlayapti)
-    const fileInput = document.getElementById('rasm');
-    fileInput.addEventListener("change", function (event) {
+    function showPreview(event) {
+        const file = event.target.files[0];
+        if (!file) return;
         const preview = document.getElementById('preview');
-        preview.src = URL.createObjectURL(event.target.files[0]);
-        preview.style.display = 'block';
-    });
-});
-
+        const wrap = document.getElementById('previewWrap');
+        preview.src = URL.createObjectURL(file);
+        wrap.style.display = 'block';
+    }
 </script>
-
 {% endblock %}
