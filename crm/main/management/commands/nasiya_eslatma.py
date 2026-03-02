@@ -44,13 +44,21 @@ class Command(BaseCommand):
             haridor  = savdo.haridor_dukon.nomi if savdo.haridor_dukon else "Noma'lum"
             kun_otdi = (timezone.now() - savdo.vaqt_sana).days
 
-            # AmalLog ga yozish (actor_user=None chunki management command)
-            AmalLog.objects.create(
-                user=None,
-                amal_shifri=(
-                    f"nasiya_eslatma|{haridor}|{remaining:.0f}|{kun_otdi}_kun"
+            # AmalLog ga yozish — actor sifatida birinchi admin (ega) foydalaniladi
+            if not hasattr(self, '_admin_user'):
+                from main.models import User as CrmUser
+                try:
+                    self._admin_user = CrmUser.objects.filter(type='ega').first()
+                except Exception:
+                    self._admin_user = None
+
+            if self._admin_user:
+                AmalLog.objects.create(
+                    user=self._admin_user,
+                    amal_shifri=(
+                        f"nasiya_eslatma|{haridor}|{remaining:.0f}|{kun_otdi}_kun"
+                    )
                 )
-            )
 
             self.stdout.write(
                 self.style.WARNING(
