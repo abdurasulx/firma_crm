@@ -589,6 +589,13 @@
                                 <i class="fa-solid fa-chart-line"></i>
                             </a>
                             {% endif %}
+                            {% if x.type  ==  'pazanda' %}
+                            <a href="{% url 'pazanda_hisobot' x.username %}" class="action-btn"
+                                title="Hisobot ko'rish"
+                                style="background:#fef3c7; color:#d97706; border:1px solid #fde68a;">
+                                <i class="fa-solid fa-chart-line"></i>
+                            </a>
+                            {% endif %}
                             <a href="{% url 'edituser' x.username %}" class="action-btn edit" title="Tahrirlash">
                                 <i class="fa-solid fa-pen"></i>
                             </a>

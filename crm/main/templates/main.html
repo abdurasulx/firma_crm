@@ -432,8 +432,7 @@
         <h3 class="section-title">
             <i class="fa-solid fa-users-viewfinder"></i> So'nggi Hodimlar
             <span
-                style="background: #e5e7eb; padding: 4px 12px; border-radius: 6px; font-size: 14px; font-weight: 600;">{{
-                ishchilar_soni }} ta</span>
+                style="background: #e5e7eb; padding: 4px 12px; border-radius: 6px; font-size: 14px; font-weight: 600;">{{ ishchilar_soni }} ta</span>
         </h3>
         <a href="{% url 'hodimlar_list' %}" class="view-all-link">Barchasini ko'rish →</a>
     </div>
@@ -463,8 +462,7 @@
         <h3 class="section-title">
             📦 So'nggi Mahsulotlar
             <span
-                style="background: #e5e7eb; padding: 4px 12px; border-radius: 6px; font-size: 14px; font-weight: 600;">{{
-                msoni }} ta</span>
+                style="background: #e5e7eb; padding: 4px 12px; border-radius: 6px; font-size: 14px; font-weight: 600;">{{ msoni }} ta</span>
         </h3>
         <a href="{% url 'mahsulotlar_list' %}" class="view-all-link">Barchasini ko'rish →</a>
     </div>
@@ -497,78 +495,99 @@
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Sales Chart
+    // ── Haftalik Sotuvlar (Bar Chart) ────────────────────────────────────────
+    // Ma'lumotlar views.py dan keladi (oxirgi 7 kun, haqiqiy DB dan)
+    const weeklyLabels = {{ weekly_labels|safe }};
+    const weeklySoni   = {{ weekly_soni|safe }};     // savdolar soni
+    const weeklySumma  = {{ weekly_summa|safe }};    // savdolar summasi (so'm)
+
     const salesCtx = document.getElementById('salesChart').getContext('2d');
     new Chart(salesCtx, {
         type: 'bar',
         data: {
-            labels: ['Dush', 'Sesh', 'Chor', 'Pay', 'Jum', 'Shan', 'Yak'],
+            labels: weeklyLabels,
             datasets: [{
-                label: 'Sotuvlar',
-                data: [12, 19, 15, 25, 22, 30, {{ bsoni }}],
-            backgroundColor: 'rgba(16, 185, 129, 0.8)',
-            borderColor: 'rgba(16, 185, 129, 1)',
-            borderWidth: 2,
-            borderRadius: 8
-        }]
-    },
-        options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                display: false
-            }
+                label: 'Sotuvlar soni',
+                data: weeklySoni,
+                backgroundColor: 'rgba(16, 185, 129, 0.85)',
+                borderColor: 'rgba(16, 185, 129, 1)',
+                borderWidth: 2,
+                borderRadius: 8
+            }]
         },
-        scales: {
-            y: {
-                beginAtZero: true,
-                grid: {
-                    color: 'rgba(0, 0, 0, 0.05)'
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        afterLabel: function(ctx) {
+                            const summa = weeklySumma[ctx.dataIndex];
+                            return 'Summa: ' + summa.toLocaleString('uz-UZ') + ' so\'m';
+                        }
+                    }
                 }
             },
-            x: {
-                grid: {
-                    display: false
-                }
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1, precision: 0 },
+                    grid: { color: 'rgba(0, 0, 0, 0.05)' }
+                },
+                x: { grid: { display: false } }
             }
         }
-    }
     });
 
-    // Products Chart
+    // ── Mahsulotlar Statistikasi (Doughnut Chart) ────────────────────────────
+    // Ma'lumotlar views.py dan keladi (haqiqiy DB dan)
+    const donutData = [
+        {{ donut_zaxira }} ,
+        {{ donut_qaytarilgan }},
+        {{ donut_sotilgan }}
+        
+    ];
+
     const productsCtx = document.getElementById('productsChart').getContext('2d');
     new Chart(productsCtx, {
         type: 'doughnut',
         data: {
-            labels: ['Zaxirada', 'Sotilgan', 'Qaytarilgan'],
+            labels: ['Zaxirada (dona)', 'Sotilgan (oy)', 'Qaytarilgan'],
             datasets: [{
-                data: [{{ msoni }}, {{ bsoni }}, 2],
-        backgroundColor: [
-            'rgba(16, 185, 129, 0.8)',
-            'rgba(59, 130, 246, 0.8)',
-            'rgba(239, 68, 68, 0.8)'
-        ],
-        borderWidth: 0
-    }]
+                data: donutData,
+                backgroundColor: [
+                    'rgba(16, 185, 129, 0.85)',
+                    'rgba(59, 130, 246, 0.85)',
+                    'rgba(239, 68, 68, 0.85)'
+                ],
+                borderWidth: 0
+            }]
         },
         options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                position: 'right',
-                align: 'center',
-                labels: {
-                    boxWidth: 15,
-                    padding: 15,
-                    font: {
-                        size: 13
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    align: 'center',
+                    labels: {
+                        boxWidth: 15,
+                        padding: 15,
+                        font: { size: 13 }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            const val = ctx.parsed;
+                            const label = ctx.label || '';
+                            return ' ' + label + ': ' + val.toLocaleString('uz-UZ');
+                        }
                     }
                 }
             }
         }
-    }
     });
 </script>
 

@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.conf.urls.static import static
-from .views import login, main, add_haridor, profile_view, crtuser, editusr, sotish, seemahsulot, createmahsulot, deleteprdct, addmiqdor, add_yuklama, logout_view, check_new_deliveries, pz_sorov_tarixi, yetkazuvchi_hisobot
+from .views import login, main, add_haridor, profile_view, crtuser, editusr, sotish, seemahsulot, createmahsulot, deleteprdct, addmiqdor, add_yuklama, logout_view, check_new_deliveries, pz_sorov_tarixi, yetkazuvchi_hisobot, pazanda_hisobot
 from .hisobot_views import hisobotlar_view
 from .list_views import hodimlar_list, mahsulotlar_list
 from .nasiya_views import nasiya_savdolar_view, add_nasiya_payment
@@ -36,6 +36,7 @@ urlpatterns = [
     path('api/check-new-deliveries/', check_new_deliveries, name='api_check_deliveries'),
     path('pazanda/sorovlar/', pz_sorov_tarixi, name='pz_sorov_tarixi'),
     path('hisobot/yetkazuvchi/<str:username>/', yetkazuvchi_hisobot, name='yetkazuvchi_hisobot'),
+    path('hisobot/pazanda/<str:username>/', pazanda_hisobot, name='pazanda_hisobot'),
     path('amallar/', amallog_view, name='amallog'),
     path('savdo/<int:savdo_id>/chek/', savdo_chek, name='savdo_chek'),
     path('qaytarish/', qaytarish_view, name='qaytarish'),

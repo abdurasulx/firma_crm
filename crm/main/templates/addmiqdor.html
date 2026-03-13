@@ -17,7 +17,7 @@
     }
 
     .form-card-head {
-        background: linear-gradient(135deg, #10b981, #059669);
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
         padding: 24px 28px;
         color: white;
     }
@@ -66,8 +66,8 @@
     }
 
     .form-control:focus {
-        border-color: #10b981;
-        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
     }
 
     /* Image upload area */
@@ -82,8 +82,8 @@
     }
 
     .upload-area:hover {
-        border-color: #10b981;
-        background: #f0fdf4;
+        border-color: var(--primary);
+        background: var(--primary-light);
     }
 
     .upload-area input[type="file"] {
@@ -122,7 +122,7 @@
     .preview-wrap img {
         max-width: 160px;
         border-radius: 10px;
-        border: 2px solid #a7f3d0;
+        border: 2px solid var(--primary-light);
         display: block;
         margin: 0 auto;
     }
@@ -130,7 +130,7 @@
     .btn-submit {
         width: 100%;
         padding: 14px;
-        background: linear-gradient(135deg, #10b981, #059669);
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
         color: white;
         border: none;
         border-radius: 10px;
@@ -147,7 +147,7 @@
 
     .btn-submit:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(16, 185, 129, 0.35);
+        box-shadow: 0 8px 24px rgba(245, 158, 11, 0.35);
     }
 </style>
 {% endblock %}

@@ -27,11 +27,16 @@ def mahsulotlar_miqdori(mahstr):
             try:
                 miqdor = int(miqdor.strip())
                 mahsulot_obj = Mahsulot.objects.filter(nomi=nomi).first()
-                turi = mahsulot_obj.turi if mahsulot_obj else "noma'lum"
-                narx = mahsulot_obj.narxi if mahsulot_obj else 0
+                
+                if not mahsulot_obj:
+                    # Skip products that no longer exist in the system
+                    continue
+
+                turi = mahsulot_obj.turi
+                narx = mahsulot_obj.narxi
 
                 if nomi not in natija:
-                    natija[nomi] = new_yuklama(nomi, miqdor, turi,narx)
+                    natija[nomi] = new_yuklama(nomi, miqdor, turi, narx)
                 else:
                     natija[nomi].miqdor += miqdor
 
@@ -132,25 +137,27 @@ def sotishm(mahs,yt):
     ytyk=ytyk.split(',')
     natija={}
     for y in ytyk:
-        if y!='':
-            y=y.split(' ')
-            natija[y[0]]=int(y[1])
-    mahs=mahs.split(',')
-    # print(mahs)
+        if y.strip():
+            y_parts = y.strip().rsplit(' ', 1)
+            if len(y_parts) == 2:
+                natija[y_parts[0].strip()] = int(y_parts[1].strip())
     
-    for m in mahs:
-        if m!='':
-            n=m.split(' ')
-            # print(m[0])
-            if n[0] in  natija:
-                    
-                ci=natija[n[0]]
-                # print(ci,ci-int(n[1]))
-                natija[n[0]]=ci-int(n[1])
+    mahs_list = mahs.split(',')
+    
+    for m in mahs_list:
+        if m.strip():
+            n = m.strip().rsplit(' ', 2) # Name Quantity Price
+            if len(n) >= 2:
+                prod_nom = n[0].strip()
+                prod_qty = int(float(n[1].strip()))
+                if prod_nom in natija:
+                    natija[prod_nom] -= prod_qty
     sotl=''
     for i in natija:
-        if natija[i]>0:
-            sotl+=f'{i} {natija[i]},'
+        if natija[i] > 0:
+            # Clean up missing products: only keep if product still exists in Mahsulot table
+            if Mahsulot.objects.filter(nomi=i).exists():
+                sotl += f'{i} {natija[i]},'
 
 
     yt.mahsulotlar=sotl
@@ -191,13 +198,17 @@ def yetkazuvchi_mahsulot_filter(Sotuv):
         t2=''
         
         for i in sx:
-            
-            if i!='':
-                n=i.split(' ')
-                if n[0] not in t0:
-                    t0+=n[0]+' '
-                    t1+=n[0]+' '+n[1]+' '+str(Mahsulot.objects.get(nomi=n[0]).turi)+' '
-                    t2+=n[2]+' '
+            if i.strip():
+                n = i.strip().rsplit(' ', 2) # Name Quantity Price
+                if len(n) == 3:
+                    prod_nom = n[0].strip()
+                    if prod_nom not in t0:
+                        mahs_obj = Mahsulot.objects.filter(nomi=prod_nom).first()
+                        if not mahs_obj:
+                            continue # Skip missing products
+                        t0 += prod_nom + ' '
+                        t1 += prod_nom + ' ' + n[1] + ' ' + str(mahs_obj.turi) + ' '
+                        t2 += n[2] + ' '
         print(t0,t1,t2)
         ns=sotuv_new_form([t0,t1,t2],s)
          

@@ -2,11 +2,14 @@ from django.shortcuts import render, get_list_or_404, get_object_or_404
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout, get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages 
+from django.core.paginator import Paginator
 from django.utils import timezone
 from django.shortcuts import redirect
-from .models import HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri, Savdo, YuklamaSorov, MiqdorQoshish, HaridorDukon, AmalLog
+from .models import HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri, Savdo, YuklamaSorov, MiqdorQoshish, HaridorDukon, AmalLog, qaytarilgan_mahsulotlar
 from .functions import mahsulotlar_miqdori, makenewform, yuklama_maker, accptyuk, sotishm, sotuv_new_form ,yetkazuvchi_mahsulot_filter, get_bugungi_savdo_summ, add_spctoint
 import datetime as dt
+import json
+from django.db.models import Count, Sum
 
 
 
@@ -44,9 +47,10 @@ def main(request):
         now = timezone.localtime()
         today_start = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.min))
         today_end = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.max))
-        payload['sorovlar'] = YuklamaSorov.objects.filter(pazanda=Pazanda.objects.get(user=request.user),sana__range=(today_start, today_end)).all()
+        pz = Pazanda.objects.get(user=request.user)
+        payload['sorovlar'] = YuklamaSorov.objects.filter(pazanda=pz, mode='waiting').all()
         payload['zaxira_mahsulotlar']=Mahsulot.objects.all()
-        zapros=MiqdorQoshish.objects.filter(pazanda=Pazanda.objects.get(user=request.user),vaqt_sana__range=(today_start, today_end)).all()
+        zapros=MiqdorQoshish.objects.filter(pazanda=pz,vaqt_sana__range=(today_start, today_end)).all()
         payload['qms']=len(zapros)
         payload['kunlik_miqdorlar'] = zapros
         return render(request, 'pazanda_dashboard.html',payload)
@@ -63,11 +67,7 @@ def main(request):
             today_start = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.min))
             today_end = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.max))
 
-            reqyuklama = YuklamaSorov.objects.filter(
-                user=YetkazibBeruvchi.objects.get(user=request.user),
-                tasdiq=False,
-                mode='waiting',
-                sana__range=(today_start, today_end)).all()
+            reqyuklama = YuklamaSorov.objects.filter(user=YetkazibBeruvchi.objects.get(user=request.user), mode="waiting").all()
             # reqyuklama=YuklamaSorov.objects.filter(user=YetkazibBeruvchi.objects.get(user=request.user),tasdiq=False, mode='waiting',sana=dt.date.today() ).all()
             payload['reqyuklama'] = reqyuklama
             savdo=Savdo.objects.filter(yetkazib_beruvchi=YetkazibBeruvchi.objects.get(user=request.user),vaqt_sana__range=(today_start, today_end)).all()
@@ -112,11 +112,7 @@ def main(request):
             today_start = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.min))
             today_end = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.max))
 
-            reqyuklama = YuklamaSorov.objects.filter(
-                user=YetkazibBeruvchi.objects.get(user=request.user),
-                tasdiq=False,
-                mode='waiting',
-                sana__range=(today_start, today_end)).all()
+            reqyuklama = YuklamaSorov.objects.filter(user=YetkazibBeruvchi.objects.get(user=request.user), mode="waiting").all()
             savdo=Savdo.objects.filter(yetkazib_beruvchi=YetkazibBeruvchi.objects.get(user=request.user),vaqt_sana__range=(today_start, today_end)).all()
             payload['savdo'] = savdo
             # reqyuklama=YuklamaSorov.objects.filter(user=YetkazibBeruvchi.objects.get(user=request.user),tasdiq=False, mode='waiting',sana=dt.date.today() ).all()
@@ -144,19 +140,50 @@ def main(request):
 
     today_start = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.min))
     today_end = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.max))
-    bsavdo=Savdo.objects.filter(vaqt_sana__range=(today_start, today_end)).all()
-    
+    bsavdo = Savdo.objects.filter(vaqt_sana__range=(today_start, today_end)).all()
+    bsoni = bsavdo.count()
 
     # Oyning 1-kunining 00:00:00 va bugungi 23:59:59
     month_start = timezone.make_aware(dt.datetime.combine(now.replace(day=1).date(), dt.time.min))
     today_end = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.max))
 
     savdo = Savdo.objects.filter(vaqt_sana__range=(month_start, today_end)).all()
-    
 
     payload['bsavdo'] = bsavdo
-
     payload['savdo'] = savdo
+    payload['bsoni'] = bsoni
+
+    # ── Haftalik savdo (oxirgi 7 kun) ────────────────────────────────────────
+    UZ_DAYS = ['Dush', 'Sesh', 'Chor', 'Pay', 'Jum', 'Shan', 'Yak']
+    weekly_labels = []
+    weekly_soni = []    # savdolar soni
+    weekly_summa = []   # savdolar summasi (so'm)
+    for i in range(6, -1, -1):
+        day = now.date() - dt.timedelta(days=i)
+        day_start = timezone.make_aware(dt.datetime.combine(day, dt.time.min))
+        day_end   = timezone.make_aware(dt.datetime.combine(day, dt.time.max))
+        qs = Savdo.objects.filter(vaqt_sana__range=(day_start, day_end))
+        weekly_labels.append(UZ_DAYS[day.weekday()])
+        weekly_soni.append(qs.count())
+        weekly_summa.append(float(qs.aggregate(t=Sum('summa'))['t'] or 0))
+
+    payload['weekly_labels'] = json.dumps(weekly_labels, ensure_ascii=False)
+    payload['weekly_soni']   = json.dumps(weekly_soni)
+    payload['weekly_summa']  = json.dumps(weekly_summa)
+
+    # ── Mahsulotlar statistikasi (doughnut) ──────────────────────────────────
+    # Zaxirada: jami mahsulotlar soni (dona)
+    zaxira_miqdori = Mahsulot.objects.aggregate(t=Sum('miqdori'))['t'] or 0
+    # Sotilgan: oy davomida sotilgan savdolar soni
+    sotilgan_soni = Savdo.objects.filter(vaqt_sana__range=(month_start, today_end)).count()
+    # Qaytarilgan
+    qaytarilgan_soni = qaytarilgan_mahsulotlar.objects.count()
+   
+
+    payload['donut_zaxira'] = float(zaxira_miqdori)
+    payload['donut_sotilgan'] = float(sotilgan_soni)
+    payload['donut_qaytarilgan'] = float(qaytarilgan_soni)
+
     # Use Analytics Service
     stats = get_dashboard_stats()
     payload['usumma'] = add_spctoint(stats['total_sales_month'])
@@ -463,7 +490,10 @@ def sotish(request):
                 txt=''
                 summa=0
                 for s in sotilganlar:
-                    mxs=Mahsulot.objects.get(nomi=s[0])
+                    mxs = Mahsulot.objects.filter(nomi=s[0]).first()
+                    if not mxs:
+                        # Skip if product was deleted
+                        continue
                     txt+=f'{s[0]} {s[1]} {mxs.narxi},'
                     summa+=float(s[1])*float(mxs.narxi)
                 if turi=='nasiya':
@@ -616,40 +646,119 @@ def yetkazuvchi_hisobot(request, username):
     from_dt = timezone.make_aware(_dt.datetime.combine(from_date, _dt.time.min))
     to_dt   = timezone.make_aware(_dt.datetime.combine(to_date,   _dt.time.max))
 
-    savdolar = Savdo.objects.filter(
+    # Base queryset for current filters
+    savdolar_qs = Savdo.objects.filter(
         yetkazib_beruvchi=yb,
         vaqt_sana__range=(from_dt, to_dt)
-    ).order_by('-vaqt_sana')
+    )
 
-    # Today stats
+    # Filter by customer if provided
+    current_customer_id = request.GET.get('customer')
+    if current_customer_id:
+        savdolar_qs = savdolar_qs.filter(haridor_dukon_id=current_customer_id)
+
+    savdolar_qs = savdolar_qs.order_by('-vaqt_sana')
+
+    # Total sum for filtered period and customer (before pagination)
+    savdolar_jami = savdolar_qs.aggregate(t=DSum('summa'))['t'] or 0
+
+    # Pagination
+    paginator = Paginator(savdolar_qs, 20)  # 20 items per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    # Customers who have sales with this delivery person (for filter dropdown)
+    active_customers = HaridorDukon.objects.filter(savdo__yetkazib_beruvchi=yb).distinct()
+
+    # Stats
     today_start = timezone.make_aware(_dt.datetime.combine(now.date(), _dt.time.min))
-    today_end   = timezone.make_aware(_dt.datetime.combine(now.date(), _dt.time.max))
     month_start = timezone.make_aware(_dt.datetime.combine(now.date().replace(day=1), _dt.time.min))
 
-    bugun_savdo = Savdo.objects.filter(yetkazib_beruvchi=yb, vaqt_sana__range=(today_start, today_end)).aggregate(t=DSum('summa'))['t'] or 0
+    bugun_savdo = Savdo.objects.filter(yetkazib_beruvchi=yb, vaqt_sana__gte=today_start).aggregate(t=DSum('summa'))['t'] or 0
     oy_savdo    = Savdo.objects.filter(yetkazib_beruvchi=yb, vaqt_sana__gte=month_start).aggregate(t=DSum('summa'))['t'] or 0
 
     # Nasiya qarz
-    nasiya_savdolar = Savdo.objects.filter(yetkazib_beruvchi=yb, st='nasiya', tulandi=False)
-    nasiya_qarz = nasiya_savdolar.aggregate(t=DSum('summa'))['t'] or 0
+    nasiya_qarz = Savdo.objects.filter(yetkazib_beruvchi=yb, st='nasiya', tulandi=False).aggregate(t=DSum('summa'))['t'] or 0
 
-    # Savdolar jami for filter period
-    savdolar_jami = savdolar.aggregate(t=DSum('summa'))['t'] or 0
-
-    # Zaxira (legacy string parsed)
+    # Zaxira (legacy)
     from .functions import mahsulotlar_miqdori
     zaxira = mahsulotlar_miqdori(yb.mahsulotlar) or []
 
     context = {
         'yb': yb,
-        'savdolar': savdolar,
+        'page_obj': page_obj,
         'savdolar_jami': savdolar_jami,
-        'jami_savdo_soni': savdolar.count(),
+        'jami_savdo_soni': Savdo.objects.filter(yetkazib_beruvchi=yb).count(),
         'bugun_savdo': bugun_savdo,
         'oy_savdo': oy_savdo,
         'nasiya_qarz': nasiya_qarz,
         'zaxira': zaxira,
         'from_date': from_date.isoformat(),
         'to_date': to_date.isoformat(),
+        'active_customers': active_customers,
+        'current_customer_id': current_customer_id,
     }
     return render(request, 'yt_hisobot.html', context)
+
+
+@login_required(login_url='login')
+def pazanda_hisobot(request, username):
+    """Admin uchun: berilgan pazandaning (oshpaz) to'liq hisoboti."""
+    if request.user.type not in ('ega',):
+        return redirect('main')
+
+    target_user = get_object_or_404(User, username=username, type='pazanda')
+    pz = get_object_or_404(Pazanda, user=target_user)
+
+    from django.db.models import Sum as DSum
+    import datetime as _dt
+
+    now = timezone.localtime()
+
+    # Date filtering
+    from_date_str = request.GET.get('from')
+    to_date_str   = request.GET.get('to')
+
+    try:
+        from_date = _dt.date.fromisoformat(from_date_str) if from_date_str else now.date().replace(day=1)
+        to_date   = _dt.date.fromisoformat(to_date_str)   if to_date_str   else now.date()
+    except ValueError:
+        from_date = now.date().replace(day=1)
+        to_date   = now.date()
+
+    from_dt = timezone.make_aware(_dt.datetime.combine(from_date, _dt.time.min))
+    to_dt   = timezone.make_aware(_dt.datetime.combine(to_date,   _dt.time.max))
+
+    # Production (Miqdor Qoshish)
+    miqdorlar_qs = MiqdorQoshish.objects.filter(
+        pazanda=pz,
+        vaqt_sana__range=(from_dt, to_dt)
+    ).order_by('-vaqt_sana')
+
+    # Shipments (Yuklama Sorovlari)
+    yuklamalar_qs = YuklamaSorov.objects.filter(
+        pazanda=pz,
+        sana__range=(from_dt, to_dt)
+    ).order_by('-sana')
+
+    # Pagination for production (main table)
+    paginator = Paginator(miqdorlar_qs, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    # Stats
+    today_start = timezone.make_aware(_dt.datetime.combine(now.date(), _dt.time.min))
+    bugun_miqdor = MiqdorQoshish.objects.filter(pazanda=pz, vaqt_sana__gte=today_start).aggregate(t=DSum('miqdor'))['t'] or 0
+    bugun_yuklama = YuklamaSorov.objects.filter(pazanda=pz, sana__gte=today_start).aggregate(t=DSum('miqdor'))['t'] or 0
+    
+    context = {
+        'pz': pz,
+        'page_obj': page_obj,
+        'yuklamalar': yuklamalar_qs,
+        'bugun_miqdor': bugun_miqdor,
+        'bugun_yuklama': bugun_yuklama,
+        'from_date': from_date.isoformat(),
+        'to_date': to_date.isoformat(),
+    }
+
+    return render(request, 'pz_hisobot.html', context)

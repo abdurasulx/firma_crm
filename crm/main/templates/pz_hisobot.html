@@ -1,0 +1,387 @@
+{% extends 'egabase.html' %}
+{% load static %}
+
+{% block title %}{{ pz.user.tuliq_ismi }} - Hisoboti{% endblock %}
+
+{% block page_title %}Pazanda Hisoboti{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --primary: #f59e0b;
+        --primary-dark: #d97706;
+        --primary-light: #fef3c7;
+        --bg-card: #ffffff;
+        --text-dark: #0f172a;
+        --text-muted: #64748b;
+        --border: #e2e8f0;
+        --shadow: 0 4px 24px rgba(0, 0, 0, 0.07);
+        --radius: 16px;
+    }
+
+    .hero-card {
+        background: linear-gradient(135deg, var(--sidebar-bg), #1e293b);
+        border-radius: var(--radius);
+        padding: 40px;
+        color: white;
+        margin-bottom: 28px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .hero-card::after {
+        content: '👨‍🍳';
+        position: absolute;
+        right: -10px;
+        bottom: -20px;
+        font-size: 140px;
+        opacity: 0.08;
+        transform: rotate(-15deg);
+        pointer-events: none;
+    }
+
+    .hero-info h2 {
+        font-size: 32px;
+        font-weight: 800;
+        margin-bottom: 12px;
+        letter-spacing: -1px;
+        color: #ffffff;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .hero-info p {
+        opacity: 0.9;
+        font-size: 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #e2e8f0;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 24px;
+        margin-bottom: 32px;
+    }
+
+    .stat-card {
+        background: var(--bg-card);
+        padding: 28px;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        border: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 30px rgba(0,0,0,0.1);
+        border-color: var(--primary);
+    }
+
+    .stat-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        flex-shrink: 0;
+    }
+
+    .stat-details {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .stat-val {
+        font-size: 28px;
+        font-weight: 800;
+        color: var(--text-dark);
+        line-height: 1.2;
+    }
+
+    .stat-lab {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 4px;
+    }
+
+    /* Filters */
+    .filter-card {
+        background: var(--bg-card);
+        padding: 20px 24px;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        margin-bottom: 28px;
+        border: 1px solid var(--border);
+    }
+
+    .filter-form {
+        display: flex;
+        gap: 16px;
+        align-items: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .fg { flex: 1; min-width: 150px; }
+    .fg label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; }
+    .fc { width: 100%; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 10px; font-size: 13px; outline: none; transition: border-color 0.2s; }
+    .fc:focus { border-color: var(--primary); }
+
+    .btn-filter {
+        padding: 10px 24px;
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-filter:hover { background: var(--primary-dark); transform: translateY(-1px); }
+
+    /* Tables */
+    .section-card {
+        background: var(--bg-card);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        border: 1px solid var(--border);
+        overflow: hidden;
+        margin-bottom: 28px;
+    }
+
+    .section-head {
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #f9fafb;
+    }
+
+    .section-head h3 { font-size: 16px; font-weight: 700; color: var(--text-dark); display: flex; align-items: center; gap: 10px; }
+
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 14px 20px; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; border-bottom: 1px solid var(--border); }
+    td { padding: 14px 20px; font-size: 14px; border-bottom: 1px solid #f8fafc; color: var(--text-dark); }
+    .total-row { background: #f9fafb; font-weight: 700; }
+
+    .badge { padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; }
+    .badge-amber { background: #fffbeb; color: #d97706; }
+    .badge-green { background: #f0fdf4; color: #16a34a; }
+    .badge-blue  { background: #eff6ff; color: #2563eb; }
+
+    .view-btn {
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        background: white;
+        border: 1.5px solid var(--border);
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .view-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+    /* Modal */
+    .modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.85);
+        z-index: 1000;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        backdrop-filter: blur(5px);
+    }
+    .modal-content { max-width: 90%; max-height: 85vh; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); object-fit: contain; }
+    .modal-close { position: absolute; top: 20px; right: 20px; color: white; font-size: 32px; cursor: pointer; }
+
+    /* Pagination */
+    .pagination { display: flex; justify-content: center; align-items: center; gap: 12px; padding: 24px; background: #f9fafb; }
+    .page-link { padding: 8px 18px; border-radius: 10px; background: #fff; border: 1.5px solid var(--border); color: var(--text-dark); text-decoration: none; font-size: 13px; font-weight: 700; }
+    .page-link:hover:not(.disabled) { border-color: var(--primary); color: var(--primary); }
+    .page-link.disabled { opacity: 0.5; pointer-events: none; }
+</style>
+
+<div class="hero-card">
+    <div class="hero-info">
+        <h2>{{ pz.user.tuliq_ismi }}</h2>
+        <p><i class="fa-solid fa-mortar-pestle"></i> Pazanda • Ishlab chiqarish va yuklamalar hisoboti</p>
+    </div>
+    <div class="hero-action">
+        <img src="{% if pz.rasmi %}{{ pz.rasmi.url }}{% else %}{% static 'images/default_avatar.jpg' %}{% endif %}" 
+             style="width:80px;height:80px;border-radius:50%;border:3px solid var(--primary);object-fit:cover;">
+    </div>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#fff7ed;color:#ea580c;box-shadow: 0 4px 12px rgba(234, 88, 12, 0.2);"><i class="fa-solid fa-mortar-pestle"></i></div>
+        <div class="stat-details">
+            <div class="stat-val">{{ bugun_miqdor|floatformat:0 }} kishi/dona</div>
+            <div class="stat-lab">Bugun tayyorladi</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#f0fdf4;color:#16a34a;box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2);"><i class="fa-solid fa-truck-ramp-box"></i></div>
+        <div class="stat-details">
+            <div class="stat-val">{{ bugun_yuklama|floatformat:0 }} dona</div>
+            <div class="stat-lab">Bugun yukladi</div>
+        </div>
+    </div>
+</div>
+
+<div class="filter-card">
+    <form class="filter-form" method="GET">
+        <div class="fg">
+            <label>Dan (sana)</label>
+            <input type="date" name="from" class="fc" value="{{ from_date }}">
+        </div>
+        <div class="fg">
+            <label>Gacha (sana)</label>
+            <input type="date" name="to" class="fc" value="{{ to_date }}">
+        </div>
+        <button type="submit" class="btn-filter">
+            <i class="fa-solid fa-magnifying-glass"></i> Filter
+        </button>
+    </form>
+</div>
+
+<!-- Ishlab chiqarish (Miqdor qo'shish) -->
+<div class="section-card">
+    <div class="section-head">
+        <h3><i class="fa-solid fa-mortar-pestle" style="color:var(--primary);"></i> Ishlab chiqarish tarixi</h3>
+        <span class="badge badge-amber">{{ page_obj.paginator.count }} ta</span>
+    </div>
+    <div class="table-wrap">
+        {% if page_obj %}
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Sana</th>
+                    <th>Mahsulot</th>
+                    <th>Miqdor</th>
+                    <th>Rasm</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in page_obj %}
+                <tr>
+                    <td style="color:var(--text-muted);">{{ forloop.counter }}</td>
+                    <td>{{ m.vaqt_sana|date:"d.m.Y, H:i" }}</td>
+                    <td><strong>{{ m.mahsulot.nomi }}</strong></td>
+                    <td><span class="badge badge-green">{{ m.miqdor }}</span></td>
+                    <td>
+                        {% if m.rasmi %}
+                        <button class="view-btn" onclick="openImageModal('{{ m.rasmi.url }}')">
+                            <i class="fa-solid fa-image"></i> Ko'rish
+                        </button>
+                        {% else %}
+                        <span style="color:var(--text-muted);font-style:italic;font-size:11px;">Rasm yo'q</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div style="padding:40px; text-align:center; color:var(--text-muted);">Ushbu davrda ma'lumot yo'q</div>
+        {% endif %}
+    </div>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="pagination">
+        {% if page_obj.has_previous %}
+        <a href="?from={{ from_date }}&to={{ to_date }}&page={{ page_obj.previous_page_number }}" class="page-link">Oldingi</a>
+        {% endif %}
+        <span style="font-size:13px; font-weight:700;">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+        <a href="?from={{ from_date }}&to={{ to_date }}&page={{ page_obj.next_page_number }}" class="page-link">Keyingi</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- Yuklama so'rovlari -->
+<div class="section-card">
+    <div class="section-head">
+        <h3><i class="fa-solid fa-truck-fast" style="color:#2563eb;"></i> Yuklama so'rovlari</h3>
+        <span class="badge badge-blue">{{ yuklamalar|length }} ta</span>
+    </div>
+    <div class="table-wrap">
+        {% if yuklamalar %}
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Sana</th>
+                    <th>Yetkazuvchi</th>
+                    <th>Mahsulot</th>
+                    <th>Miqdor</th>
+                    <th>Holati</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for y in yuklamalar %}
+                <tr>
+                    <td style="color:var(--text-muted);">{{ forloop.counter }}</td>
+                    <td>{{ y.sana|date:"d.m.Y, H:i" }}</td>
+                    <td>{{ y.user.user.tuliq_ismi }}</td>
+                    <td><strong>{{ y.mahsulot.nomi }}</strong></td>
+                    <td>{{ y.miqdor }}</td>
+                    <td>
+                        {% if y.mode == 'done' %}<span class="badge badge-green">Tayyor</span>
+                        {% elif y.mode == 'waiting' %}<span class="badge badge-amber">Kutilmoqda</span>
+                        {% else %}<span class="badge badge-blue">Rad etildi</span>{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div style="padding:40px; text-align:center; color:var(--text-muted);">Yuklama so'rovlari mavjud emas</div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Image Modal -->
+<div id="imageModal" class="modal" onclick="closeImageModal()">
+    <span class="modal-close">&times;</span>
+    <img id="modalImg" class="modal-content" src="">
+</div>
+
+<script>
+    function openImageModal(url) {
+        document.getElementById('modalImg').src = url;
+        document.getElementById('imageModal').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+    function closeImageModal() {
+        document.getElementById('imageModal').style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+</script>
+{% endblock %}

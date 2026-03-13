@@ -335,6 +335,90 @@
         font-size: 15px;
         font-weight: 700;
     }
+
+    /* --- Receipt Modal --- */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 23, 42, 0.7);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        z-index: 2000;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .modal-container {
+        background: white;
+        border-radius: 24px;
+        max-width: 600px;
+        width: 100%;
+        position: relative;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        overflow: hidden;
+        animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .modal-close {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        width: 40px;
+        height: 40px;
+        background: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 10;
+        border: 1px solid var(--bdr);
+        color: var(--t-dark);
+        font-size: 20px;
+        transition: all 0.2s;
+    }
+
+    .modal-close:hover {
+        background: #f3f4f6;
+        transform: rotate(90deg);
+    }
+
+    .modal-body {
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .modal-body img {
+        max-width: 100%;
+        max-height: 80vh;
+        object-fit: contain;
+    }
+
+    .modal-footer {
+        padding: 16px;
+        width: 100%;
+        border-top: 1px solid var(--bdr);
+        text-align: center;
+        background: #f8fafc;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+        from { transform: translateY(20px) scale(0.95); opacity: 0; }
+        to { transform: translateY(0) scale(1); opacity: 1; }
+    }
 </style>
 
 <div class="page-header">
@@ -524,6 +608,7 @@
                     <th>Summa</th>
                     <th>To'lov</th>
                     <th>Holat</th>
+                    <th>Chek</th>
                 </tr>
             </thead>
             <tbody>
@@ -549,10 +634,19 @@
                         <span class="badge danger">❌</span>
                         {% endif %}
                     </td>
+                    <td>
+                        {% if savdo.smr %}
+                        <a href="javascript:void(0)" onclick="showReceipt('{{ savdo.smr.url }}')" class="detail-link" title="Chekni ko'rish">
+                            🖼️ Ko'rish
+                        </a>
+                        {% else %}
+                        <span class="badge danger" style="opacity: 0.5;">Yo'q</span>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6" class="empty-state">Savdolar topilmadi</td>
+                    <td colspan="7" class="empty-state">Savdolar topilmadi</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -588,6 +682,42 @@
         if (empId) url += `&employee=${empId}`;
         window.location.href = url;
     }
+
+    /* --- Modal logic --- */
+    function showReceipt(url) {
+        const modal = document.getElementById('receipt-modal');
+        const img = document.getElementById('receipt-img');
+        img.src = url;
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden'; // Stop scrolling
+    }
+
+    function closeReceipt() {
+        const modal = document.getElementById('receipt-modal');
+        modal.style.display = 'none';
+        document.body.style.overflow = ''; // Restore scrolling
+    }
+
+    // Close on backdrop click
+    window.onclick = function(event) {
+        const modal = document.getElementById('receipt-modal');
+        if (event.target == modal) {
+            closeReceipt();
+        }
+    }
 </script>
+
+<!-- Receipt Modal -->
+<div id="receipt-modal" class="modal-overlay">
+    <div class="modal-container">
+        <div class="modal-close" onclick="closeReceipt()">×</div>
+        <div class="modal-body">
+            <img id="receipt-img" src="" alt="Receipt">
+        </div>
+        <div class="modal-footer">
+            <span class="stat-label">Savdo Cheki</span>
+        </div>
+    </div>
+</div>
 
 {% endblock %}
