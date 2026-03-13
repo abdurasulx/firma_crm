@@ -1,7 +1,11 @@
-Django>=5.1.0,<5.2.0
-Pillow>=10.0.0
-python-telegram-bot>=20.0
+Django==5.1.15
+Pillow==12.1.0
+python-telegram-bot==21.10
 
 # Analytics dependencies for demand forecasting
-pandas>=2.0.0
-numpy>=1.24.0
+pandas==3.0.1
+numpy==2.4.2
+sqlparse==0.5.5
+python-dateutil==2.9.0.post0
+six==1.17.0
+asgiref==3.11.0
