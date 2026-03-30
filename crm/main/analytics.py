@@ -17,6 +17,7 @@ from main.services import (
     get_all_products
 )
 from main.models import Savdo, Mahsulot
+from main.plan_utils import company_has_access
 
 
 @require_http_methods(["GET"])
@@ -58,6 +59,10 @@ def product_demand_api(request):
         }
     """
     product_name = request.GET.get('product')
+    
+    # Access control: check plan and payment
+    if not company_has_access(request.company) or not getattr(request, 'has_analytics', False):
+        return JsonResponse({'error': 'Analytics is not available in your plan'}, status=403)
     
     if not product_name:
         return JsonResponse({
@@ -118,6 +123,10 @@ def products_list_api(request):
         }
     """
     try:
+        # Access control: check plan and payment
+        if not company_has_access(request.company) or not getattr(request, 'has_analytics', False):
+            return JsonResponse({'error': 'Analytics is not available in your plan'}, status=403)
+        
         products = get_all_products(company=request.company)
         
         return JsonResponse({
@@ -151,6 +160,10 @@ def shop_recommendations_api(request):
     """
     product_name = request.GET.get('product')
     limit = request.GET.get('limit')
+    
+    # Access control: check plan and payment
+    if not company_has_access(request.company) or not getattr(request, 'has_analytics', False):
+        return JsonResponse({'error': 'Analytics is not available in your plan'}, status=403)
     
     if not product_name:
         return JsonResponse({
@@ -189,6 +202,10 @@ def top_products_api(request):
         limit (optional): nechtasini qaytarish (default: 8)
     """
     try:
+        # Access control: check plan and payment
+        if not company_has_access(request.company) or not getattr(request, 'has_analytics', False):
+            return JsonResponse({'error': 'Analytics is not available in your plan'}, status=403)
+        
         days  = int(request.GET.get('days',  30))
         limit = int(request.GET.get('limit', 8))
 

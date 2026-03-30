@@ -26,7 +26,7 @@ def approve_miqdor_qoshish_service(request_id, actor):
     if req.tasdiqlangan:
         return False, "Ushbu ariza allaqachon tasdiqlangan."
 
-    mahsulot = req.mahsulot
+    mahsulot = Mahsulot.objects.select_for_update().get(id=req.mahsulot_id)
     old_qty = mahsulot.miqdori
     new_qty = old_qty + req.miqdor
 
@@ -50,7 +50,8 @@ def approve_yuklama_sorov_service(request_id, actor):
     if req.tasdiq:
         return False, "Ushbu so'rov allaqachon bajarilgan."
 
-    mahsulot = req.mahsulot
+    # Lock the product to prevent race conditions
+    mahsulot = Mahsulot.objects.select_for_update().get(id=req.mahsulot_id)
     if mahsulot.miqdori < req.miqdor:
         return False, "Omborda yetarli mahsulot mavjud emas."
 

@@ -313,7 +313,13 @@ def approve_plan_request(request, request_id):
     plan_request = get_object_or_404(PlanRequest, id=request_id)
     company = plan_request.company
     
-    if plan_request.is_custom:
+    if plan_request.is_trial:
+        company.is_on_trial = True
+        company.trial_expires_at = timezone.now() + timedelta(days=30)
+        company.next_payment_date = company.trial_expires_at
+        company.has_used_trial = True
+        company.payment_status = 'paid' # Grant access during trial
+    elif plan_request.is_custom:
         company.is_custom_plan = True
         company.plan = None
         company.custom_max_users = plan_request.custom_max_users
@@ -325,14 +331,24 @@ def approve_plan_request(request, request_id):
     else:
         company.plan = plan_request.plan
         company.is_custom_plan = False
-        # Reset custom fields just in case
+        # Reset ALL custom fields to prevent stale data
         company.custom_max_users = 0
+        company.custom_has_telegram_bot = False
+        company.custom_has_analytics = False
+        company.custom_has_map = False
+        company.custom_backup_type = 'none'
         company.custom_price = 0
     
-    # End trial automatically since they just got onto a paid plan
-    company.is_on_trial = False
-    company.trial_expires_at = None
-    company.next_payment_date = timezone.now()
+    if not plan_request.is_trial:
+        # Set initial payment status to unpaid
+        company.payment_status = 'unpaid'
+        # Start the 5-day grace period
+        company.next_payment_date = timezone.now() + timedelta(days=5)
+        
+        # Trial feature is disabled for normal plan upgrades
+        company.is_on_trial = False
+        company.has_used_trial = True # Mark as used so it never appears
+        company.trial_expires_at = None
     
     company.save()
     
@@ -409,12 +425,6 @@ def update_billing_status(request, company_id):
         elif action == 'mark_unpaid':
             company.payment_status = 'unpaid'
             messages.warning(request, f"⚠️ {company.name} to'lovi 'to'lanmagan' deb belgilandi.")
-            
-        elif action == 'end_trial':
-            company.is_on_trial = False
-            company.trial_expires_at = None
-            company.next_payment_date = timezone.now()
-            messages.success(request, f"⏳ {company.name} uchun sinov muddati tugatildi. Keyingi to'lov sanasi bugundan hisoblanadi.")
             
         company.save()
         

@@ -6,6 +6,7 @@ from django.utils import timezone
 from django.conf import settings
 from .models import Company, Plan
 from .backup_utils import generate_backup, restore_backup, get_backup_dates
+from .plan_utils import company_has_access
 import datetime
 
 @login_required(login_url='login')
@@ -19,6 +20,11 @@ def prepare_backup_page(request):
         return redirect('main')
     
     company = request.company
+    
+    # To'lov holatini tekshirish
+    if not company_has_access(company):
+        messages.warning(request, "Zaxira nusxasini yuklab olish uchun to'lov amalga oshirilgan bo'lishi kerak.")
+        return redirect('main')
     
     # Backup turi va ruxsatini tekshirish
     backup_type = 'none'
@@ -49,6 +55,11 @@ def download_backup(request):
         return redirect('main')
     
     company = request.company
+    
+    # To'lov holatini tekshirish
+    if not company_has_access(company):
+        messages.warning(request, "Zaxira nusxasini yuklab olish uchun to'lov amalga oshirilgan bo'lishi kerak.")
+        return redirect('main')
     
     # Backup turi va ruxsatini tekshirish
     backup_type = 'none'
@@ -102,6 +113,13 @@ def restore_view(request):
     """Backupdan ma'lumotlarni tiklash sahifasi"""
     if request.user.type != 'ega':
         messages.error(request, "Faqat do'kon egasi ma'lumotlarni tiklay oladi.")
+        return redirect('main')
+    
+    company = request.company
+    
+    # To'lov holatini tekshirish (sinov muddatida restore mumkin emas)
+    if not company_has_access(company) or company.is_on_trial:
+        messages.warning(request, "Ma'lumotlarni tiklash uchun to'lov amalga oshirilgan bo'lishi kerak (Sinov muddatida ruxsat berilmagan).")
         return redirect('main')
     
     context = {}

@@ -47,7 +47,7 @@ class Company(models.Model):
         ('paid', "To'langan"),
         ('unpaid', "To'lanmagan")
     )
-    payment_status = models.CharField(max_length=20, choices=PAYMENT_CHOICES, default='paid')
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_CHOICES, default='unpaid')
     next_payment_date = models.DateTimeField(null=True, blank=True)
     
     
@@ -56,6 +56,7 @@ class Company(models.Model):
     setup_expires_at = models.DateTimeField(null=True, blank=True)
     is_on_trial = models.BooleanField(default=False)
     trial_expires_at = models.DateTimeField(null=True, blank=True)
+    has_used_trial = models.BooleanField(default=False)
     
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -78,6 +79,8 @@ class PlanRequest(models.Model):
     custom_has_map = models.BooleanField(default=False)
     custom_backup_type = models.CharField(max_length=20, choices=BACKUP_CHOICES, default='none')
     custom_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    
+    is_trial = models.BooleanField(default=False)
     
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -247,6 +250,9 @@ class Savdo(models.Model):
     summa=models.FloatField(null=True, blank=True)
     tulandi = models.BooleanField(default=False)
     tasdiq_kutilmoqda = models.BooleanField(default=False)
+    # Sotuvchining lokatsiyasi
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.haridor_dukon.nomi} - {self.oluvchining_ismi}"
@@ -263,17 +269,22 @@ class Savdo(models.Model):
         # Telegram Notification Logic
         if self.tulandi and (is_new or old_status == False):
             try:
-                from .bot_logic import send_telegram_notification
-                owner = User.objects.filter(company=self.company, type='ega').first()
-                if owner and owner.tg_id:
-                    msg = (
-                        f"💰 <b>Yangi to'lov tasdiqlandi!</b>\n\n"
-                        f"🏢 Do'kon: {self.haridor_dukon.nomi}\n"
-                        f"👤 Mashul: {self.yetkazib_beruvchi.tuliq_ismi}\n"
-                        f"💵 Summa: {self.summa:,.0f} so'm\n"
-                        f"📅 Vaqt: {self.vaqt_sana.strftime('%d.%m.%Y %H:%M') if self.vaqt_sana else 'Hozir'}"
-                    )
-                    send_telegram_notification(owner.tg_id, msg)
+                # Check if company has telegram bot access
+                from .plan_utils import company_has_access, get_feature_flags
+                if company_has_access(self.company):
+                    flags = get_feature_flags(self.company)
+                    if flags['has_telegram_bot']:
+                        from .bot_logic import send_telegram_notification
+                        owner = User.objects.filter(company=self.company, type='ega').first()
+                        if owner and owner.tg_id:
+                            msg = (
+                                f"💰 <b>Yangi to'lov tasdiqlandi!</b>\n\n"
+                                f"🏢 Do'kon: {self.haridor_dukon.nomi}\n"
+                                f"👤 Mashul: {self.yetkazib_beruvchi.tuliq_ismi}\n"
+                                f"💵 Summa: {self.summa:,.0f} so'm\n"
+                                f"📅 Vaqt: {self.vaqt_sana.strftime('%d.%m.%Y %H:%M') if self.vaqt_sana else 'Hozir'}"
+                            )
+                            send_telegram_notification(owner.tg_id, msg)
             except Exception as e:
                 print(f"Telegram Notification Error: {e}")
 
@@ -375,3 +386,30 @@ class StockHistory(models.Model):
 
     def __str__(self):
         return f"{self.event_type} - {self.mahsulot.nomi} ({self.delta})"
+
+
+# --- CLICK TRANSACTION MODEL ---
+class ClickTransaction(models.Model):
+    STATUS_CHOICES = (
+        ('processing', 'Jarayonda'),
+        ('paid', 'To\'langan'),
+        ('canceled', 'Bekor qilingan'),
+        ('error', 'Xatolik'),
+    )
+    click_trans_id = models.CharField(max_length=255)
+    merchant_trans_id = models.CharField(max_length=255)
+    company = models.ForeignKey('Company', on_delete=models.CASCADE, related_name='click_transactions')
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    action = models.IntegerField(default=0)
+    sign_time = models.CharField(max_length=255)
+    sign_string = models.CharField(max_length=255, blank=True, null=True)
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='processing')
+    
+    create_time = models.DateTimeField(auto_now_add=True)
+    perform_time = models.DateTimeField(null=True, blank=True)
+    cancel_time = models.DateTimeField(null=True, blank=True)
+    error_reason = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"ClickTrans {self.click_trans_id} - {self.company.name} - {self.amount}"

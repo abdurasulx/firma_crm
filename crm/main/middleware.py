@@ -7,9 +7,9 @@ class CompanyMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        # Admin panel and Super Admin dashboard should always be accessible via project ROOT_URLCONF
+        # Admin panel, Super Admin, and API webhooks should always be accessible via project ROOT_URLCONF
         path = request.path.strip('/')
-        if path.startswith('admin_panel') or path.startswith('super-admin'):
+        if path.startswith('admin_panel') or path.startswith('super-admin') or path.startswith('api/click'):
             return self.get_response(request)
         
         host = request.get_host().split(':')[0]
@@ -56,12 +56,13 @@ class CompanyMiddleware:
                 
                 # 2. Trial Expiration Check
                 if company.is_on_trial and company.trial_expires_at and now > company.trial_expires_at:
-                    if not company.plan:
+                    # Trial tugadi — doimo is_on_trial ni False qilish
+                    company.is_on_trial = False
+                    company.trial_expires_at = None
+                    if not company.plan and not company.is_custom_plan:
+                        # Agar hech qanday tarif yo'q bo'lsa — firmani deaktiv qilish
                         company.is_active = False
-                        company.is_on_trial = False
-                        company.trial_expires_at = None
-                        company.trial_expires_at = None
-                        company.save()
+                    company.save()
                         
                 # 3. Grace Period Expiration Check (Unpaid past 3 days)
                 from datetime import timedelta

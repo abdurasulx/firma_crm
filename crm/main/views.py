@@ -8,6 +8,7 @@ from django.utils import timezone
 from django.shortcuts import redirect
 from .models import BACKUP_CHOICES, Plan, HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri, Savdo, YuklamaSorov, MiqdorQoshish, HaridorDukon, AmalLog, qaytarilgan_mahsulotlar, PlanRequest
 from .functions import mahsulotlar_miqdori, makenewform, yuklama_maker, accptyuk, sotishm, sotuv_new_form ,yetkazuvchi_mahsulot_filter, get_bugungi_savdo_summ, add_spctoint
+from .plan_utils import company_has_access
 import datetime as dt
 import json
 from django.db.models import Count, Sum
@@ -163,36 +164,6 @@ def login(request):
 
     return render(request, 'login.html',data)
 
-@login_required(login_url='login')
-def activate_trial(request):
-    if request.user.type != 'ega':
-        messages.error(request, "Faqat firma egasi sinov muddatini yoqa oladi.")
-        return redirect('main')
-    
-    company = request.company
-    if company.is_on_trial:
-        messages.info(request, "Sinov muddati allaqachon yoqilgan.")
-        return redirect('main')
-    
-    if company.plan and company.plan.price > 0:
-        messages.warning(request, "Sizda allaqachon pullik tarif faol.")
-        return redirect('main')
-
-    # 10-day limit check
-    now = timezone.now()
-    days_since_creation = (now - company.created_at).days
-    
-    if days_since_creation > 10:
-        messages.error(request, "Sinov muddatini faqat ro'yxatdan o'tganingizdan so'ng 10 kun ichida yoqishingiz mumkin. Iltimos, admin bilan bog'laning.")
-        return redirect('main')
-    
-    # Activate trial
-    company.is_on_trial = True
-    company.trial_expires_at = now + timezone.timedelta(days=30)
-    company.save()
-    
-    messages.success(request, "Sinov muddati 30 kunga muvaffaqiyatli yoqildi!")
-    return redirect('main')
 
 @login_required(login_url='login')
 def select_plan(request, plan_id):
@@ -275,6 +246,37 @@ def select_custom_plan(request):
     )
 
     messages.success(request, "Maxsus tarif uchun so'rov yuborildi. Admin tasdiqlaganidan so'ng faollashadi.")
+    return redirect('main')
+
+@login_required(login_url='login')
+def request_trial(request):
+    company = request.company
+    if request.user.type != 'ega':
+        messages.error(request, "Faqat do'kon egasi sinov muddatini so'rashi mumkin.")
+        return redirect('main')
+    
+    if company.has_used_trial:
+        messages.error(request, "Siz allaqachon sinov muddatidan foydalanganiz.")
+        return redirect('main')
+    
+    # Check if more than 10 days since creation
+    from django.utils import timezone
+    from datetime import timedelta
+    if company.created_at + timedelta(days=10) < timezone.now():
+        messages.error(request, "Sinov muddatini so'rash vaqti tugagan (ro'yxatdan o'tgandan keyin 10 kun ichida ruxsat beriladi).")
+        return redirect('main')
+    
+    # Check if already has a pending trial request
+    if PlanRequest.objects.filter(company=company, is_trial=True, status='pending').exists():
+        messages.info(request, "Sizning sinov muddati uchun so'rovingiz ko'rib chiqilmoqda.")
+        return redirect('main')
+        
+    PlanRequest.objects.create(
+        company=company,
+        is_trial=True,
+        status='pending'
+    )
+    messages.success(request, "Sinov muddati uchun so'rov yuborildi. Tez orada tasdiqlanadi.")
     return redirect('main')
 
 @login_required(login_url='login')
@@ -397,6 +399,17 @@ def main(request):
     today_end = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.max))
     bsavdo = Savdo.objects.filter(company=request.company, vaqt_sana__range=(today_start, today_end)).all()
     bsoni = bsavdo.count()
+
+    # Trial eligibility check
+    from datetime import timedelta
+    can_request_trial = False
+    if not request.company.has_used_trial and (request.company.created_at + timedelta(days=10) >= timezone.now()):
+        # Check if already pending
+        if not PlanRequest.objects.filter(company=request.company, is_trial=True, status='pending').exists():
+            can_request_trial = True
+    
+    payload['can_request_trial'] = can_request_trial
+    payload['trial_pending'] = PlanRequest.objects.filter(company=request.company, is_trial=True, status='pending').exists()
 
     # Oyning 1-kunining 00:00:00 va bugungi 23:59:59
     month_start = timezone.make_aware(dt.datetime.combine(now.replace(day=1).date(), dt.time.min))
@@ -538,6 +551,7 @@ def crtuser(request):
         # Check plan limit
         company = request.user.company
         if company:
+
             # Get max_users from custom plan or standard plan
             if company.is_custom_plan:
                 max_users = company.custom_max_users
@@ -551,7 +565,7 @@ def crtuser(request):
                 current_users_count = User.objects.filter(company=company).count()
                 if current_users_count >= max_users:
                     messages.error(request, f"Siz tanlagan tarif bo'yicha maksimal foydalanuvchilar soni ({max_users}) ga yetgan. Qo'shish uchun tarifni yangilang.")
-                    return render(request, 'useryaratish.html', request.POST)
+                    return render(request, 'useryaratish.html', request.POST.dict())
 
         user, message = create_user_service(
             username=request.POST.get('username'),
@@ -569,7 +583,7 @@ def crtuser(request):
             return redirect('hodimlar_list')
         else:
             messages.error(request, message)
-            return render(request, 'useryaratish.html', request.POST)
+            return render(request, 'useryaratish.html', request.POST.dict())
 
     return render(request, 'useryaratish.html')
 
@@ -700,10 +714,17 @@ def deleteprdct(request, product_id):
     if request.method == 'POST':
         confirm_text = request.POST.get('confirm_text')
         if confirm_text == 'OCHIR':
+            if mhs.stockhistory_set.exists() or mhs.yuklamasorov_set.exists() or mhs.deliverystock_set.exists() or mhs.miqdorqoshish_set.exists():
+                from django.contrib import messages
+                messages.error(request, "Ushbu mahsulot bo'yicha tarixiy yozuvlar mavjud! Uni o'chirish audit xatoliklariga olib keladi. Iltimos, o'rniga nomini 'Eskirgan' deb o'zgartiring.")
+                return redirect('seeproduct', mahsulot_id=product_id)
+            
             mhs.delete()
+            from django.contrib import messages
             messages.success(request, "Mahsulot o'chirildi.")
             return redirect('mahsulotlar_list')
         else:
+            from django.contrib import messages
             messages.error(request, "Tasdiqlash matni noto'g'ri.")
     return redirect('seeproduct', mahsulot_id=product_id)
 @login_required(login_url='login')
@@ -719,18 +740,22 @@ def addmiqdor(request):
             mqdr=request.POST.get('miqdor')
             rasmi=request.FILES.get('rasm')
             pz=Pazanda.objects.get(user=request.user)
-            # Create request for this company
+            # Create request for this company (Unapproved initially)
             nw=MiqdorQoshish.objects.create(
                 company=request.company,
                 mahsulot=mxs,
                 miqdor=mqdr,
                 rasmi=rasmi,
-                tasdiqlangan=True, 
+                tasdiqlangan=False, 
                 pazanda=pz
             )
-            mxs.miqdori+=int(mqdr)
-            mxs.save()
-            nw.save()
+            
+            # Delegate to atomic service to prevent race conditions and log history
+            success, message = approve_miqdor_qoshish_service(nw.id, request.user)
+            if not success:
+                from django.contrib import messages
+                messages.error(request, message)
+                return redirect('main')
             
             # WebSocket Notification
             send_ws_notification(
@@ -739,7 +764,6 @@ def addmiqdor(request):
                 f"{pz.tuliq_ismi} {mqdr} ta {mxs.nomi} qo'shdi.",
                 'success'
             )
-            
             
             return redirect('main')
         return render(request, 'addmiqdor.html',payload)
@@ -780,73 +804,76 @@ def sotish(request):
         xaridorlar=HaridorDukon.objects.filter(company=request.company)
         
         if request.method == "POST":
-            rasm=request.FILES.get('rasm')
-            turi =request.POST.get('st')
-            haridor= HaridorDukon.objects.get(id=request.POST.get('haridor'), company=request.company)
-            oluvchi=request.POST.get('oluvchi')
-            sotilganlar = []
-            for m in mahsulotlar:
-                miqdor = request.POST.get(f'miqdor_{m.nom}')
-                if miqdor!='0':
-                    m.miqdor -= float(miqdor)
-                    sotilganlar.append((m.nom, miqdor))  # Logging uchun
-                
-            if len(sotilganlar) > 0:
-                txt=''
-                summa=0
-                for s in sotilganlar:
-                    mxs = Mahsulot.objects.filter(nomi=s[0], company=request.company).first()
-                    if not mxs:
-                        # Skip if product was deleted
-                        continue
-                    txt+=f'{s[0]} {s[1]} {mxs.narxi},'
-                    summa+=float(s[1])*float(mxs.narxi)
-                if turi=='nasiya':
-                    svd=Savdo.objects.create(yetkazib_beruvchi=yt,haridor_dukon=haridor,smm=txt,smr=rasm,oluvchining_ismi=oluvchi,tulandi=False,tasdiq_kutilmoqda=False,st=turi,summa=summa, company=request.company)
-                    svd.save()
-
-                else:
-                    svd=Savdo.objects.create(yetkazib_beruvchi=yt,haridor_dukon=haridor,smm=txt,smr=rasm,oluvchining_ismi=oluvchi,tulandi=True,tasdiq_kutilmoqda=True,st=turi,summa=summa, company=request.company)
-                    svd.save()
-    
-                sotishm(txt,yt)
-                # Activity log
-                AmalLog.objects.create(
-                    user=request.user,
-                    company=request.company,
-                    amal_shifri=f"savdo_yaratish|{haridor.nomi}|{summa}"
-                )
-                
-                # WebSocket Notification
-                send_ws_notification(
-                    request.company.subdomain,
-                    "Yangi Savdo",
-                    f"{yt.tuliq_ismi} {haridor.nomi}ga {summa} so'mlik savdo qildi.",
-                    'info'
-                )
-
-                # Update deliverer location if provided
-                lat = request.POST.get('latitude')
-                lng = request.POST.get('longitude')
-                if lat and lng:
-                    yt.last_lat = float(lat)
-                    yt.last_lng = float(lng)
-                    yt.last_active = timezone.now()
-                    yt.save()
-                    from .models import LocationHistory
-                    LocationHistory.objects.create(
-                        yetkazib_beruvchi=yt,
-                        company=request.company,
-                        lat=float(lat),
-                        lng=float(lng)
-                    )
-                # svd=Savdo.objects.create(yetkazuvchi=yt,haridor=request.POST.get('haridor'),mahsulotlar=txt)
-                # Istasa: Savdo modelga yozish
-
+            from django.db import transaction
             
+            with transaction.atomic():
+                yt = YetkazibBeruvchi.objects.select_for_update().get(user=request.user)
+                # Re-parse mahsulotlar inside the locked transaction to get latest string
+                mahsulotlar = mahsulotlar_miqdori(yt.mahsulotlar, company=request.company)
+                
+                rasm=request.FILES.get('rasm')
+                turi =request.POST.get('st')
+                haridor= HaridorDukon.objects.get(id=request.POST.get('haridor'), company=request.company)
+                oluvchi=request.POST.get('oluvchi')
+                sotilganlar = []
+                for m in mahsulotlar:
+                    miqdor = request.POST.get(f'miqdor_{m.nom}')
+                    if miqdor and miqdor != '0':
+                        m.miqdor -= float(miqdor)
+                        sotilganlar.append((m.nom, miqdor))  # Logging uchun
+                    
+                if len(sotilganlar) > 0:
+                    txt=''
+                    summa=0
+                    for s in sotilganlar:
+                        mxs = Mahsulot.objects.filter(nomi=s[0], company=request.company).first()
+                        if not mxs:
+                            # Skip if product was deleted
+                            continue
+                        txt+=f'{s[0]} {s[1]} {mxs.narxi},'
+                        summa+=float(s[1])*float(mxs.narxi)
+                    # Get seller's current location
+                    seller_lat = yt.last_lat
+                    seller_lng = yt.last_lng
+                    
+                    if turi=='nasiya':
+                        svd=Savdo.objects.create(yetkazib_beruvchi=yt,haridor_dukon=haridor,smm=txt,smr=rasm,oluvchining_ismi=oluvchi,tulandi=False,tasdiq_kutilmoqda=False,st=turi,summa=summa, company=request.company, latitude=seller_lat, longitude=seller_lng)
+                    else:
+                        svd=Savdo.objects.create(yetkazib_beruvchi=yt,haridor_dukon=haridor,smm=txt,smr=rasm,oluvchining_ismi=oluvchi,tulandi=True,tasdiq_kutilmoqda=True,st=turi,summa=summa, company=request.company, latitude=seller_lat, longitude=seller_lng)
+        
+                    sotishm(txt,yt)
+                    # Activity log
+                    AmalLog.objects.create(
+                        user=request.user,
+                        company=request.company,
+                        amal_shifri=f"savdo_yaratish|{haridor.nomi}|{summa}"
+                    )
+                    
+                    # WebSocket Notification
+                    send_ws_notification(
+                        request.company.subdomain,
+                        "Yangi Savdo",
+                        f"{yt.tuliq_ismi} {haridor.nomi}ga {summa} so'mlik savdo qildi.",
+                        'info'
+                    )
 
-            # yt.mahsulotlar = yuklama_maker(mahsulotlar)
-            # yt.save()
+                    # Update deliverer location if provided
+                    lat = request.POST.get('latitude')
+                    lng = request.POST.get('longitude')
+                    if lat and lng:
+                        yt.last_lat = float(lat)
+                        yt.last_lng = float(lng)
+                        yt.last_active = timezone.now()
+                        yt.save()
+                        from .models import LocationHistory
+                        LocationHistory.objects.create(
+                            yetkazib_beruvchi=yt,
+                            company=request.company,
+                            lat=float(lat),
+                            lng=float(lng)
+                        )
+                
+                return redirect('main')
             # Istasa: Savdo modelga yozish
             return redirect('main')
     else:

@@ -1,21 +1,29 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.http import JsonResponse
 from django.utils import timezone
 from datetime import timedelta
 from .models import YetkazibBeruvchi, LocationHistory, Savdo, HaridorDukon
 from django.db.models import Sum
+from .plan_utils import company_has_access
 
 @login_required(login_url='login')
 def map_dashboard(request):
+    # Tarifda xarita bormi?
     if not request.has_map:
+        return render(request, 'map_no_access.html')
+    
+    # To'lov qilinganmi? (yoki trial)
+    if not company_has_access(request.company):
+        messages.warning(request, "Xarita xizmatidan foydalanish uchun to'lov amalga oshirilgan bo'lishi kerak.")
         return render(request, 'map_no_access.html')
     
     return render(request, 'map_dashboard.html')
 
 @login_required(login_url='login')
 def api_map_data(request):
-    if not request.has_map:
+    if not company_has_access(request.company) or not request.has_map:
         return JsonResponse({'error': 'No access'}, status=403)
     
     # Real-time & Recent Deliverers (active in last 7 days)
@@ -84,8 +92,8 @@ def api_map_data(request):
     sales = Savdo.objects.filter(
         company=request.company,
         vaqt_sana__gte=today_start,
-        haridor_dukon__latitude__isnull=False,
-        haridor_dukon__longitude__isnull=False
+        latitude__isnull=False,
+        longitude__isnull=False
     ).select_related('haridor_dukon', 'yetkazib_beruvchi')
     
     sales_data = []
@@ -93,8 +101,8 @@ def api_map_data(request):
         sales_data.append({
             'shop_name': s.haridor_dukon.nomi,
             'summa': float(s.summa),
-            'lat': s.haridor_dukon.latitude,
-            'lng': s.haridor_dukon.longitude,
+            'lat': s.latitude,
+            'lng': s.longitude,
             'deliverer_name': s.yetkazib_beruvchi.tuliq_ismi,
             'time': s.vaqt_sana.strftime('%H:%M')
         })
@@ -122,7 +130,7 @@ def api_map_data(request):
 
 @login_required(login_url='login')
 def api_route_history(request, deliverer_id):
-    if not request.has_map:
+    if not company_has_access(request.company) or not request.has_map:
         return JsonResponse({'error': 'No access'}, status=403)
     
     # Default: last 24 hours

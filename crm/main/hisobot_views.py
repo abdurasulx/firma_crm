@@ -216,52 +216,42 @@ def hisobotlar_view(request):
     # Recent sales
     recent_sales = savdolar.order_by('-vaqt_sana')[:10]
     
-    # Map data aggregation (shops with coordinates)
+    # Map data aggregation (sales with seller coordinates)
     map_data = []
-    no_coord_shops = set()
+    no_coord_sales = []
     
     for s in savdolar:
-        if s.haridor_dukon:
-            if s.haridor_dukon.latitude and s.haridor_dukon.longitude:
-                shop_id = s.haridor_dukon.id
-                existing = next((item for item in map_data if item['id'] == shop_id), None)
-                
-                # Get deliverer info
-                dev_name = s.yetkazib_beruvchi.tuliq_ismi
-                dev_pic = ""
-                try:
-                    if s.yetkazib_beruvchi.rasmi:
-                        dev_pic = s.yetkazib_beruvchi.rasmi.url
-                except:
-                    pass
+        # Use sale's own location (seller's location) if available
+        if s.latitude and s.longitude:
+            # Create a unique key for each location point (not grouping by shop anymore)
+            dev_name = s.yetkazib_beruvchi.tuliq_ismi
+            dev_pic = ""
+            try:
+                if s.yetkazib_beruvchi.rasmi:
+                    dev_pic = s.yetkazib_beruvchi.rasmi.url
+            except:
+                pass
 
-                shop_pic = ""
-                try:
-                    if s.haridor_dukon.dukon_rasmi:
-                        shop_pic = s.haridor_dukon.dukon_rasmi.url
-                except:
-                    pass
+            shop_pic = ""
+            try:
+                if s.haridor_dukon.dukon_rasmi:
+                    shop_pic = s.haridor_dukon.dukon_rasmi.url
+            except:
+                pass
 
-                if existing:
-                    existing['total'] += float(s.summa or 0)
-                    existing['sales_count'] += 1
-                    # Update with latest deliverer
-                    existing['dev_name'] = dev_name
-                    existing['dev_pic'] = dev_pic
-                else:
-                    map_data.append({
-                        'id': shop_id,
-                        'name': s.haridor_dukon.nomi,
-                        'shop_pic': shop_pic,
-                        'lat': s.haridor_dukon.latitude,
-                        'lng': s.haridor_dukon.longitude,
-                        'total': float(s.summa or 0),
-                        'sales_count': 1,
-                        'dev_name': dev_name,
-                        'dev_pic': dev_pic
-                    })
-            else:
-                no_coord_shops.add(s.haridor_dukon.nomi)
+            map_data.append({
+                'id': s.id,
+                'name': s.haridor_dukon.nomi,
+                'shop_pic': shop_pic,
+                'lat': s.latitude,
+                'lng': s.longitude,
+                'total': float(s.summa or 0),
+                'sales_count': 1,
+                'dev_name': dev_name,
+                'dev_pic': dev_pic
+            })
+        else:
+            no_coord_sales.append(s.haridor_dukon.nomi)
 
     # Get all employees for dropdown
     employees = User.objects.filter(company=request.company).filter(Q(type='yetkazib_beruvchi') | Q(type='pazanda')).order_by('tuliq_ismi')

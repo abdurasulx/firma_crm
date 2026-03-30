@@ -1,0 +1,168 @@
+Loyiha: Stockfirm CRM (Multi-tenant SaaS + Landing System)
+🎯 1. Maqsad
+
+Yagona Django loyiha orqali:
+
+subdomain asosida firmalarni boshqarish
+
+har bir firmaga alohida CRM berish
+
+asosiy domen (stockfirm.uz) da landing page ko‘rsatish
+
+deploysiz yangi firma qo‘shish
+
+🌐 2. Domenlar logikasi
+🔹 Asosiy domen:
+stockfirm.uz
+
+👉 Bu yerda:
+
+Landing page (marketing sahifa)
+
+Tariflar
+
+Ro‘yxatdan o‘tish
+
+🔹 Subdomainlar:
+firma1.stockfirm.uz
+firma2.stockfirm.uz
+
+👉 Bu yerda:
+
+CRM tizim ishlaydi
+
+🔹 Admin:
+admin.stockfirm.uz
+
+👉 Super admin panel
+
+🧠 3. Routing logikasi (MUHIM)
+Middleware yangilanishi:
+class CompanyMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        host = request.get_host().split(':')[0]
+
+        parts = host.split('.')
+
+        # stockfirm.uz → landing
+        if host == "stockfirm.uz" or host == "www.stockfirm.uz":
+            request.company = None
+            request.is_landing = True
+
+        # admin.stockfirm.uz → super admin
+        elif parts[0] == "admin":
+            request.company = None
+            request.is_admin_panel = True
+
+        # firma subdomain
+        else:
+            subdomain = parts[0]
+            try:
+                company = Company.objects.get(subdomain=subdomain)
+                request.company = company
+                request.is_landing = False
+            except Company.DoesNotExist:
+                request.company = None
+
+        return self.get_response(request)
+🏗 4. Landing Page (MUHIM QISM)
+🔹 Django app:
+apps/landing/
+🔹 Vazifalari:
+
+bosh sahifa (/)
+
+pricing sahifa
+
+login / register sahifa
+
+demo request
+
+🔹 URL:
+# urls.py
+urlpatterns = [
+    path('', landing_home),
+    path('pricing/', pricing_view),
+]
+🔹 View logikasi:
+def landing_home(request):
+    if getattr(request, "is_landing", False):
+        return render(request, "landing/index.html")
+    
+    return redirect("/")  # noto‘g‘ri kirish bo‘lsa
+🔐 5. Login tizimi
+Landing orqali:
+
+user ro‘yxatdan o‘tadi
+
+firma yaratiladi
+
+subdomain generatsiya qilinadi
+
+👉 masalan:
+
+akfa → akfa.stockfirm.uz
+🧱 6. Company yaratish flow
+
+User landingda signup qiladi
+
+Company yaratiladi
+
+Subdomain tekshiriladi (unique)
+
+Admin user yaratiladi
+
+Redirect:
+
+https://firma.stockfirm.uz
+⚙️ 7. NGINX konfiguratsiya (yangilangan)
+server {
+    listen 80;
+    server_name stockfirm.uz www.stockfirm.uz *.stockfirm.uz;
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+🔒 8. SSL
+
+wildcard:
+
+*.stockfirm.uz
+
+asosiy domen:
+
+stockfirm.uz
+🎨 9. Dizayn (siz qilasiz)
+
+Landing app:
+
+HTML / CSS / JS erkin
+
+siz mustaqil o‘zgartirasiz
+
+backend faqat routing beradi
+
+🚀 10. Kengaytirish (Landing bilan)
+
+Landing orqali:
+
+tarif tanlash
+
+to‘lov qilish
+
+trial ochish
+
+⚠️ 11. Muhim qoidalar
+
+❗ stockfirm.uz → hech qachon CRM ochilmaydi
+❗ faqat marketing sahifa
+
+❗ CRM faqat:
+
+*.stockfirm.uz

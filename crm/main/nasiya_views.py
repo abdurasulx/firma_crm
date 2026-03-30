@@ -101,39 +101,41 @@ def add_nasiya_payment(request, savdo_id):
     
     if request.method == 'POST':
         try:
-            savdo = Savdo.objects.get(id=savdo_id, company=request.company)
-            payment_amount = float(request.POST.get('payment_amount', 0))
-            note = request.POST.get('note', '')
-            
-            if payment_amount <= 0:
-                messages.error(request, "To'lov summasi 0 dan katta bo'lishi kerak!")
-                return redirect('nasiya_savdolar')
-            
-            # Get current payments
-            payments = NasiyaTolov.objects.filter(savdo=savdo)
-            total_payments = sum([p.tolov_summasi for p in payments])
-            remaining = (savdo.summa or 0) - total_payments
-            
-            if payment_amount > remaining:
-                messages.error(request, f"To'lov summasi qoldiqdan ({remaining}) katta bo'lishi mumkin emas!")
-                return redirect('nasiya_savdolar')
-            
-            # Create payment
-            NasiyaTolov.objects.create(
-                savdo=savdo,
-                tolov_summasi=payment_amount,
-                izoh=note,
-                qabul_qilgan_user=request.user,
-                company=request.company
-            )
-            
-            # Update sale status if fully paid
-            new_total = total_payments + payment_amount
-            if new_total >= savdo.summa:
-                savdo.tulandi = True
-                savdo.save()
-            
-            messages.success(request, f"{payment_amount} so'm to'lov qabul qilindi!")
+            from django.db import transaction
+            with transaction.atomic():
+                savdo = Savdo.objects.select_for_update().get(id=savdo_id, company=request.company)
+                payment_amount = float(request.POST.get('payment_amount', 0))
+                note = request.POST.get('note', '')
+                
+                if payment_amount <= 0:
+                    messages.error(request, "To'lov summasi 0 dan katta bo'lishi kerak!")
+                    return redirect('nasiya_savdolar')
+                
+                # Get current payments
+                payments = NasiyaTolov.objects.filter(savdo=savdo)
+                total_payments = sum([p.tolov_summasi for p in payments])
+                remaining = (savdo.summa or 0) - total_payments
+                
+                if payment_amount > remaining:
+                    messages.error(request, f"To'lov summasi qoldiqdan ({remaining}) katta bo'lishi mumkin emas!")
+                    return redirect('nasiya_savdolar')
+                
+                # Create payment
+                NasiyaTolov.objects.create(
+                    savdo=savdo,
+                    tolov_summasi=payment_amount,
+                    izoh=note,
+                    qabul_qilgan_user=request.user,
+                    company=request.company
+                )
+                
+                # Update sale status if fully paid
+                new_total = total_payments + payment_amount
+                if new_total >= savdo.summa:
+                    savdo.tulandi = True
+                    savdo.save()
+                
+                messages.success(request, f"{payment_amount} so'm to'lov qabul qilindi!")
             
         except Exception as e:
             messages.error(request, f"Xato: {str(e)}")

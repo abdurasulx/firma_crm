@@ -199,7 +199,9 @@
                     {% endif %}
                 </td>
                 <td>
-                    {% if company.payment_status == 'paid' %}
+                    {% if company.setup_mode %}
+                        <span class="badge" style="background: #fef3c7; color: #f59e0b;"><i class="fa-solid fa-clock-rotate-left"></i> Sozlashda</span>
+                    {% elif company.payment_status == 'paid' %}
                         <span class="badge badge-success"><i class="fa-solid fa-check"></i> To'langan</span>
                     {% else %}
                         <span class="badge badge-error"><i class="fa-solid fa-xmark"></i> To'lanmagan</span>
@@ -208,6 +210,9 @@
                 <td>
                     {% if company.next_payment_date %}
                         <span style="font-weight: 600; font-size: 13px;">{{ company.next_payment_date|date:"d.m.Y" }}</span>
+                        {% if company.setup_mode %}
+                            <br><small style="color: #f59e0b;">(Imtiyozli davr)</small>
+                        {% endif %}
                     {% else %}
                         <span style="color: var(--text-dim); font-size: 13px;">O'rnatilmagan</span>
                     {% endif %}
@@ -222,12 +227,6 @@
                 <td style="text-align: right;">
                     <form action="{% url 'update_billing_status' company.id %}" method="post" style="display: inline;">
                         {% csrf_token %}
-                        {% if company.is_on_trial %}
-                            <button type="submit" name="action" value="end_trial" class="action-btn" style="background: #8b5cf6; color: white;" title="Sinov muddatini tugatish va to'lovni hisoblashni boshlash">
-                                <i class="fa-solid fa-hourglass-end"></i> Sinovni tugatish
-                            </button>
-                            <div style="width: 1px; height: 16px; background: var(--border); display: inline-block; margin: 0 5px; vertical-align: middle;"></div>
-                        {% endif %}
                         
                         {% if company.payment_status == 'paid' %}
                             <button type="submit" name="action" value="mark_unpaid" class="action-btn action-btn-unpaid" title="Qarzdor deb belgilash">

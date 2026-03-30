@@ -1,6 +1,13 @@
 from django.conf import settings
 from django.conf.urls.static import static
-from .views import login, main, end_setup, add_haridor, profile_view, crtuser, editusr, sotish, seemahsulot, createmahsulot, deleteprdct, addmiqdor, add_yuklama, logout_view, check_new_deliveries, pz_sorov_tarixi, yetkazuvchi_hisobot, pazanda_hisobot, activate_trial, select_plan, select_custom_plan, select_plan_page, yt_navigation
+from .views import (
+    login, main, end_setup, add_haridor, profile_view, crtuser, editusr, 
+    sotish, seemahsulot, createmahsulot, deleteprdct, addmiqdor, 
+    add_yuklama, logout_view, check_new_deliveries, pz_sorov_tarixi, 
+    yetkazuvchi_hisobot, pazanda_hisobot, 
+    select_plan, select_custom_plan, select_plan_page, yt_navigation,
+    request_trial
+)
 from .hisobot_views import hisobotlar_view
 from .list_views import hodimlar_list, mahsulotlar_list
 from .nasiya_views import nasiya_savdolar_view, add_nasiya_payment
@@ -12,6 +19,7 @@ from .analytics_views import analytics_dashboard
 from .map_views import map_dashboard, api_map_data, api_route_history
 from .api import dashboard_stats_api
 from .backup_views import download_backup, restore_view, prepare_backup_page
+from .click_views import click_prepare, click_complete, click_pay_redirect
 from django.urls import path
 
 urlpatterns = [
@@ -64,8 +72,13 @@ urlpatterns = [
     path('map/', map_dashboard, name='map_dashboard'),
     path('api/map/data/', api_map_data, name='api_map_data'),
     path('api/map/route/<int:deliverer_id>/', api_route_history, name='api_route_history'),
-    path('activate-trial/', activate_trial, name='activate_trial'),
+    path('select-plan-page/', select_plan_page, name='select_plan_page'),
+    path('request-trial/', request_trial, name='request_trial'),
     path('select-plan/<int:plan_id>/', select_plan, name='select_plan'),
     path('select-custom-plan/', select_custom_plan, name='select_custom_plan'),
-    path('select-plan-page/', select_plan_page, name='select_plan_page'),
+    
+    # Click API integration
+    path('api/click/prepare/', click_prepare, name='click_prepare'),
+    path('api/click/complete/', click_complete, name='click_complete'),
+    path('payment/click/redirect/', click_pay_redirect, name='click_pay_redirect'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

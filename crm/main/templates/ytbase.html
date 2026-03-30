@@ -486,6 +486,25 @@
         </div>
     </nav>
 
+    <!-- Global Messages -->
+    {% if messages %}
+    <div id="global-messages" style="max-width: 1280px; margin: 1rem auto 0; padding: 0 1.5rem; position: relative; z-index: 99;">
+        {% for message in messages %}
+            <div style="padding: 12px 20px; border-radius: 10px; margin-bottom: 10px; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 12px;
+                {% if message.tags == 'error' %}background-color: #fef2f2; color: #dc2626; border: 1px solid #fecdd3;
+                {% elif message.tags == 'success' %}background-color: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;
+                {% elif message.tags == 'warning' %}background-color: #fffbeb; color: #d97706; border: 1px solid #fef3c7;
+                {% else %}background-color: #f0f9ff; color: #0284c7; border: 1px solid #e0f2fe;{% endif %}">
+                <i class="fa-solid {% if message.tags == 'error' %}fa-circle-exclamation{% elif message.tags == 'success' %}fa-circle-check{% elif message.tags == 'warning' %}fa-triangle-exclamation{% else %}fa-circle-info{% endif %}"></i>
+                <span>{{ message }}</span>
+                <button onclick="this.parentElement.remove()" style="margin-left: auto; background: none; border: none; color: inherit; cursor: pointer; opacity: 0.5;">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <!-- Mobile Side Menu -->
     <div class="mobile-overlay" id="mobileOverlay" onclick="toggleMobileMenu()"></div>
     <div class="mobile-menu" id="mobileMenu">
