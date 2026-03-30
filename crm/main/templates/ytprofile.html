@@ -1,157 +1,219 @@
 {% extends 'ytbase.html' %}
 {% load static %}
 
-{% block title %}Foydalanuvchi Profil{% endblock %}
+{% block title %}Profil - StockFirm{% endblock %}
 
 {% block content %}
 <style>
-    /* Modern Profile Page */
-    .page-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 30px;
-        border-radius: 16px;
-        margin-bottom: 30px;
-        box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
-        text-align: center;
-    }
-
-    .page-header h1 {
-        margin: 0;
-        font-size: 24px;
-        font-weight: 700;
+    .profile-container {
+        max-width: 700px;
+        margin: 0 auto;
     }
 
     .profile-card {
         background: white;
-        padding: 40px;
-        border-radius: 16px;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-        max-width: 600px;
-        margin: 0 auto;
+        border-radius: var(--radius);
+        border: 1px solid var(--slate-200);
+        box-shadow: var(--shadow);
+        overflow: hidden;
     }
 
-    .profile-avatar-section {
+    .profile-header {
+        background: var(--slate-900);
+        padding: 3rem 2rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
         text-align: center;
-        margin-bottom: 32px;
+        position: relative;
     }
 
-    .profile-avatar {
-        width: 150px;
-        height: 150px;
-        border-radius: 50%;
+    .profile-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: radial-gradient(circle at 50% 50%, rgba(79, 70, 229, 0.15) 0%, transparent 70%);
+        pointer-events: none;
+    }
+
+    .avatar-wrapper {
+        position: relative;
+        margin-bottom: 1.5rem;
+    }
+
+    .profile-img {
+        width: 140px;
+        height: 140px;
+        border-radius: 2rem;
         object-fit: cover;
-        border: 5px solid #667eea;
-        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
-        margin-bottom: 16px;
+        border: 4px solid white;
+        box-shadow: var(--shadow-xl);
     }
 
-    .profile-name {
-        font-size: 24px;
-        font-weight: 700;
-        color: #1f2937;
-        margin-bottom: 8px;
-    }
-
-    .profile-role {
-        display: inline-block;
-        padding: 6px 16px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    .status-badge {
+        position: absolute;
+        bottom: -5px;
+        right: -5px;
+        background: var(--success);
         color: white;
-        border-radius: 20px;
-        font-size: 14px;
-        font-weight: 600;
+        font-size: 0.75rem;
+        font-weight: 800;
+        padding: 0.25rem 0.75rem;
+        border-radius: 0.75rem;
+        border: 3px solid white;
+        box-shadow: var(--shadow-sm);
     }
 
-    .profile-info-grid {
+    .profile-header h1 {
+        color: white;
+        font-size: 1.75rem;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+        margin-bottom: 0.25rem;
+    }
+
+    .profile-header p {
+        color: var(--slate-400);
+        font-weight: 500;
+    }
+
+    .profile-body {
+        padding: 2.5rem;
+    }
+
+    .info-section {
         display: grid;
-        gap: 20px;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
     }
 
-    .info-item {
-        background: #f9fafb;
-        padding: 16px 20px;
-        border-radius: 10px;
-        border-left: 4px solid #667eea;
+    .info-box {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 1.25rem;
+        background: var(--slate-50);
+        border-radius: 1rem;
+        border: 1px solid var(--slate-200);
+        transition: all 0.2s;
+    }
+
+    .info-box:hover {
+        background: white;
+        border-color: var(--primary-light);
+        box-shadow: var(--shadow-sm);
     }
 
     .info-label {
-        font-size: 13px;
-        font-weight: 600;
-        color: #6b7280;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--slate-500);
         text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 6px;
+        letter-spacing: 0.05em;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .info-label i {
+        color: var(--primary);
+        font-size: 0.875rem;
     }
 
     .info-value {
-        font-size: 16px;
-        font-weight: 600;
-        color: #1f2937;
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: var(--slate-900);
     }
 
     .info-value.empty {
-        color: #9ca3af;
+        color: var(--slate-400);
+        font-weight: 500;
         font-style: italic;
     }
 
-    @media (max-width: 768px) {
-        .profile-card {
-            padding: 24px;
-        }
+    .profile-footer {
+        padding: 1.5rem 2.5rem 2.5rem;
+        border-top: 1px solid var(--slate-100);
+        display: flex;
+        justify-content: center;
+    }
 
-        .profile-avatar {
-            width: 120px;
-            height: 120px;
-        }
+    .btn-logout {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 2rem;
+        background: #fee2e2;
+        color: var(--danger);
+        border-radius: 0.875rem;
+        font-weight: 800;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
 
-        .profile-name {
-            font-size: 20px;
-        }
+    .btn-logout:hover {
+        background: #fecaca;
+        transform: translateY(-1px);
+    }
+
+    @media (max-width: 640px) {
+        .info-section { grid-template-columns: 1fr; }
+        .profile-body { padding: 1.5rem; }
+        .profile-header { padding: 2rem 1rem; }
     }
 </style>
 
-<!-- Page Header -->
-<div class="page-header">
-    <h1>👤 Foydalanuvchi Profili</h1>
-</div>
-
-<!-- Profile Card -->
-<div class="profile-card">
-    <!-- Avatar Section -->
-    <div class="profile-avatar-section">
-        <img src="{% if user.rasmi.url %}{{ user.rasmi.url }}{% else %}{% static 'images/default_avatar.jpg' %}{% endif %}"
-            alt="Avatar" class="profile-avatar">
-        <div class="profile-name">{{ user.tuliq_ismi }}</div>
-        <div class="profile-role">{{ user.get_type_display }}</div>
-    </div>
-
-    <!-- Info Grid -->
-    <div class="profile-info-grid">
-        <div class="info-item">
-            <div class="info-label">👤 Foydalanuvchi nomi</div>
-            <div class="info-value">{{ user.username }}</div>
+<div class="profile-container">
+    <div class="profile-card">
+        <!-- Header -->
+        <div class="profile-header">
+            <div class="avatar-wrapper">
+                <img src="{% if user.rasmi.url %}{{ user.rasmi.url }}{% else %}{% static 'images/default_avatar.jpg' %}{% endif %}" alt="Avatar" class="profile-img">
+                <span class="status-badge">ONLINE</span>
+            </div>
+            <h1>{{ user.tuliq_ismi }}</h1>
+            <p>@{{ user.username }}</p>
         </div>
 
-        <div class="info-item">
-            <div class="info-label">✉️ Email</div>
-            <div class="info-value {% if not user.email %}empty{% endif %}">
-                {{ user.email|default:"Kiritilmagan" }}
+        <!-- Body -->
+        <div class="profile-body">
+            <div class="info-section">
+                <div class="info-box">
+                    <span class="info-label"><i class="fas fa-user"></i> Foydalanuvchi nomi</span>
+                    <span class="info-value">{{ user.username }}</span>
+                </div>
+                
+                <div class="info-box">
+                    <span class="info-label"><i class="fas fa-id-badge"></i> Lavozim</span>
+                    <span class="info-value">{{ user.get_type_display }}</span>
+                </div>
+
+                <div class="info-box">
+                    <span class="info-label"><i class="fas fa-envelope"></i> Email</span>
+                    <span class="info-value {% if not user.email %}empty{% endif %}">
+                        {{ user.email|default:"Kiritilmagan" }}
+                    </span>
+                </div>
+
+                <div class="info-box">
+                    <span class="info-label"><i class="fas fa-phone"></i> Telefon raqami</span>
+                    <span class="info-value {% if not user.tel_raqami %}empty{% endif %}">
+                        {{ user.tel_raqami|default:"Kiritilmagan" }}
+                    </span>
+                </div>
             </div>
         </div>
 
-        <div class="info-item">
-            <div class="info-label">📞 Telefon raqami</div>
-            <div class="info-value {% if not user.tel_raqami %}empty{% endif %}">
-                {{ user.tel_raqami|default:"Kiritilmagan" }}
-            </div>
-        </div>
-
-        <div class="info-item">
-            <div class="info-label">🏢 Lavozim</div>
-            <div class="info-value">{{ user.get_type_display }}</div>
+        <!-- Footer -->
+        <div class="profile-footer">
+            <a href="{% url 'logout_view' %}" class="btn-logout">
+                <i class="fas fa-sign-out-alt"></i> Tizimdan chiqish
+            </a>
         </div>
     </div>
 </div>
-
-{% endblock %}
+{% endblock %}

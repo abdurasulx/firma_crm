@@ -5,8 +5,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Firma CRM{% endblock %}</title>
+    <title>{% block title %}StockFirm CRM - Yetkazuvchi{% endblock %}</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-dark: #4338ca;
+            --primary-light: #818cf8;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --slate-50: #f8fafc;
+            --slate-100: #f1f5f9;
+            --slate-200: #e2e8f0;
+            --slate-700: #334155;
+            --slate-800: #1e293b;
+            --slate-900: #0f172a;
+            --glass: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(255, 255, 255, 0.4);
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --radius: 1rem;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -14,312 +42,373 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            font-family: 'Inter', sans-serif;
+            background-color: var(--slate-50);
+            color: var(--slate-800);
             min-height: 100vh;
-            padding-bottom: 30px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
         }
 
         /* Modern Navbar */
         .navbar {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 0;
-            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--glass-border);
             position: sticky;
             top: 0;
             z-index: 1000;
+            height: 72px;
+            display: flex;
+            align-items: center;
         }
 
-        .navbar-container {
-            max-width: 1400px;
+        .nav-container {
+            max-width: 1280px;
+            width: 100%;
             margin: 0 auto;
+            padding: 0 1.5rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0 30px;
         }
 
-        .navbar-brand {
+        .brand {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 20px 0;
-        }
-
-        .brand-logo {
-            font-size: 32px;
-        }
-
-        .brand-text {
-            color: white;
-            font-size: 24px;
-            font-weight: 700;
+            gap: 0.75rem;
             text-decoration: none;
+            color: var(--slate-900);
+            font-weight: 800;
+            font-size: 1.25rem;
+            letter-spacing: -0.025em;
         }
 
-        .navbar-menu {
+        .brand-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--primary);
+            border-radius: 0.75rem;
             display: flex;
             align-items: center;
-            gap: 8px;
+            justify-content: center;
+            color: white;
+            font-size: 1.25rem;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+
+        .brand-details {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+        }
+
+        .brand-name {
+            font-size: 1.125rem;
+        }
+
+        .brand-company {
+            font-size: 0.75rem;
+            color: var(--slate-500);
+            font-weight: 500;
+        }
+
+        /* Desktop Menu */
+        .nav-menu {
+            display: flex;
+            gap: 0.5rem;
             list-style: none;
         }
 
-        .nav-link {
-            color: white;
+        .nav-item a {
             text-decoration: none;
-            padding: 12px 20px;
-            border-radius: 8px;
+            color: var(--slate-600);
+            padding: 0.625rem 1rem;
+            border-radius: 0.75rem;
             font-weight: 600;
-            font-size: 15px;
-            transition: all 0.3s ease;
+            font-size: 0.875rem;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 0.5rem;
         }
 
-        .nav-link:hover {
-            background: rgba(255, 255, 255, 0.15);
-            transform: translateY(-2px);
+        .nav-item a:hover {
+            color: var(--primary);
+            background: rgba(79, 70, 229, 0.05);
         }
 
-        .nav-link.active {
-            background: rgba(255, 255, 255, 0.25);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        .nav-item a.active {
+            color: var(--primary);
+            background: rgba(79, 70, 229, 0.1);
         }
 
-        /* User Profile Dropdown */
-        .user-menu {
+        /* User Menu */
+        .user-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-dropdown {
             position: relative;
         }
 
-        .user-toggle {
+        .user-btn {
+            background: white;
+            border: 1px solid var(--slate-200);
+            padding: 0.5rem;
+            padding-right: 1rem;
+            border-radius: 9999px;
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 10px 16px;
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 10px;
+            gap: 0.75rem;
             cursor: pointer;
-            transition: all 0.3s ease;
-            color: white;
-            font-weight: 600;
+            transition: all 0.2s;
+            box-shadow: var(--shadow-sm);
         }
 
-        .user-toggle:hover {
-            background: rgba(255, 255, 255, 0.25);
+        .user-btn:hover {
+            border-color: var(--primary-light);
+            background: var(--slate-50);
         }
 
         .user-avatar {
-            width: 36px;
-            height: 36px;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
+            object-fit: cover;
             border: 2px solid white;
+            box-shadow: 0 0 0 1px var(--slate-200);
         }
 
-        .dropdown-menu {
+        .user-info-text {
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: var(--slate-700);
+        }
+
+        .dropdown-content {
             position: absolute;
-            top: calc(100% + 10px);
+            top: calc(100% + 0.75rem);
             right: 0;
+            width: 200px;
             background: white;
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-            min-width: 200px;
+            border-radius: 1rem;
+            border: 1px solid var(--slate-200);
+            box-shadow: var(--shadow-lg);
+            padding: 0.5rem;
             opacity: 0;
             visibility: hidden;
-            transform: translateY(-10px);
-            transition: all 0.3s ease;
+            transform: translateY(10px);
+            transition: all 0.2s;
         }
 
-        .user-menu.active .dropdown-menu {
+        .user-dropdown.active .dropdown-content {
             opacity: 1;
             visibility: visible;
             transform: translateY(0);
         }
 
-        .dropdown-item {
+        .dropdown-link {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 12px 20px;
-            color: #374151;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
             text-decoration: none;
-            transition: all 0.2s ease;
+            color: var(--slate-600);
             font-weight: 500;
+            font-size: 0.875rem;
+            border-radius: 0.75rem;
+            transition: all 0.2s;
         }
 
-        .dropdown-item:first-child {
-            border-radius: 12px 12px 0 0;
+        .dropdown-link:hover {
+            background: var(--slate-100);
+            color: var(--slate-900);
         }
 
-        .dropdown-item:last-child {
-            border-radius: 0 0 12px 12px;
-            border-top: 1px solid #e5e7eb;
+        .dropdown-link.logout {
+            color: var(--danger);
         }
 
-        .dropdown-item:hover {
-            background: #f3f4f6;
+        .dropdown-link.logout:hover {
+            background: #fef2f2;
         }
 
+        /* Mobile Controls */
         .mobile-toggle {
             display: none;
-            background: none;
+            background: var(--slate-100);
             border: none;
-            color: white;
-            font-size: 24px;
+            width: 40px;
+            height: 40px;
+            border-radius: 0.75rem;
+            color: var(--slate-700);
+            font-size: 1.25rem;
             cursor: pointer;
-            padding: 10px;
+            transition: all 0.2s;
         }
 
-        /* Visibility helpers */
-        .mobile-only {
-            display: none;
+        /* Mobile Side Menu */
+        .mobile-menu {
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 280px;
+            height: 100vh;
+            background: white;
+            z-index: 2000;
+            box-shadow: var(--shadow-lg);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 2rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
         }
 
-        .desktop-only {
-            display: block;
+        .mobile-menu.active {
+            right: 0;
         }
 
-        /* Container */
-        .container {
-            max-width: 1400px;
-            margin: 30px auto;
-            padding: 0 30px;
+        .mobile-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(4px);
+            z-index: 1999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
         }
 
-        /* Mobile Responsive */
-        @media (max-width: 768px) {
-            .navbar-container {
-                padding: 0 15px;
-                position: relative;
-            }
+        .mobile-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
 
-            .navbar-brand {
-                padding: 15px 0;
-            }
+        /* Main Content */
+        .main-container {
+            max-width: 1280px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+            padding-bottom: 5rem;
+        }
 
-            .brand-text {
-                font-size: 18px;
-            }
+        /* Notification Container */
+        #notification-container {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            max-width: 400px;
+            width: calc(100% - 4rem);
+        }
 
-            .brand-logo {
-                font-size: 28px;
-            }
+        .notification {
+            background: white;
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--slate-200);
+            display: flex;
+            gap: 1rem;
+            transform: translateX(120%);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
 
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notif-icon-box {
+            width: 40px;
+            height: 40px;
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .notif-content {
+            flex: 1;
+        }
+
+        .notif-title {
+            font-weight: 700;
+            font-size: 0.9375rem;
+            color: var(--slate-900);
+            margin-bottom: 0.125rem;
+        }
+
+        .notif-message {
+            font-size: 0.875rem;
+            color: var(--slate-500);
+        }
+
+        .notif-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 4px;
+            background: var(--primary);
+            width: 100%;
+            opacity: 0.2;
+        }
+
+        .notif-progress-bar {
+            height: 100%;
+            background: var(--primary);
+            width: 100%;
+            transition: width linear;
+        }
+
+        /* Notification Types */
+        .notification.success .notif-icon-box { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+        .notification.warning .notif-icon-box { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+        .notification.info .notif-icon-box { background: rgba(79, 70, 229, 0.1); color: var(--primary); }
+        
+        .notification.success .notif-progress-bar { background: var(--success); }
+        .notification.warning .notif-progress-bar { background: var(--warning); }
+        .notification.info .notif-progress-bar { background: var(--primary); }
+
+        @media (max-width: 1024px) {
+            .nav-menu {
+                display: none;
+            }
             .mobile-toggle {
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                width: 44px;
-                height: 44px;
-                position: absolute;
-                right: 15px;
-                top: 50%;
-                transform: translateY(-50%);
             }
-
-            .navbar-menu {
-                position: fixed;
-                top: 70px;
-                left: 0;
-                right: 0;
-                background: white;
-                flex-direction: column;
-                padding: 0;
-                gap: 0;
-                max-height: 0;
-                overflow: hidden;
-                opacity: 0;
-                transition: all 0.3s ease;
-                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-            }
-
-            .navbar-menu.active {
-                max-height: 400px;
-                opacity: 1;
-                padding: 10px 0;
-            }
-
-            .nav-link {
-                width: 100%;
-                justify-content: flex-start;
-                color: #374151;
-                padding: 16px 20px;
-                border-radius: 0;
-                border-bottom: 1px solid #f3f4f6;
-            }
-
-            .nav-link:hover {
-                background: #f9fafb;
-                transform: none;
-            }
-
-            .nav-link.active {
-                background: linear-gradient(to right, #667eea 0%, #764ba2 100%);
-                color: white;
-                border-left: 4px solid #764ba2;
-                box-shadow: none;
-            }
-
-            .user-toggle {
-                display: none;
-            }
-
             .desktop-only {
                 display: none !important;
             }
-
-            .mobile-only {
-                display: block;
-            }
-
-            .mobile-only .nav-link {
-                border-top: 1px solid #f3f4f6;
-                background: #f9fafb;
-            }
-
-            .user-avatar {
-                width: 32px;
-                height: 32px;
-            }
-
-            .dropdown-menu {
-                display: none;
-            }
-
-            .container {
-                padding: 0 15px;
-                margin: 20px auto;
-            }
-
-            /* Better touch targets */
-            .dropdown-item {
-                padding: 16px 20px;
-                font-size: 16px;
-            }
         }
 
-        /* Small mobile devices */
-        @media (max-width: 480px) {
-            .navbar-container {
-                padding: 0 10px;
+        @media (max-width: 640px) {
+            .nav-container {
+                padding: 0 1rem;
             }
-
-            .brand-text {
-                font-size: 16px;
+            .main-container {
+                padding: 1.5rem 1rem;
+                margin: 0;
             }
-
-            .brand-logo {
-                font-size: 24px;
-            }
-
-            .mobile-toggle {
-                right: 10px;
-                width: 40px;
-                height: 40px;
-            }
-
-            .container {
-                padding: 0 10px;
+            #notification-container {
+                bottom: 1rem;
+                right: 1rem;
+                width: calc(100% - 2rem);
             }
         }
     </style>
@@ -328,104 +417,266 @@
 <body>
     <!-- Navbar -->
     <nav class="navbar">
-        <div class="navbar-container">
-            <div class="navbar-brand">
-                <span class="brand-logo">🚚</span>
-                <a href="{% url 'main' %}" class="brand-text">Firma CRM</a>
-            </div>
+        <div class="nav-container">
+            <a href="{% url 'main' %}" class="brand">
+                <div class="brand-icon"><i class="fas fa-truck-fast"></i></div>
+                <div class="brand-details">
+                    <span class="brand-name">StockFirm</span>
+                    <span class="brand-company">{{ request.user.company.name }}</span>
+                </div>
+            </a>
 
-            <button class="mobile-toggle" onclick="toggleMobileMenu()">☰</button>
-
-            <ul class="navbar-menu" id="navbarMenu">
-                <li>
-                    <a href="{% url 'main' %}" class="nav-link {% if request.path == '/' %}active{% endif %}">
-                        🏠 Bosh sahifa
+            <!-- Desktop Navigation -->
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="{% url 'main' %}" class="{% if request.path == '/' %}active{% endif %}">
+                        <i class="fas fa-house"></i> Dashboard
                     </a>
                 </li>
-                <li>
-                    <a href="{% url 'sotish' %}" class="nav-link {% if request.path == '/sotish/' %}active{% endif %}">
-                        🛒 Sotish
+                <li class="nav-item">
+                    <a href="{% url 'sotish' %}" class="{% if request.path == '/sotish/' %}active{% endif %}">
+                        <i class="fas fa-cart-shopping"></i> Sotish
                     </a>
                 </li>
-                <li>
-                    <a href="{% url 'add_haridor' %}"
-                        class="nav-link {% if request.path == '/add/haridor/' %}active{% endif %}">
-                        🏪 Haridor qo'shish
+                <li class="nav-item">
+                    <a href="{% url 'yt_navigation' %}" class="{% if request.path == '/navigation/' %}active{% endif %}">
+                        <i class="fas fa-map-location-dot"></i> Marshrutlar
                     </a>
                 </li>
-                <li>
-                    <a href="{% url 'qaytarish' %}"
-                        class="nav-link {% if request.path == '/qaytarish/' %}active{% endif %}">
-                        📦 Qaytarish
+                <li class="nav-item">
+                    <a href="{% url 'add_haridor' %}" class="{% if request.path == '/add/haridor/' %}active{% endif %}">
+                        <i class="fas fa-store"></i> Haridor
                     </a>
                 </li>
-                <!-- Mobile only links -->
-                <li class="mobile-only">
-                    <a href="{% url 'profile' user.username %}" class="nav-link">
-                        👤 Profil
-                    </a>
-                </li>
-                <li class="mobile-only">
-                    <a href="{% url 'logout' %}" class="nav-link">
-                        🚪 Chiqish
+                <li class="nav-item">
+                    <a href="{% url 'qaytarish' %}" class="{% if request.path == '/qaytarish/' %}active{% endif %}">
+                        <i class="fas fa-box-open"></i> Qaytarish
                     </a>
                 </li>
             </ul>
 
-            <div class="user-menu desktop-only" id="userMenu">
-                <div class="user-toggle" onclick="toggleUserMenu()">
-                    <img src="{% if user.rasmi.url %}{{ user.rasmi.url }}{% else %}{% static 'images/default_avatar.jpg' %}{% endif %}"
-                        alt="Avatar" class="user-avatar">
-                    <span>{{ user.tuliq_ismi }}</span>
-                    <span>▼</span>
+            <div class="user-section">
+                <!-- User Profile Desktop -->
+                <div class="user-dropdown desktop-only" id="userDropdown">
+                    <div class="user-btn" onclick="toggleUserDropdown(event)">
+                        <img src="{% if user.rasmi.url %}{{ user.rasmi.url }}{% else %}{% static 'images/default_avatar.jpg' %}{% endif %}"
+                            alt="Avatar" class="user-avatar">
+                        <span class="user-info-text">{{ user.tuliq_ismi }}</span>
+                        <i class="fas fa-chevron-down" style="font-size: 0.75rem; opacity: 0.5;"></i>
+                    </div>
+                    <div class="dropdown-content">
+                        <a href="{% url 'profile' user.username %}" class="dropdown-link">
+                            <i class="fas fa-user-circle"></i> Profil
+                        </a>
+                        <a href="{% url 'yetkazuvchi_hisobot' request.user.username %}" class="dropdown-link">
+                            <i class="fas fa-file-invoice"></i> Hisobotlar
+                        </a>
+                        <div style="height: 1px; background: var(--slate-100); margin: 0.5rem 0;"></div>
+                        <a href="{% url 'logout' %}" class="dropdown-link logout">
+                            <i class="fas fa-right-from-bracket"></i> Chiqish
+                        </a>
+                    </div>
                 </div>
-                <div class="dropdown-menu">
-                    <a href="{% url 'profile' user.username %}" class="dropdown-item">
-                        👤 Profil
-                    </a>
-                    <a href="{% url 'logout' %}" class="dropdown-item">
-                        🚪 Chiqish
-                    </a>
-                </div>
+
+                <!-- Mobile Toggle -->
+                <button class="mobile-toggle" onclick="toggleMobileMenu()">
+                    <i class="fas fa-bars"></i>
+                </button>
             </div>
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <div class="container">
-        {% block content %}
-        {% endblock %}
+    <!-- Mobile Side Menu -->
+    <div class="mobile-overlay" id="mobileOverlay" onclick="toggleMobileMenu()"></div>
+    <div class="mobile-menu" id="mobileMenu">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div class="brand">
+                <div class="brand-icon"><i class="fas fa-truck-fast"></i></div>
+                <span class="brand-name">Menu</span>
+            </div>
+            <button class="mobile-toggle" onclick="toggleMobileMenu()">
+                <i class="fas fa-xmark"></i>
+            </button>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <a href="{% url 'main' %}" class="dropdown-link {% if request.path == '/' %}active{% endif %}">
+                <i class="fas fa-house"></i> Bosh sahifa
+            </a>
+            <a href="{% url 'sotish' %}" class="dropdown-link {% if request.path == '/sotish/' %}active{% endif %}">
+                <i class="fas fa-cart-shopping"></i> Sotish
+            </a>
+            <a href="{% url 'yt_navigation' %}" class="dropdown-link {% if request.path == '/navigation/' %}active{% endif %}">
+                <i class="fas fa-map-location-dot"></i> Marshrutlar
+            </a>
+            <a href="{% url 'add_haridor' %}" class="dropdown-link {% if request.path == '/add/haridor/' %}active{% endif %}">
+                <i class="fas fa-store"></i> Haridor qo'shish
+            </a>
+            <a href="{% url 'qaytarish' %}" class="dropdown-link {% if request.path == '/qaytarish/' %}active{% endif %}">
+                <i class="fas fa-box-open"></i> Qaytarish
+            </a>
+        </div>
+
+        <div style="height: 1px; background: var(--slate-100);"></div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <a href="{% url 'profile' user.username %}" class="dropdown-link">
+                <i class="fas fa-user-circle"></i> Profil sozlamalari
+            </a>
+            <a href="{% url 'yetkazuvchi_hisobot' request.user.username %}" class="dropdown-link">
+                <i class="fas fa-file-invoice"></i> Kunlik hisobotlar
+            </a>
+            <a href="{% url 'logout' %}" class="dropdown-link logout">
+                <i class="fas fa-right-from-bracket"></i> Tizimdan chiqish
+            </a>
+        </div>
     </div>
 
+    <!-- Main Content -->
+    <main class="main-container">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <div id="notification-container"></div>
+
     <script>
-        // Toggle mobile menu
+        // UI Controls
+        function toggleUserDropdown(e) {
+            e.stopPropagation();
+            const dd = document.getElementById('userDropdown');
+            dd.classList.toggle('active');
+        }
+
         function toggleMobileMenu() {
-            const menu = document.getElementById('navbarMenu');
+            const menu = document.getElementById('mobileMenu');
+            const overlay = document.getElementById('mobileOverlay');
             menu.classList.toggle('active');
+            overlay.classList.toggle('active');
+            document.body.style.overflow = menu.classList.contains('active') ? 'hidden' : '';
         }
 
-        // Toggle user dropdown menu
-        function toggleUserMenu() {
-            const userMenu = document.getElementById('userMenu');
-            userMenu.classList.toggle('active');
-        }
-
-        // Close dropdown when clicking outside
-        document.addEventListener('click', function (event) {
-            const userMenu = document.getElementById('userMenu');
-            if (!userMenu.contains(event.target)) {
-                userMenu.classList.remove('active');
-            }
+        document.addEventListener('click', () => {
+            const dd = document.getElementById('userDropdown');
+            if (dd) dd.classList.remove('active');
         });
 
-        // Close mobile menu when clicking outside
-        document.addEventListener('click', function (event) {
-            const menu = document.getElementById('navbarMenu');
-            const toggle = document.querySelector('.mobile-toggle');
-            if (!menu.contains(event.target) && !toggle.contains(event.target)) {
-                menu.classList.remove('active');
+        // WebSocket Notifications & Heartbeat
+        (function() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const socketUrl = protocol + '//' + window.location.host + '/ws/notifications/';
+            
+            let notificationSocket = null;
+            const notificationQueue = [];
+            const activeNotifications = [];
+            const MAX_ACTIVE = 3;
+            const DURATION = 5000;
+
+            function connect() {
+                notificationSocket = new WebSocket(socketUrl);
+
+                notificationSocket.onopen = function() {
+                    console.log("Premium notification link active.");
+                    // Geolocation Heartbeat
+                    setInterval(() => {
+                        if (notificationSocket.readyState === WebSocket.OPEN) {
+{% if request.has_map %}
+                            if (navigator.geolocation) {
+                                navigator.geolocation.getCurrentPosition(
+                                    (pos) => {
+                                        notificationSocket.send(JSON.stringify({
+                                            type: 'ping',
+                                            lat: pos.coords.latitude,
+                                            lng: pos.coords.longitude
+                                        }));
+                                    },
+                                    (err) => {
+                                        notificationSocket.send(JSON.stringify({type: 'ping'}));
+                                    },
+                                    { enableHighAccuracy: false, timeout: 5000 }
+                                );
+                            } else {
+                                notificationSocket.send(JSON.stringify({type: 'ping'}));
+                            }
+{% else %}
+                            // Just basic ping if map feature is disabled
+                            notificationSocket.send(JSON.stringify({type: 'ping'}));
+{% endif %}
+                        }
+                    }, 30000);
+                };
+
+                notificationSocket.onmessage = function(e) {
+                    try {
+                        const data = JSON.parse(e.data);
+                        if (data.title && data.message) {
+                            showNotification(data.title, data.message, data.type || 'info');
+                        }
+                    } catch(err) {}
+                };
+
+                notificationSocket.onclose = () => setTimeout(connect, 3000);
             }
-        });
+
+            function showNotification(title, message, type) {
+                notificationQueue.push({title, message, type});
+                processQueue();
+            }
+            window.showNotification = showNotification;
+
+            function processQueue() {
+                if (notificationQueue.length === 0 || activeNotifications.length >= MAX_ACTIVE) return;
+                const {title, message, type} = notificationQueue.shift();
+                
+                const container = document.getElementById('notification-container');
+                const el = document.createElement('div');
+                el.className = `notification ${type}`;
+                
+                const icon = type === 'success' ? 'fa-check-circle' : (type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle');
+                
+                el.innerHTML = `
+                    <div class="notif-icon-box"><i class="fas ${icon}"></i></div>
+                    <div class="notif-content">
+                        <div class="notif-title">${title}</div>
+                        <div class="notif-message">${message}</div>
+                    </div>
+                    <div class="notif-progress"><div class="notif-progress-bar"></div></div>
+                `;
+
+                container.appendChild(el);
+                activeNotifications.push(el);
+
+                setTimeout(() => el.classList.add('show'), 10);
+                
+                const progressBar = el.querySelector('.notif-progress-bar');
+                progressBar.style.transitionDuration = `${DURATION}ms`;
+                progressBar.style.width = '0%';
+
+                setTimeout(() => {
+                    el.classList.remove('show');
+                    setTimeout(() => {
+                        el.remove();
+                        const index = activeNotifications.indexOf(el);
+                        if (index > -1) activeNotifications.splice(index, 1);
+                        processQueue();
+                    }, 400);
+                }, DURATION);
+            }
+
+
+            function getStatusColor(type) {
+                switch(type) {
+                    case 'success': return '#22c55e';
+                    case 'warning': return '#f59e0b';
+                    case 'info': return '#3b82f6';
+                    default: return '#3b82f6';
+                }
+            }
+
+            if (window.location.pathname !== '/login/' && window.location.pathname !== '/register/') {
+                connect();
+            }
+        })();
     </script>
 </body>
 

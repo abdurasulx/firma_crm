@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Firma CRM{% endblock %}</title>
+    <title>{% block title %}StockFirm CRM{% endblock %}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
@@ -106,12 +106,24 @@
 
         .sidebar-brand {
             color: white;
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+            transition: opacity 0.3s ease;
+        }
+
+        .sidebar-brand .brand-main {
             font-size: 20px;
             font-weight: 700;
-            white-space: nowrap;
-            opacity: 1;
-            transition: opacity 0.3s ease;
             letter-spacing: -0.3px;
+        }
+
+        .sidebar-brand .brand-sub {
+            font-size: 11px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.6);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .sidebar.collapsed .sidebar-brand {
@@ -412,11 +424,19 @@
 
         @media (max-width: 768px) {
             .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                width: var(--sidebar-width);
                 transform: translateX(-100%);
+                transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+                z-index: 1001;
             }
 
             .sidebar.mobile-open {
                 transform: translateX(0);
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
             }
 
             .main-wrapper {
@@ -424,15 +444,25 @@
             }
 
             .mobile-overlay {
-                display: block;
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.4);
+                z-index: 990;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+                pointer-events: none;
             }
 
             .mobile-overlay.active {
                 display: block;
+                opacity: 1;
+                pointer-events: auto;
             }
 
             .top-header {
                 padding: 12px 16px;
+                z-index: 100;
             }
 
             .header-title {
@@ -481,6 +511,209 @@
             border-radius: 2px;
             transition: all 0.3s ease;
         }
+
+        /* Notifications */
+        #notification-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            pointer-events: none;
+        }
+
+        .notification {
+            width: 320px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 12px;
+            transform: translateX(120%);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-left: 4px solid var(--primary-color);
+            pointer-events: auto;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification-success { border-left-color: var(--success-color); }
+        .notification-warning { border-left-color: var(--warning-color); }
+        .notification-info { border-left-color: var(--secondary-color); }
+
+        .notification-icon {
+            font-size: 20px;
+            padding-top: 2px;
+        }
+        .notification-success .notification-icon { color: var(--success-color); }
+        .notification-warning .notification-icon { color: var(--warning-color); }
+        .notification-info .notification-icon { color: var(--secondary-color); }
+
+        .notification-content {
+            flex: 1;
+        }
+
+        .notification-title {
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--text-dark);
+            margin-bottom: 4px;
+        }
+
+        .notification-message {
+            font-size: 13px;
+            color: var(--text-light);
+            line-height: 1.4;
+        }
+
+        .notification-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: rgba(0,0,0,0.05);
+            width: 100%;
+            border-radius: 0 0 0 12px;
+        }
+        
+        .notification.show .notification-progress::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 100%;
+            background: inherit;
+            background-color: currentColor;
+            opacity: 0.3;
+            animation: notification-progress 4s linear forwards;
+        }
+
+        @keyframes notification-progress {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
+
+        /* Online Deliverers Sidebar Section */
+        #online-deliverers-section {
+            margin-top: auto;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 10px;
+        }
+        .online-dev-item {
+            padding: 8px 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        .online-dev-item:hover {
+            background: var(--sidebar-hover);
+        }
+        .online-dot {
+            width: 8px;
+            height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+            flex-shrink: 0;
+            box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+        }
+        .online-dev-img {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .sidebar.collapsed .online-dev-item span:not(.online-dot) {
+            display: none;
+        }
+        .sidebar.collapsed .online-dev-img {
+            display: none;
+        }
+        /* Online Kuryerlar Scrollable & Expandable List */
+        #online-deliverers-list {
+            max-height: 260px; /* Limit default height */
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #online-deliverers-list.expanded {
+            max-height: 600px; /* Allow more when expanded */
+        }
+
+        #online-deliverers-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        #online-deliverers-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .online-dev-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 20px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .online-dev-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .online-dot {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            flex-shrink: 0;
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+        }
+
+        .online-dev-img {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            object-fit: cover;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .show-more-btn {
+            display: block;
+            width: 100%;
+            padding: 8px 20px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--primary-color);
+            text-align: left;
+            background: none;
+            border: none;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .show-more-btn:hover {
+            opacity: 1;
+        }
+
+        .sidebar.collapsed .show-more-btn {
+            display: none;
+        }
     </style>
 </head>
 
@@ -489,8 +722,11 @@
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-inner">
             <div class="sidebar-header">
-                <div class="sidebar-logo"><i class="fa-solid fa-building"></i></div>
-                <span class="sidebar-brand">Firma CRM</span>
+                <div class="sidebar-logo"><i class="fa-solid fa-layer-group"></i></div>
+                <div class="sidebar-brand">
+                    <span class="brand-main">StockFirm</span>
+                    <span class="brand-sub">{{ request.user.company.name }}</span>
+                </div>
             </div>
             <div class="sidebar-menu-wrapper">
 
@@ -538,6 +774,7 @@
                             <span class="menu-text">Hisobotlar</span>
                         </a>
                     </li>
+                    {% if has_analytics %}
                     <li class="menu-item">
                         <a href="{% url 'analytics_dashboard' %}"
                             class="menu-link {% if '/analytics/' in request.path %}active{% endif %}"
@@ -546,6 +783,17 @@
                             <span class="menu-text">AI Analytics</span>
                         </a>
                     </li>
+                    {% endif %}
+                    {% if has_map %}
+                    <li class="menu-item">
+                        <a href="{% url 'map_dashboard' %}"
+                            class="menu-link {% if '/map/' in request.path %}active{% endif %}"
+                            data-title="Real-vaqt Xaritasi">
+                            <span class="menu-icon"><i class="fa-solid fa-map-location-dot"></i></span>
+                            <span class="menu-text">Xarita</span>
+                        </a>
+                    </li>
+                    {% endif %}
                     <li class="menu-item">
                         <a href="{% url 'amallog' %}"
                             class="menu-link {% if '/amallar/' in request.path %}active{% endif %}"
@@ -570,11 +818,37 @@
                             <span class="menu-text">Nasiya Savdolar</span>
                         </a>
                     </li>
+                    <li class="menu-item">
+                        <a href="{% url 'select_plan_page' %}"
+                            class="menu-link {% if '/select-plan-page/' in request.path %}active{% endif %}"
+                            data-title="Tarifni O'zgartirish">
+                            <span class="menu-icon"><i class="fa-solid fa-star"></i></span>
+                            <span class="menu-text">Tarifni O'zgartirish</span>
+                        </a>
+                    </li>
+                    {% if request.user.type == 'ega' and backup_type != 'none' %}
+                    <li class="menu-item">
+                        <a href="{% url 'restore_view' %}"
+                            class="menu-link {% if '/backup/restore/' in request.path %}active{% endif %}"
+                            data-title="Ma'lumotlarni Tiklash">
+                            <span class="menu-icon"><i class="fa-solid fa-cloud-arrow-up"></i></span>
+                            <span class="menu-text">Ma'lumotlarni Tiklash</span>
+                        </a>
+                    </li>
+                    {% endif %}
                 </ul>
             </div>
-            <div class="sidebar-toggle" onclick="toggleSidebar()">
-                <i class="fa-solid fa-angles-left"></i>
-                <span class="toggle-text">Yig'ish</span>
+                <div id="online-deliverers-section">
+                    <div class="sidebar-section-label">Online Kuryerlar</div>
+                    <div id="online-deliverers-list">
+                        <!-- Dynamic items -->
+                    </div>
+                </div>
+
+                <div class="sidebar-toggle" onclick="toggleSidebar()">
+                    <i class="fa-solid fa-angles-left"></i>
+                    <span class="toggle-text">Yig'ish</span>
+                </div>
             </div>
         </div>
     </aside>
@@ -585,6 +859,12 @@
     <!-- Main Wrapper -->
     <div class="main-wrapper">
         <!-- Top Header -->
+        {% if request.company.setup_mode and request.user.type == 'ega' %}
+        <div style="background: var(--warning-color); color: white; padding: 10px 30px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 500; z-index: 101; position: relative;">
+            <span><i class="fa-solid fa-triangle-exclamation" style="margin-right: 8px;"></i> Tizim hozirda sozlash rejimida. Boshqa xodimlar kira olmaydi.</span>
+            <a href="{% url 'end_setup' %}" style="background: white; color: var(--warning-color); padding: 5px 15px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 12px;">SOZLASHNI YAKUNLASH</a>
+        </div>
+        {% endif %}
         <header class="top-header">
             <div class="header-left">
                 <div class="hamburger" onclick="openMobileSidebar()">
@@ -625,9 +905,12 @@
         </main>
     </div>
 
+    <!-- Notification Container -->
+    <div id="notification-container"></div>
+
     <script>
-        // Toggle sidebar collapse
-        function toggleSidebar() {
+        // Global functions for inline onclick handlers
+        window.toggleSidebar = function() {
             const sidebar = document.getElementById('sidebar');
             const icon = sidebar.querySelector('.sidebar-toggle i');
             sidebar.classList.toggle('collapsed');
@@ -637,16 +920,58 @@
                 icon.className = 'fa-solid fa-angles-left';
             }
             localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
-        }
+        };
+
+        window.openMobileSidebar = function(event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobileOverlay');
+            if (sidebar) {
+                sidebar.classList.add('mobile-open');
+            }
+            if (overlay) {
+                overlay.classList.add('active');
+            }
+        };
+
+        window.closeMobileSidebar = function(event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobileOverlay');
+            if (sidebar) {
+                sidebar.classList.remove('mobile-open');
+            }
+            if (overlay) {
+                overlay.classList.remove('active');
+            }
+        };
+
+        window.toggleUserDropdown = function(event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            const userProfile = document.getElementById('userProfile');
+            if (userProfile) {
+                userProfile.classList.toggle('active');
+            }
+        };
 
         // Load sidebar state & set dynamic page title
-        window.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', function () {
+            // Restore sidebar state
             const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
             if (isCollapsed) {
                 const sidebar = document.getElementById('sidebar');
                 sidebar.classList.add('collapsed');
                 const icon = sidebar.querySelector('.sidebar-toggle i');
-                icon.className = 'fa-solid fa-angles-right';
+                if (icon) icon.className = 'fa-solid fa-angles-right';
             }
 
             // Set page title from active sidebar link
@@ -658,32 +983,257 @@
                     pageTitle.textContent = title;
                 }
             }
-        });
 
-        // Toggle user dropdown
-        function toggleUserDropdown() {
-            const userProfile = document.getElementById('userProfile');
-            userProfile.classList.toggle('active');
-        }
+            // Setup hamburger click handler
+            const hamburger = document.querySelector('.hamburger');
+            if (hamburger) {
+                hamburger.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.openMobileSidebar(e);
+                });
+            }
+
+            // Setup mobile overlay click to close sidebar
+            const mobileOverlay = document.getElementById('mobileOverlay');
+            if (mobileOverlay) {
+                mobileOverlay.addEventListener('click', function(e) {
+                    // Only close if clicked directly on overlay
+                    if (e.target === this) {
+                        e.preventDefault();
+                        window.closeMobileSidebar(e);
+                    }
+                });
+            }
+
+            // Close sidebar when any menu link is clicked
+            const menuLinks = document.querySelectorAll('.menu-link');
+            menuLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    // Don't prevent default - let the link navigate
+                    // Just close the mobile sidebar
+                    setTimeout(function() {
+                        window.closeMobileSidebar(null);
+                    }, 100);
+                });
+            });
+
+            // Prevent sidebar from being clickable by overlay when closed
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar) {
+                sidebar.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                });
+            }
+        });
 
         // Close dropdown when clicking outside
         document.addEventListener('click', function (event) {
             const userProfile = document.getElementById('userProfile');
-            if (!userProfile.contains(event.target)) {
+            if (userProfile && !userProfile.contains(event.target)) {
                 userProfile.classList.remove('active');
             }
         });
 
-        // Mobile sidebar functions
-        function openMobileSidebar() {
-            document.getElementById('sidebar').classList.add('mobile-open');
-            document.getElementById('mobileOverlay').classList.add('active');
-        }
+        // WebSocket Notifications
+        (function() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const socketUrl = protocol + '//' + window.location.host + '/ws/notifications/';
+            
+            let notificationSocket = null;
+            const notificationQueue = [];
+            const activeNotifications = [];
+            const MAX_ACTIVE = 3;
+            const DURATION = 4000;
 
-        function closeMobileSidebar() {
-            document.getElementById('sidebar').classList.remove('mobile-open');
-            document.getElementById('mobileOverlay').classList.remove('active');
-        }
+            let heartbeatInterval = null;
+
+            function connect() {
+                console.log("Connecting to notifications WebSocket...");
+                notificationSocket = new WebSocket(socketUrl);
+
+                notificationSocket.onopen = function() {
+                    console.log("Notification socket connected.");
+                    // Start heartbeat
+                    heartbeatInterval = setInterval(() => {
+                        if (notificationSocket.readyState === WebSocket.OPEN) {
+{% if request.has_map %}
+                            // Try to get location
+                            if (navigator.geolocation) {
+                                navigator.geolocation.getCurrentPosition(
+                                    (pos) => {
+                                        notificationSocket.send(JSON.stringify({
+                                            type: 'ping',
+                                            lat: pos.coords.latitude,
+                                            lng: pos.coords.longitude
+                                        }));
+                                    },
+                                    (err) => {
+                                        if (err.code === 1 && !window.gpsWarned) { 
+                                            showNotification("Lokatsiya", "Iltimos, kuryer xaritada ko'rinishi uchun GPSga ruxsat bering.", "warning");
+                                            window.gpsWarned = true;
+                                        }
+                                        notificationSocket.send(JSON.stringify({type: 'ping'}));
+                                    },
+                                    { enableHighAccuracy: false, timeout: 5000 }
+                                );
+                            } else {
+                                notificationSocket.send(JSON.stringify({type: 'ping'}));
+                            }
+{% else %}
+                            // Just basic ping if map feature is disabled
+                            notificationSocket.send(JSON.stringify({type: 'ping'}));
+{% endif %}
+                        }
+                    }, 30000); // 30 seconds
+                };
+
+                notificationSocket.onmessage = function(e) {
+                    try {
+                        const data = JSON.parse(e.data);
+                        if (data.type === 'pong') return; // Ignore pong
+                        showNotification(data.title, data.message, data.type);
+                    } catch (err) {
+                        console.error("Notification WS Error:", err);
+                    }
+                };
+
+                notificationSocket.onclose = function(e) {
+                    console.log('Notification socket closed. Reconnecting in 5s...', e.reason);
+                    if (heartbeatInterval) clearInterval(heartbeatInterval);
+                    setTimeout(connect, 5000);
+                };
+
+                notificationSocket.onerror = function(err) {
+                    console.error('Notification socket error:', err);
+                    notificationSocket.close();
+                };
+            }
+
+            function showNotification(title, message, type) {
+                notificationQueue.push({title, message, type});
+                processQueue();
+            }
+
+            function processQueue() {
+                if (activeNotifications.length < MAX_ACTIVE && notificationQueue.length > 0) {
+                    const data = notificationQueue.shift();
+                    createNotificationElement(data);
+                }
+            }
+
+            function createNotificationElement(data) {
+                const container = document.getElementById('notification-container');
+                if (!container) return;
+
+                const el = document.createElement('div');
+                el.className = `notification notification-${data.type}`;
+                el.style.color = getStatusColor(data.type);
+                el.innerHTML = `
+                    <div class="notification-icon">
+                        <i class="fa-solid ${getIcon(data.type)}"></i>
+                    </div>
+                    <div class="notification-content">
+                        <div class="notification-title">${data.title}</div>
+                        <div class="notification-message">${data.message}</div>
+                    </div>
+                    <div class="notification-progress"></div>
+                `;
+
+                container.appendChild(el);
+                activeNotifications.push(el);
+
+                // Animate in
+                setTimeout(() => el.classList.add('show'), 10);
+
+                // Remove after duration
+                setTimeout(() => {
+                    el.classList.remove('show');
+                    setTimeout(() => {
+                        el.remove();
+                        const index = activeNotifications.indexOf(el);
+                        if (index > -1) activeNotifications.splice(index, 1);
+                        processQueue();
+                    }, 400);
+                }, DURATION);
+            }
+
+            function getIcon(type) {
+                switch(type) {
+                    case 'success': return 'fa-circle-check';
+                    case 'warning': return 'fa-triangle-exclamation';
+                    default: return 'fa-circle-info';
+                }
+            }
+
+            function getStatusColor(type) {
+                switch(type) {
+                    case 'success': return '#22c55e';
+                    case 'warning': return '#f59e0b';
+                    case 'info': return '#3b82f6';
+                    default: return '#3b82f6';
+                }
+            }
+
+            // Start connection
+            if (window.location.pathname !== '/login/' && window.location.pathname !== '/register/') {
+                connect();
+                
+                // Also poll for online deliverers
+                updateOnlineDeliverers();
+                setInterval(updateOnlineDeliverers, 5000); // Every 5 seconds
+            }
+
+            async function updateOnlineDeliverers() {
+                const listContainer = document.getElementById('online-deliverers-list');
+                if (!listContainer) return;
+
+                try {
+                    const response = await fetch('/api/map/data/');
+                    const data = await response.json();
+                    
+                    if (data.deliverers) {
+                        const onlineOnly = data.deliverers.filter(d => d.is_online);
+                        const isExpanded = listContainer.classList.contains('expanded');
+                        const limit = 5;
+                        
+                        const displayList = isExpanded ? onlineOnly : onlineOnly.slice(0, limit);
+                        
+                        listContainer.innerHTML = displayList.map(dev => `
+                            <div class="online-dev-item" title="${dev.name}" onclick="window.location.href='/map/?deliverer=${dev.id}'">
+                                <span class="online-dot"></span>
+                                <img src="${dev.image || '/static/images/default_avatar.jpg'}" class="online-dev-img" alt="">
+                                <span class="menu-text" style="display:flex; flex-direction:column; line-height: 1.2;">
+                                    <span>${dev.name}</span>
+                                    <span style="font-size: 9px; opacity: 0.7;">${dev.last_active}</span>
+                                </span>
+                            </div>
+                        `).join('');
+                        
+                        // Handle empty state
+                        if (onlineOnly.length === 0) {
+                            listContainer.innerHTML = `
+                                <div class="online-dev-item" style="font-size: 11px; opacity: 0.5;">
+                                    <span class="menu-text">Hozirda hech kim yo'q</span>
+                                </div>
+                            `;
+                        } else if (onlineOnly.length > limit) {
+                            const moreBtn = document.createElement('button');
+                            moreBtn.className = 'show-more-btn';
+                            moreBtn.textContent = isExpanded ? "Yig'ish" : `Yana ${onlineOnly.length - limit} ta...`;
+                            moreBtn.onclick = (e) => {
+                                e.stopPropagation();
+                                listContainer.classList.toggle('expanded');
+                                updateOnlineDeliverers();
+                            };
+                            listContainer.appendChild(moreBtn);
+                        }
+                    }
+                } catch (err) {
+                    console.error("Error updating online deliverers:", err);
+                }
+            }
+        })();
     </script>
 </body>
 

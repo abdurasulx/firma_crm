@@ -1,0 +1,319 @@
+{% extends 'egabase.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    .restore-container {
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 0 20px;
+    }
+    .restore-card {
+        background: var(--bg-white);
+        border-radius: 20px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+    }
+    .restore-header {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        padding: 30px;
+        color: white;
+        text-align: center;
+    }
+    .restore-header h2 {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+    }
+    .restore-header p {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 15px;
+    }
+    .restore-body {
+        padding: 40px 30px;
+    }
+    .file-upload-wrapper {
+        border: 2px dashed var(--border-color);
+        border-radius: 16px;
+        padding: 40px 20px;
+        text-align: center;
+        background: var(--bg-light);
+        transition: all 0.3s ease;
+        position: relative;
+        cursor: pointer;
+    }
+    .file-upload-wrapper:hover {
+        border-color: var(--primary-color);
+        background: rgba(16, 185, 129, 0.05);
+    }
+    .file-upload-input {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+    }
+    .file-upload-icon {
+        font-size: 48px;
+        color: var(--primary-color);
+        margin-bottom: 16px;
+    }
+    .file-upload-text {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text-dark);
+        margin-bottom: 8px;
+    }
+    .file-upload-info {
+        font-size: 13px;
+        color: var(--text-light);
+    }
+    .btn-submit {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        width: 100%;
+        padding: 16px;
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-top: 30px;
+        box-shadow: 0 8px 20px var(--primary-glow);
+    }
+    .btn-submit:hover {
+        background: var(--primary-dark);
+        transform: translateY(-2px);
+    }
+    .btn-cancel {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        width: 100%;
+        padding: 16px;
+        background: var(--bg-light);
+        color: var(--text-dark);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: center;
+        text-decoration: none;
+        margin-top: 15px;
+    }
+    .btn-cancel:hover {
+        background: #e5e7eb;
+    }
+    .date-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 24px;
+    }
+    .form-group label {
+        display: block;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-dark);
+        margin-bottom: 8px;
+    }
+    .form-control {
+        width: 100%;
+        padding: 14px 16px;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        background: #f9fafb;
+        font-size: 15px;
+        color: var(--text-dark);
+        transition: all 0.2s;
+    }
+    .form-control:focus {
+        border-color: var(--primary-color);
+        outline: none;
+        box-shadow: 0 0 0 3px var(--primary-glow);
+        background: white;
+    }
+    .alert {
+        padding: 18px 20px;
+        border-radius: 12px;
+        margin-bottom: 24px;
+        display: flex;
+        gap: 16px;
+        align-items: flex-start;
+    }
+    .alert-icon {
+        font-size: 24px;
+        flex-shrink: 0;
+    }
+    .alert-success {
+        background: rgba(16, 185, 129, 0.1);
+        color: #047857;
+        border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+    .alert-warning {
+        background: rgba(245, 158, 11, 0.1);
+        color: #92400e;
+        border: 1px solid rgba(245, 158, 11, 0.2);
+    }
+    .alert-info {
+        background: rgba(59, 130, 246, 0.1);
+        color: #1e40af;
+        border: 1px solid rgba(59, 130, 246, 0.2);
+    }
+    .alert-content h4 {
+        margin: 0 0 6px 0;
+        font-size: 16px;
+        font-weight: 700;
+    }
+    .alert-content p {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.5;
+    }
+    .action-buttons {
+        display: flex;
+        gap: 16px;
+        margin-top: 30px;
+    }
+    .action-buttons > * {
+        flex: 1;
+        margin-top: 0;
+    }
+    .back-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        margin-top: 24px;
+        color: var(--text-light);
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 500;
+        transition: color 0.2s;
+    }
+    .back-link:hover {
+        color: var(--primary-color);
+    }
+    
+    @media (max-width: 640px) {
+        .date-grid {
+            grid-template-columns: 1fr;
+        }
+        .action-buttons {
+            flex-direction: column;
+        }
+    }
+</style>
+
+<div class="restore-container">
+    <div class="restore-card">
+        <div class="restore-header">
+            <h2><i class="fa-solid fa-cloud-arrow-up"></i> Ma'lumotlarni Qayta Tiklash</h2>
+            <p>Zaxira (backup) faylidan tizim ma'lumotlarini tiklash ustaxonasi</p>
+        </div>
+        
+        <div class="restore-body">
+            <form action="{% url 'restore_view' %}" method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                {% if step_two %}
+                    <input type="hidden" name="action" value="restore">
+                    <input type="hidden" name="temp_backup_path" value="{{ temp_backup_path }}">
+                    
+                    <div class="alert alert-success">
+                        <div class="alert-icon"><i class="fa-solid fa-circle-check"></i></div>
+                        <div class="alert-content">
+                            <h4>Fayl muvaffaqiyatli tahlil qilindi</h4>
+                            <p><strong>{{ file_name }}</strong> o'qishga tayyor. Iltimos quyidagi sanalarni tasdiqlang yoki o'zgartiring.</p>
+                        </div>
+                    </div>
+
+                    <h3 style="font-size: 18px; font-weight: 600; color: var(--text-dark); margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
+                        <i class="fa-solid fa-calendar-range" style="color: var(--primary-color); margin-right: 8px;"></i> Tiklanadigan Vaqt Oralig'i (Ixtiyoriy)
+                    </h3>
+                    
+                    <div class="date-grid">
+                        <div class="form-group">
+                            <label>Boshlanish sanasi</label>
+                            <input type="date" name="start_date" class="form-control" value="{{ detected_start }}">
+                        </div>
+                        <div class="form-group">
+                            <label>Tugash sanasi</label>
+                            <input type="date" name="end_date" class="form-control" value="{{ detected_end }}">
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <div class="alert-icon" style="font-size: 20px;"><i class="fa-solid fa-circle-info"></i></div>
+                        <div class="alert-content">
+                            <p>Agar sana tanlansa, faqat o'sha oraliqda yaratilgan ma'lumotlar qayta tiklanadi. Bo'sh qolsa, arxivdagi <b>barcha ma'lumotlar</b> tiklanadi.</p>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <div class="alert-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                        <div class="alert-content">
+                            <h4>Diqqat!</h4>
+                            <p>Ma'lumotlarni tiklash hozirgi mavjud ma'lumotlarni ustidan yozishi (overwrite) mumkin. Ushbu amalni bajarishdan oldin joriy holatdan zaxira (backup) olib qo'yishingiz tavsiya etiladi.</p>
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <a href="{% url 'restore_view' %}" class="btn-cancel"><i class="fa-solid fa-xmark"></i> Bekor qilish</a>
+                        <button type="submit" class="btn-submit"><i class="fa-solid fa-rotate"></i> Hozir Tasdiqlang</button>
+                    </div>
+
+                {% else %}
+                    <input type="hidden" name="action" value="upload_only">
+                    
+                    <div class="file-upload-wrapper" id="drop-zone">
+                        <input type="file" name="backup_file" id="backup_file" class="file-upload-input" accept=".zip" required onchange="updateFileName(this)">
+                        <div class="file-upload-icon"><i class="fa-solid fa-file-zipper"></i></div>
+                        <div class="file-upload-text" id="file-name-display">Backup faylni tanlang yoki shu yerga tashlang</div>
+                        <div class="file-upload-info">Faqat <strong>.zip</strong> formatidagi arxiv fayllar. Ichida <code>all.json</code> va <code>media/</code> bo'lishi shart.</div>
+                    </div>
+
+                    <button type="submit" class="btn-submit">
+                        <i class="fa-solid fa-magnifying-glass-chart"></i> Sanalarni Tahlil Qilish
+                    </button>
+                {% endif %}
+            </form>
+            
+            <a href="{% url 'main' %}" class="back-link">
+                <i class="fa-solid fa-arrow-left"></i> Dashboardga qaytish
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    function updateFileName(input) {
+        const display = document.getElementById('file-name-display');
+        const wrapper = document.getElementById('drop-zone');
+        if (input.files && input.files[0]) {
+            display.textContent = 'Tanlangan fayl: ' + input.files[0].name;
+            wrapper.style.borderColor = 'var(--primary-color)';
+            wrapper.style.background = 'rgba(16, 185, 129, 0.05)';
+        } else {
+            display.textContent = 'Backup faylni tanlang yoki shu yerga tashlang';
+            wrapper.style.borderColor = 'var(--border-color)';
+            wrapper.style.background = 'var(--bg-light)';
+        }
+    }
+</script>
+{% endblock %}

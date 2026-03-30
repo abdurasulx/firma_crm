@@ -1,0 +1,50 @@
+{% extends 'landing/base.html' %}
+
+{% block content %}
+<section class="container animate-fade" style="text-align: center; padding: 4rem 0;">
+    <h2 style="font-size: 3rem; font-weight: 800; margin-bottom: 1rem;">Oddiy va Shaffof <span style="color: var(--primary);">Narxlar</span></h2>
+    <p style="color: var(--text-muted); margin-bottom: 4rem;">Biznesingiz hajmiga qarab eng ma'qul tarifni tanlang.</p>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+        <div class="glass-card">
+            <h3 style="margin-bottom: 1rem;">Startap</h3>
+            <div style="font-size: 2.5rem; font-weight: 800; margin-bottom: 1rem;">Bepul</div>
+            <p style="color: var(--text-muted); margin-bottom: 2rem;">Kichik biznes uchun ideal</p>
+            <ul style="list-style: none; text-align: left; margin-bottom: 2.5rem; color: var(--text-muted);">
+                <li style="margin-bottom: 0.75rem;">✓ 1 ta firma</li>
+                <li style="margin-bottom: 0.75rem;">✓ 5 tagacha xodim</li>
+                <li style="margin-bottom: 0.75rem;">✓ Cheksiz mahsulotlar</li>
+                <li style="margin-bottom: 0.75rem;">✓ 1 oylik tahlil</li>
+            </ul>
+            <a href="{% url 'register_company' %}" class="btn btn-outline" style="display: block;">Hozir boshlash</a>
+        </div>
+
+        <div class="glass-card" style="border-color: var(--primary); transform: scale(1.05); box-shadow: 0 10px 30px rgba(99, 102, 241, 0.1);">
+            <div style="position: absolute; top: -15px; right: 20px; background: var(--primary); padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700;">POPULYAR</div>
+            <h3 style="margin-bottom: 1rem;">Biznes</h3>
+            <div style="font-size: 2.5rem; font-weight: 800; margin-bottom: 1rem;">$29<span style="font-size: 1rem; color: var(--text-muted);">/oy</span></div>
+            <p style="color: var(--text-muted); margin-bottom: 2rem;">Rivojlanayotgan jamoalar uchun</p>
+            <ul style="list-style: none; text-align: left; margin-bottom: 2.5rem;">
+                <li style="margin-bottom: 0.75rem;">✓ 1 ta firma (Wildcard)</li>
+                <li style="margin-bottom: 0.75rem;">✓ Cheksiz xodimlar</li>
+                <li style="margin-bottom: 0.75rem;">✓ To'liq tahliliy dashboard</li>
+                <li style="margin-bottom: 0.75rem;">✓ Telegram bot integratsiyasi</li>
+            </ul>
+            <a href="{% url 'register_company' %}" class="btn btn-primary" style="display: block;">Tanlash</a>
+        </div>
+
+        <div class="glass-card">
+            <h3 style="margin-bottom: 1rem;">Enterprise</h3>
+            <div style="font-size: 2.5rem; font-weight: 800; margin-bottom: 1rem;">Aloqa</div>
+            <p style="color: var(--text-muted); margin-bottom: 2rem;">Katta kompaniyalar uchun</p>
+            <ul style="list-style: none; text-align: left; margin-bottom: 2.5rem; color: var(--text-muted);">
+                <li style="margin-bottom: 0.75rem;">✓ Maxsus integratsiyalar</li>
+                <li style="margin-bottom: 0.75rem;">✓ Shaxsiy menejer</li>
+                <li style="margin-bottom: 0.75rem;">✓ 24/7 VIP qo'llab-quvvatlash</li>
+                <li style="margin-bottom: 0.75rem;">✓ Cheksiz imkoniyatlar</li>
+            </ul>
+            <a href="#" class="btn btn-outline" style="display: block;">Biz bilan bog'lanish</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

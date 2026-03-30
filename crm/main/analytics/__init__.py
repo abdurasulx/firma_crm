@@ -17,7 +17,7 @@ def top_products_api(request):
         limit = int(request.GET.get('limit', 8))
 
         from_dt  = timezone.now() - datetime.timedelta(days=days)
-        savdolar = Savdo.objects.filter(vaqt_sana__gte=from_dt).select_related('haridor_dukon')
+        savdolar = Savdo.objects.filter(company=request.company, vaqt_sana__gte=from_dt).select_related('haridor_dukon')
 
         shop_totals = defaultdict(float)
         shop_counts = defaultdict(int)

@@ -23,9 +23,9 @@ from main.models import Savdo, HaridorDukon
 from .parser import parse_smm
 
 
-def build_product_timeseries() -> 'pd.DataFrame':
+def build_product_timeseries(company=None) -> 'pd.DataFrame':
     """
-    Build a timeseries DataFrame of all product sales.
+    Build a timeseries DataFrame of all product sales for a company.
     
     Returns:
         DataFrame with columns: [date, product, qty, shop, price]
@@ -36,8 +36,12 @@ def build_product_timeseries() -> 'pd.DataFrame':
     if not PANDAS_AVAILABLE:
         raise ImportError("pandas is required for demand analysis. Install: pip install pandas numpy")
     
-    # Query all sales with related shop data (avoid N+1)
-    sales = Savdo.objects.select_related('haridor_dukon').values(
+    # Query all sales for this company
+    query = Savdo.objects.all()
+    if company:
+        query = query.filter(company=company)
+        
+    sales = query.select_related('haridor_dukon').values(
         'vaqt_sana', 'smm', 'haridor_dukon__nomi'
     ).order_by('vaqt_sana')
     
@@ -65,7 +69,7 @@ def build_product_timeseries() -> 'pd.DataFrame':
     return df
 
 
-def analyze_product_demand(product_name: str) -> Dict:
+def analyze_product_demand(product_name: str, company=None) -> Dict:
     """
     Analyze demand for a specific product and generate forecast.
     
@@ -92,8 +96,8 @@ def analyze_product_demand(product_name: str) -> Dict:
     if not PANDAS_AVAILABLE:
         raise ImportError("pandas is required. Install: pip install pandas numpy")
     
-    # Build timeseries
-    df = build_product_timeseries()
+    # Build timeseries for company
+    df = build_product_timeseries(company=company)
     
     if df.empty:
         raise ValueError("No sales data available")
@@ -160,7 +164,7 @@ def analyze_product_demand(product_name: str) -> Dict:
     }
 
 
-def get_all_products() -> List[str]:
+def get_all_products(company=None) -> List[str]:
     """
     Get list of all unique products from sales data.
     
@@ -170,7 +174,7 @@ def get_all_products() -> List[str]:
     if not PANDAS_AVAILABLE:
         return []
     
-    df = build_product_timeseries()
+    df = build_product_timeseries(company=company)
     
     if df.empty:
         return []

@@ -1,0 +1,55 @@
+{% extends 'landing/super_base.html' %}
+
+{% block super_content %}
+<div class="glass-card animate-fade">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h2 style="font-size: 1.5rem; font-weight: 700;">Tariflar (Planlar)</h2>
+        <a href="{% url 'super_plan_create' %}" class="btn btn-primary">+ Yangi Tarif</a>
+    </div>
+
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead>
+                <tr style="border-bottom: 1px solid var(--glass-border); color: var(--text-muted);">
+                    <th style="padding: 1rem;">Nomi</th>
+                    <th style="padding: 1rem;">Narxi</th>
+                    <th style="padding: 1rem;">Limit (Users)</th>
+                    <th style="padding: 1rem;">Funksiyalar</th>
+                    <th style="padding: 1rem;">Sana</th>
+                    <th style="padding: 1rem; text-align: right;">Amallar</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for plan in plans %}
+                <tr style="border-bottom: 1px solid var(--glass-border); transition: background 0.3s;">
+                    <td style="padding: 1rem; font-weight: 600;">{{ plan.name }}</td>
+                    <td style="padding: 1rem;">${{ plan.price }}</td>
+                    <td style="padding: 1rem;">{% if plan.max_users == 0 %}Cheksiz{% else %}{{ plan.max_users }}{% endif %}</td>
+                    <td style="padding: 1rem;">
+                        {% if plan.has_analytics %}<span style="color: #10b981; margin-right: 5px;">✓ Analytics</span>{% endif %}
+                        {% if plan.has_telegram_bot %}<span style="color: #10b981; margin-right: 5px;">✓ Bot</span>{% endif %}
+                        {% if plan.has_map %}<span style="color: #10b981;">✓ Map</span>{% endif %}
+                        
+                        {% if plan.backup_type and plan.backup_type != 'none' %}
+                            <br><span style="color: #3b82f6; font-size: 0.85rem; display: inline-block; margin-top: 4px;"><i class="fa-solid fa-cloud" style="margin-right: 4px;"></i> Zaxira: <strong>{{ plan.get_backup_type_display }}</strong></span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 1rem;">{{ plan.created_at|date:"d.m.Y" }}</td>
+                    <td style="padding: 1rem; text-align: right;">
+                        <a href="{% url 'super_plan_edit' plan.pk %}" class="btn btn-outline" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Edit</a>
+                        <form action="{% url 'super_plan_delete' plan.pk %}" method="POST" style="display: inline;" onsubmit="return confirm('Haqiqatdan ham o\'chirmoqchimisiz?')">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline" style="padding: 0.5rem 1rem; font-size: 0.875rem; color: #ef4444; border-color: rgba(239, 68, 68, 0.2);">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="padding: 2rem; text-align: center; color: var(--text-muted);">Hozircha tariflar yo'q.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

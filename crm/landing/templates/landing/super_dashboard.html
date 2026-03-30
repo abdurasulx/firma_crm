@@ -1,0 +1,289 @@
+{% extends 'landing/super_base.html' %}
+{% load static %}
+
+{% block page_title %}Tizim Analitikasi{% endblock %}
+{% block page_subtitle %}Barcha firmalar va foydalanuvchilar bo'yicha umumiy holat{% endblock %}
+
+{% block content %}
+<style>
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 25px;
+        margin-bottom: 40px;
+    }
+
+    .stat-card {
+        padding: 25px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        transition: transform 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .stat-card::after {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
+        pointer-events: none;
+    }
+
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+    }
+
+    .stat-info .label {
+        font-size: 14px;
+        color: var(--text-dim);
+        display: block;
+        margin-bottom: 5px;
+    }
+
+    .stat-info .value {
+        font-size: 32px;
+        font-weight: 700;
+        letter-spacing: -1px;
+    }
+
+    .blue .stat-icon { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+    .purple .stat-icon { background: rgba(139, 92, 246, 0.2); color: #8b5cf6; }
+    .green .stat-icon { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+    .orange .stat-icon { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 25px;
+    }
+
+    .table-container {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+    }
+
+    th {
+        text-align: left;
+        padding: 15px;
+        color: var(--text-dim);
+        font-weight: 500;
+        border-bottom: 1px solid var(--border);
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    td {
+        padding: 18px 15px;
+        border-bottom: 1px solid var(--border);
+        font-size: 15px;
+    }
+
+    tr:hover td {
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .badge {
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .badge-success { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+    .badge-primary { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+
+    .chart-container {
+        height: 300px;
+        margin-top: 20px;
+    }
+</style>
+
+<div class="stats-grid">
+    <div class="glass-card stat-card blue">
+        <div class="stat-icon"><i class="fa-solid fa-building"></i></div>
+        <div class="stat-info">
+            <span class="label">Jami Firmalar</span>
+            <span class="value">{{ total_companies }}</span>
+        </div>
+    </div>
+    <div class="glass-card stat-card green">
+        <div class="stat-icon"><i class="fa-solid fa-check-circle"></i></div>
+        <div class="stat-info">
+            <span class="label">Faol Firmalar</span>
+            <span class="value">{{ active_companies }}</span>
+        </div>
+    </div>
+    <div class="glass-card stat-card purple">
+        <div class="stat-icon"><i class="fa-solid fa-vial"></i></div>
+        <div class="stat-info">
+            <span class="label">Sinov Muddatida</span>
+            <span class="value">{{ trial_companies }}</span>
+        </div>
+    </div>
+    <div class="glass-card stat-card orange">
+        <div class="stat-icon"><i class="fa-solid fa-gears"></i></div>
+        <div class="stat-info">
+            <span class="label">Sozlash Rejimida</span>
+            <span class="value">{{ setup_companies }}</span>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+    <div class="glass-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="font-size: 20px;">Yangi Registratsiyalar</h2>
+            <div style="text-align: right;">
+                <span style="font-size: 12px; color: var(--text-dim);">Oxirgi 24 soatda</span>
+                <div style="font-size: 18px; font-weight: 700; color: var(--accent);">+{{ today_registrations }}</div>
+            </div>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Firma Nomi</th>
+                        <th>Subdomain</th>
+                        <th>Sana</th>
+                        <th>Holati</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for company in recent_companies %}
+                    <tr>
+                        <td><strong>{{ company.name }}</strong></td>
+                        <td><code style="color: var(--primary);">{{ company.subdomain }}</code></td>
+                        <td>{{ company.created_at|date:"d.m.Y" }}</td>
+                        <td>
+                            {% if company.setup_mode %}
+                                <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">Sozlanyapti</span>
+                            {% elif company.is_on_trial %}
+                                <span class="badge badge-primary">Sinovda</span>
+                            {% elif company.is_active %}
+                                <span class="badge badge-success">Faol</span>
+                            {% else %}
+                                <span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">To'xtatilgan</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" style="text-align: center; color: var(--text-dim);">Hech qanday firma yo'q</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="glass-card">
+        <h2 style="font-size: 20px; margin-bottom: 20px;">O'sish Dinamikasi (7 kun)</h2>
+        <div class="chart-container">
+            <canvas id="growthChart"></canvas>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('growthChart').getContext('2d');
+    
+    // Check current theme
+    const isLight = document.body.classList.contains('light-mode');
+    const textColor = isLight ? '#1e293b' : '#9ca3af';
+    const gridColor = isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)';
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ chart_labels|safe }},
+            datasets: [{
+                label: 'Yangi firmalar',
+                data: {{ chart_data|safe }},
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                tension: 0.4,
+                fill: true,
+                borderWidth: 3,
+                pointBackgroundColor: '#fff',
+                pointBorderColor: '#3b82f6',
+                pointRadius: 4,
+                pointHoverRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: isLight ? '#fff' : '#1e293b',
+                    titleColor: isLight ? '#1e293b' : '#fff',
+                    bodyColor: isLight ? '#1e293b' : '#fff',
+                    borderColor: '#3b82f6',
+                    borderWidth: 1,
+                    displayColors: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: gridColor },
+                    ticks: { 
+                        color: textColor,
+                        stepSize: 1
+                    }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: textColor }
+                }
+            }
+        }
+    });
+
+    // Handle theme change for chart
+    document.getElementById('theme-toggle').addEventListener('click', () => {
+        setTimeout(() => {
+            const isLightNew = document.body.classList.contains('light-mode');
+            const newTextColor = isLightNew ? '#1e293b' : '#9ca3af';
+            const newGridColor = isLightNew ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)';
+            
+            const chart = Chart.getChart('growthChart');
+            chart.options.scales.y.grid.color = newGridColor;
+            chart.options.scales.y.ticks.color = newTextColor;
+            chart.options.scales.x.ticks.color = newTextColor;
+            chart.options.plugins.tooltip.backgroundColor = isLightNew ? '#fff' : '#1e293b';
+            chart.options.plugins.tooltip.titleColor = isLightNew ? '#1e293b' : '#fff';
+            chart.options.plugins.tooltip.bodyColor = isLightNew ? '#1e293b' : '#fff';
+            chart.update();
+        }, 100);
+    });
+</script>
+{% endblock %}

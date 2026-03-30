@@ -1,0 +1,317 @@
+{% extends 'egabase.html' %}
+{% load static %}
+
+{% block title %}Xarita - StockFirm CRM{% endblock %}
+
+{% block page_title %}Real-vaqt Xaritasi{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    .map-container {
+        height: calc(100vh - 200px);
+        min-height: 500px;
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        overflow: hidden;
+        position: relative;
+    }
+    #map {
+        height: 100%;
+        width: 100%;
+    }
+    .map-overlay {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(8px);
+        padding: 15px;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        width: 250px;
+    }
+    .deliverer-marker, .sale-marker, .shop-marker {
+        background: none !important;
+        border: none !important;
+    }
+    .deliverer-marker {
+        position: relative;
+    }
+    .deliverer-avatar-wrapper, .shop-avatar-wrapper {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        border: 2px solid white;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        overflow: hidden;
+        background: #eee;
+    }
+    .deliverer-avatar-wrapper img, .shop-avatar-wrapper img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+    .marker-label {
+        background: rgba(0,0,0,0.7);
+        backdrop-filter: blur(4px);
+        color: white;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 10px;
+        font-weight: 700;
+        position: absolute;
+        bottom: -15px;
+        left: 50%;
+        transform: translateX(-50%);
+        white-space: nowrap;
+        z-index: 10;
+    }
+    .sale-badge {
+        position: absolute;
+        top: -10px;
+        right: -10px;
+        background: var(--success-color);
+        color: white;
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-size: 10px;
+        font-weight: 800;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        z-index: 20;
+        border: 1px solid white;
+    }
+    .shop-marker {
+        opacity: 0.8;
+        transition: opacity 0.3s;
+    }
+    .shop-marker:hover {
+        opacity: 1;
+    }
+    .deliverer-avatar-wrapper.pulse-online {
+        animation: pulse-border 2s infinite;
+    }
+    @keyframes pulse-border {
+        0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+    }
+</style>
+
+<div class="map-container">
+    <div id="map"></div>
+    
+    <div class="map-overlay">
+        <h3 style="font-size: 16px; margin-bottom: 12px; color: var(--text-dark);">Xarita Sozlamalari</h3>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                <input type="checkbox" id="show-deliverers" checked> 🚚 Yetkazib beruvchilar
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                <input type="checkbox" id="show-sales" checked> 💰 Bugungi sotuvlar
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                <input type="checkbox" id="show-shops" checked> 🏠 Barcha do'konlar
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                <input type="checkbox" id="show-routes" checked> 📍 Yo'llarni ko'rsatish
+            </label>
+        </div>
+        <hr style="margin: 12px 0; border: 0; border-top: 1px solid var(--border-color);">
+        <div id="active-list" style="max-height: 200px; overflow-y: auto;">
+            <p style="font-size: 12px; color: var(--text-light);">Xaritani yangilash...</p>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Map
+        const map = L.map('map').setView([41.311, 69.240], 12);
+        
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 20
+        }).addTo(map);
+
+        let delivererMarkers = {};
+        let routeLayers = {};
+        let saleMarkers = [];
+        let shopMarkers = [];
+
+        function updateMap() {
+            const showSales = document.getElementById('show-sales').checked;
+            const showDeliverers = document.getElementById('show-deliverers').checked;
+            const showShops = document.getElementById('show-shops').checked;
+            const showRoutes = document.getElementById('show-routes').checked;
+            
+            fetch('{% url "api_map_data" %}')
+                .then(res => res.json())
+                .then(data => {
+                    // Update Deliverers & Routes
+                    const currentIds = data.deliverers.map(d => d.id.toString());
+                    
+                    // Cleanup old markers/routes
+                    Object.keys(delivererMarkers).forEach(id => {
+                        if (!currentIds.includes(id)) {
+                            map.removeLayer(delivererMarkers[id]);
+                            delete delivererMarkers[id];
+                        }
+                    });
+                    Object.keys(routeLayers).forEach(id => {
+                        if (!currentIds.includes(id) || !showRoutes || !showDeliverers) {
+                            map.removeLayer(routeLayers[id]);
+                            delete routeLayers[id];
+                        }
+                    });
+
+                    if (showDeliverers) {
+                        data.deliverers.forEach(d => {
+                            // Marker
+                            const statusColor = d.is_online ? d.color : '#94a3b8';
+                            const opacity = d.is_online ? 1 : 0.6;
+                            const filter = d.is_online ? '' : 'grayscale(100%)';
+                            const iconHtml = `<div class="marker-label" style="background:${statusColor};">${d.name}</div>
+                                           <div class="deliverer-avatar-wrapper ${d.is_online ? 'pulse-online' : ''}" style="border-color:${statusColor}; opacity:${opacity}; filter:${filter};">
+                                               <img src="${d.image || '/static/images/default_avatar.jpg'}">
+                                           </div>`;
+                            const popupHtml = `<b>${d.name}</b><br>Status: ${d.is_online ? '<span style="color:var(--success-color)">Onlayn</span>' : '<span style="color:var(--slate-500)">Oflayn</span>'}<br>Faollik: ${d.last_active}`;
+
+                            if (delivererMarkers[d.id]) {
+                                delivererMarkers[d.id].setLatLng([d.lat, d.lng]);
+                                // Update Icon and Popup for real-time status
+                                delivererMarkers[d.id].setIcon(L.divIcon({
+                                    className: 'deliverer-marker',
+                                    html: iconHtml,
+                                    iconSize: [44, 44],
+                                    iconAnchor: [22, 22]
+                                }));
+                                delivererMarkers[d.id].getPopup().setContent(popupHtml);
+                            } else {
+                                const icon = L.divIcon({
+                                    className: 'deliverer-marker',
+                                    html: iconHtml,
+                                    iconSize: [44, 44],
+                                    iconAnchor: [22, 22]
+                                });
+                                delivererMarkers[d.id] = L.marker([d.lat, d.lng], {icon: icon})
+                                    .addTo(map)
+                                    .bindPopup(popupHtml);
+                            }
+
+                            // Route
+                            if (showRoutes && d.path && d.path.length > 1) {
+                                if (routeLayers[d.id]) {
+                                    routeLayers[d.id].setLatLngs(d.path);
+                                } else {
+                                    routeLayers[d.id] = L.polyline(d.path, {
+                                        color: d.color,
+                                        weight: 3,
+                                        opacity: 0.5,
+                                        dashArray: '5, 5'
+                                    }).addTo(map);
+                                }
+                            }
+                        });
+                    }
+
+                    // Update Sales
+                    saleMarkers.forEach(m => map.removeLayer(m));
+                    saleMarkers = [];
+                    if (showSales) {
+                        data.sales.forEach(s => {
+                            const icon = L.divIcon({
+                                className: 'sale-marker',
+                                html: `<div class="sale-badge">${s.summa.toLocaleString()}</div><div class="deliverer-avatar-wrapper" style="border-color:var(--success-color);"><img src="/static/images/default_avatar.jpg"></div>`,
+                                iconSize: [44, 44],
+                                iconAnchor: [22, 22]
+                            });
+                            const marker = L.marker([s.lat, s.lng], {icon: icon})
+                                .addTo(map)
+                                .bindPopup(`<b>${s.shop_name}</b><br>Summa: ${s.summa.toLocaleString()} so'm<br>Yetkazuvchi: ${s.deliverer_name}<br>Vaqt: ${s.time}`);
+                            saleMarkers.push(marker);
+                        });
+                    }
+
+                    // Update Static Shops
+                    shopMarkers.forEach(m => map.removeLayer(m));
+                    shopMarkers = [];
+                    if (showShops) {
+                        data.shops.forEach(sh => {
+                            const icon = L.divIcon({
+                                className: 'shop-marker',
+                                html: `<div class="marker-label" style="background:#6366f1;">${sh.name}</div><div class="shop-avatar-wrapper" style="border-color:#6366f1; width:32px; height:32px; border-radius:8px;"><img src="${sh.pic || '/static/images/default_shop.png'}"></div>`,
+                                iconSize: [32, 32],
+                                iconAnchor: [16, 16]
+                            });
+                            const marker = L.marker([sh.lat, sh.lng], {icon: icon})
+                                .addTo(map)
+                                .bindPopup(`<b>${sh.name}</b><br>Status: Ro'yxatdan o'tgan shop`);
+                            shopMarkers.push(marker);
+                        });
+                    }
+
+                    // Update active list
+                    const list = document.getElementById('active-list');
+                    const isExpanded = list.classList.contains('expanded');
+                    const limit = 5;
+                    const onlineCount = data.deliverers.filter(d => d.is_online).length;
+                    
+                    list.innerHTML = `<h4 style="font-size:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                        <span>Yetkazib beruvchilar (${data.deliverers.length})</span>
+                        <span style="font-size:10px; color:var(--success-color)">${onlineCount} onlayn</span>
+                    </h4>`;
+                    
+                    const displayItems = isExpanded ? data.deliverers : data.deliverers.slice(0, limit);
+                    
+                    displayItems.forEach(d => {
+                        const statusColor = d.is_online ? 'var(--success-color)' : 'var(--slate-400)';
+                        const statusText = d.is_online ? 'Onlayn' : 'Oflayn';
+                        list.innerHTML += `
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:12px; opacity: ${d.is_online ? 1 : 0.7}; cursor:pointer;" onclick="map.setView([${d.lat}, ${d.lng}], 15)">
+                                <div style="width:8px; height:8px; border-radius:50%; background:${statusColor};" title="${statusText}"></div>
+                                <span style="flex:1; font-weight:${d.is_online ? '600' : '400'}">${d.name}</span>
+                                <span style="color:var(--text-light); font-size:10px;">${d.last_active}</span>
+                            </div>
+                        `;
+                    });
+                    
+                    if (data.deliverers.length > limit) {
+                        const moreBtn = document.createElement('div');
+                        moreBtn.style.textAlign = 'center';
+                        moreBtn.style.fontSize = '11px';
+                        moreBtn.style.color = 'var(--primary-color)';
+                        moreBtn.style.cursor = 'pointer';
+                        moreBtn.style.fontWeight = '700';
+                        moreBtn.style.marginTop = '10px';
+                        moreBtn.textContent = isExpanded ? "YIG'ISH" : `BARCHASINI KO'RSATISH (${data.deliverers.length - limit} ta yana)`;
+                        moreBtn.onclick = () => {
+                            list.classList.toggle('expanded');
+                            updateMap();
+                        };
+                        list.appendChild(moreBtn);
+                    }
+
+                    if (data.deliverers.length === 0) {
+                        list.innerHTML += '<p style="font-size:11px; color:var(--text-light);">Hozircha yetkazib beruvchilar yo\'q.</p>';
+                    }
+                });
+        }
+
+        // Poll every 5 seconds for high-responsiveness
+        setInterval(updateMap, 5000);
+        updateMap();
+
+        // Event listeners
+        document.getElementById('show-deliverers').addEventListener('change', updateMap);
+        document.getElementById('show-sales').addEventListener('change', updateMap);
+        document.getElementById('show-shops').addEventListener('change', updateMap);
+        document.getElementById('show-routes').addEventListener('change', updateMap);
+    });
+</script>
+{% endblock %}

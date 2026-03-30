@@ -1,4 +1,4 @@
-{% extends 'egabase.html' %}
+{% extends base_template|default:'egabase.html' %}
 {% load static %}
 
 {% block title %}{{ pz.user.tuliq_ismi }} - Hisoboti{% endblock %}
@@ -20,7 +20,8 @@
     }
 
     .hero-card {
-        background: linear-gradient(135deg, var(--sidebar-bg), #1e293b);
+        background: #0f172a; /* Fallback */
+        background: linear-gradient(135deg, var(--sidebar-bg, #0f172a), #1e293b);
         border-radius: var(--radius);
         padding: 40px;
         color: white;
@@ -57,10 +58,11 @@
     .hero-info p {
         opacity: 0.9;
         font-size: 15px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
         color: #e2e8f0;
+        line-height: 1.5;
+    }
+    .hero-info p i {
+        margin-right: 8px;
     }
 
     .stats-grid {
@@ -223,6 +225,45 @@
     .page-link { padding: 8px 18px; border-radius: 10px; background: #fff; border: 1.5px solid var(--border); color: var(--text-dark); text-decoration: none; font-size: 13px; font-weight: 700; }
     .page-link:hover:not(.disabled) { border-color: var(--primary); color: var(--primary); }
     .page-link.disabled { opacity: 0.5; pointer-events: none; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .hero-card {
+            flex-direction: column-reverse;
+            text-align: center;
+            padding: 30px 20px;
+            gap: 20px;
+        }
+        .hero-info h2 { font-size: 24px; word-break: break-word; }
+        .hero-info p { font-size: 13px; text-align: center; }
+        .hero-info p i { margin-right: 6px; }
+        .hero-action img { width: 70px !important; height: 70px !important; }
+
+        .stats-grid {
+            grid-template-columns: 1fr;
+            gap: 16px;
+            max-width: 100%;
+        }
+        .stat-card { padding: 16px; max-width: 100%; }
+        .stat-val { font-size: 22px; }
+
+        .filter-card { padding: 16px; max-width: 100%; }
+        .filter-form { gap: 12px; flex-direction: column; align-items: stretch; }
+        .fg { min-width: 100%; width: 100%; }
+        .fc { width: 100%; box-sizing: border-box; }
+        .btn-filter { width: 100%; display: flex; justify-content: center; align-items: center; }
+
+        .section-card { max-width: 100%; overflow: hidden; }
+        .section-head { padding: 16px; flex-direction: column; align-items: flex-start; gap: 10px; }
+        th, td { padding: 12px 16px; font-size: 13px; }
+        
+        .view-btn { padding: 6px 10px; font-size: 11px; }
+    }
+
+    @media (max-width: 480px) {
+        th:nth-child(1), td:nth-child(1) { display: none; } /* Hide # column */
+        .hero-info h2 { font-size: 20px; }
+    }
 </style>
 
 <div class="hero-card">
@@ -266,6 +307,9 @@
         <button type="submit" class="btn-filter">
             <i class="fa-solid fa-magnifying-glass"></i> Filter
         </button>
+        <a href="?from={{ from_date }}&to={{ to_date }}&export=xlsx" class="btn-filter" style="background: #10b981; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-file-excel"></i> Excelga yuklash
+        </a>
     </form>
 </div>
 

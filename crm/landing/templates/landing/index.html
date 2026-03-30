@@ -1,0 +1,51 @@
+{% extends 'landing/base.html' %}
+
+{% block content %}
+<section class="container animate-fade" style="text-align: center; padding: 4rem 0;">
+    <h1 style="font-size: 4rem; font-weight: 800; margin-bottom: 1.5rem; line-height: 1.1;">
+        Biznesingizni <br>
+        <span style="background: linear-gradient(to right, #6366f1, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Yangi darajaga</span> olib chiqing
+    </h1>
+    <p style="color: var(--text-muted); font-size: 1.25rem; max-width: 600px; margin: 0 auto 3rem; line-height: 1.6;">
+        StockFirm orqali zaxira boshqaruvi, savdo tahlili va mijozlar bilan munosabatlarni bir joyda boshqaring.
+    </p>
+    <div style="display: flex; gap: 1rem; justify-content: center;">
+        <a href="{% url 'register_company' %}" class="btn btn-primary" style="padding: 1rem 2rem; font-size: 1.1rem;">Bepul boshlash</a>
+        <a href="#features" class="btn btn-outline" style="padding: 1rem 2rem; font-size: 1.1rem;">Imkoniyatlar</a>
+    </div>
+</section>
+
+<section id="features" class="container" style="padding: 6rem 0;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+        <div class="glass-card">
+            <div style="width: 50px; height: 50px; background: rgba(99, 102, 241, 0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 1.5rem; color: var(--primary);">
+                📊
+            </div>
+            <h3 style="font-size: 1.5rem; margin-bottom: 1rem;">Real-vaqt Tahlili</h3>
+            <p style="color: var(--text-muted); line-height: 1.6;">Savdolaringizni va zaxira harakatlarini real vaqt rejimida kuzatib boring.</p>
+        </div>
+        <div class="glass-card">
+            <div style="width: 50px; height: 50px; background: rgba(168, 85, 247, 0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 1.5rem; color: #a855f7;">
+                🚀
+            </div>
+            <h3 style="font-size: 1.5rem; margin-bottom: 1rem;">Tezkor Boshqaruv</h3>
+            <p style="color: var(--text-muted); line-height: 1.6;">Optimal ishlash uchun sozlangan qulay interfeys orqali mahsulotlarni boshqaring.</p>
+        </div>
+        <div class="glass-card">
+            <div style="width: 50px; height: 50px; background: rgba(16, 185, 129, 0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 1.5rem; color: #10b981;">
+                🌐
+            </div>
+            <h3 style="font-size: 1.5rem; margin-bottom: 1rem;">Subdomain Tizimi</h3>
+            <p style="color: var(--text-muted); line-height: 1.6;">Har bir brend uchun alohida subdomain va mustaqil CRM tizimi.</p>
+        </div>
+    </div>
+</section>
+
+<section class="container" style="padding: 4rem 0;">
+    <div class="glass-card" style="text-align: center; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1));">
+        <h2 style="font-size: 2.5rem; margin-bottom: 1.5rem;">Hozirroq ro'yxatdan o'ting</h2>
+        <p style="color: var(--text-muted); margin-bottom: 2rem;">Hech qanday deploysiz, 1 daqiqada o'z CRM tizimingizga ega bo'ling.</p>
+        <a href="{% url 'register_company' %}" class="btn btn-primary" style="padding: 1rem 2.5rem;">Firmami ochish</a>
+    </div>
+</section>
+{% endblock %}

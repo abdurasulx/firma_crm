@@ -1,0 +1,145 @@
+{% extends 'landing/super_base.html' %}
+{% load l10n %}
+
+{% block content %}
+<div class="glass-card animate-fade" style="max-width: 800px; margin: 0 auto; background: var(--card-bg); border: 1px solid var(--border);">
+    <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 2rem; color: var(--text-main);">Tarif {{ action }}</h2>
+
+    <form method="POST">
+        {% csrf_token %}
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+            <div style="grid-column: span 2;">
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-dim); font-weight: 500;">Plan Nomi</label>
+                <input type="text" name="name" value="{{ plan.name|default:'' }}" required 
+                    style="width: 100%; background: var(--input-bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 0.75rem 1rem; color: var(--input-text); font-size: 1rem; transition: all 0.3s;">
+            </div>
+
+            <div style="grid-column: span 2;">
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-dim); font-weight: 500;">Tavsif</label>
+                <textarea name="description" rows="3" 
+                    style="width: 100%; background: var(--input-bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 0.75rem 1rem; color: var(--input-text); font-size: 1rem; transition: all 0.3s;">{{ plan.description|default:'' }}</textarea>
+            </div>
+
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <label style="color: var(--text-dim); font-weight: 500;">Narxi ($)</label>
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <input type="checkbox" id="auto_calc_price" checked style="width: 1rem; height: 1rem; cursor: pointer; accent-color: var(--primary);">
+                        <label for="auto_calc_price" style="color: var(--text-dim); font-size: 0.85rem; cursor: pointer;">Avto hisob</label>
+                    </div>
+                </div>
+                <input type="number" step="0.01" name="price" id="plan_price_input" value="{{ plan.price|unlocalize|default:'0.00' }}" required 
+                    style="width: 100%; background: var(--input-bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 0.75rem 1rem; color: var(--input-text); font-size: 1rem;">
+            </div>
+
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-dim); font-weight: 500;">Maksimal foydalanuvchilar</label>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="number" name="max_users" id="max_users_input" value="{{ plan.max_users|default:'5' }}" required 
+                        style="width: 100%; background: var(--input-bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 0.75rem 1rem; color: var(--input-text); font-size: 1rem; {% if plan.max_users == 0 %}opacity: 0.5; pointer-events: none;{% endif %}">
+                    <div style="display: flex; align-items: center; gap: 5px; white-space: nowrap;">
+                        <input type="checkbox" id="unlimited_users_check" {% if plan.max_users == 0 %}checked{% endif %}
+                            style="width: 1rem; height: 1rem; cursor: pointer;">
+                        <label for="unlimited_users_check" style="color: var(--text-main); font-size: 0.9rem; cursor: pointer;">Cheksiz</label>
+                    </div>
+                </div>
+                <script>
+                    document.getElementById('unlimited_users_check').addEventListener('change', function() {
+                        const input = document.getElementById('max_users_input');
+                        if (this.checked) {
+                            input.value = 0;
+                            input.style.opacity = '0.5';
+                            input.style.pointerEvents = 'none';
+                        } else {
+                            if (input.value == 0) input.value = 5;
+                            input.style.opacity = '1';
+                            input.style.pointerEvents = 'auto';
+                        }
+                    });
+                </script>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <input type="checkbox" name="has_analytics" id="has_analytics" {% if plan.has_analytics or action == "Qo'shish" %}checked{% endif %}
+                    style="width: 1.25rem; height: 1.25rem; accent-color: var(--primary); cursor: pointer;">
+                <label for="has_analytics" style="color: var(--text-main); cursor: pointer;">AI Analytics mavjud</label>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <input type="checkbox" name="has_telegram_bot" id="has_telegram_bot" {% if plan.has_telegram_bot %}checked{% endif %}
+                    style="width: 1.25rem; height: 1.25rem; accent-color: var(--primary); cursor: pointer;">
+                <label for="has_telegram_bot" style="color: var(--text-main); cursor: pointer;">Telegram Bot mavjud</label>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <input type="checkbox" name="has_map" id="has_map" {% if plan.has_map %}checked{% endif %}
+                    style="width: 1.25rem; height: 1.25rem; accent-color: var(--primary); cursor: pointer;">
+                <label for="has_map" style="color: var(--text-main); cursor: pointer;">Xarita (Map) mavjud</label>
+            </div>
+
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-dim); font-weight: 500;">Ma'lumotlar zaxirasi</label>
+                <select name="backup_type" style="width: 100%; background: var(--input-bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 0.75rem 1rem; color: var(--input-text); font-size: 1rem;">
+                    <option value="none" {% if plan.backup_type == 'none' %}selected{% endif %}>Yo'q</option>
+                    <option value="monthly" {% if plan.backup_type == 'monthly' %}selected{% endif %}>Oylik</option>
+                    <option value="weekly" {% if plan.backup_type == 'weekly' %}selected{% endif %}>Haftalik</option>
+                    <option value="daily" {% if plan.backup_type == 'daily' %}selected{% endif %}>Kunlik</option>
+                </select>
+            </div>
+        </div>
+
+        <div style="margin-top: 2.5rem; display: flex; gap: 1rem;">
+            <button type="submit" class="btn-primary" style="flex: 1; border: none; cursor: pointer; padding: 0.8rem; font-weight: 600;">Saqlash</button>
+            <a href="{% url 'super_plan_list' %}" class="btn-primary" style="flex: 1; text-align: center; background: rgba(0,0,0,0.05); color: var(--text-main); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; text-decoration: none;">Bekor qilish</a>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const priceInput = document.querySelector('input[name="price"]');
+        const autoCalcCheck = document.getElementById('auto_calc_price');
+        const maxUsersInput = document.getElementById('max_users_input');
+        const unlimitedCheck = document.getElementById('unlimited_users_check');
+        const hasAnalytics = document.getElementById('has_analytics');
+        const hasTelegramBot = document.getElementById('has_telegram_bot');
+        const hasMap = document.getElementById('has_map');
+        const backupSelect = document.querySelector('select[name="backup_type"]');
+        
+        // Disable readonly state conditionally if needed, but here we just respect the checkbox
+        
+        function calculatePrice() {
+            if (!autoCalcCheck.checked) return;
+            
+            let total = 0;
+            
+            if (unlimitedCheck.checked) {
+                total += 55;
+            } else {
+                total += parseInt(maxUsersInput.value || 0) * 1;
+            }
+            
+            if (hasAnalytics.checked) total += 15;
+            if (hasTelegramBot.checked) total += 5;
+            if (hasMap.checked) total += 20;
+            
+            const backupType = backupSelect.value;
+            if (backupType === 'monthly') total += 5;
+            if (backupType === 'weekly') total += 15;
+            if (backupType === 'daily') total += 30;
+            
+            priceInput.value = total.toFixed(2);
+        }
+        
+        const elements = [maxUsersInput, unlimitedCheck, hasAnalytics, hasTelegramBot, hasMap, backupSelect];
+        elements.forEach(el => {
+            el.addEventListener('change', calculatePrice);
+        });
+        
+        // Hozirgi narx bo'sh bo'lsa yoki 0.00 bo'lsa birinchi marta hisoblab qo'yamiz
+        if (!priceInput.value || parseFloat(priceInput.value) === 0) {
+            calculatePrice();
+        }
+    });
+</script>
+{% endblock %}

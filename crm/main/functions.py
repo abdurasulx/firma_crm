@@ -8,7 +8,7 @@ class new_yuklama:
         self.narx=narx
 
 
-def mahsulotlar_miqdori(mahstr):
+def mahsulotlar_miqdori(mahstr, company=None):
     from main.models import Mahsulot
     from collections import defaultdict
 
@@ -26,7 +26,10 @@ def mahsulotlar_miqdori(mahstr):
             nomi = nomi.strip()
             try:
                 miqdor = int(miqdor.strip())
-                mahsulot_obj = Mahsulot.objects.filter(nomi=nomi).first()
+                product_filter = {'nomi': nomi}
+                if company:
+                    product_filter['company'] = company
+                mahsulot_obj = Mahsulot.objects.filter(**product_filter).first()
                 
                 if not mahsulot_obj:
                     # Skip products that no longer exist in the system
@@ -117,7 +120,7 @@ def accptyuk(user,yuk):
 
     
     
-    mxs=Mahsulot.objects.get(nomi=yuk.mahsulot.nomi)
+    mxs=Mahsulot.objects.get(nomi=yuk.mahsulot.nomi, company=yuk.company)
     if mxs.miqdori>=yuk.miqdor:
         
         yt.mahsulotlar+=f'{yuk.mahsulot} {int(yuk.miqdor)},'
@@ -155,8 +158,8 @@ def sotishm(mahs,yt):
     sotl=''
     for i in natija:
         if natija[i] > 0:
-            # Clean up missing products: only keep if product still exists in Mahsulot table
-            if Mahsulot.objects.filter(nomi=i).exists():
+            # Clean up missing products: only keep if product still exists in Mahsulot table for this company
+            if Mahsulot.objects.filter(nomi=i, company=yt.company).exists():
                 sotl += f'{i} {natija[i]},'
 
 
@@ -175,7 +178,7 @@ class sotuv_new_form:
         self.tasdiq_kutilmoqda=savdo.tasdiq_kutilmoqda
         self.summa=savdo.summa
         self.smm=savdo.smm
-        print(savdo.smm)
+        
         self.smr=savdo.smr.url
         self.vaqt_sana=savdo.vaqt_sana
 
@@ -203,16 +206,16 @@ def yetkazuvchi_mahsulot_filter(Sotuv):
                 if len(n) == 3:
                     prod_nom = n[0].strip()
                     if prod_nom not in t0:
-                        mahs_obj = Mahsulot.objects.filter(nomi=prod_nom).first()
+                        mahs_obj = Mahsulot.objects.filter(nomi=prod_nom, company=s.company).first()
                         if not mahs_obj:
                             continue # Skip missing products
                         t0 += prod_nom + ' '
                         t1 += prod_nom + ' ' + n[1] + ' ' + str(mahs_obj.turi) + ' '
                         t2 += n[2] + ' '
-        print(t0,t1,t2)
+        # print(t0,t1,t2)
         ns=sotuv_new_form([t0,t1,t2],s)
          
-        print(ns.narxi)
+        # print(ns.narxi)
         res.append( ns)
     
     return res

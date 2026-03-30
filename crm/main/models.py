@@ -1,9 +1,94 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
+BACKUP_CHOICES = (
+    ('none', 'Yo\'q ($0)'),
+    ('monthly', 'Oylik ($5)'),
+    ('weekly', 'Haftalik ($15)'),
+    ('daily', 'Kunlik ($30)'),
+)
+
+# --- PLAN (TARIFF) MODEL ---
+class Plan(models.Model):
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    max_users = models.IntegerField(default=5)
+    has_telegram_bot = models.BooleanField(default=False)
+    has_analytics = models.BooleanField(default=True)
+    has_map = models.BooleanField(default=False)
+    backup_type = models.CharField(max_length=20, choices=BACKUP_CHOICES, default='none')
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+# --- COMPANY MODEL ---
+class Company(models.Model):
+    name = models.CharField(max_length=255)
+    subdomain = models.CharField(max_length=100, unique=True)
+    plan = models.ForeignKey(Plan, on_delete=models.SET_NULL, null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    # Custom Plan Fields
+    is_custom_plan = models.BooleanField(default=False)
+    custom_max_users = models.IntegerField(default=5) # 0 means unlimited
+    custom_has_telegram_bot = models.BooleanField(default=False)
+    custom_has_analytics = models.BooleanField(default=False)
+    custom_has_map = models.BooleanField(default=False)
+    custom_backup_type = models.CharField(max_length=20, choices=BACKUP_CHOICES, default='none')
+    custom_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    
+    last_backup_at = models.DateTimeField(null=True, blank=True)
+    
+    # Billing fields
+    PAYMENT_CHOICES = (
+        ('paid', "To'langan"),
+        ('unpaid', "To'lanmagan")
+    )
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_CHOICES, default='paid')
+    next_payment_date = models.DateTimeField(null=True, blank=True)
+    
+    
+    # Lifecycle fields
+    setup_mode = models.BooleanField(default=True)
+    setup_expires_at = models.DateTimeField(null=True, blank=True)
+    is_on_trial = models.BooleanField(default=False)
+    trial_expires_at = models.DateTimeField(null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+class PlanRequest(models.Model):
+    STATUS_CHOICES = (
+        ('pending', 'Kutilmoqda'),
+        ('approved', 'Tasdiqlandi'),
+        ('rejected', 'Rad etildi'),
+    )
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='plan_requests')
+    plan = models.ForeignKey(Plan, on_delete=models.SET_NULL, null=True, blank=True)
+    is_custom = models.BooleanField(default=False)
+    # Store custom plan details if is_custom is True
+    custom_max_users = models.IntegerField(default=5)
+    custom_has_telegram_bot = models.BooleanField(default=False)
+    custom_has_analytics = models.BooleanField(default=False)
+    custom_has_map = models.BooleanField(default=False)
+    custom_backup_type = models.CharField(max_length=20, choices=BACKUP_CHOICES, default='none')
+    custom_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    
+    def __str__(self):
+        return f"{self.company.name} - {self.status}"
 
 # --- USER MODELI ---
 class User(AbstractUser):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True, blank=True)
     id = models.BigAutoField(primary_key=True)
     USER_TYPES = (
         ('pazanda', 'Pazanda'),
@@ -39,6 +124,7 @@ class User(AbstractUser):
 
 # --- HARIDOR DUKON ---
 class HaridorDukon(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True, blank=True)
     nomi = models.CharField(max_length=255)
     egasi = models.CharField(max_length=255)
     joylashuvi = models.TextField()
@@ -46,6 +132,8 @@ class HaridorDukon(models.Model):
     longitude = models.FloatField(null=True, blank=True)  # Uzunlik
     dukon_rasmi = models.ImageField(upload_to='dukons/')
     egasining_rasmi = models.ImageField(upload_to='egalar/')
+    telefon = models.CharField(max_length=20, null=True, blank=True)
+    telegram_username = models.CharField(max_length=100, null=True, blank=True)
 
     def __str__(self):
         return self.nomi
@@ -53,6 +141,7 @@ class HaridorDukon(models.Model):
 
 # --- MAHSULOT TURI ---
 class MahsulotTuri(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True, blank=True)
     nomi = models.CharField(max_length=100)  # kg, dona, l
 
     def __str__(self):
@@ -61,6 +150,7 @@ class MahsulotTuri(models.Model):
 
 # --- MAHSULOT ---
 class Mahsulot(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True, blank=True)
     nomi = models.CharField(max_length=255)
     rasmi = models.ImageField(upload_to='mahsulotlar/')
     narxi = models.DecimalField(max_digits=10, decimal_places=2)
@@ -80,6 +170,7 @@ class Mahsulot(models.Model):
 # --- PAZANDA (User vorisi) ---
 class Pazanda(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True, blank=True)
     tuliq_ismi = models.CharField(max_length=255)
     turi = models.CharField(max_length=100, blank=True, null=True)
     rasmi = models.ImageField(upload_to='pazandalar/')
@@ -91,19 +182,41 @@ class Pazanda(models.Model):
 # --- YETKAZIB BERUVCHI ---
 class YetkazibBeruvchi(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True, blank=True)
     tuliq_ismi = models.CharField(max_length=255)
     rasmi = models.ImageField(upload_to='yetkazib/')
     bmh = models.TextField(verbose_name="Biriktirilgan mashina haqida")
     bmr = models.ImageField(upload_to='mashina_rasmlar/')
     mahsulotlar = models.TextField(null=True, blank=True)
+    
+    # Location tracking
+    last_lat = models.FloatField(null=True, blank=True)
+    last_lng = models.FloatField(null=True, blank=True)
+    last_active = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return self.tuliq_ismi
+
+class LocationHistory(models.Model):
+    yetkazib_beruvchi = models.ForeignKey(YetkazibBeruvchi, on_delete=models.CASCADE, related_name='location_history')
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True, blank=True)
+    lat = models.FloatField()
+    lng = models.FloatField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+        verbose_name = "Joylashuv tarixi"
+        verbose_name_plural = "Joylashuv tarixlari"
+
+    def __str__(self):
+        return f"{self.yetkazib_beruvchi.tuliq_ismi} - {self.timestamp}"
 
 
 # --- MIQDOR QO‘SHISH ---
 class MiqdorQoshish(models.Model):
     pazanda = models.ForeignKey(Pazanda, on_delete=models.CASCADE)
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True, blank=True)
     mahsulot = models.ForeignKey(Mahsulot, on_delete=models.CASCADE)
     vaqt_sana = models.DateTimeField(auto_now_add=True)
     miqdor = models.FloatField()
@@ -125,6 +238,7 @@ class Savdo(models.Model):
 
     haridor_dukon = models.ForeignKey(HaridorDukon, on_delete=models.CASCADE)
     yetkazib_beruvchi = models.ForeignKey(YetkazibBeruvchi, on_delete=models.CASCADE)
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True, blank=True)
     vaqt_sana = models.DateTimeField(auto_now_add=True)
     oluvchining_ismi = models.CharField(max_length=255)
     smm = models.TextField(verbose_name="Sotilgan mahsulot miqdori", blank=True, null=True)
@@ -137,15 +251,42 @@ class Savdo(models.Model):
     def __str__(self):
         return f"{self.haridor_dukon.nomi} - {self.oluvchining_ismi}"
 
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        old_status = None
+        if not is_new:
+            old_instance = Savdo.objects.get(pk=self.pk)
+            old_status = old_instance.tulandi
+
+        super().save(*args, **kwargs)
+
+        # Telegram Notification Logic
+        if self.tulandi and (is_new or old_status == False):
+            try:
+                from .bot_logic import send_telegram_notification
+                owner = User.objects.filter(company=self.company, type='ega').first()
+                if owner and owner.tg_id:
+                    msg = (
+                        f"💰 <b>Yangi to'lov tasdiqlandi!</b>\n\n"
+                        f"🏢 Do'kon: {self.haridor_dukon.nomi}\n"
+                        f"👤 Mashul: {self.yetkazib_beruvchi.tuliq_ismi}\n"
+                        f"💵 Summa: {self.summa:,.0f} so'm\n"
+                        f"📅 Vaqt: {self.vaqt_sana.strftime('%d.%m.%Y %H:%M') if self.vaqt_sana else 'Hozir'}"
+                    )
+                    send_telegram_notification(owner.tg_id, msg)
+            except Exception as e:
+                print(f"Telegram Notification Error: {e}")
+
 class AmalLog(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True, blank=True)
     amal_shifri = models.TextField()  # Masalan: 'chiqarish|un|10'
     sana_vaqti = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.user.username} - {self.amal_shifri}"
 class qaytarilgan_mahsulotlar(models.Model):
-   
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True, blank=True)
     mahsulot = models.ForeignKey(Mahsulot, on_delete=models.CASCADE)
     miqdor = models.FloatField()
     sana = models.DateTimeField(auto_now_add=True)
@@ -163,6 +304,7 @@ class YuklamaSorov(models.Model):
     mode=models.CharField(max_length=20, choices=ST_CHOICES)
     pazanda=models.ForeignKey(Pazanda, on_delete=models.CASCADE, null=True, blank=True)
     user=models.ForeignKey(YetkazibBeruvchi, on_delete=models.CASCADE)
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True, blank=True)
     mahsulot=models.ForeignKey(Mahsulot, on_delete=models.CASCADE, null=True, blank=True)
     miqdor = models.FloatField()
     sana = models.DateTimeField(auto_now_add=True)
@@ -174,6 +316,7 @@ class YuklamaSorov(models.Model):
 # --- NASIYA TO'LOV ---
 class NasiyaTolov(models.Model):
     savdo = models.ForeignKey(Savdo, on_delete=models.CASCADE, related_name='tolovlar')
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True, blank=True)
     tolov_summasi = models.FloatField()
     tolov_sanasi = models.DateTimeField(auto_now_add=True)
     izoh = models.TextField(blank=True, null=True)
@@ -191,6 +334,7 @@ class NasiyaTolov(models.Model):
 # --- DELIVERY STOCK (Yangi qatlam) ---
 class DeliveryStock(models.Model):
     yetkazib_beruvchi = models.ForeignKey(YetkazibBeruvchi, on_delete=models.CASCADE, related_name='stocks')
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True, blank=True)
     mahsulot = models.ForeignKey(Mahsulot, on_delete=models.CASCADE)
     qty = models.FloatField(default=0)
     updated_at = models.DateTimeField(auto_now=True)
@@ -216,6 +360,7 @@ class StockHistory(models.Model):
 
     actor_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     yetkazib_beruvchi = models.ForeignKey(YetkazibBeruvchi, on_delete=models.CASCADE, null=True, blank=True)
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True, blank=True)
     mahsulot = models.ForeignKey(Mahsulot, on_delete=models.CASCADE)
     event_type = models.CharField(max_length=20, choices=EVENT_TYPES)
     old_qty = models.FloatField()

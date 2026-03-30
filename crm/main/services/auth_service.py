@@ -3,7 +3,7 @@ from ..models import YetkazibBeruvchi, Pazanda
 
 User = get_user_model()
 
-def create_user_service(username, password, fullname, user_type, phone=None, profile_photo=None, car_info=None, car_photo=None):
+def create_user_service(username, password, fullname, user_type, phone=None, profile_photo=None, car_info=None, car_photo=None, company=None):
     """Securely creates a new user and its profile."""
     if User.objects.filter(username=username).exists():
         return None, "Ushbu login allaqachon mavjud!"
@@ -12,7 +12,8 @@ def create_user_service(username, password, fullname, user_type, phone=None, pro
         username=username, 
         password=password, 
         tuliq_ismi=fullname, 
-        tel_raqami=phone
+        tel_raqami=phone,
+        company=company
     )
     user.type = user_type
     user.save()
@@ -23,13 +24,15 @@ def create_user_service(username, password, fullname, user_type, phone=None, pro
             tuliq_ismi=fullname, 
             rasmi=profile_photo, 
             bmr=car_photo, 
-            bmh=car_info
+            bmh=car_info,
+            company=company
         )
     elif user_type == 'pazanda':
         Pazanda.objects.create(
             user=user, 
             tuliq_ismi=fullname, 
-            rasmi=profile_photo
+            rasmi=profile_photo,
+            company=company
         )
     
     return user, "Foydalanuvchi muvaffaqiyatli yaratildi."

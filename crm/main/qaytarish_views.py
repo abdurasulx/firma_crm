@@ -27,7 +27,9 @@ def qaytarish_view(request):
 
     # Faqat yetkazuvchida mavjud mahsulotlar (DeliveryStock orqali)
     stocks = DeliveryStock.objects.filter(
-        yetkazib_beruvchi=yb, qty__gt=0
+        company=request.company,
+        yetkazib_beruvchi=yb, 
+        qty__gt=0
     ).select_related('mahsulot')
 
     if request.method == 'POST':
@@ -35,7 +37,7 @@ def qaytarish_view(request):
         miqdor_str  = request.POST.get('miqdor', '').replace(',', '.')
 
         try:
-            mahsulot = Mahsulot.objects.get(id=mahsulot_id)
+            mahsulot = Mahsulot.objects.get(id=mahsulot_id, company=request.company)
             miqdor   = float(miqdor_str)
         except (Mahsulot.DoesNotExist, ValueError):
             messages.error(request, "Noto'g'ri mahsulot yoki miqdor.")
@@ -47,7 +49,7 @@ def qaytarish_view(request):
 
         # Mavjuddagi stokni tekshirish
         try:
-            ds = DeliveryStock.objects.get(yetkazib_beruvchi=yb, mahsulot=mahsulot)
+            ds = DeliveryStock.objects.get(yetkazib_beruvchi=yb, mahsulot=mahsulot, company=request.company)
             if miqdor > ds.qty:
                 messages.error(request, f"Sizda faqat {ds.qty} ta {mahsulot.nomi} bor.")
                 return redirect('qaytarish')
@@ -57,6 +59,7 @@ def qaytarish_view(request):
 
         # So'rov yaratish (yq=False — tasdiqlash kutilmoqda)
         qaytarilgan_mahsulotlar.objects.create(
+            company=request.company,
             mahsulot=mahsulot,
             miqdor=miqdor,
             yq=False,
@@ -64,6 +67,7 @@ def qaytarish_view(request):
 
         AmalLog.objects.create(
             user=request.user,
+            company=request.company,
             amal_shifri=f"qaytarish_sorov|{mahsulot.nomi}|{miqdor}|{yb.tuliq_ismi}"
         )
 
@@ -83,8 +87,8 @@ def qaytarishlar_view(request):
     if request.user.type != 'ega':
         return redirect('main')
 
-    pending = qaytarilgan_mahsulotlar.objects.filter(yq=False).select_related('mahsulot').order_by('-sana')
-    done    = qaytarilgan_mahsulotlar.objects.filter(yq=True).select_related('mahsulot').order_by('-sana')[:50]
+    pending = qaytarilgan_mahsulotlar.objects.filter(company=request.company, yq=False).select_related('mahsulot').order_by('-sana')
+    done    = qaytarilgan_mahsulotlar.objects.filter(company=request.company, yq=True).select_related('mahsulot').order_by('-sana')[:50]
 
     context = {
         'pending': pending,
@@ -101,7 +105,7 @@ def qaytarish_tasdiq(request, qaytarish_id):
     if request.user.type != 'ega':
         return redirect('main')
 
-    q = get_object_or_404(qaytarilgan_mahsulotlar, id=qaytarish_id, yq=False)
+    q = get_object_or_404(qaytarilgan_mahsulotlar, id=qaytarish_id, yq=False, company=request.company)
 
     if request.method == 'POST':
         # Mahsulot ombor zaxirasini oshir
@@ -115,6 +119,7 @@ def qaytarish_tasdiq(request, qaytarish_id):
 
         AmalLog.objects.create(
             user=request.user,
+            company=request.company,
             amal_shifri=f"qaytarish_tasdiq|{m.nomi}|{q.miqdor}"
         )
 
@@ -130,11 +135,12 @@ def qaytarish_rad(request, qaytarish_id):
     if request.user.type != 'ega':
         return redirect('main')
 
-    q = get_object_or_404(qaytarilgan_mahsulotlar, id=qaytarish_id, yq=False)
+    q = get_object_or_404(qaytarilgan_mahsulotlar, id=qaytarish_id, yq=False, company=request.company)
 
     if request.method == 'POST':
         AmalLog.objects.create(
             user=request.user,
+            company=request.company,
             amal_shifri=f"qaytarish_rad|{q.mahsulot.nomi}|{q.miqdor}"
         )
         q.yq = True   # yopish (rad etildi deb belgilash uchun yq=True)

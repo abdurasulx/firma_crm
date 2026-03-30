@@ -1,0 +1,183 @@
+{% extends 'landing/super_base.html' %}
+{% load static %}
+
+{% block page_title %}{{ action }} Firma{% endblock %}
+{% block page_subtitle %}{% if company %}Tahrirlash: {{ company.name }}{% else %}Yangi firma va uning adminini qo'shish{% endif %}{% endblock %}
+
+{% block content %}
+<style>
+    .form-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .form-group {
+        margin-bottom: 25px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 10px;
+        color: var(--text-dim);
+        font-weight: 500;
+        font-size: 14px;
+    }
+
+    .form-control {
+        width: 100%;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 12px 16px;
+        color: var(--text-main);
+        font-family: inherit;
+        font-size: 16px;
+        transition: all 0.3s;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: var(--primary);
+        background: rgba(255, 255, 255, 0.06);
+        box-shadow: 0 0 15px var(--primary-glow);
+    }
+
+    /* Fixed visibility for select options */
+    .form-control option {
+        background: var(--bg-dark);
+        color: var(--text-main);
+    }
+
+    .input-wrapper {
+        position: relative;
+    }
+
+    .input-suffix {
+        position: absolute;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-dim);
+        font-size: 14px;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 25px;
+    }
+
+    .section-divider {
+        height: 1px;
+        background: var(--border);
+        margin: 40px 0;
+        position: relative;
+    }
+
+    .section-divider span {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: var(--bg-dark);
+        padding: 0 15px;
+        color: var(--text-dim);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+    }
+</style>
+
+<div class="form-container">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="glass-card" style="margin-bottom: 20px; border-color: {% if message.tags == 'error' %}var(--danger-color){% else %}var(--success-color){% endif %}; padding: 15px;">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="glass-card">
+        <form method="POST">
+            {% csrf_token %}
+            
+            <h2 style="margin-bottom: 25px; font-size: 20px;"><i class="fa-solid fa-building" style="margin-right: 10px; color: var(--primary);"></i> Firma Ma'lumotlari</h2>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Firma Nomi</label>
+                    <input type="text" name="name" class="form-control" value="{{ company.name|default:'' }}" required placeholder="Masalan: 'Best Food LLC'">
+                </div>
+                <div class="form-group">
+                    <label>Subdomain</label>
+                    <div class="input-wrapper">
+                        <input type="text" name="subdomain" class="form-control" value="{{ company.subdomain|default:'' }}" required placeholder="masalan: 'bestfood'" style="padding-right: 110px;">
+                        <span class="input-suffix">.stockfirm.uz</span>
+                    </div>
+                </div>
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>Tarif (Plan)</label>
+                    <select name="plan" class="form-control" required>
+                        <option value="">-- Tarifni tanlang --</option>
+                        {% for plan in plans %}
+                        <option value="{{ plan.id }}" {% if company.plan.id == plan.id %}selected{% endif %}>
+                            {{ plan.name }} - ${{ plan.price }} ({% if plan.max_users == 0 %}Cheksiz{% else %}{{ plan.max_users }}{% endif %} users)
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" style="grid-column: span 2; display: flex; flex-direction: column; gap: 15px; background: rgba(255,255,255,0.02); padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" name="is_active" id="is_active" {% if company.is_active|default:True %}checked{% endif %} style="width: 20px; height: 20px; cursor: pointer;">
+                        <label for="is_active" style="margin-bottom: 0; cursor: pointer;">Firma faoliyati (Active)</label>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" name="setup_mode" id="setup_mode" {% if company.setup_mode|default:True %}checked{% endif %} style="width: 20px; height: 20px; cursor: pointer;">
+                        <label for="setup_mode" style="margin-bottom: 0; cursor: pointer;">Sozlash rejimi (Setup Mode) - 5 kun</label>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" name="is_on_trial" id="is_on_trial" {% if company.is_on_trial %}checked{% endif %} style="width: 20px; height: 20px; cursor: pointer;">
+                        <label for="is_on_trial" style="margin-bottom: 0; cursor: pointer;">Sinov muddati (Free Trial) - 1 oy</label>
+                    </div>
+                </div>
+            </div>
+
+            {% if not company %}
+            <div class="section-divider">
+                <span>Firma Admini (Ega)</span>
+            </div>
+
+            <h2 style="margin-bottom: 25px; font-size: 20px;"><i class="fa-solid fa-user-shield" style="margin-right: 10px; color: var(--secondary);"></i> Admin Ma'lumotlari</h2>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>To'liq Ismi</label>
+                    <input type="text" name="full_name" class="form-control" required placeholder="F.I.SH">
+                </div>
+                <div class="form-group">
+                    <label>Telefon Raqami</label>
+                    <input type="text" name="phone" class="form-control" required placeholder="+998901234567">
+                </div>
+                <div class="form-group">
+                    <label>Username (Login)</label>
+                    <input type="text" name="username" class="form-control" required placeholder="admin_login">
+                </div>
+                <div class="form-group">
+                    <label>Parol</label>
+                    <input type="password" name="password" class="form-control" required placeholder="********">
+                </div>
+            </div>
+            {% endif %}
+
+            <div style="margin-top: 30px; display: flex; gap: 15px; justify-content: flex-end;">
+                <a href="{% url 'super_companies' %}" class="btn-primary" style="background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--border);">Bekor qilish</a>
+                <button type="submit" class="btn-primary">
+                    <i class="fa-solid fa-check"></i> Saqlash
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

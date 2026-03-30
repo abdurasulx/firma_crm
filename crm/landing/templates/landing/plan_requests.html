@@ -1,0 +1,103 @@
+{% extends 'landing/super_base.html' %}
+
+{% block page_title %}Tarif So'rovlari{% endblock %}
+{% block page_subtitle %}Do'konlar tomonidan yuborilgan tarif o'zgartirish so'rovlari{% endblock %}
+
+{% block content %}
+<div style="background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); overflow: hidden; border: 1px solid #eef2f6;">
+    <div style="padding: 24px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; background: #f8fafc;">
+        <div>
+            <h2 style="margin: 0; font-size: 20px; font-weight: 800; color: #1e293b;"><i class="fa-solid fa-clock-rotate-left" style="color: #6366f1; margin-right: 10px;"></i> Kutilayotgan Tarif So'rovlari</h2>
+            <p style="margin: 4px 0 0 0; font-size: 14px; color: #64748b;">Do'konlar tomonidan yuborilgan tarif o'zgartirish so'rovlarini ko'rib chiqing.</p>
+        </div>
+        <div style="background: #eef2f6; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 700; color: #475569;">
+            {{ requests.count }} ta yangi so'rov
+        </div>
+    </div>
+
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead>
+                <tr style="background: #f8fafc; border-bottom: 2px solid #f1f5f9;">
+                    <th style="padding: 16px 24px; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase;">Do'kon</th>
+                    <th style="padding: 16px 24px; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase;">Hozirgi Tarif</th>
+                    <th style="padding: 16px 24px; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase;">So'ralgan Tarif</th>
+                    <th style="padding: 16px 24px; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase;">Tafsilotlar</th>
+                    <th style="padding: 16px 24px; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase;">Sana</th>
+                    <th style="padding: 16px 24px; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; text-align: right;">Amallar</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in requests %}
+                <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.2s;" onmouseover="this.style.background='#fcfdfe';" onmouseout="this.style.background='white';">
+                    <td style="padding: 16px 24px;">
+                        <div style="font-weight: 700; color: #1e293b;">{{ req.company.name }}</div>
+                        <div style="font-size: 12px; color: #94a3b8;">#{{ req.company.id }}</div>
+                    </td>
+                    <td style="padding: 16px 24px;">
+                        <span style="display: inline-block; padding: 4px 10px; border-radius: 6px; background: #f1f5f9; font-size: 13px; font-weight: 600; color: #475569;">
+                            {{ req.company.plan.name|default:"Tanlanmagan" }}
+                            {% if req.company.is_custom_plan %} (Maxsus) {% endif %}
+                        </span>
+                    </td>
+                    <td style="padding: 16px 24px;">
+                        {% if req.is_custom %}
+                        <span style="display: inline-block; padding: 4px 10px; border-radius: 6px; background: #e0f2fe; font-size: 13px; font-weight: 700; color: #0369a1;">
+                           <i class="fa-solid fa-screwdriver-wrench"></i> Maxsus Tarif
+                        </span>
+                        {% else %}
+                        <span style="display: inline-block; padding: 4px 10px; border-radius: 6px; background: #f0fdf4; font-size: 13px; font-weight: 700; color: #166534;">
+                            <i class="fa-solid fa-gem"></i> {{ req.plan.name }}
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 16px 24px;">
+                        <div style="font-size: 13px; color: #475569;">
+                            {% if req.is_custom %}
+                                <b>Hodimlar:</b> {% if req.custom_max_users == 0 %}Cheksiz{% else %}{{ req.custom_max_users }}{% endif %}<br>
+                                <b>Modullar:</b> 
+                                {% if req.custom_has_map %}Map, {% endif %}
+                                {% if req.custom_has_telegram_bot %}Bot, {% endif %}
+                                {% if req.custom_has_analytics %}AI{% endif %}
+                                <br>
+                                <b>Zaxira:</b> {{ req.get_custom_backup_type_display }}
+                                <br>
+                                <b style="color: #10b981;">Narxi: ${{ req.custom_price }}</b>
+                            {% else %}
+                                Standart tarif parametrlari
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td style="padding: 16px 24px; font-size: 13px; color: #64748b;">
+                        {{ req.created_at|date:"d.m.Y H:i" }}
+                    </td>
+                    <td style="padding: 16px 24px; text-align: right;">
+                        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                            <a href="{% url 'approve_plan_request' req.id %}" 
+                               style="background: #10b981; color: white; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; text-decoration: none; transition: all 0.2s;" 
+                               onmouseover="this.style.background='#059669';" onmouseout="this.style.background='#10b981';">
+                                <i class="fa-solid fa-check"></i> Tasdiqlash
+                            </a>
+                            <a href="{% url 'reject_plan_request' req.id %}" 
+                               style="background: #ef4444; color: white; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; text-decoration: none; transition: all 0.2s;" 
+                               onmouseover="this.style.background='#dc2626';" onmouseout="this.style.background='#ef4444';">
+                                <i class="fa-solid fa-xmark"></i> Rad etish
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="padding: 60px; text-align: center;">
+                        <div style="width: 80px; height: 80px; background: #f8fafc; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                            <i class="fa-solid fa-envelope-open" style="font-size: 32px; color: #cbd5e1;"></i>
+                        </div>
+                        <h4 style="margin: 0; color: #475569; font-weight: 700;">Hozircha yangi so'rovlar yo'q</h4>
+                        <p style="margin: 8px 0 0 0; color: #94a3b8; font-size: 14px;">Barcha so'rovlar ko'rib chiqilgan.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

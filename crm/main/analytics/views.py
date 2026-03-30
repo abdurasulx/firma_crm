@@ -37,10 +37,10 @@ def product_demand_api(request):
     
     try:
         # Get demand analysis
-        demand_data = analyze_product_demand(product_name)
+        demand_data = analyze_product_demand(product_name, company=request.company)
         
         # Get shop recommendations
-        shop_recs = recommend_shops_for_product(product_name)
+        shop_recs = recommend_shops_for_product(product_name, company=request.company)
         
         # Combine results
         response_data = {
@@ -76,7 +76,7 @@ def products_list_api(request):
     Get list of all products with sales data.
     """
     try:
-        products = get_all_products()
+        products = get_all_products(company=request.company)
         
         return JsonResponse({
             'products': products,
@@ -103,7 +103,7 @@ def shop_recommendations_api(request):
         }, status=400)
     
     try:
-        recommendations = recommend_shops_for_product(product_name)
+        recommendations = recommend_shops_for_product(product_name, company=request.company)
         
         # Apply limit if specified
         if limit:

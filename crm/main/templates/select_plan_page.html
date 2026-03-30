@@ -1,0 +1,241 @@
+{% extends 'egabase.html' %}
+
+{% block content %}
+<div class="container-fluid" style="padding: 30px;">
+    <div style="margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h2 style="margin: 0; color: #1e293b; font-weight: 800;">Tarif Tanlash / O'zgartirish</h2>
+            <p style="color: #64748b; margin: 4px 0 0 0;">Biznesingiz uchun eng mos tarifni tanlang.</p>
+        </div>
+        <a href="{% url 'main' %}" style="padding: 10px 20px; background: #f1f5f9; color: #475569; border-radius: 10px; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-arrow-left"></i> Orqaga qaytish
+        </a>
+    </div>
+
+    <!-- Standard Plans -->
+    <div class="section-card" style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 30px; border-radius: 16px;">
+        <h3 style="margin-bottom: 24px; font-size: 20px; font-weight: 700; color: #0f172a;"><i class="fa-solid fa-gem" style="color: #3b82f6;"></i> Standart Tariflar</h3>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">
+            {% for plan in plans %}
+            <div style="background: white; border: 2px solid {% if request.company.plan == plan %}#10b981{% else %}#e2e8f0{% endif %}; border-radius: 20px; padding: 32px; display: flex; flex-direction: column; justify-content: space-between; position: relative; transition: all 0.3s ease; {% if request.company.plan == plan %}transform: scale(1.02); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);{% endif %}">
+                {% if request.company.plan == plan %}
+                <div style="position: absolute; top: -12px; right: 20px; background: #10b981; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; text-transform: uppercase;">Faol</div>
+                {% endif %}
+                
+                <div>
+                    <h4 style="font-size: 24px; font-weight: 800; color: #1e293b; margin-bottom: 8px;">{{ plan.name }}</h4>
+                    <div style="font-size: 40px; font-weight: 900; color: #0f172a; margin-bottom: 20px;">
+                        ${{ plan.price|floatformat:0 }}<span style="font-size: 16px; font-weight: 400; color: #64748b;"> / oy</span>
+                    </div>
+                    
+                    <ul style="list-style: none; padding: 0; margin: 0 0 32px 0; display: flex; flex-direction: column; gap: 14px;">
+                        <li style="display: flex; align-items: center; gap: 12px; font-size: 15px; color: #475569;">
+                            <i class="fa-solid fa-circle-check" style="color: #10b981;"></i> 
+                            {% if plan.max_users == 0 %}Cheksiz hodim{% else %}{{ plan.max_users }} ta hodimgacha{% endif %}
+                        </li>
+                        <li style="display: flex; align-items: center; gap: 12px; font-size: 15px; color: #475569;">
+                            <i class="fa-solid {% if plan.has_telegram_bot %}fa-circle-check{% else %}fa-circle-xmark{% endif %}" style="color: {% if plan.has_telegram_bot %}#10b981{% else %}#cbd5e1{% endif %};"></i> 
+                            Telegram Bot
+                        </li>
+                        <li style="display: flex; align-items: center; gap: 12px; font-size: 15px; color: #475569;">
+                            <i class="fa-solid {% if plan.has_analytics %}fa-circle-check{% else %}fa-circle-xmark{% endif %}" style="color: {% if plan.has_analytics %}#10b981{% else %}#cbd5e1{% endif %};"></i> 
+                            AI Analitika
+                        </li>
+                        <li style="display: flex; align-items: center; gap: 12px; font-size: 15px; color: #475569;">
+                            <i class="fa-solid {% if plan.has_map %}fa-circle-check{% else %}fa-circle-xmark{% endif %}" style="color: {% if plan.has_map %}#10b981{% else %}#cbd5e1{% endif %};"></i> 
+                            Real-vaqt Xaritasi
+                        </li>
+                        <li style="display: flex; align-items: center; gap: 12px; font-size: 15px; color: #475569;">
+                            <i class="fa-solid {% if plan.backup_type != 'none' %}fa-circle-check{% else %}fa-circle-xmark{% endif %}" style="color: {% if plan.backup_type != 'none' %}#10b981{% else %}#cbd5e1{% endif %};"></i> 
+                            {% if plan.backup_type == 'none' %}Zaxiralash yo'q{% else %}{{ plan.get_backup_type_display }} zaxiralash{% endif %}
+                        </li>
+                    </ul>
+                </div>
+
+                {% if request.company.plan == plan %}
+                <div style="background: #f0fdf4; color: #10b981; padding: 14px; border-radius: 12px; text-align: center; font-weight: 700;">
+                    Ushbu tarif faol
+                </div>
+                {% else %}
+                <a href="{% url 'select_plan' plan.id %}" style="background: #3b82f6; color: white; padding: 14px; border-radius: 12px; text-align: center; font-weight: 700; text-decoration: none; transition: all 0.3s ease; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);" onmouseover="this.style.background='#2563eb'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='#3b82f6'; this.style.transform='translateY(0)';">
+                    Tarifga o'tish
+                </a>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Custom Plan Builder -->
+    <div style="margin-top: 40px; background: white; border: 2px dashed #10b981; padding: 40px; border-radius: 20px;">
+        <div style="margin-bottom: 30px;">
+            <h3 style="margin: 0; font-size: 24px; font-weight: 800; color: #0f172a;"><i class="fa-solid fa-screwdriver-wrench" style="color: #10b981;"></i> Maxsus Tarif Quruvchi</h3>
+            <p style="color: #64748b; margin-top: 8px;">Faqat o'zingizga kerakli funksiyalarni tanlang va oylik to'lovni optimallashtiring.</p>
+        </div>
+
+        <form action="{% url 'select_custom_plan' %}" method="POST" id="custom-plan-form-page">
+            {% csrf_token %}
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 40px;">
+                <!-- Left Column -->
+                <div style="display: flex; flex-direction: column; gap: 30px;">
+                    <div>
+                        <label style="display: block; font-weight: 700; margin-bottom: 12px; color: #1e293b;">1. Hodimlar Chegarasi</label>
+                        <div style="background: #f8fafc; padding: 20px; border-radius: 16px; border: 1px solid #f1f5f9;">
+                            <div style="display: flex; align-items: center; gap: 20px;">
+                                <input type="number" name="staff_count" id="staff_count_page" value="{{ request.company.custom_max_users|default:5 }}" min="1" max="100" 
+                                       style="width: 100px; padding: 12px; border-radius: 10px; border: 1px solid #cbd5e1; font-weight: 800; text-align: center; font-size: 18px;">
+                                <span style="font-weight: 600; color: #64748b;">$1 / hodim</span>
+                            </div>
+                            <div style="margin-top: 15px; display: flex; align-items: center; gap: 12px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
+                                <input type="checkbox" name="unlimited_staff" id="unlimited_staff_page" style="width: 22px; height: 22px; cursor: pointer; accent-color: #10b981;" {% if request.company.custom_max_users == 0 %}checked{% endif %}>
+                                <label for="unlimited_staff_page" style="font-weight: 600; color: #334155; cursor: pointer;">Cheksiz hodimlar ($55)</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label style="display: block; font-weight: 700; margin-bottom: 12px; color: #1e293b;">2. Qo'shimcha Modullar</label>
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <label class="feature-item" style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: #f8fafc; border-radius: 12px; cursor: pointer; border: 1px solid #f1f5f9; transition: all 0.2s;">
+                                <div style="display: flex; align-items: center; gap: 15px;">
+                                    <div style="width: 40px; height: 40px; background: #dbeafe; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fa-solid fa-map-location-dot" style="color: #3b82f6;"></i>
+                                    </div>
+                                    <span style="font-weight: 600; color: #334155;">Real-vaqt Xaritasi</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 15px;">
+                                    <span style="font-weight: 700; color: #3b82f6;">+$20</span>
+                                    <input type="checkbox" name="has_map" id="has_map_page" {% if request.company.custom_has_map %}checked{% endif %} style="width: 20px; height: 20px; accent-color: #10b981;">
+                                </div>
+                            </label>
+                            <label class="feature-item" style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: #f8fafc; border-radius: 12px; cursor: pointer; border: 1px solid #f1f5f9; transition: all 0.2s;">
+                                <div style="display: flex; align-items: center; gap: 15px;">
+                                    <div style="width: 40px; height: 40px; background: #e0f2fe; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fa-brands fa-telegram" style="color: #0088cc;"></i>
+                                    </div>
+                                    <span style="font-weight: 600; color: #334155;">Telegram Bot</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 15px;">
+                                    <span style="font-weight: 700; color: #0088cc;">+$5</span>
+                                    <input type="checkbox" name="has_bot" id="has_bot_page" {% if request.company.custom_has_telegram_bot %}checked{% endif %} style="width: 20px; height: 20px; accent-color: #10b981;">
+                                </div>
+                            </label>
+                            <label class="feature-item" style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: #f8fafc; border-radius: 12px; cursor: pointer; border: 1px solid #f1f5f9; transition: all 0.2s;">
+                                <div style="display: flex; align-items: center; gap: 15px;">
+                                    <div style="width: 40px; height: 40px; background: #f3e8ff; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fa-solid fa-robot" style="color: #8b5cf6;"></i>
+                                    </div>
+                                    <span style="font-weight: 600; color: #334155;">AI Analitika</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 15px;">
+                                    <span style="font-weight: 700; color: #8b5cf6;">+$15</span>
+                                    <input type="checkbox" name="has_analytics" id="has_analytics_page" {% if request.company.custom_has_analytics %}checked{% endif %} style="width: 20px; height: 20px; accent-color: #10b981;">
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column -->
+                <div style="display: flex; flex-direction: column; gap: 30px;">
+                    <div>
+                        <label style="display: block; font-weight: 700; margin-bottom: 12px; color: #1e293b;">3. Ma'lumotlarni Zaxiralash</label>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            {% for code, label in backup_choices %}
+                            <label style="display: flex; flex-direction: column; padding: 16px; border: 2px solid #f1f5f9; border-radius: 16px; cursor: pointer; transition: all 0.2s; position: relative;" class="backup-radio-label">
+                                <input type="radio" name="backup_type" value="{{ code }}" {% if request.company.custom_backup_type == code %}checked{% elif not request.company.custom_backup_type and code == 'none' %}checked{% endif %} style="position: absolute; opacity: 0;">
+                                <span style="font-size: 14px; color: #64748b; font-weight: 600; margin-bottom: 4px;">{{ label }}</span>
+                                <span style="font-size: 18px; font-weight: 800; color: #10b981;">
+                                    {% if code == 'none' %}$0{% elif code == 'monthly' %}$5{% elif code == 'weekly' %}$15{% elif code == 'daily' %}$30{% endif %}
+                                </span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div style="margin-top: auto; background: #0f172a; padding: 32px; border-radius: 20px; color: white; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);">
+                        <div>
+                            <span style="font-size: 12px; text-transform: uppercase; opacity: 0.6; letter-spacing: 1px; font-weight: 700; display: block; margin-bottom: 4px;">Umumiy Oylik To'lov:</span>
+                            <span style="font-size: 42px; font-weight: 900; color: #10b981;" id="total-price-page">$0.00</span>
+                        </div>
+                        <button type="submit" style="background: #10b981; color: white; padding: 16px 32px; border: none; border-radius: 14px; font-weight: 800; font-size: 16px; cursor: pointer; transition: all 0.3s ease;" onmouseover="this.style.transform='translateY(-2px)';" onmouseout="this.style.transform='translateY(0)';">
+                            So'rov yuborish
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .backup-radio-label:has(input:checked) {
+        border-color: #10b981 !important;
+        background: #f0fdf4;
+    }
+    .feature-item:hover {
+        border-color: #cbd5e1 !important;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const staffInput = document.getElementById('staff_count_page');
+    const unlimitedCheck = document.getElementById('unlimited_staff_page');
+    const hasMap = document.getElementById('has_map_page');
+    const hasBot = document.getElementById('has_bot_page');
+    const hasAnalytics = document.getElementById('has_analytics_page');
+    const backupRadios = document.querySelectorAll('input[name="backup_type"]');
+    const totalPriceEl = document.getElementById('total-price-page');
+
+    function calculatePrice() {
+        let price = 0;
+        
+        // Staff
+        if (unlimitedCheck.checked) {
+            price += 55;
+            staffInput.disabled = true;
+            staffInput.style.opacity = '0.5';
+        } else {
+            let val = parseInt(staffInput.value) || 0;
+            if (val > 55) {
+                unlimitedCheck.checked = true;
+                staffInput.value = 55;
+                calculatePrice();
+                return;
+            }
+            if (val < 1) val = 1;
+
+            staffInput.disabled = false;
+            staffInput.style.opacity = '1';
+            price += val * 1;
+        }
+
+        // Features
+        if (hasMap.checked) price += 20;
+        if (hasBot.checked) price += 5;
+        if (hasAnalytics.checked) price += 15;
+
+        // Backup
+        const checkedBackup = document.querySelector('input[name="backup_type"]:checked');
+        if (checkedBackup) {
+            const backupType = checkedBackup.value;
+            if (backupType === 'monthly') price += 5;
+            else if (backupType === 'weekly') price += 15;
+            else if (backupType === 'daily') price += 30;
+        }
+
+        totalPriceEl.textContent = '$' + price.toFixed(2);
+    }
+
+    [staffInput, unlimitedCheck, hasMap, hasBot, hasAnalytics].forEach(el => {
+        el.addEventListener('change', calculatePrice);
+    });
+    staffInput.addEventListener('input', calculatePrice);
+    backupRadios.forEach(r => r.addEventListener('change', calculatePrice));
+
+    calculatePrice();
+});
+</script>
+{% endblock %}

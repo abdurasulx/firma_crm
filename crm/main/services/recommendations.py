@@ -19,12 +19,13 @@ except ImportError:
 from .demand import build_product_timeseries
 
 
-def recommend_shops_for_product(product_name: str) -> List[Dict]:
+def recommend_shops_for_product(product_name: str, company=None) -> List[Dict]:
     """
     Analyze shop-level demand and provide distribution recommendations.
     
     Args:
         product_name: Product to analyze
+        company: Company context for filtering sales
         
     Returns:
         List of dicts sorted by avg_qty (descending):
@@ -41,8 +42,8 @@ def recommend_shops_for_product(product_name: str) -> List[Dict]:
     if not PANDAS_AVAILABLE:
         raise ImportError("pandas is required. Install: pip install pandas numpy")
     
-    # Get timeseries data
-    df = build_product_timeseries()
+    # Get timeseries data for company
+    df = build_product_timeseries(company=company)
     
     if df.empty:
         raise ValueError("No sales data available")
@@ -99,18 +100,19 @@ def recommend_shops_for_product(product_name: str) -> List[Dict]:
     return results
 
 
-def get_top_shops(product_name: str, limit: int = 10) -> List[Dict]:
+def get_top_shops(product_name: str, limit: int = 10, company=None) -> List[Dict]:
     """
     Get top shops by sales volume for a product.
     
     Args:
         product_name: Product to analyze
         limit: Maximum number of shops to return
+        company: Company context for filtering sales
         
     Returns:
         List of top shops sorted by total quantity
     """
-    recommendations = recommend_shops_for_product(product_name)
+    recommendations = recommend_shops_for_product(product_name, company=company)
     
     # Sort by total quantity
     sorted_shops = sorted(recommendations, key=lambda x: x['total_qty'], reverse=True)

@@ -10,7 +10,7 @@ def hodimlar_list(request):
     if request.user.type != 'ega':
         return redirect('main')
     
-    hodimlar = User.objects.exclude(type='ega').order_by('-date_joined')
+    hodimlar = User.objects.filter(company=request.company).exclude(type='ega').order_by('-date_joined')
     
     # Qidiruv
     search_query = request.GET.get('q', '')
@@ -86,7 +86,7 @@ def mahsulotlar_list(request):
     if request.user.type != 'ega':
         return redirect('main')
     
-    mahsulotlar = Mahsulot.objects.all()
+    mahsulotlar = Mahsulot.objects.filter(company=request.company)
     
     # Qidiruv
     search_query = request.GET.get('q', '')
@@ -134,7 +134,7 @@ def mahsulotlar_list(request):
     
     # Get all product types for filter dropdown
     from .models import MahsulotTuri
-    mahsulot_turlari = MahsulotTuri.objects.all()
+    mahsulot_turlari = MahsulotTuri.objects.filter(company=request.company)
     
     context = {
         'mahsulotlar': page_obj,

@@ -14,8 +14,8 @@ def nasiya_savdolar_view(request):
     if request.user.type != 'ega':
         return redirect('main')
 
-    # Get all credit sales
-    nasiya_savdolar = Savdo.objects.filter(st='nasiya').order_by('-vaqt_sana')
+    # Get all credit sales for this company
+    nasiya_savdolar = Savdo.objects.filter(company=request.company, st='nasiya').order_by('-vaqt_sana')
 
     # Filter options
     status_filter = request.GET.get('status', 'all')  # all, paid, unpaid, overdue
@@ -101,7 +101,7 @@ def add_nasiya_payment(request, savdo_id):
     
     if request.method == 'POST':
         try:
-            savdo = Savdo.objects.get(id=savdo_id)
+            savdo = Savdo.objects.get(id=savdo_id, company=request.company)
             payment_amount = float(request.POST.get('payment_amount', 0))
             note = request.POST.get('note', '')
             
@@ -123,7 +123,8 @@ def add_nasiya_payment(request, savdo_id):
                 savdo=savdo,
                 tolov_summasi=payment_amount,
                 izoh=note,
-                qabul_qilgan_user=request.user
+                qabul_qilgan_user=request.user,
+                company=request.company
             )
             
             # Update sale status if fully paid

@@ -1,0 +1,21 @@
+{% extends 'landing/base.html' %}
+{% load static %}
+{% block header %}{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<section class="hero-section" style="min-height: 80vh; display: flex; align-items: center; justify-content: center; text-align: center;">
+    <div class="container">
+        <div class="hero-content">
+            <h1 class="hero-title" style="font-size: 120px; margin-bottom: 0; background: linear-gradient(135deg, #a855f7 0%, #3b82f6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">404</h1>
+            <h2 style="font-size: 32px; margin-bottom: 20px;">Sahifa topilmadi</h2>
+            <p class="hero-subtitle" style="max-width: 600px; margin: 0 auto 40px;">
+                Siz qidirayotgan sahifa yoki kompaniya topilmadi. Subdomen xato kiritilgan bo'lishi mumkin.
+            </p>
+            <div class="hero-cta" style="display: flex; gap: 20px; justify-content: center;">
+                <a href="http://localhost:8000" class="btn-primary">Bosh sahifaga qaytish</a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

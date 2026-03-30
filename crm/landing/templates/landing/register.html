@@ -1,0 +1,122 @@
+{% extends 'landing/base.html' %}
+
+{% block extra_head %}
+<style>
+    .form-group {
+        margin-bottom: 1.5rem;
+        text-align: left;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: var(--text-muted);
+        font-size: 0.875rem;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--glass-border);
+        border-radius: 12px;
+        color: white;
+        font-size: 1rem;
+        transition: all 0.3s;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: var(--primary);
+        background: rgba(255, 255, 255, 0.08);
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+    }
+
+    .subdomain-input {
+        display: flex;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--glass-border);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .subdomain-input input {
+        border: none;
+        background: transparent;
+        padding: 0.75rem 0.5rem 0.75rem 1rem;
+        flex: 1;
+        color: white;
+        font-size: 1rem;
+    }
+
+    .subdomain-input .suffix {
+        padding: 0.75rem 1rem;
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-muted);
+        font-size: 0.875rem;
+        border-left: 1px solid var(--glass-border);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="container animate-fade" style="padding: 2rem 0;">
+    <div style="max-width: 500px; margin: 0 auto;">
+        <div class="glass-card" style="text-align: center;">
+            <h2 style="font-size: 2rem; margin-bottom: 0.5rem;">Ro'yxatdan o'tish</h2>
+            <p style="color: var(--text-muted); margin-bottom: 2rem;">CRM tizimingizni hozirroq o'rnating</p>
+
+            <form method="POST">
+                {% csrf_token %}
+                
+                <div style="margin-bottom: 2rem;">
+                    <h4 style="color: var(--primary); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem; text-align: left;">Firma haqida</h4>
+                    
+                    <div class="form-group">
+                        <label for="company_name">Firma nomi</label>
+                        <input type="text" name="company_name" id="company_name" class="form-control" placeholder="Masalan: Akfa" value="{{ post_data.company_name }}" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="subdomain">Subdomain</label>
+                        <div class="subdomain-input">
+                            <input type="text" name="subdomain" id="subdomain" placeholder="akfa" value="{{ post_data.subdomain }}" required>
+                            <span class="suffix">.stockfirm.uz</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 style="color: var(--primary); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem; text-align: left;">Admin ma'lumotlari</h4>
+                    
+                    <div class="form-group">
+                        <label for="full_name">To'liq ism</label>
+                        <input type="text" name="full_name" id="full_name" class="form-control" placeholder="Abdulla Qodiriy" value="{{ post_data.full_name }}" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="username">Login</label>
+                        <input type="text" name="username" id="username" class="form-control" placeholder="admin" value="{{ post_data.username }}" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Parol</label>
+                        <input type="password" name="password" id="password" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="phone">Telefon raqam</label>
+                        <input type="text" name="phone" id="phone" class="form-control" placeholder="+998 90 123 45 67" value="{{ post_data.phone }}" required>
+                    </div>
+                <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin-top: 1rem;">
+                    <input type="checkbox" name="free_trial" id="free_trial" style="width: 20px; height: 20px; cursor: pointer;">
+                    <label for="free_trial" style="margin-bottom: 0; cursor: pointer; color: white;">1 oylik bepul sinov muddati (Free Trial)</label>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1rem; margin-top: 1rem; font-size: 1.1rem;">Ro'yxatdan o'tish</button>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}

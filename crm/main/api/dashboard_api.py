@@ -8,5 +8,5 @@ def dashboard_stats_api(request):
     if request.user.type != 'ega':
         return JsonResponse({'error': 'Unauthorized'}, status=403)
     
-    stats = get_dashboard_stats()
+    stats = get_dashboard_stats(request.company)
     return JsonResponse(stats)

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xizmat to'xtatilgan - StockFirm</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            color: #1e293b;
+        }
+        .container {
+            text-align: center;
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            max-width: 500px;
+        }
+        .icon {
+            font-size: 64px;
+            color: #ef4444;
+            margin-bottom: 20px;
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        p {
+            color: #64748b;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+        .btn {
+            display: inline-block;
+            background: #10b981;
+            color: white;
+            text-decoration: none;
+            padding: 12px 25px;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: opacity 0.2s;
+        }
+        .btn:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">{% if reason == 'trial_expired' %}⏳{% else %}⚠️{% endif %}</div>
+        <h1>
+            {% if reason == 'trial_expired' %}
+                Sinov muddati tugagan
+            {% elif reason == 'payment_overdue' %}
+                To'lov muddati o'tgan
+            {% else %}
+                Xizmat vaqtincha to'xtatilgan
+            {% endif %}
+        </h1>
+        <p>
+            <strong>{{ company.name }}</strong> ning StockFirm xizmatidan foydalanishi 
+            {% if reason == 'trial_expired' %}
+                sinov muddati tugagani sababli to'xtatilgan. Iltimos, davom etish uchun tarif rejasini tanlang.
+            {% elif reason == 'payment_overdue' %}
+                oylik to'lov o'z vaqtida amalga oshirilmagani sababli to'xtatildi. Tizimdan foydalanishda davom etish uchun to'lovni amalga oshiring yoki administrator bilan bog'laning.
+            {% else %}
+                vaqtincha to'xtatilgan. Iltimos, ma'lumot olish uchun tizim administratoriga murojaat qiling.
+            {% endif %}
+        </p>
+        <a href="http://stockfirm.uz" class="btn">Asosiy sahifaga qaytish</a>
+    </div>
+</body>
+</html>

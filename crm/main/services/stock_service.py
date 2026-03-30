@@ -5,10 +5,11 @@ from ..models import (
     MiqdorQoshish, DeliveryStock, StockHistory
 )
 
-def log_stock_change(actor, mahsulot, old_qty, new_qty, event_type, yetkazib_beruvchi=None):
+def log_stock_change(actor, mahsulot, old_qty, new_qty, event_type, yetkazib_beruvchi=None, company=None):
     """Utility to log stock movement in StockHistory."""
     delta = new_qty - old_qty
     StockHistory.objects.create(
+        company=company or mahsulot.company,
         actor_user=actor,
         yetkazib_beruvchi=yetkazib_beruvchi,
         mahsulot=mahsulot,
@@ -38,7 +39,7 @@ def approve_miqdor_qoshish_service(request_id, actor):
     req.save()
 
     # Log History
-    log_stock_change(actor, mahsulot, old_qty, new_qty, 'ADD')
+    log_stock_change(actor, mahsulot, old_qty, new_qty, 'ADD', company=req.company)
     
     return True, "Zaxira muvaffaqiyatli oshirildi."
 
@@ -58,10 +59,11 @@ def approve_yuklama_sorov_service(request_id, actor):
     new_warehouse_qty = old_warehouse_qty - req.miqdor
     mahsulot.miqdori = new_warehouse_qty
     mahsulot.save()
-    log_stock_change(actor, mahsulot, old_warehouse_qty, new_warehouse_qty, 'DEDUCT', yetkazib_beruvchi=req.user)
+    log_stock_change(actor, mahsulot, old_warehouse_qty, new_warehouse_qty, 'DEDUCT', yetkazib_beruvchi=req.user, company=req.company)
 
     # 2. Update Delivery Stock (Modern tracking)
     ds, created = DeliveryStock.objects.get_or_create(
+        company=req.company,
         yetkazib_beruvchi=req.user,
         mahsulot=mahsulot
     )
@@ -102,5 +104,5 @@ def adjust_stock_service(mahsulot_id, new_qty, actor):
     mahsulot.miqdori = new_qty
     mahsulot.save()
 
-    log_stock_change(actor, mahsulot, old_qty, new_qty, 'ADJUST')
+    log_stock_change(actor, mahsulot, old_qty, new_qty, 'ADJUST', company=mahsulot.company)
     return True

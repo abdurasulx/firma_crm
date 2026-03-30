@@ -1,0 +1,18 @@
+{% extends 'egabase.html' %}
+
+{% block title %}Kirish taqiqlangan - StockFirm CRM{% endblock %}
+
+{% block content %}
+<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: calc(100vh - 200px); text-align: center;">
+    <div style="font-size: 64px; color: var(--danger-color); margin-bottom: 24px;">
+        <i class="fa-solid fa-map-location-dot"></i>
+    </div>
+    <h2 style="font-size: 28px; color: var(--text-dark); margin-bottom: 12px;">Xarita xizmati yoqilmagan</h2>
+    <p style="font-size: 16px; color: var(--text-light); max-width: 500px; margin-bottom: 30px;">
+        Sizning joriy tarifingizda real-vaqt xaritasi xizmati mavjud emas. Ushbu xizmatni yoqish uchun tarifingizni yangilang.
+    </p>
+    <a href="{% url 'main' %}" style="background: var(--primary-color); color: white; padding: 12px 30px; border-radius: 12px; text-decoration: none; font-weight: 600; box-shadow: 0 4px 15px var(--primary-glow);">
+        Dashboardga qaytish
+    </a>
+</div>
+{% endblock %}

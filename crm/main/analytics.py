@@ -66,11 +66,11 @@ def product_demand_api(request):
         }, status=400)
     
     try:
-        # Get demand analysis
-        demand_data = analyze_product_demand(product_name)
+        # Get demand analysis with company filter
+        demand_data = analyze_product_demand(product_name, company=request.company)
         
-        # Get shop recommendations
-        shop_recs = recommend_shops_for_product(product_name)
+        # Get shop recommendations with company filter
+        shop_recs = recommend_shops_for_product(product_name, company=request.company)
         
         # Combine results
         response_data = {
@@ -118,7 +118,7 @@ def products_list_api(request):
         }
     """
     try:
-        products = get_all_products()
+        products = get_all_products(company=request.company)
         
         return JsonResponse({
             'products': products,
@@ -158,7 +158,7 @@ def shop_recommendations_api(request):
         }, status=400)
     
     try:
-        recommendations = recommend_shops_for_product(product_name)
+        recommendations = recommend_shops_for_product(product_name, company=request.company)
         
         # Apply limit if specified
         if limit:
@@ -193,7 +193,7 @@ def top_products_api(request):
         limit = int(request.GET.get('limit', 8))
 
         from_dt = timezone.now() - datetime.timedelta(days=days)
-        savdolar = Savdo.objects.filter(vaqt_sana__gte=from_dt).select_related('haridor_dukon')
+        savdolar = Savdo.objects.filter(company=request.company, vaqt_sana__gte=from_dt).select_related('haridor_dukon')
 
         # Group by haridor_dukon (shop) by summa
         from collections import defaultdict

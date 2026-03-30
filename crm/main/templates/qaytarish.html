@@ -1,184 +1,195 @@
 {% extends 'ytbase.html' %}
 {% load static %}
 
-{% block title %}Mahsulot Qaytarish{% endblock %}
+{% block title %}Qaytarish - StockFirm{% endblock %}
 
 {% block content %}
 <style>
-    .return-hero {
-        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-        border-radius: 14px;
-        padding: 24px 28px;
-        margin-bottom: 24px;
+    .return-container {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .hero-section {
+        background: var(--slate-900);
+        padding: 2.5rem 2rem;
+        border-radius: var(--radius);
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
         color: white;
-        box-shadow: 0 8px 24px rgba(245, 158, 11, 0.25);
     }
 
-    .return-hero h1 {
-        font-size: 20px;
+    .hero-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 150px;
+        height: 150px;
+        background: radial-gradient(circle, rgba(245, 158, 11, 0.15) 0%, transparent 70%);
+        pointer-events: none;
+    }
+
+    .hero-section h1 {
+        font-size: 1.5rem;
         font-weight: 800;
-        margin-bottom: 4px;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
     }
 
-    .return-hero p {
-        font-size: 13px;
-        opacity: 0.85;
+    .hero-section p {
+        color: var(--slate-400);
+        font-size: 0.875rem;
+        font-weight: 500;
     }
 
     .form-card {
         background: white;
-        border-radius: 14px;
-        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.07);
-        overflow: hidden;
+        padding: 2rem;
+        border-radius: var(--radius);
+        border: 1px solid var(--slate-200);
+        box-shadow: var(--shadow);
     }
 
-    .form-head {
-        padding: 16px 22px;
-        border-bottom: 1px solid #f3f4f6;
-        font-size: 15px;
-        font-weight: 700;
-        color: #1f2937;
+    .form-group {
+        margin-bottom: 1.5rem;
     }
 
-    .form-body {
-        padding: 24px 22px;
-    }
-
-    .fg {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        margin-bottom: 18px;
-    }
-
-    .fg label {
-        font-size: 12px;
-        font-weight: 700;
-        color: #6b7280;
+    .form-label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 800;
+        color: var(--slate-700);
+        margin-bottom: 0.5rem;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.05em;
     }
 
-    .fc {
-        padding: 11px 14px;
-        border: 1.5px solid #e5e7eb;
-        border-radius: 10px;
-        font-size: 14px;
+    .form-select, .form-input {
+        width: 100%;
+        padding: 0.875rem 1rem;
+        border-radius: 0.75rem;
+        border: 1.5px solid var(--slate-200);
         font-family: inherit;
-        color: #1f2937;
-        outline: none;
-        transition: border-color 0.2s;
-        background: white;
+        font-size: 1rem;
+        background: var(--slate-50);
+        transition: all 0.2s;
     }
 
-    .fc:focus {
-        border-color: #f59e0b;
-        box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.12);
+    .form-select:focus, .form-input:focus {
+        outline: none;
+        border-color: var(--warning);
+        background: white;
+        box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.1);
+    }
+
+    .stock-hint {
+        margin-top: 0.5rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--slate-500);
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
     }
 
     .btn-submit {
         width: 100%;
-        padding: 13px;
-        background: linear-gradient(135deg, #f59e0b, #d97706);
+        padding: 1rem;
+        background: var(--warning);
         color: white;
         border: none;
-        border-radius: 10px;
-        font-size: 15px;
-        font-weight: 700;
+        border-radius: 0.875rem;
+        font-weight: 800;
+        font-size: 1rem;
         cursor: pointer;
-        font-family: inherit;
-        transition: all 0.2s;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 8px;
+        gap: 0.75rem;
+        transition: all 0.2s;
+        box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.2);
     }
 
     .btn-submit:hover {
+        background: #d97706;
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(245, 158, 11, 0.35);
+        box-shadow: 0 10px 15px -3px rgba(245, 158, 11, 0.3);
     }
 
-    /* Messages */
-    .alert {
-        padding: 12px 16px;
-        border-radius: 10px;
-        margin-bottom: 18px;
-        font-size: 13px;
+    .btn-submit:active { transform: translateY(0); }
+
+    /* Custom Alerts */
+    .alert-box {
+        padding: 1rem;
+        border-radius: 0.75rem;
+        margin-bottom: 1.5rem;
+        font-size: 0.875rem;
         font-weight: 600;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 0.75rem;
     }
 
-    .alert-success {
-        background: #d1fae5;
-        color: #065f46;
-        border-left: 4px solid #10b981;
+    .alert-success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+    .alert-error { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: var(--slate-400);
     }
 
-    .alert-error {
-        background: #fee2e2;
-        color: #991b1b;
-        border-left: 4px solid #ef4444;
-    }
-
-    .stock-hint {
-        margin-top: 6px;
-        font-size: 12px;
-        color: #9ca3af;
-        font-style: italic;
-    }
-
-    @media (max-width: 640px) {
-        .form-body {
-            padding: 18px 14px;
-        }
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1.5rem;
+        opacity: 0.2;
     }
 </style>
 
-<!-- Hero -->
-<div class="return-hero">
-    <h1>📦 Mahsulot Qaytarish</h1>
-    <p>Foydalanilmagan mahsulotni qaytarish so'rovi yuboring. Admin tasdiqlaydi.</p>
-</div>
+<div class="return-container">
+    <div class="hero-section">
+        <h1><i class="fas fa-undo-alt" style="color: var(--warning);"></i> Mahsulot Qaytarish</h1>
+        <p>Omborga qaytarish so'rovini qoldiring. Admin tasdiqlagach, zaxira yangilanadi.</p>
+    </div>
 
-<!-- Messages -->
-{% for msg in messages %}
-<div class="alert alert-{% if msg.tags == 'error' %}error{% else %}success{% endif %}">
-    {% if msg.tags == 'error' %}❌{% else %}✅{% endif %} {{ msg }}
-</div>
-{% endfor %}
+    {% for msg in messages %}
+    <div class="alert-box alert-{% if msg.tags == 'error' %}error{% else %}success{% endif %}">
+        {% if msg.tags == 'error' %}<i class="fas fa-exclamation-circle"></i>{% else %}<i class="fas fa-check-circle"></i>{% endif %}
+        {{ msg }}
+    </div>
+    {% endfor %}
 
-<!-- Form -->
-<div class="form-card">
-    <div class="form-head">📝 Qaytarish So'rovi</div>
-    <div class="form-body">
+    <div class="form-card">
         {% if stocks %}
         <form method="POST">
             {% csrf_token %}
 
-            <div class="fg">
-                <label>Mahsulot tanlang</label>
-                <select name="mahsulot" class="fc" required id="mahsulot-select">
-                    <option value="">— Tanlang —</option>
+            <div class="form-group">
+                <label class="form-label">Mahsulotni tanlang</label>
+                <select name="mahsulot" class="form-select" required id="mahsulot-select">
+                    <option value="">— Mahsulotni tanlang —</option>
                     {% for s in stocks %}
                     <option value="{{ s.mahsulot.id }}" data-qty="{{ s.qty }}">
-                        {{ s.mahsulot.nomi }} (mavjud: {{ s.qty|floatformat:1 }} {{ s.mahsulot.turi }})
+                        {{ s.mahsulot.nomi }} ({{ s.qty|floatformat:1 }} {{ s.mahsulot.turi }})
                     </option>
                     {% endfor %}
                 </select>
-                <p class="stock-hint" id="qty-hint">Mahsulot tanlang — qolgan miqdor ko'rinadi</p>
+                <div class="stock-hint" id="qty-hint">
+                    <i class="fas fa-info-circle"></i> Mahsulot tanlash kutilmoqda
+                </div>
             </div>
 
-            <div class="fg">
-                <label>Qaytarilayotgan miqdor</label>
-                <input type="number" name="miqdor" class="fc" required min="0.01" step="0.01" id="miqdor-input"
-                    placeholder="Masalan: 5">
+            <div class="form-group">
+                <label class="form-label">Qaytariladigan miqdor</label>
+                <input type="number" name="miqdor" class="form-input" required min="0.01" step="0.01" id="miqdor-input" placeholder="0.00">
             </div>
 
             <button type="submit" class="btn-submit">
-                📤 So'rov Yuborish
+                So'rovni yuborish <i class="fas fa-paper-plane"></i>
             </button>
         </form>
 
@@ -191,16 +202,17 @@
                 const opt = sel.selectedOptions[0];
                 const qty = opt.dataset.qty;
                 if (qty) {
-                    hint.textContent = `Maksimal qaytarish: ${qty}`;
+                    hint.innerHTML = `<i class="fas fa-check-circle" style="color: var(--success)"></i> Maksimal qaytarish: <b>${qty}</b>`;
                     inp.max = qty;
+                } else {
+                    hint.innerHTML = `<i class="fas fa-info-circle"></i> Mahsulot tanlash kutilmoqda`;
                 }
             });
         </script>
-
         {% else %}
-        <div style="text-align:center; padding:40px 20px; color:#9ca3af;">
-            <div style="font-size:48px; opacity:0.3; margin-bottom:12px;">📦</div>
-            <p>Sizda qaytarishga mahsulot yo'q.</p>
+        <div class="empty-state">
+            <i class="fas fa-box-open"></i>
+            <p>Sizda qaytarish mumkin bo'lgan mahsulotlar mavjud emas.</p>
         </div>
         {% endif %}
     </div>

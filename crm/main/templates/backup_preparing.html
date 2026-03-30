@@ -1,0 +1,44 @@
+{% extends 'egabase.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center" style="min-height: 60vh;">
+    <div class="glass-card text-center" style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 20px; padding: 40px; max-width: 500px; width: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
+        
+        <div class="spinner-border mb-4" style="width: 3rem; height: 3rem; color: #10b981;" role="status">
+            <span class="visually-hidden">Yuklanmoqda...</span>
+        </div>
+        
+        <h3 style="font-weight: 700; color: var(--text-main); margin-bottom: 15px;">Zaxira nusxasi tayyorlanmoqda...</h3>
+        <p style="color: var(--text-dim); margin-bottom: 0;">Bu jarayon bazaning hajmiga qarab bir necha soniya vaqt olishi mumkin. Iltimos, sahifani yopmang.</p>
+        
+        <div id="success-msg" style="display: none; margin-top: 20px; color: #10b981; font-weight: 600;">
+            <i class="fa-solid fa-check-circle me-1"></i> Fayl yuklash boshlandi! Bosh sahifaga qaytishingiz mumkin.
+            <br>
+            <a href="{% url 'main' %}" class="btn btn-sm mt-3" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px;">Bosh sahifaga qaytish</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        let downloadUrl = "{% url 'download_backup' %}";
+        
+        if(urlParams.toString()) {
+            downloadUrl += "?" + urlParams.toString();
+        }
+        
+        // UX uchun biroz pauza va yuklash
+        setTimeout(() => {
+            window.location.href = downloadUrl;
+            
+            // Yuklash ishga tushgach spinnerni yashirish
+            setTimeout(() => {
+                document.querySelector('.spinner-border').style.display = 'none';
+                document.getElementById('success-msg').style.display = 'block';
+            }, 2500);
+            
+        }, 1200);
+    });
+</script>
+{% endblock %}

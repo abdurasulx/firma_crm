@@ -5,8 +5,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Firma CRM - Login</title>
+    <title>StockFirm CRM - Tizimga kirish</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <title>Kirish - StockFirm CRM</title>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-dark: #4338ca;
+            --slate-50: #f8fafc;
+            --slate-100: #f1f5f9;
+            --slate-200: #e2e8f0;
+            --slate-600: #475569;
+            --slate-800: #1e293b;
+            --slate-900: #0f172a;
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -14,206 +34,251 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Inter', sans-serif;
+            background-color: var(--slate-50);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.05) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.05) 0px, transparent 50%);
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            padding: 20px;
+            padding: 24px;
+            color: var(--slate-900);
         }
 
-        .login-container {
+        .login-card {
             background: white;
-            padding: 48px 40px;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             width: 100%;
-            max-width: 420px;
-            animation: slideUp 0.5s ease;
+            max-width: 440px;
+            padding: 3rem 2.5rem;
+            border-radius: 1.5rem;
+            box-shadow: var(--shadow-xl);
+            border: 1px solid var(--slate-200);
+            animation: fadeInScale 0.6s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        @keyframes fadeInScale {
+            from { opacity: 0; transform: scale(0.95) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
         }
 
         .login-header {
             text-align: center;
-            margin-bottom: 40px;
+            margin-bottom: 2.5rem;
         }
 
-        .login-header .logo {
-            font-size: 48px;
-            margin-bottom: 16px;
+        .logo-box {
+            width: 64px;
+            height: 64px;
+            background: var(--primary);
+            color: white;
+            border-radius: 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin: 0 auto 1.5rem;
+            box-shadow: 0 8px 16px rgba(79, 70, 229, 0.25);
         }
 
         .login-header h1 {
-            color: #1f2937;
-            font-size: 28px;
-            font-weight: 700;
-            margin-bottom: 8px;
+            font-size: 1.75rem;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            margin-bottom: 0.5rem;
+            color: var(--slate-900);
         }
 
         .login-header p {
-            color: #6b7280;
-            font-size: 14px;
+            color: var(--slate-600);
+            font-size: 0.9375rem;
         }
 
-        .input-group {
-            margin-bottom: 24px;
+        .form-group {
+            margin-bottom: 1.5rem;
         }
 
-        .input-group label {
+        .form-label {
             display: block;
-            margin-bottom: 8px;
-            color: #374151;
+            font-size: 0.875rem;
             font-weight: 600;
-            font-size: 14px;
+            color: var(--slate-800);
+            margin-bottom: 0.5rem;
         }
 
-        .input-group input {
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--slate-400);
+            font-size: 1rem;
+            transition: color 0.2s;
+        }
+
+        .form-input {
             width: 100%;
-            padding: 14px 16px;
-            border: 2px solid #e5e7eb;
-            border-radius: 10px;
-            font-size: 16px;
-            transition: all 0.3s ease;
-            background: #f9fafb;
+            padding: 0.875rem 1rem 0.875rem 2.75rem;
+            background: var(--slate-50);
+            border: 1.5px solid var(--slate-200);
+            border-radius: 0.875rem;
+            font-family: inherit;
+            font-size: 1rem;
+            color: var(--slate-900);
+            transition: all 0.2s;
         }
 
-        .input-group input:focus {
+        .form-input:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: var(--primary);
             background: white;
-            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
         }
 
-        .login-button {
+        .form-input:focus + .input-icon {
+            color: var(--primary);
+        }
+
+        .login-btn {
             width: 100%;
-            padding: 16px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 1rem;
+            background: var(--primary);
             color: white;
             border: none;
-            border-radius: 10px;
-            font-size: 16px;
+            border-radius: 0.875rem;
+            font-size: 1rem;
             font-weight: 700;
             cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 8px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-top: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
         }
 
-        .login-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        .login-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
         }
 
-        .login-button:active {
+        .login-btn:active {
             transform: translateY(0);
         }
 
-        .message-box {
-            margin-top: 20px;
-            padding: 12px 16px;
-            border-radius: 8px;
-            background: #fee2e2;
-            border-left: 4px solid #ef4444;
+        .login-btn.loading {
+            opacity: 0.8;
+            cursor: wait;
         }
 
-        .message-box p {
-            color: #991b1b;
-            font-size: 14px;
-            margin: 0;
+        .error-box {
+            background: #fff1f2;
+            border: 1px solid #fecdd3;
+            padding: 1rem;
+            border-radius: 0.875rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            color: #be123c;
+            font-size: 0.875rem;
+            font-weight: 500;
         }
 
-        .footer-text {
+        .footer {
+            margin-top: 2rem;
             text-align: center;
-            margin-top: 24px;
-            color: #6b7280;
-            font-size: 13px;
-        }
-
-        /* Loading state */
-        .login-button.loading {
-            opacity: 0.7;
-            cursor: not-allowed;
+            font-size: 0.8125rem;
+            color: var(--slate-600);
         }
 
         @media (max-width: 480px) {
-            .login-container {
-                padding: 32px 24px;
-            }
-
-            .login-header h1 {
-                font-size: 24px;
+            .login-card {
+                padding: 2.5rem 1.5rem;
+                border-radius: 1.25rem;
             }
         }
     </style>
 </head>
 
 <body>
-    <div class="login-container">
+    <div class="login-card">
         <div class="login-header">
-            <div class="logo">🏢</div>
-            <h1>Firma CRM</h1>
-            <p>Tizimga kirish</p>
+            <div class="logo-box">
+                <i class="fas fa-truck-fast"></i>
+            </div>
+            <h1>StockFirm CRM</h1>
+            <p>Xush kelibsiz! Tizimga kiring.</p>
         </div>
 
-        <form method="POST" onsubmit="handleSubmit(event)">
-            {% csrf_token %}
-
-            <div class="input-group">
-                <label for="username">👤 Foydalanuvchi nomi</label>
-                <input type="text" id="username" name="username" value="{{ username }}" required autocomplete="username"
-                    placeholder="Username kiriting">
-            </div>
-
-            <div class="input-group">
-                <label for="password">🔒 Parol</label>
-                <input type="password" id="password" name="password" value="{{ password }}" required
-                    autocomplete="current-password" placeholder="Parol kiriting">
-            </div>
-
-            <button type="submit" class="login-button" id="loginBtn">
-                Kirish
-            </button>
-        </form>
-
         {% if messages %}
-        <div class="message-box">
-            {% for message in messages %}
-            <p>❌ {{ message }}</p>
-            {% endfor %}
+        <div class="error-box">
+            <i class="fas fa-circle-exclamation" style="margin-top: 2px;"></i>
+            <div>
+                {% for message in messages %}
+                <p>{{ message }}</p>
+                {% endfor %}
+            </div>
         </div>
         {% endif %}
 
-        <div class="footer-text">
-            © 2026 Firma CRM. Barcha huquqlar himoyalangan.
+        <form method="POST" onsubmit="handleSubmit(event)">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label class="form-label" for="username">Foydalanuvchi nomi</label>
+                <div class="input-wrapper">
+                    <input type="text" id="username" name="username" class="form-input" 
+                        placeholder="Username kiriting" required autocomplete="username"
+                        value="{{ username }}">
+                    <i class="fas fa-user input-icon"></i>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">Parol</label>
+                <div class="input-wrapper">
+                    <input type="password" id="password" name="password" class="form-input" 
+                        placeholder="Parol kiriting" required autocomplete="current-password">
+                    <i class="fas fa-lock input-icon"></i>
+                </div>
+            </div>
+
+            <button type="submit" class="login-btn" id="loginBtn">
+                <span>Kirish</span>
+                <i class="fas fa-arrow-right"></i>
+            </button>
+        </form>
+
+        <div class="footer">
+            &copy; 2026 StockFirm CRM. Barcha huquqlar himoyalangan.
         </div>
     </div>
 
     <script>
         function handleSubmit(event) {
             const btn = document.getElementById('loginBtn');
+            const span = btn.querySelector('span');
+            const icon = btn.querySelector('i');
+            
             btn.classList.add('loading');
-            btn.textContent = 'Yuklanmoqda...';
+            span.textContent = 'Kirilmoqda...';
+            icon.className = 'fas fa-spinner fa-spin';
         }
 
-        // Auto-focus first input
-        document.addEventListener('DOMContentLoaded', () => {
-            const usernameInput = document.getElementById('username');
-            if (!usernameInput.value) {
-                usernameInput.focus();
-            }
-        });
+        // Auto-focus logic
+        window.onload = () => {
+            const userInp = document.getElementById('username');
+            if (!userInp.value) userInp.focus();
+            else document.getElementById('password').focus();
+        };
     </script>
 </body>
 
-</html>
+</html>

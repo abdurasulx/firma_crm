@@ -41,6 +41,35 @@
         font-size: 16px;
     }
 
+    .header-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 20px;
+    }
+
+    .btn-export {
+        background: rgba(255, 255, 255, 0.2);
+        color: #fff;
+        padding: 10px 20px;
+        border-radius: 12px;
+        text-decoration: none;
+        font-weight: 700;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s ease;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        backdrop-filter: blur(10px);
+    }
+
+    .btn-export:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        color: #fff;
+    }
+
     /* Filter Type Tabs */
     .filter-type-tabs {
         display: flex;
@@ -422,8 +451,17 @@
 </style>
 
 <div class="page-header">
-    <h1>📊 Professional Hisobotlar</h1>
-    <p>{{ period_label|default:"Hisobot davri" }}</p>
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 20px;">
+        <div>
+            <h1>📊 Professional Hisobotlar</h1>
+            <p>{{ period_label|default:"Hisobot davri" }}</p>
+        </div>
+        <div class="header-actions">
+            <a href="javascript:void(0)" onclick="exportExcel()" class="btn-export">
+                Excelga yuklash
+            </a>
+        </div>
+    </div>
 </div>
 
 <!-- Filter Type Selection -->
@@ -515,7 +553,7 @@
 <div class="stats-grid">
     <div class="stat-card primary">
         <div class="stat-label">💰 Jami Summa</div>
-        <div class="stat-value">{{ total_amount|floatformat:0|default:"0" }}</div>
+        <div class="stat-value">{{ total_amount|default:"0" }}</div>
     </div>
     <div class="stat-card success">
         <div class="stat-label">🛒 Savdolar</div>
@@ -540,17 +578,17 @@
         <div class="stats-grid">
             <div class="stat-card success">
                 <div class="stat-label">💵 Naqd</div>
-                <div class="stat-value">{{ naqd_amount|floatformat:0|default:"0" }}</div>
+                <div class="stat-value">{{ naqd_amount|default:"0" }}</div>
                 <small>{{ naqd_sales|default:"0" }} ta</small>
             </div>
             <div class="stat-card info">
                 <div class="stat-label">💳 Karta</div>
-                <div class="stat-value">{{ karta_amount|floatformat:0|default:"0" }}</div>
+                <div class="stat-value">{{ karta_amount|default:"0" }}</div>
                 <small>{{ karta_sales|default:"0" }} ta</small>
             </div>
             <div class="stat-card warning">
                 <div class="stat-label">🔄 Nasiya</div>
-                <div class="stat-value">{{ nasiya_amount|floatformat:0|default:"0" }}</div>
+                <div class="stat-value">{{ nasiya_amount|default:"0" }}</div>
                 <small>{{ nasiya_sales|default:"0" }} ta</small>
             </div>
         </div>
@@ -683,6 +721,12 @@
         window.location.href = url;
     }
 
+    function exportExcel() {
+        const urlParams = new URLSearchParams(window.location.search);
+        urlParams.set('export', 'xlsx');
+        window.location.href = '?' + urlParams.toString();
+    }
+
     /* --- Modal logic --- */
     function showReceipt(url) {
         const modal = document.getElementById('receipt-modal');
@@ -719,5 +763,169 @@
         </div>
     </div>
 </div>
+
+<!-- Sales Map Section -->
+{% if has_map %}
+<div class="section" style="margin-top: 30px;">
+    <div class="section-header">
+        <div class="section-title">🗺️ Sotuvlar Xaritasi ({{ period_label }})</div>
+    </div>
+    <div class="section-content" style="padding: 0; position: relative;">
+        <div id="report-map" style="height: 480px; width: 100%; border-radius: 0 0 16px 16px; border-top: 1px solid var(--bdr);"></div>
+        
+        <!-- Missing Coordinates Alert -->
+        <div id="missing-coords-info" style="display: none; position: absolute; top: 10px; right: 10px; z-index: 1000; max-width: 250px; background: rgba(255,255,255,0.9); backdrop-filter: blur(5px); border-radius: 10px; padding: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid var(--warning-color);">
+            <div style="font-size: 12px; font-weight: 700; color: var(--warning-color); margin-bottom: 5px;">⚠️ Koordinatasi yo'q do'konlar:</div>
+            <ul id="missing-shops-list" style="margin: 0; padding-left: 15px; font-size: 11px; color: var(--t-light); max-height: 100px; overflow-y: auto;">
+            </ul>
+        </div>
+    </div>
+</div>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    .custom-div-icon {
+        background: none !important;
+        border: none !important;
+    }
+    .report-marker-container {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .report-shop-avatar-wrapper {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        border: 3px solid white;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        overflow: hidden;
+        background: #eee;
+        transition: transform 0.2s;
+        z-index: 5;
+    }
+    .report-shop-avatar-wrapper img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+    .report-dev-avatar-wrapper {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        border: 2px solid white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        position: absolute;
+        bottom: -2px;
+        right: -5px;
+        z-index: 10;
+        overflow: hidden;
+        background: #fff;
+    }
+    .report-dev-avatar-wrapper img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+    .report-amount-badge {
+        background: var(--success-color);
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 10px;
+        font-weight: 800;
+        border: 1px solid white;
+        position: absolute;
+        top: -10px;
+        white-space: nowrap;
+        z-index: 20;
+    }
+    .report-marker-container:hover .report-shop-avatar {
+        transform: scale(1.1);
+        z-index: 1000 !important;
+    }
+</style>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        try {
+            const mapData = {{ map_data|safe }};
+            const mapElement = document.getElementById('report-map');
+            
+            const noCoordShops = {{ no_coord_shops|safe|default:"[]" }};
+            const missingInfo = document.getElementById('missing-coords-info');
+            const missingList = document.getElementById('missing-shops-list');
+
+            if (noCoordShops.length > 0 && missingInfo && missingList) {
+                missingInfo.style.display = 'block';
+                noCoordShops.forEach(shop => {
+                    const li = document.createElement('li');
+                    li.textContent = shop;
+                    missingList.appendChild(li);
+                });
+            }
+            
+            if (mapElement && mapData && mapData.length > 0) {
+                const map = L.map('report-map').setView([41.311, 69.240], 12);
+                
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                    subdomains: 'abcd',
+                    maxZoom: 20
+                }).addTo(map);
+
+                const markers = [];
+                mapData.forEach(shop => {
+                    const icon = L.divIcon({
+                        className: 'custom-div-icon',
+                        html: `
+                            <div class="report-marker-container">
+                                <div class="report-amount-badge">${shop.total.toLocaleString()}</div>
+                                <div class="report-shop-avatar-wrapper">
+                                    <img src="${shop.shop_pic || '/static/images/default_shop.png'}">
+                                </div>
+                                <div class="report-dev-avatar-wrapper" title="${shop.dev_name}">
+                                    <img src="${shop.dev_pic || '/static/images/default_avatar.jpg'}">
+                                </div>
+                            </div>
+                        `,
+                        iconSize: [50, 50],
+                        iconAnchor: [25, 25]
+                    });
+                    
+                    const marker = L.marker([shop.lat, shop.lng], {icon: icon})
+                        .addTo(map)
+                        .bindPopup(`
+                            <div style="font-family: inherit; padding: 5px;">
+                                <h4 style="margin: 0 0 5px 0; color: var(--t-dark);">${shop.name}</h4>
+                                <div style="font-size: 13px; color: var(--t-light);">
+                                    Jami: <strong style="color: #10b981;">${shop.total.toLocaleString()}</strong> so'm<br>
+                                    Savdolar soni: <strong>${shop.sales_count}</strong><br>
+                                    Oxirgi kuryer: <strong>${shop.dev_name}</strong>
+                                </div>
+                            </div>
+                        `);
+                    markers.push(marker);
+                });
+
+                if (markers.length > 0) {
+                    const group = new L.featureGroup(markers);
+                    map.fitBounds(group.getBounds().pad(0.2));
+                }
+            } else if (mapElement) {
+                mapElement.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--t-light); font-weight: 700; flex-direction: column; gap: 10px;">' +
+                                     '<div style="font-size: 32px;">📍</div>' +
+                                     '<div style="text-align:center;">Ushbu davrda koordinataga ega savdolar mavjud emas.<br><span style="font-size:12px; font-weight:400; color:var(--warning-color);">Do\'konlar profilida koordinatalar kiritilganiga ishonch hosil qiling.</span></div>' +
+                                     '</div>';
+            }
+        } catch (e) {
+            console.error("Map initialization error:", e);
+        }
+    });
+</script>
+{% endif %}
 
 {% endblock %}

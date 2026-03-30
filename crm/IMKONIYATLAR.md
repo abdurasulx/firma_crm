@@ -1,9 +1,9 @@
-# Firma CRM - Loyiha Imkoniyatlari
+# StockFirm CRM - Loyiha Imkoniyatlari
 
-Ushbu hujjat "Firma CRM" tizimining texnik imkoniyatlari, funksional modullari va arxitektura xususiyatlari haqida to'liq ma'lumot beradi.
+Ushbu hujjat "StockFirm CRM" tizimining texnik imkoniyatlari, funksional modullari va arxitektura xususiyatlari haqida to'liq ma'lumot beradi.
 
 ## 1. Umumiy tavsif
-Firma CRM — ishlab chiqarish, omborxona, yetkazib berish va savdo jarayonlarini avtomatlashtirish uchun mo'ljallangan enterprise-grade korporativ boshqaruv tizimi. Tizim ko'p rolli foydalanishga asoslangan va real-vaqt rejimida ma'lumotlar almashinuvini ta'minlaydi.
+StockFirm CRM — ishlab chiqarish, omborxona, yetkazib berish va savdo jarayonlarini avtomatlashtirish uchun mo'ljallangan enterprise-grade korporativ boshqaruv tizimi. Tizim ko'p rolli foydalanishga asoslangan va real-vaqt rejimida ma'lumotlar almashinuvini ta'minlaydi.
 
 ## 2. Asosiy Modullar
 

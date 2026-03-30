@@ -4,6 +4,7 @@ from django.utils import timezone
 from .models import Savdo, User, YetkazibBeruvchi, Pazanda, Mahsulot
 from django.db.models import Sum, Count, Q
 import datetime as dt
+import json
 from .functions import add_spctoint
 import calendar
 
@@ -17,8 +18,8 @@ def hisobotlar_view(request):
     
     now = timezone.localtime()
     
-    # System start date (first sale ever)
-    first_sale = Savdo.objects.order_by('vaqt_sana').first()
+    # System start date (first sale ever for this company)
+    first_sale = Savdo.objects.filter(company=request.company).order_by('vaqt_sana').first()
     system_start_date = first_sale.vaqt_sana if first_sale else now
     
     # Get filter parameters (default: daily with current day)
@@ -142,19 +143,45 @@ def hisobotlar_view(request):
         period_label = f"{calendar.month_name[now.month]} {now.year}"
     
     # Base queryset
-    savdolar = Savdo.objects.filter(vaqt_sana__range=(start_date, end_date))
+    savdolar = Savdo.objects.filter(company=request.company, vaqt_sana__range=(start_date, end_date))
     
     # Employee filter
     employee_name = None
     if employee_id:
         try:
-            employee = User.objects.get(id=employee_id)
+            employee = User.objects.get(id=employee_id, company=request.company)
             if employee.type == 'yetkazib_beruvchi':
                 yetkazuvchi = YetkazibBeruvchi.objects.get(user=employee)
                 savdolar = savdolar.filter(yetkazib_beruvchi=yetkazuvchi)
             employee_name = employee.tuliq_ismi
         except:
             pass
+    
+    # Excel Export Logic
+    if request.GET.get('export') == 'xlsx':
+        import pandas as pd
+        from .utils import export_to_excel, format_product_string
+        rows = []
+        for s in savdolar.order_by('-vaqt_sana'):
+            lt = timezone.localtime(s.vaqt_sana)
+            rows.append({
+                'Sana': lt.strftime('%Y-%m-%d'),
+                'Vaqt': lt.strftime('%H:%M'),
+                'Haridor': s.haridor_dukon.nomi if s.haridor_dukon else "-",
+                'Yetkazuvchi': s.yetkazib_beruvchi.user.tuliq_ismi if s.yetkazib_beruvchi else "-",
+                'Mahsulotlar': format_product_string(s.smm, request.company),
+                'Summa': float(s.summa or 0),
+                'To\'lov turi': s.get_st_display(),
+                'To\'langan': "Ha" if s.tulandi else "Yo'q"
+            })
+        
+        df = pd.DataFrame(rows)
+        header_info = {
+            'title': f"Hisobot - {employee_name if employee_name else 'Barcha xodimlar'}",
+            'date_range': period_label
+        }
+        filename = f"hisobot_umumiy_{timezone.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        return export_to_excel(df, filename, header_info)
     
     # Statistics
     total_sales = savdolar.count()
@@ -175,7 +202,7 @@ def hisobotlar_view(request):
     
     # Delivery stats
     yetkazuvchilar_stats = []
-    for yetkazuvchi in YetkazibBeruvchi.objects.all():
+    for yetkazuvchi in YetkazibBeruvchi.objects.filter(user__company=request.company):
         y_sales = savdolar.filter(yetkazib_beruvchi=yetkazuvchi)
         if y_sales.exists():
             yetkazuvchilar_stats.append({
@@ -189,8 +216,55 @@ def hisobotlar_view(request):
     # Recent sales
     recent_sales = savdolar.order_by('-vaqt_sana')[:10]
     
+    # Map data aggregation (shops with coordinates)
+    map_data = []
+    no_coord_shops = set()
+    
+    for s in savdolar:
+        if s.haridor_dukon:
+            if s.haridor_dukon.latitude and s.haridor_dukon.longitude:
+                shop_id = s.haridor_dukon.id
+                existing = next((item for item in map_data if item['id'] == shop_id), None)
+                
+                # Get deliverer info
+                dev_name = s.yetkazib_beruvchi.tuliq_ismi
+                dev_pic = ""
+                try:
+                    if s.yetkazib_beruvchi.rasmi:
+                        dev_pic = s.yetkazib_beruvchi.rasmi.url
+                except:
+                    pass
+
+                shop_pic = ""
+                try:
+                    if s.haridor_dukon.dukon_rasmi:
+                        shop_pic = s.haridor_dukon.dukon_rasmi.url
+                except:
+                    pass
+
+                if existing:
+                    existing['total'] += float(s.summa or 0)
+                    existing['sales_count'] += 1
+                    # Update with latest deliverer
+                    existing['dev_name'] = dev_name
+                    existing['dev_pic'] = dev_pic
+                else:
+                    map_data.append({
+                        'id': shop_id,
+                        'name': s.haridor_dukon.nomi,
+                        'shop_pic': shop_pic,
+                        'lat': s.haridor_dukon.latitude,
+                        'lng': s.haridor_dukon.longitude,
+                        'total': float(s.summa or 0),
+                        'sales_count': 1,
+                        'dev_name': dev_name,
+                        'dev_pic': dev_pic
+                    })
+            else:
+                no_coord_shops.add(s.haridor_dukon.nomi)
+
     # Get all employees for dropdown
-    employees = User.objects.filter(Q(type='yetkazib_beruvchi') | Q(type='pazanda')).order_by('tuliq_ismi')
+    employees = User.objects.filter(company=request.company).filter(Q(type='yetkazib_beruvchi') | Q(type='pazanda')).order_by('tuliq_ismi')
     
     context = {
         'filter_type': filter_type,
@@ -231,6 +305,7 @@ def hisobotlar_view(request):
         # Stats
         'yetkazuvchilar_stats': yetkazuvchilar_stats,
         'recent_sales': recent_sales,
+        'map_data': json.dumps(map_data),
     }
     
     return render(request, 'hisobotlar.html', context)

@@ -1,0 +1,266 @@
+{% extends 'landing/super_base.html' %}
+
+{% block page_title %}Hisobotlar va To'lovlar{% endblock %}
+{% block page_subtitle %}Barcha firmalarning joriy tariflari va to'lov holati{% endblock %}
+
+{% block content %}
+<style>
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 25px;
+        margin-bottom: 40px;
+    }
+
+    .stat-card {
+        padding: 25px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        transition: transform 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+    }
+
+    .stat-info .label {
+        font-size: 14px;
+        color: var(--text-dim);
+        display: block;
+        margin-bottom: 5px;
+    }
+
+    .stat-info .value {
+        font-size: 32px;
+        font-weight: 700;
+        letter-spacing: -1px;
+    }
+
+    .blue .stat-icon { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+    .green .stat-icon { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+    .red .stat-icon { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+    .orange .stat-icon { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+
+    .table-container {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+    }
+
+    th {
+        padding: 16px 24px;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text-dim);
+        text-transform: uppercase;
+        border-bottom: 2px solid var(--border);
+    }
+
+    td {
+        padding: 16px 24px;
+        border-bottom: 1px solid var(--border);
+        transition: background 0.2s;
+    }
+
+    tr:hover td {
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .badge-success { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+    .badge-error { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+    .badge-warning { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+    .badge-info { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+    
+    .action-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    
+    .action-btn-pay {
+        background: #10b981;
+        color: white;
+    }
+    .action-btn-pay:hover { background: #059669; }
+    
+    .action-btn-stop {
+        background: #ef4444;
+        color: white;
+    }
+    .action-btn-stop:hover { background: #dc2626; }
+    
+    .action-btn-start {
+        background: #3b82f6;
+        color: white;
+    }
+    .action-btn-start:hover { background: #2563eb; }
+    
+    .action-btn-unpaid {
+        background: #f59e0b;
+        color: white;
+    }
+    .action-btn-unpaid:hover { background: #d97706; }
+
+</style>
+
+<div class="stats-grid">
+    <div class="glass-card stat-card blue">
+        <div class="stat-icon"><i class="fa-solid fa-building"></i></div>
+        <div class="stat-info">
+            <span class="label">Barcha Firmalar</span>
+            <span class="value">{{ total_companies }}</span>
+        </div>
+    </div>
+    <div class="glass-card stat-card green">
+        <div class="stat-icon"><i class="fa-solid fa-money-bill-wave"></i></div>
+        <div class="stat-info">
+            <span class="label">To'langan</span>
+            <span class="value">{{ paid_companies }}</span>
+        </div>
+    </div>
+    <div class="glass-card stat-card red">
+        <div class="stat-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <div class="stat-info">
+            <span class="label">To'lanmagan (Qarzdor)</span>
+            <span class="value">{{ unpaid_companies }}</span>
+        </div>
+    </div>
+    <div class="glass-card stat-card orange">
+        <div class="stat-icon"><i class="fa-solid fa-power-off"></i></div>
+        <div class="stat-info">
+            <span class="label">Faoliyatsiz / To'xtatilgan</span>
+            <span class="value">{{ inactive_companies }}</span>
+        </div>
+    </div>
+</div>
+
+<div class="glass-card table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Firma (Do'kon)</th>
+                <th>Tarif & Narx</th>
+                <th>To'lov Holati</th>
+                <th>Keyingi To'lov Sanasi</th>
+                <th>Tizim Holati (Access)</th>
+                <th style="text-align: right;">Amallar</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for company in companies %}
+            <tr>
+                <td>
+                    <div style="font-weight: 700;">{{ company.name }}</div>
+                    <div style="font-size: 12px; color: var(--text-dim);"><i class="fa-solid fa-link"></i> {{ company.subdomain }}</div>
+                </td>
+                <td>
+                    {% if company.is_custom_plan %}
+                        <span class="badge badge-info"><i class="fa-solid fa-screwdriver-wrench"></i> Maxsus</span><br>
+                        <span style="font-weight: 600; font-size: 13px;">${{ company.custom_price }}</span>
+                    {% elif company.plan %}
+                        <span class="badge" style="background: rgba(139, 92, 246, 0.15); color: #8b5cf6;"><i class="fa-solid fa-gem"></i> {{ company.plan.name }}</span><br>
+                        <span style="font-weight: 600; font-size: 13px;">${{ company.plan.price }}</span>
+                    {% else %}
+                        <span class="badge" style="background: rgba(100, 116, 139, 0.15); color: #64748b;">Tarif yo'q</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if company.payment_status == 'paid' %}
+                        <span class="badge badge-success"><i class="fa-solid fa-check"></i> To'langan</span>
+                    {% else %}
+                        <span class="badge badge-error"><i class="fa-solid fa-xmark"></i> To'lanmagan</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if company.next_payment_date %}
+                        <span style="font-weight: 600; font-size: 13px;">{{ company.next_payment_date|date:"d.m.Y" }}</span>
+                    {% else %}
+                        <span style="color: var(--text-dim); font-size: 13px;">O'rnatilmagan</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if company.is_active %}
+                        <span class="badge badge-success" style="font-size: 11px;"><i class="fa-solid fa-play"></i> FAOL</span>
+                    {% else %}
+                        <span class="badge badge-warning" style="font-size: 11px;"><i class="fa-solid fa-pause"></i> TO'XTATILGAN</span>
+                    {% endif %}
+                </td>
+                <td style="text-align: right;">
+                    <form action="{% url 'update_billing_status' company.id %}" method="post" style="display: inline;">
+                        {% csrf_token %}
+                        {% if company.is_on_trial %}
+                            <button type="submit" name="action" value="end_trial" class="action-btn" style="background: #8b5cf6; color: white;" title="Sinov muddatini tugatish va to'lovni hisoblashni boshlash">
+                                <i class="fa-solid fa-hourglass-end"></i> Sinovni tugatish
+                            </button>
+                            <div style="width: 1px; height: 16px; background: var(--border); display: inline-block; margin: 0 5px; vertical-align: middle;"></div>
+                        {% endif %}
+                        
+                        {% if company.payment_status == 'paid' %}
+                            <button type="submit" name="action" value="mark_unpaid" class="action-btn action-btn-unpaid" title="Qarzdor deb belgilash">
+                                <i class="fa-solid fa-ban"></i>
+                            </button>
+                        {% else %}
+                            <button type="submit" name="action" value="mark_paid" class="action-btn action-btn-pay" title="To'lovni kiritish (+1 oy)">
+                                <i class="fa-solid fa-money-bills"></i> To'ladi (+1 oy)
+                            </button>
+                        {% endif %}
+                        
+                        <div style="width: 1px; height: 16px; background: var(--border); display: inline-block; margin: 0 5px; vertical-align: middle;"></div>
+                        
+                        {% if company.is_active %}
+                            <button type="submit" name="action" value="toggle_active" class="action-btn action-btn-stop" title="Tizimga kirishni to'xtatish (blokлаш)">
+                                <i class="fa-solid fa-power-off"></i> Stop
+                            </button>
+                        {% else %}
+                            <button type="submit" name="action" value="toggle_active" class="action-btn action-btn-start" title="Tizimni faollashtirish (ruxsat berish)">
+                                <i class="fa-solid fa-play"></i> Start
+                            </button>
+                        {% endif %}
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-dim);">
+                    Hozircha firmalar yo'q.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

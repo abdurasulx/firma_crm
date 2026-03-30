@@ -11,7 +11,7 @@ def mijozlar_list(request):
     if request.user.type != 'ega':
         return redirect('main')
     
-    mijozlar = HaridorDukon.objects.all().order_by('nomi')
+    mijozlar = HaridorDukon.objects.filter(company=request.company).order_by('nomi')
     
     # Calculate statistics for each customer
     mijoz_stats = []
@@ -71,7 +71,7 @@ def mijoz_detail(request, mijoz_id):
     if request.user.type != 'ega':
         return redirect('main')
     
-    mijoz = get_object_or_404(HaridorDukon, id=mijoz_id)
+    mijoz = get_object_or_404(HaridorDukon, id=mijoz_id, company=request.company)
     
     # Get all sales
     savdolar = Savdo.objects.filter(haridor_dukon=mijoz).order_by('-vaqt_sana')

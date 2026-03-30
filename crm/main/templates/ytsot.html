@@ -1,416 +1,431 @@
 {% extends 'ytbase.html' %}
 {% load static %}
 
-{% block title %}Sotish{% endblock %}
+{% block title %}Yangi sotuv - StockFirm{% endblock %}
 
 {% block content %}
 <style>
-    .content-area,
-    .main-content {
-        padding: 0 !important
+    .sales-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding-bottom: 120px; /* Space for sticky bar */
     }
 
-    .sotish-wrap {
-        max-width: 520px;
-        margin: auto;
-        padding: 16px 14px 120px;
-    }
-
-    .page-title {
-        font-size: 20px;
-        font-weight: 800;
-        margin-bottom: 16px;
-        color: #1f2937
-    }
-
-    .section-lbl {
-        font-size: 11px;
-        font-weight: 700;
-        color: #6b7280;
-        text-transform: uppercase;
-        margin-bottom: 6px;
-        letter-spacing: .5px;
-    }
-
-    .big-select,
-    .big-input {
-        width: 100%;
-        padding: 14px;
-        border: 2px solid #e5e7eb;
-        border-radius: 12px;
-        font-size: 16px;
-        font-family: inherit;
+    .form-card {
         background: white;
+        padding: 2rem;
+        border-radius: var(--radius);
+        border: 1px solid var(--slate-200);
+        box-shadow: var(--shadow);
+        margin-bottom: 2rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 700;
+        color: var(--slate-700);
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+    }
+
+    .form-select, .form-input {
+        width: 100%;
+        padding: 0.875rem 1rem;
+        border-radius: 0.75rem;
+        border: 1.5px solid var(--slate-200);
+        font-family: inherit;
+        font-size: 1rem;
+        background: var(--slate-50);
+        transition: all 0.2s;
+    }
+
+    .form-select:focus, .form-input:focus {
         outline: none;
-        color: #1f2937;
+        border-color: var(--primary);
+        background: white;
+        box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
     }
 
-    .big-select:focus,
-    .big-input:focus {
-        border-color: #667eea
-    }
-
-    .mb16 {
-        margin-bottom: 16px
-    }
-
-    .product-grid {
+    /* Product Cards */
+    .products-list {
         display: flex;
         flex-direction: column;
-        gap: 10px
+        gap: 0.75rem;
     }
 
-    .product-row {
-        background: #fff;
-        border-radius: 14px;
-        padding: 14px;
-        border: 2px solid #f3f4f6;
+    .product-item {
+        background: white;
+        padding: 1.25rem;
+        border-radius: 1rem;
+        border: 1.5px solid var(--slate-200);
         display: flex;
+        justify-content: space-between;
         align-items: center;
-        gap: 14px;
-        transition: border-color .2s, background .2s;
+        transition: all 0.2s;
     }
 
-    .product-row.has-qty {
-        border-color: #667eea;
-        background: #f5f3ff
+    .product-item.selected {
+        border-color: var(--primary);
+        background: rgba(79, 70, 229, 0.02);
     }
 
-    .product-info {
-        flex: 1;
-        min-width: 0
+    .p-info {
+        display: flex;
+        flex-direction: column;
     }
 
-    .product-name {
-        font-size: 15px;
+    .p-name {
         font-weight: 700;
-        color: #1f2937;
-        margin-bottom: 2px
+        color: var(--slate-900);
+        font-size: 1rem;
     }
 
-    .product-stock {
-        font-size: 12px;
-        color: #6b7280
+    .p-stock {
+        font-size: 0.8125rem;
+        color: var(--slate-500);
+        font-weight: 500;
     }
 
+    .p-price {
+        font-size: 0.875rem;
+        color: var(--success);
+        font-weight: 700;
+    }
+
+    /* Stepper */
     .stepper {
         display: flex;
         align-items: center;
-        gap: 6px;
-        flex-shrink: 0
+        gap: 0.75rem;
+        background: var(--slate-100);
+        padding: 0.25rem;
+        border-radius: 0.75rem;
     }
 
-    .stepper-btn {
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
+    .step-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 0.5rem;
         border: none;
-        font-size: 20px;
-        font-weight: 700;
-        cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: opacity .15s;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 1rem;
     }
 
-    .stepper-btn:active {
-        opacity: .7
-    }
+    .step-minus { background: white; color: var(--slate-600); }
+    .step-plus { background: var(--primary); color: white; }
+    
+    .step-btn:hover { transform: scale(1.05); }
+    .step-btn:active { transform: scale(0.95); }
 
-    .minus {
-        background: #f3f4f6;
-        color: #374151
-    }
-
-    .plus {
-        background: #667eea;
-        color: white;
-        box-shadow: 0 3px 10px rgba(102, 126, 234, .35)
-    }
-
-    .stepper-val {
-        width: 40px;
+    .step-val {
+        width: 30px;
         text-align: center;
-        font-size: 18px;
         font-weight: 800;
-        color: #1f2937;
+        color: var(--slate-900);
     }
 
-    .pay-row {
+    /* Payment Selector */
+    .payment-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
-        gap: 8px;
-        margin-bottom: 16px
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.75rem;
     }
 
-    .pay-btn {
-        padding: 14px 8px;
-        border: 2px solid #e5e7eb;
-        border-radius: 12px;
+    .pay-option {
         background: white;
+        padding: 1rem 0.5rem;
+        border-radius: 0.75rem;
+        border: 1.5px solid var(--slate-200);
         text-align: center;
         cursor: pointer;
-        font-size: 13px;
-        font-weight: 700;
-        color: #6b7280;
-        transition: all .2s;
-        user-select: none;
-    }
-
-    .pay-icon {
-        font-size: 22px;
-        display: block;
-        margin-bottom: 4px
-    }
-
-    .pay-btn.active {
-        border-color: #667eea;
-        background: #ede9fe;
-        color: #4f46e5
-    }
-
-    .upload-box {
+        transition: all 0.2s;
         display: flex;
+        flex-direction: column;
         align-items: center;
-        gap: 12px;
-        padding: 16px;
-        border: 2px dashed #e5e7eb;
-        border-radius: 14px;
+        gap: 0.5rem;
+        font-weight: 700;
+        font-size: 0.8125rem;
+        color: var(--slate-500);
+    }
+
+    .pay-option i { font-size: 1.25rem; }
+
+    .pay-option.active {
+        border-color: var(--primary);
+        background: rgba(79, 70, 229, 0.05);
+        color: var(--primary);
+    }
+
+    /* Photo Upload */
+    .upload-area {
+        border: 2px dashed var(--slate-200);
+        padding: 2rem;
+        border-radius: 1rem;
+        text-align: center;
         cursor: pointer;
+        transition: all 0.2s;
+        background: var(--slate-50);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .upload-area:hover {
+        border-color: var(--primary);
         background: white;
-        color: #6b7280;
-        font-size: 14px;
-        font-weight: 600;
-        transition: all .2s;
     }
 
-    .upload-box:hover {
-        border-color: #667eea;
-        background: #f5f3ff
+    .upload-area i {
+        font-size: 2.5rem;
+        color: var(--slate-400);
     }
 
-    .upload-box input {
-        display: none
+    .upload-area.has-file {
+        border-color: var(--success);
+        background: rgba(16, 185, 129, 0.02);
     }
 
-    .summary-bar {
+    .upload-area.has-file i { color: var(--success); }
+
+    /* Bottom Bar */
+    .sticky-bar {
         position: fixed;
         bottom: 0;
         left: 0;
         right: 0;
-        background: white;
-        border-top: 1px solid #e5e7eb;
-        padding: 12px 16px;
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(12px);
+        border-top: 1px solid var(--slate-200);
+        padding: 1rem 1.5rem;
         display: flex;
-        gap: 12px;
+        justify-content: space-between;
         align-items: center;
-        box-shadow: 0 -4px 20px rgba(0, 0, 0, .08);
-        z-index: 500;
+        z-index: 1000;
+        box-shadow: 0 -10px 25px -5px rgba(0, 0, 0, 0.05);
     }
 
-    .sum-info {
-        flex: 1
+    .total-box {
+        display: flex;
+        flex-direction: column;
     }
 
-    .sum-label {
-        font-size: 11px;
-        color: #9ca3af;
-        font-weight: 600
+    .total-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--slate-500);
+        text-transform: uppercase;
     }
 
-    .sum-val {
-        font-size: 20px;
+    .total-value {
+        font-size: 1.5rem;
         font-weight: 800;
-        color: #1f2937
+        color: var(--slate-900);
     }
 
-    .submit-btn {
-        padding: 14px 22px;
-        background: linear-gradient(135deg, #667eea, #764ba2);
+    .confirm-btn {
+        background: var(--primary);
         color: white;
+        padding: 0.875rem 2rem;
+        border-radius: 0.875rem;
         border: none;
-        border-radius: 14px;
-        font-size: 15px;
         font-weight: 800;
+        font-size: 1rem;
         cursor: pointer;
-        font-family: inherit;
-        min-width: 140px;
-        box-shadow: 0 6px 20px rgba(102, 126, 234, .35);
-        transition: all .2s;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        transition: all 0.2s;
     }
 
-    .submit-btn:disabled {
-        opacity: .45;
-        cursor: not-allowed
+    .confirm-btn:hover:not(:disabled) {
+        background: var(--primary-dark);
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
     }
 
-    .submit-btn:not(:disabled):active {
-        transform: scale(.97)
+    .confirm-btn:active:not(:disabled) { transform: translateY(0); }
+
+    .confirm-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    @media (max-width: 640px) {
+        .form-card { padding: 1.5rem 1.25rem; }
     }
 </style>
 
-<!-- ══ Sotish Formasi ══ -->
-<form method="POST" enctype="multipart/form-data" id="sotish-form">
-    {% csrf_token %}
+<div class="sales-container">
+    <div style="margin-bottom: 2rem;">
+        <h1 style="font-size: 1.5rem; font-weight: 800; color: var(--slate-900);">🛒 Yangi sotuv</h1>
+        <p style="color: var(--slate-500); font-weight: 500;">Mahsulotlarni va haridorni tanlang</p>
+    </div>
 
-    <div class="sotish-wrap">
+    <form method="POST" enctype="multipart/form-data" id="sotish-form">
+        {% csrf_token %}
+        
+        <div class="form-card">
+            <div class="form-group">
+                <label class="form-label">Haridor / Do'kon</label>
+                <select name="haridor" class="form-select" required>
+                    <option value="">— Tanlang —</option>
+                    {% for h in haridorlar %}
+                    <option value="{{ h.id }}">{{ h.nomi }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-        <div class="page-title">🛒 Sotish</div>
-
-        <!-- Haridor -->
-        <div class="mb16">
-            <div class="section-lbl">Do'kon / Haridor</div>
-            <select name="haridor" class="big-select" required>
-                <option value="">— Tanlang —</option>
-                {% for h in haridorlar %}
-                <option value="{{ h.id }}">{{ h.nomi }}</option>
-                {% endfor %}
-            </select>
+            <div class="form-group">
+                <label class="form-label">Oluvchining ismi</label>
+                <input type="text" name="oluvchi" class="form-input" placeholder="Ism kiriting" required>
+            </div>
         </div>
 
-        <!-- Oluvchi -->
-        <div class="mb16">
-            <div class="section-lbl">Oluvchining ismi</div>
-            <input type="text" name="oluvchi" class="big-input" placeholder="Ism kiritilsin" required>
-        </div>
-
-        <!-- Mahsulotlar -->
-        <div class="mb16">
-            <div class="section-lbl">Mahsulotlar</div>
-            <div class="product-grid">
+        <div class="form-card">
+            <label class="form-label">Mahsulotlar</label>
+            <div class="products-list">
                 {% for m in mahsulotlar %}
-                <div class="product-row" id="prow{{ forloop.counter }}">
-                    <div class="product-info">
-                        <div class="product-name">{{ m.nom }}</div>
-                        <div class="product-stock">Mavjud: {{ m.miqdor }} {{ m.turi }}</div>
+                <div class="product-item" id="prow{{ forloop.counter }}">
+                    <div class="p-info">
+                        <span class="p-name">{{ m.nom }}</span>
+                        <span class="p-stock">Mavjud: {{ m.miqdor }} {{ m.turi }}</span>
+                        <span class="p-price">{{ m.narx|floatformat:0 }} so'm</span>
                     </div>
                     <div class="stepper">
-                        <button type="button" class="stepper-btn minus"
-                            onclick="stepBy({{ forloop.counter }}, -1)">−</button>
-                        <div class="stepper-val" id="pval{{ forloop.counter }}">0</div>
-                        <button type="button" class="stepper-btn plus"
-                            onclick="stepBy({{ forloop.counter }}, +1)">+</button>
+                        <button type="button" class="step-btn step-minus" onclick="stepBy({{ forloop.counter }}, -1)">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <div class="step-val" id="pval{{ forloop.counter }}">0</div>
+                        <button type="button" class="step-btn step-plus" onclick="stepBy({{ forloop.counter }}, +1)">
+                            <i class="fas fa-plus"></i>
+                        </button>
                     </div>
                     <input type="hidden" name="miqdor_{{ m.nom }}" id="pinp{{ forloop.counter }}" value="0">
                 </div>
                 {% empty %}
-                <div style="text-align:center;padding:32px;color:#9ca3af">
-                    <div style="font-size:40px;opacity:.4">📦</div>
+                <div style="text-align:center;padding:2rem;color:var(--slate-400)">
+                    <i class="fas fa-box-open" style="font-size:2rem;margin-bottom:0.5rem"></i>
                     <p>Zaxirada mahsulot yo'q</p>
                 </div>
                 {% endfor %}
             </div>
         </div>
 
-        <!-- To'lov turi -->
-        <div class="mb16">
-            <div class="section-lbl">To'lov turi</div>
-            <div class="pay-row">
-                <div class="pay-btn active" onclick="setPay(this,'naqd')">
-                    <span class="pay-icon">💵</span>Naqd
+        <div class="form-card">
+            <label class="form-label">To'lov turi</label>
+            <div class="payment-grid">
+                <div class="pay-option active" onclick="setPay(this,'naqd')">
+                    <i class="fas fa-money-bill-wave"></i>
+                    <span>Naqd</span>
                 </div>
-                <div class="pay-btn" onclick="setPay(this,'karta')">
-                    <span class="pay-icon">💳</span>Karta
+                <div class="pay-option" onclick="setPay(this,'karta')">
+                    <i class="fas fa-credit-card"></i>
+                    <span>Karta</span>
                 </div>
-                <div class="pay-btn" onclick="setPay(this,'nasiya')">
-                    <span class="pay-icon">📋</span>Nasiya
+                <div class="pay-option" onclick="setPay(this,'nasiya')">
+                    <i class="fas fa-hand-holding-dollar"></i>
+                    <span>Nasiya</span>
                 </div>
             </div>
             <input type="hidden" name="st" id="pay-input" value="naqd">
         </div>
 
-        <!-- Chek rasmi -->
-        <div class="mb16">
-            <div class="section-lbl">Chek rasmi <span style="color:#ef4444">*</span></div>
-            <label class="upload-box" id="upload-box">
-                <span style="font-size:28px">📷</span>
-                <span id="file-label">Rasm tanlash (majburiy)</span>
-                <input type="file" name="rasm" accept="image/*" capture="environment" required
-                    onchange="onFileChange(this)">
+        <div class="form-card">
+            <label class="form-label">Chek rasmi <span style="color:var(--danger)">*</span></label>
+            <label for="id_rasm" class="upload-area" id="upload-label">
+                <i class="fas fa-camera"></i>
+                <div style="font-weight: 600;" id="file-status">Rasm tanlang yoki rasmga oling</div>
+                <div style="font-size: 0.75rem; color: var(--slate-400);">Majburiy rasm</div>
+                <input type="file" name="rasm" id="id_rasm" accept="image/*" capture="environment" required style="display:none" onchange="onFileChange(this)">
             </label>
         </div>
 
-    </div><!-- /sotish-wrap -->
-
-    <!-- Sticky submit bar -->
-    <div class="summary-bar">
-        <div class="sum-info">
-            <div class="sum-label">Jami summa</div>
-            <div class="sum-val" id="total-display">0 so'm</div>
+        <!-- Sticky Bar -->
+        <div class="sticky-bar">
+            <div class="total-box">
+                <span class="total-label">Umumiy summa</span>
+                <span class="total-value" id="total-display">0 so'm</span>
+            </div>
+            <button type="submit" class="confirm-btn" id="submit-btn" disabled>
+                Tasdiqlash <i class="fas fa-check-circle"></i>
+            </button>
         </div>
-        <button type="submit" class="submit-btn" id="submit-btn" disabled>
-            ✅ Sotishni Tasdiqlash
-        </button>
-    </div>
-
-</form>
+    </form>
+</div>
 
 <script>
-    // ── Mahsulot ma'lumotlari ─────────────────────────────────────────────────────
-    var PRODUCT_DATA = [
+    const PRODUCT_DATA = [
         {% for m in mahsulotlar %}
-    {
-        "idx": {{ forloop.counter }},
-        "nom": "{{ m.nom|escapejs }}",
-        "max": {{ m.miqdor|default:0|stringformat:"f" }},
-        "narx": {{ m.narx|default:0|stringformat:"f" }}
-    } {% if not forloop.last %}, {% endif %}
-    {% endfor %}
+        {
+            "idx": {{ forloop.counter }},
+            "nom": "{{ m.nom|escapejs }}",
+            "max": {{ m.miqdor|default:0|stringformat:"f" }},
+            "narx": {{ m.narx|default:0|stringformat:"f" }}
+        } {% if not forloop.last %}, {% endif %}
+        {% endfor %}
     ];
 
-    var BY_IDX = {};
-    PRODUCT_DATA.forEach(function (p) { BY_IDX[p.idx] = p; });
+    const BY_IDX = {};
+    PRODUCT_DATA.forEach(p => BY_IDX[p.idx] = p);
 
-    var totals = {};
+    const totals = {};
 
-    // ── Stepper ───────────────────────────────────────────────────────────────────
     function stepBy(idx, delta) {
-        var p = BY_IDX[idx];
-        var cur = totals[idx] || 0;
-        var nxt = Math.max(0, Math.min(p.max, cur + delta));
+        const p = BY_IDX[idx];
+        const cur = totals[idx] || 0;
+        const nxt = Math.max(0, Math.min(p.max, cur + delta));
+        
         totals[idx] = nxt;
+        
         document.getElementById('pval' + idx).textContent = nxt;
         document.getElementById('pinp' + idx).value = nxt;
-        var row = document.getElementById('prow' + idx);
-        if (nxt > 0) row.classList.add('has-qty');
-        else row.classList.remove('has-qty');
+        
+        const row = document.getElementById('prow' + idx);
+        if (nxt > 0) row.classList.add('selected');
+        else row.classList.remove('selected');
+        
         recalc();
     }
 
     function recalc() {
-        var total = 0;
-        for (var idx in totals) {
-            var p = BY_IDX[idx];
+        let total = 0;
+        for (const idx in totals) {
+            const p = BY_IDX[idx];
             if (p) total += totals[idx] * p.narx;
         }
-        document.getElementById('total-display').textContent =
-            total.toLocaleString('uz-UZ') + " so'm";
-        var has = Object.keys(totals).some(function (k) { return totals[k] > 0; });
-        document.getElementById('submit-btn').disabled = !has;
+        document.getElementById('total-display').textContent = total.toLocaleString('uz-UZ') + " so'm";
+        
+        const hasSelection = Object.values(totals).some(val => val > 0);
+        document.getElementById('submit-btn').disabled = !hasSelection;
     }
 
-    // ── To'lov turi ───────────────────────────────────────────────────────────────
     function setPay(el, val) {
-        document.querySelectorAll('.pay-btn').forEach(function (b) { b.classList.remove('active'); });
+        document.querySelectorAll('.pay-option').forEach(opt => opt.classList.remove('active'));
         el.classList.add('active');
         document.getElementById('pay-input').value = val;
     }
 
-    // ── Fayl label ────────────────────────────────────────────────────────────────
     function onFileChange(input) {
-        var lbl = document.getElementById('file-label');
-        var box = document.getElementById('upload-box');
-        if (input.files[0]) {
-            lbl.textContent = input.files[0].name;
-            box.style.borderColor = '#10b981';
-            box.style.background = '#f0fdf4';
-            box.style.color = '#065f46';
+        const area = document.getElementById('upload-label');
+        const status = document.getElementById('file-status');
+        if (input.files && input.files[0]) {
+            status.textContent = input.files[0].name;
+            area.classList.add('has-file');
         } else {
-            lbl.textContent = 'Rasm tanlash (majburiy)';
-            box.style.cssText = '';
+            status.textContent = 'Rasm tanlang yoki rasmga oling';
+            area.classList.remove('has-file');
         }
     }
 </script>
-
 {% endblock %}

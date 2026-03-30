@@ -23,7 +23,7 @@ def amallog_view(request):
     from_str = request.GET.get('from', '')
     to_str = request.GET.get('to', '')
 
-    logs = AmalLog.objects.select_related('user').order_by('-sana_vaqti')
+    logs = AmalLog.objects.filter(company=request.company).select_related('user').order_by('-sana_vaqti')
 
     if user_filter:
         logs = logs.filter(user__username=user_filter)
@@ -53,8 +53,8 @@ def amallog_view(request):
             ])
         return response
 
-    # Users list for filter dropdown
-    all_users = User.objects.filter(is_active=True).order_by('username')
+    # Users list for filter dropdown for this company
+    all_users = User.objects.filter(company=request.company, is_active=True).order_by('username')
 
     context = {
         'logs': logs[:500],           # cap at 500 to avoid slow page
@@ -71,7 +71,7 @@ def amallog_view(request):
 @login_required(login_url='login')
 def savdo_chek(request, savdo_id):
     """Savdo uchun chop etiladigan chek sahifasi."""
-    savdo = get_object_or_404(Savdo, id=savdo_id)
+    savdo = get_object_or_404(Savdo, id=savdo_id, company=request.company)
 
     # Only ega and the delivery person who made the sale can view
     if request.user.type not in ('ega',):
