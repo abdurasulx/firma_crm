@@ -364,7 +364,7 @@
                 <thead>
                     <tr>
                         <th>Sana</th>
-                        <th>Yetkazuvchi</th>
+                        <th>Sotuvchi</th>
                         <th>Summa</th>
                         <th>To'lov</th>
                         <th>Holat</th>
@@ -374,7 +374,15 @@
                     {% for savdo in recent_sales %}
                     <tr>
                         <td data-label="Sana">{{ savdo.vaqt_sana|date:"d.m.Y H:i" }}</td>
-                        <td data-label="Yetkazuvchi">{{ savdo.yetkazib_beruvchi.tuliq_ismi }}</td>
+                        <td data-label="Sotuvchi">
+                            {% if savdo.yetkazib_beruvchi %}
+                            {{ savdo.yetkazib_beruvchi.tuliq_ismi }}
+                            {% elif savdo.savdogar %}
+                            {{ savdo.savdogar.tuliq_ismi|default:savdo.savdogar.username }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
                         <td data-label="Summa"><b>{{ savdo.summa|floatformat:0 }}</b> so'm</td>
 
                         <td data-label="To'lov">

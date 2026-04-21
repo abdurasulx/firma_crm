@@ -25,11 +25,11 @@
 
     .form-control {
         width: 100%;
-        background: rgba(255, 255, 255, 0.05);
+        background: var(--input-bg);
         border: 1px solid var(--border);
         border-radius: 12px;
         padding: 12px 16px;
-        color: var(--text-main);
+        color: var(--input-text);
         font-family: inherit;
         font-size: 16px;
         transition: all 0.3s;
@@ -38,14 +38,19 @@
     .form-control:focus {
         outline: none;
         border-color: var(--primary);
-        background: rgba(255, 255, 255, 0.06);
+        background: var(--card-bg);
         box-shadow: 0 0 15px var(--primary-glow);
     }
 
     /* Fixed visibility for select options */
     .form-control option {
-        background: var(--bg-dark);
-        color: var(--text-main);
+        background: var(--card-bg);
+        color: var(--input-text);
+    }
+
+    body.light-mode .form-control option {
+        background: #ffffff;
+        color: #1e293b;
     }
 
     .input-wrapper {
@@ -85,6 +90,27 @@
         font-size: 12px;
         text-transform: uppercase;
         letter-spacing: 2px;
+    }
+
+    .btn-secondary {
+        background: var(--input-bg);
+        color: var(--text-main);
+        border: 1px solid var(--border);
+        padding: 12px 24px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-secondary:hover {
+        background: var(--card-bg);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(15, 23, 42, 0.08);
     }
 </style>
 
@@ -172,7 +198,7 @@
             {% endif %}
 
             <div style="margin-top: 30px; display: flex; gap: 15px; justify-content: flex-end;">
-                <a href="{% url 'super_companies' %}" class="btn-primary" style="background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--border);">Bekor qilish</a>
+                <a href="{% url 'super_companies' %}" class="btn-secondary">Bekor qilish</a>
                 <button type="submit" class="btn-primary">
                     <i class="fa-solid fa-check"></i> Saqlash
                 </button>

@@ -73,8 +73,12 @@ def savdo_chek(request, savdo_id):
     """Savdo uchun chop etiladigan chek sahifasi."""
     savdo = get_object_or_404(Savdo, id=savdo_id, company=request.company)
 
-    # Only ega and the delivery person who made the sale can view
+    # Only owner, the delivery person, or the seller who made the sale can view.
     if request.user.type not in ('ega',):
+        if request.user.type == 'savdogar':
+            if savdo.savdogar_id != request.user.id:
+                return redirect('main')
+            return render(request, 'savdo_chek.html', {'savdo': savdo})
         try:
             yb = YetkazibBeruvchi.objects.get(user=request.user)
             if savdo.yetkazib_beruvchi != yb:

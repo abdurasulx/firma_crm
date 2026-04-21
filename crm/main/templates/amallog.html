@@ -309,9 +309,15 @@
                         {% if log.user.type  ==  'ega' %}
                         <span
                             style="background:#dbeafe; color:#1d4ed8; padding:3px 9px; border-radius:999px; font-size:11px; font-weight:700;">Admin</span>
-                        {% elif log.user.type  ==  'pazanda' %}
+                        {% elif log.user.type  ==  'pazanda' or log.user.type == 'ishlab_chiqaruvchi' %}
                         <span
-                            style="background:#fef3c7; color:#b45309; padding:3px 9px; border-radius:999px; font-size:11px; font-weight:700;">Pazanda</span>
+                            style="background:#fef3c7; color:#b45309; padding:3px 9px; border-radius:999px; font-size:11px; font-weight:700;">Ishlab chiqaruvchi</span>
+                        {% elif log.user.type == 'omborchi' %}
+                        <span
+                            style="background:#dcfce7; color:#166534; padding:3px 9px; border-radius:999px; font-size:11px; font-weight:700;">Omborchi</span>
+                        {% elif log.user.type == 'savdogar' %}
+                        <span
+                            style="background:#ccfbf1; color:#0f766e; padding:3px 9px; border-radius:999px; font-size:11px; font-weight:700;">Savdogar</span>
                         {% else %}
                         <span
                             style="background:#dcfce7; color:#15803d; padding:3px 9px; border-radius:999px; font-size:11px; font-weight:700;">Yetkazuvchi</span>

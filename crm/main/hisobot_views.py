@@ -153,6 +153,8 @@ def hisobotlar_view(request):
             if employee.type == 'yetkazib_beruvchi':
                 yetkazuvchi = YetkazibBeruvchi.objects.get(user=employee)
                 savdolar = savdolar.filter(yetkazib_beruvchi=yetkazuvchi)
+            elif employee.type == 'savdogar':
+                savdolar = savdolar.filter(savdogar=employee)
             employee_name = employee.tuliq_ismi
         except:
             pass
@@ -168,7 +170,7 @@ def hisobotlar_view(request):
                 'Sana': lt.strftime('%Y-%m-%d'),
                 'Vaqt': lt.strftime('%H:%M'),
                 'Haridor': s.haridor_dukon.nomi if s.haridor_dukon else "-",
-                'Yetkazuvchi': s.yetkazib_beruvchi.user.tuliq_ismi if s.yetkazib_beruvchi else "-",
+                'Sotuvchi': s.yetkazib_beruvchi.user.tuliq_ismi if s.yetkazib_beruvchi else (s.savdogar.tuliq_ismi if s.savdogar else "-"),
                 'Mahsulotlar': format_product_string(s.smm, request.company),
                 'Summa': float(s.summa or 0),
                 'To\'lov turi': s.get_st_display(),
@@ -224,6 +226,9 @@ def hisobotlar_view(request):
         # Use sale's own location (seller's location) if available
         if s.latitude and s.longitude:
             # Create a unique key for each location point (not grouping by shop anymore)
+            if not s.yetkazib_beruvchi:
+                no_coord_sales.append(s.haridor_dukon.nomi)
+                continue
             dev_name = s.yetkazib_beruvchi.tuliq_ismi
             dev_pic = ""
             try:
@@ -254,7 +259,7 @@ def hisobotlar_view(request):
             no_coord_sales.append(s.haridor_dukon.nomi)
 
     # Get all employees for dropdown
-    employees = User.objects.filter(company=request.company).filter(Q(type='yetkazib_beruvchi') | Q(type='pazanda')).order_by('tuliq_ismi')
+    employees = User.objects.filter(company=request.company).filter(Q(type='yetkazib_beruvchi') | Q(type='pazanda') | Q(type='savdogar')).order_by('tuliq_ismi')
     
     context = {
         'filter_type': filter_type,

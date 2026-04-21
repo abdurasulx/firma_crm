@@ -1,4 +1,5 @@
 import json
+from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from main.models import Company, User, Plan, PlanRequest
@@ -7,11 +8,154 @@ from django.db.models import Count, Q, Sum
 from django.contrib.auth.decorators import user_passes_test
 from django.utils import timezone
 from datetime import timedelta
+from main.services.auth_service import create_user_service
+from main.services.billing_service import (
+    apply_plan_request,
+    get_company_login_url,
+    mark_company_paid,
+    mark_company_unpaid,
+    reject_plan_request as reject_plan_request_service,
+    sync_company_lifecycle,
+)
 
 def landing_home(request):
     if not getattr(request, "is_landing", False):
         return redirect('/') 
-    return render(request, "landing/index.html")
+    return render(request, "landing/home_pro.html")
+
+
+MARKETING_PAGES = {
+    "features": {
+        "eyebrow": "Platforma",
+        "title": "StockFirm CRM nimalarni hal qiladi?",
+        "lead": "Firma ichidagi tarqoq Excel, Telegram xabarlar, qo'lda yozilgan daftar va og'zaki kelishuvlarni bitta tartibli tizimga almashtiring.",
+        "items": [
+            ("Ombor", "Mahsulot kirimi, chiqimi, minimal qoldiq va audit tarixi."),
+            ("Savdo", "Naqd, karta va nasiya savdolarini hodimlar kesimida ko'rish."),
+            ("Yetkazib berish", "Kuryer zaxirasi, yuklama so'rovlari va GPS monitoring."),
+            ("Analitika", "Mahsulot talabi, top mijozlar va o'sish signallari."),
+            ("Billing", "Tarif, trial, Click to'lov va feature gating."),
+            ("Backup", "Ma'lumotlarni eksport qilish va tiklash imkoniyati."),
+        ],
+    },
+    "inventory": {
+        "eyebrow": "Ombor nazorati",
+        "title": "Har bir mahsulot qayerdan keldi va qayerga ketdi?",
+        "lead": "Ombor qoldig'i, ishlab chiqarishdan kirim, yetkazuvchiga yuklama va qaytarilgan mahsulotlar aniq hisobda yuradi.",
+        "items": [
+            ("Minimal zaxira", "Qoldiq belgilangan chegaradan pastlasa rahbar ko'radi."),
+            ("Stock history", "Har bir o'zgarish kim tomonidan va qachon qilinganini saqlaydi."),
+            ("Delivery stock", "Har bir yetkazuvchidagi mahsulot alohida hisoblanadi."),
+            ("Qaytarish", "Qaytgan mahsulotlar umumiy ombor jarayonidan ajralmaydi."),
+        ],
+    },
+    "sales": {
+        "eyebrow": "Savdo boshqaruvi",
+        "title": "Sotuvlar, mijozlar va cheklar bitta oqimda.",
+        "lead": "Yetkazuvchi sotuv qilganda mahsulot avtomatik kamayadi, summa hisoblanadi va rahbar dashboardda ko'radi.",
+        "items": [
+            ("Mijoz tarixi", "Har bir do'kon bilan savdo tarixi saqlanadi."),
+            ("To'lov turi", "Naqd, karta va nasiya alohida tahlil qilinadi."),
+            ("Chek", "Savdo bo'yicha tezkor chek va hujjat ko'rinishi."),
+            ("Hisobot", "Kunlik, haftalik, oylik va xodim kesimida hisobot."),
+        ],
+    },
+    "nasiya": {
+        "eyebrow": "Nasiya nazorati",
+        "title": "Qarzlar yo'qolmaydi, nazoratdan chiqmaydi.",
+        "lead": "Nasiya savdolar, qisman to'lovlar, qarzdor mijozlar va muddati o'tgan qarzlarni bitta joyda kuzating.",
+        "items": [
+            ("Qisman to'lov", "Mijoz to'lovni bo'lib-bo'lib qilsa ham tarix saqlanadi."),
+            ("Qarzdorlar ro'yxati", "Kim qancha qarzdorligini tez ko'rasiz."),
+            ("Mas'ul hodim", "Qarz qaysi yetkazuvchi savdosidan kelgani aniq."),
+            ("Rahbar nazorati", "Nasiya biznes pul oqimiga qanday ta'sir qilayotganini ko'rsatadi."),
+        ],
+    },
+    "delivery": {
+        "eyebrow": "Yetkazib berish",
+        "title": "Kuryer qayerda, yonida nima bor, qancha sotdi?",
+        "lead": "Yetkazuvchilar zaxirasi, yuklama so'rovlari, real vaqt lokatsiyasi va savdo tarixi tizimda bog'lanadi.",
+        "items": [
+            ("Yuklama", "Ombordan kuryerga mahsulot berish tasdiq bilan yuradi."),
+            ("GPS", "Xaritada faol yetkazuvchilarni kuzatish."),
+            ("Zaxira", "Har bir kuryerning alohida mahsulot qoldig'i."),
+            ("Marshrut", "Do'konlar va savdo nuqtalari bilan ishlash osonlashadi."),
+        ],
+    },
+    "analytics": {
+        "eyebrow": "Analitika",
+        "title": "Qarorlar taxmin bilan emas, raqam bilan qabul qilinadi.",
+        "lead": "Dashboard, grafiklar, mahsulot talabi va do'konlar bo'yicha tavsiyalar biznes egasiga tez qaror qilishga yordam beradi.",
+        "items": [
+            ("Talab prognozi", "Qaysi mahsulotni ko'proq ishlab chiqarish kerakligini ko'rsatadi."),
+            ("Top mijozlar", "Eng faol do'konlarni ajratadi."),
+            ("Past zaxira", "Tugab qolish xavfini oldindan bildiradi."),
+            ("Excel export", "Hisobotlarni tashqi tahlil uchun yuklab olish."),
+        ],
+    },
+    "maps": {
+        "eyebrow": "Xarita",
+        "title": "Real vaqt xarita bilan yetkazuvchilar nazoratda.",
+        "lead": "GPS monitoring, do'kon koordinatalari va yetkazuvchi faolligi savdo geografiyasini tushunarli qiladi.",
+        "items": [
+            ("Online status", "Qaysi yetkazuvchi hozir faol ekanini ko'rsatadi."),
+            ("Lokatsiya tarixi", "Harakatlar tarixi keyingi nazorat uchun saqlanadi."),
+            ("Do'konlar xaritada", "Mijozlar joylashuvi aniq ko'rinadi."),
+            ("Hudud nazorati", "Qaysi hudud ko'proq ishlayotganini ko'rish oson."),
+        ],
+    },
+    "billing": {
+        "eyebrow": "SaaS billing",
+        "title": "Tarif, trial va to'lovlar tizimli boshqariladi.",
+        "lead": "Firma to'lovi, keyingi to'lov sanasi, Click linklari va feature access bitta billing oqimida ishlaydi.",
+        "items": [
+            ("Trial", "Yangi firmaga sinov muddati berish mumkin."),
+            ("Tariflar", "Standart yoki custom tarif tanlash."),
+            ("Feature gating", "To'lanmagan firma premium funksiyalardan foydalana olmaydi."),
+            ("Click", "Online to'lov linki va status tracking."),
+        ],
+    },
+    "security": {
+        "eyebrow": "Xavfsizlik",
+        "title": "Har bir firma o'z ma'lumotini alohida ko'radi.",
+        "lead": "Subdomain asosidagi tenant ajratish, rollar, super admin va firma ichidagi user limitlar ma'lumotlarni tartibli saqlaydi.",
+        "items": [
+            ("Tenant isolation", "Firma ma'lumotlari boshqa firmadan ajratiladi."),
+            ("Rollar", "Ega, pazanda va yetkazuvchi huquqlari farqlanadi."),
+            ("Audit", "Muhim harakatlar jurnalga yoziladi."),
+            ("Backup", "Kerak bo'lsa ma'lumotlarni eksport va tiklash."),
+        ],
+    },
+    "implementation": {
+        "eyebrow": "Joriy qilish",
+        "title": "StockFirm CRM'ni ishga tushirish murakkab emas.",
+        "lead": "Firma ochiladi, subdomain tanlanadi, mahsulot va hodimlar kiritiladi, keyin jarayonlar tizimga o'tkaziladi.",
+        "items": [
+            ("1-qadam", "Firma va ega akkaunti yaratiladi."),
+            ("2-qadam", "Mahsulot turlari, mahsulotlar va mijozlar kiritiladi."),
+            ("3-qadam", "Pazanda va yetkazuvchilar qo'shiladi."),
+            ("4-qadam", "Savdo, zaxira va hisobotlar real ishda sinovdan o'tadi."),
+        ],
+    },
+    "contact": {
+        "eyebrow": "Aloqa",
+        "title": "Tizimni biznesingizga moslab ko'rishni xohlaysizmi?",
+        "lead": "Demo, pilot firma yoki individual tarif bo'yicha bog'laning. Sizning jarayoningizni CRM oqimiga moslab beramiz.",
+        "items": [
+            ("Demo", "Tizim imkoniyatlarini jonli ko'rish."),
+            ("Pilot", "Bitta firma bilan sinov ishga tushirish."),
+            ("Custom tarif", "Kerakli modullarni tanlab narx shakllantirish."),
+            ("Migratsiya", "Mavjud Excel yoki daftar jarayonini tizimga ko'chirish."),
+        ],
+    },
+}
+
+
+def marketing_page(request, slug):
+    page = MARKETING_PAGES.get(slug)
+    if not page:
+        return render(request, '404.html', status=404)
+    return render(request, "landing/marketing_page.html", {'page': page, 'slug': slug})
 
 def pricing_view(request):
     return render(request, "landing/pricing.html")
@@ -19,7 +163,7 @@ def pricing_view(request):
 def register_company(request):
     if request.method == 'POST':
         company_name = request.POST.get('company_name')
-        subdomain = request.POST.get('subdomain').lower()
+        subdomain = (request.POST.get('subdomain') or '').lower()
         full_name = request.POST.get('full_name')
         username = request.POST.get('username')
         password = request.POST.get('password')
@@ -27,10 +171,6 @@ def register_company(request):
 
         if Company.objects.filter(subdomain=subdomain).exists():
             messages.error(request, "Bu subdomain allaqachon band!")
-            return render(request, "landing/register.html", {'post_data': request.POST})
-
-        if User.objects.filter(username=username).exists():
-            messages.error(request, "Bu login allaqachon band!")
             return render(request, "landing/register.html", {'post_data': request.POST})
 
         try:
@@ -53,20 +193,19 @@ def register_company(request):
                     trial_expires_at=trial_expires
                 )
                 
-                # Create Admin User for this company
-                user = User.objects.create_user(
+                user, message = create_user_service(
                     username=username,
                     password=password,
-                    tuliq_ismi=full_name,
-                    tel_raqami=phone,
-                    type='ega',
-                    company=company
+                    fullname=full_name,
+                    user_type='ega',
+                    phone=phone,
+                    company=company,
                 )
+                if not user:
+                    raise ValueError(message)
                 
                 messages.success(request, f"Tabriklaymiz! {company_name} muvaffaqiyatli ro'yxatdan o'tdi. 5 kunlik sozlash rejimi yoqildi.")
-                # Redirect to the new subdomain's login page
-                protocol = "http" # Simplified for local dev
-                return redirect(f"{protocol}://{subdomain}.localhost:8000/login/")
+                return redirect(get_company_login_url(company, request.get_host()))
                 
         except Exception as e:
             messages.error(request, f"Xatolik yuz berdi: {str(e)}")
@@ -130,7 +269,7 @@ def super_companies(request):
 def super_company_create(request):
     if request.method == 'POST':
         name = request.POST.get('name')
-        subdomain = request.POST.get('subdomain').lower()
+        subdomain = (request.POST.get('subdomain') or '').lower()
         full_name = request.POST.get('full_name')
         username = request.POST.get('username')
         password = request.POST.get('password')
@@ -163,14 +302,16 @@ def super_company_create(request):
                     is_on_trial=is_on_trial,
                     trial_expires_at=trial_expires
                 )
-                User.objects.create_user(
+                user, message = create_user_service(
                     username=username,
                     password=password,
-                    tuliq_ismi=full_name,
-                    tel_raqami=phone,
-                    type='ega',
-                    company=company
+                    fullname=full_name,
+                    user_type='ega',
+                    phone=phone,
+                    company=company,
                 )
+                if not user:
+                    raise ValueError(message)
                 messages.success(request, f"{name} firmasi muvaffaqiyatli qo'shildi.")
                 return redirect('super_companies')
         except Exception as e:
@@ -311,61 +452,16 @@ def plan_requests_list(request):
 def approve_plan_request(request, request_id):
     """Tarif so'rovini tasdiqlash"""
     plan_request = get_object_or_404(PlanRequest, id=request_id)
-    company = plan_request.company
-    
-    if plan_request.is_trial:
-        company.is_on_trial = True
-        company.trial_expires_at = timezone.now() + timedelta(days=30)
-        company.next_payment_date = company.trial_expires_at
-        company.has_used_trial = True
-        company.payment_status = 'paid' # Grant access during trial
-    elif plan_request.is_custom:
-        company.is_custom_plan = True
-        company.plan = None
-        company.custom_max_users = plan_request.custom_max_users
-        company.custom_has_telegram_bot = plan_request.custom_has_telegram_bot
-        company.custom_has_analytics = plan_request.custom_has_analytics
-        company.custom_has_map = plan_request.custom_has_map
-        company.custom_backup_type = plan_request.custom_backup_type
-        company.custom_price = plan_request.custom_price
-    else:
-        company.plan = plan_request.plan
-        company.is_custom_plan = False
-        # Reset ALL custom fields to prevent stale data
-        company.custom_max_users = 0
-        company.custom_has_telegram_bot = False
-        company.custom_has_analytics = False
-        company.custom_has_map = False
-        company.custom_backup_type = 'none'
-        company.custom_price = 0
-    
-    if not plan_request.is_trial:
-        # Set initial payment status to unpaid
-        company.payment_status = 'unpaid'
-        # Start the 5-day grace period
-        company.next_payment_date = timezone.now() + timedelta(days=5)
-        
-        # Trial feature is disabled for normal plan upgrades
-        company.is_on_trial = False
-        company.has_used_trial = True # Mark as used so it never appears
-        company.trial_expires_at = None
-    
-    company.save()
-    
-    plan_request.status = 'approved'
-    plan_request.resolved_at = timezone.now()
-    plan_request.save()
-    
+    company = apply_plan_request(plan_request)
     messages.success(request, f"{company.name} uchun tarif muvaffaqiyatli o'zgartirildi.")
     return redirect('plan_requests_list')
+
 
 @user_passes_test(lambda u: u.is_superuser)
 def reject_plan_request(request, request_id):
     """Tarif so'rovini rad etish"""
     plan_request = get_object_or_404(PlanRequest, id=request_id)
-    plan_request.status = 'rejected'
-    plan_request.resolved_at = timezone.now()
-    plan_request.save()
+    reject_plan_request_service(plan_request)
     
     messages.warning(request, f"{plan_request.company.name} so'rovi rad etildi.")
     return redirect('plan_requests_list')
@@ -387,14 +483,13 @@ def super_billing_report(request):
         'paid_companies': paid_companies,
         'unpaid_companies': unpaid_companies,
         'inactive_companies': inactive_companies,
+        'debug_mode': settings.DEBUG,
     }
-    
-    # Backfill logic for empty next_payment_date when visiting the dashboard
-    for c in companies:
-        if c.next_payment_date is None:
-            c.next_payment_date = c.created_at + timedelta(days=5)
-            c.save()
-            
+
+    # Admin billing sahifasiga kirganida barcha firmalar lifecycle tekshiruvi
+    for company in companies:
+        sync_company_lifecycle(company)
+
     return render(request, 'landing/super_billing.html', context)
 
 @user_passes_test(lambda u: u.is_superuser)
@@ -408,24 +503,17 @@ def update_billing_status(request, company_id):
             company.is_active = not company.is_active
             status_text = "faollashtirildi" if company.is_active else "to'xtatildi"
             messages.success(request, f"🏢 {company.name} tizimi {status_text}.")
+            company.save(update_fields=['is_active'])
             
         elif action == 'mark_paid':
-            company.payment_status = 'paid'
-            # Add 30 days to their next payment date
-            if company.next_payment_date and company.next_payment_date > timezone.now():
-                company.next_payment_date = company.next_payment_date + timedelta(days=30)
-            else:
-                company.next_payment_date = timezone.now() + timedelta(days=30)
-            
-            # If they were inactive due to non-payment, we could auto activate them
-            # company.is_active = True 
-            
+            if not settings.DEBUG:
+                return redirect('super_billing_report')
+            company = mark_company_paid(company)
             messages.success(request, f"💵 {company.name} to'lovi qabul qilindi. Keyingi to'lov: {company.next_payment_date.strftime('%d.%m.%Y')}")
             
         elif action == 'mark_unpaid':
-            company.payment_status = 'unpaid'
+            mark_company_unpaid(company)
             messages.warning(request, f"⚠️ {company.name} to'lovi 'to'lanmagan' deb belgilandi.")
-            
-        company.save()
         
     return redirect('super_billing_report')
+

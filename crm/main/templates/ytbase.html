@@ -6,6 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}StockFirm CRM - Yetkazuvchi{% endblock %}</title>
+    <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -383,6 +384,104 @@
         .notification.warning .notif-progress-bar { background: var(--warning); }
         .notification.info .notif-progress-bar { background: var(--primary); }
 
+        /* ── Notification Bell ── */
+        .notif-bell-wrapper { position: relative; }
+        .notif-bell-btn {
+            width: 40px; height: 40px;
+            border-radius: 0.75rem;
+            background: var(--slate-100);
+            border: 1px solid transparent;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--slate-500);
+            font-size: 17px;
+            position: relative;
+        }
+        .notif-bell-btn:hover {
+            background: white;
+            border-color: var(--slate-200);
+            color: var(--slate-800);
+            box-shadow: var(--shadow-sm);
+        }
+        .notif-bell-btn.has-unread { color: var(--primary); }
+        .notif-bell-badge {
+            position: absolute; top: 6px; right: 6px;
+            width: 17px; height: 17px;
+            background: #ef4444;
+            border-radius: 50%;
+            font-size: 9px; font-weight: 700; color: white;
+            display: flex; align-items: center; justify-content: center;
+            border: 2px solid white;
+            opacity: 0; transform: scale(0);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .notif-bell-badge.visible { opacity: 1; transform: scale(1); }
+        @keyframes bell-ring {
+            0%{transform:rotate(0)} 10%{transform:rotate(-20deg)}
+            30%{transform:rotate(20deg)} 50%{transform:rotate(-15deg)}
+            70%{transform:rotate(10deg)} 90%{transform:rotate(-5deg)} 100%{transform:rotate(0)}
+        }
+        .notif-bell-btn.ringing i { animation: bell-ring 0.6s ease; }
+
+        /* ── Notification Panel ── */
+        .notif-panel {
+            position: absolute; top: calc(100% + 12px); right: 0;
+            width: 340px; background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--slate-200);
+            overflow: hidden;
+            opacity: 0; visibility: hidden;
+            transform: translateY(10px);
+            transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+            z-index: 3000;
+        }
+        .notif-panel.open { opacity: 1; visibility: visible; transform: translateY(0); }
+        .notif-panel-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--slate-200);
+        }
+        .notif-panel-header h4 { font-size: 14px; font-weight: 700; color: var(--slate-800); }
+        .notif-panel-clear {
+            font-size: 11px; color: var(--primary); font-weight: 600;
+            background: none; border: none; cursor: pointer;
+            padding: 3px 7px; border-radius: 5px;
+            transition: background 0.2s;
+        }
+        .notif-panel-clear:hover { background: rgba(79,70,229,0.06); }
+        .notif-panel-list { max-height: 340px; overflow-y: auto; scrollbar-width: thin; }
+        .notif-panel-item {
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 12px 18px; border-bottom: 1px solid #f3f4f6;
+            transition: background 0.15s;
+        }
+        .notif-panel-item:hover { background: var(--slate-50); }
+        .notif-panel-item.unread { background: rgba(79,70,229,0.03); }
+        .notif-panel-icon {
+            width: 34px; height: 34px; border-radius: 0.625rem;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; flex-shrink: 0;
+        }
+        .notif-panel-icon.success { background: rgba(16,185,129,0.1); color: var(--success); }
+        .notif-panel-icon.warning { background: rgba(245,158,11,0.1); color: var(--warning); }
+        .notif-panel-icon.info    { background: rgba(79,70,229,0.1);  color: var(--primary); }
+        .notif-panel-body { flex: 1; min-width: 0; }
+        .notif-panel-title {
+            font-size: 12px; font-weight: 600; color: var(--slate-800);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .notif-panel-msg  { font-size: 11px; color: var(--slate-500); line-height: 1.4; }
+        .notif-panel-time { font-size: 10px; color: #9ca3af; margin-top: 3px; }
+        .notif-unread-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: var(--primary); flex-shrink: 0; margin-top: 5px;
+        }
+        .notif-panel-empty { text-align: center; padding: 36px 16px; color: var(--slate-500); }
+        .notif-panel-empty i { font-size: 32px; opacity: 0.25; display: block; margin-bottom: 8px; }
+        .notif-panel-empty p { font-size: 12px; }
+
         @media (max-width: 1024px) {
             .nav-menu {
                 display: none;
@@ -429,33 +528,69 @@
             <!-- Desktop Navigation -->
             <ul class="nav-menu">
                 <li class="nav-item">
-                    <a href="{% url 'main' %}" class="{% if request.path == '/' %}active{% endif %}">
+                    <a href="{% url 'main' %}" class="{% if request.resolver_match.url_name == 'main' %}active{% endif %}">
                         <i class="fas fa-house"></i> Dashboard
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="{% url 'sotish' %}" class="{% if request.path == '/sotish/' %}active{% endif %}">
+                    <a href="{% url 'sotish' %}" class="{% if request.resolver_match.url_name == 'sotish' or request.resolver_match.url_name == 'savdo_chek' %}active{% endif %}">
                         <i class="fas fa-cart-shopping"></i> Sotish
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="{% url 'yt_navigation' %}" class="{% if request.path == '/navigation/' %}active{% endif %}">
+                    {% if request.user.type != 'savdogar' %}
+                    <a href="{% url 'yt_navigation' %}" class="{% if request.resolver_match.url_name == 'yt_navigation' %}active{% endif %}">
                         <i class="fas fa-map-location-dot"></i> Marshrutlar
                     </a>
+                    {% endif %}
                 </li>
                 <li class="nav-item">
-                    <a href="{% url 'add_haridor' %}" class="{% if request.path == '/add/haridor/' %}active{% endif %}">
+                    <a href="{% url 'add_haridor' %}" class="{% if request.resolver_match.url_name == 'add_haridor' or request.resolver_match.url_name == 'mijoz_detail' %}active{% endif %}">
                         <i class="fas fa-store"></i> Haridor
                     </a>
                 </li>
+                {% if request.user.type == 'savdogar' %}
                 <li class="nav-item">
-                    <a href="{% url 'qaytarish' %}" class="{% if request.path == '/qaytarish/' %}active{% endif %}">
+                    <a href="{% url 'savdogar_savdolar' %}" class="{% if request.resolver_match.url_name == 'savdogar_savdolar' %}active{% endif %}">
+                        <i class="fas fa-receipt"></i> Savdolar
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'nasiya_savdolar' %}" class="{% if request.resolver_match.url_name == 'nasiya_savdolar' %}active{% endif %}">
+                        <i class="fas fa-hand-holding-dollar"></i> Nasiya
+                    </a>
+                </li>
+                {% endif %}
+                {% if request.user.type != 'savdogar' %}
+                <li class="nav-item">
+                    <a href="{% url 'qaytarish' %}" class="{% if request.resolver_match.url_name == 'qaytarish' %}active{% endif %}">
                         <i class="fas fa-box-open"></i> Qaytarish
                     </a>
                 </li>
+                {% endif %}
             </ul>
 
             <div class="user-section">
+                <!-- Notification Bell -->
+                <div class="notif-bell-wrapper desktop-only" id="notifBellWrapper">
+                    <div class="notif-bell-btn" id="notifBellBtn" onclick="toggleNotifPanel(event)" title="Bildirishnomalar">
+                        <i class="fa-solid fa-bell"></i>
+                        <span class="notif-bell-badge" id="notifBadge">0</span>
+                    </div>
+                    <div class="notif-panel" id="notifPanel">
+                        <div class="notif-panel-header">
+                            <h4><i class="fa-solid fa-bell" style="margin-right:6px;opacity:0.6;"></i>Bildirishnomalar</h4>
+                            <button class="notif-panel-clear" onclick="clearAllNotifs()">Hammasini o'qish</button>
+                        </div>
+                        <div class="notif-panel-list" id="notifPanelList">
+                            <div class="notif-panel-empty" id="notifPanelEmpty">
+                                <i class="fa-solid fa-bell-slash"></i>
+                                <p>Hozircha bildirishnoma yo'q</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- User Profile Desktop -->
                 <div class="user-dropdown desktop-only" id="userDropdown">
                     <div class="user-btn" onclick="toggleUserDropdown(event)">
@@ -468,9 +603,15 @@
                         <a href="{% url 'profile' user.username %}" class="dropdown-link">
                             <i class="fas fa-user-circle"></i> Profil
                         </a>
+                        {% if request.user.type == 'savdogar' %}
+                        <a href="{% url 'savdogar_hisobot' %}" class="dropdown-link">
+                            <i class="fas fa-file-invoice"></i> Hisobotlar
+                        </a>
+                        {% else %}
                         <a href="{% url 'yetkazuvchi_hisobot' request.user.username %}" class="dropdown-link">
                             <i class="fas fa-file-invoice"></i> Hisobotlar
                         </a>
+                        {% endif %}
                         <div style="height: 1px; background: var(--slate-100); margin: 0.5rem 0;"></div>
                         <a href="{% url 'logout' %}" class="dropdown-link logout">
                             <i class="fas fa-right-from-bracket"></i> Chiqish
@@ -519,21 +660,33 @@
         </div>
         
         <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-            <a href="{% url 'main' %}" class="dropdown-link {% if request.path == '/' %}active{% endif %}">
+            <a href="{% url 'main' %}" class="dropdown-link {% if request.resolver_match.url_name == 'main' %}active{% endif %}">
                 <i class="fas fa-house"></i> Bosh sahifa
             </a>
-            <a href="{% url 'sotish' %}" class="dropdown-link {% if request.path == '/sotish/' %}active{% endif %}">
+            <a href="{% url 'sotish' %}" class="dropdown-link {% if request.resolver_match.url_name == 'sotish' or request.resolver_match.url_name == 'savdo_chek' %}active{% endif %}">
                 <i class="fas fa-cart-shopping"></i> Sotish
             </a>
-            <a href="{% url 'yt_navigation' %}" class="dropdown-link {% if request.path == '/navigation/' %}active{% endif %}">
+            {% if request.user.type != 'savdogar' %}
+            <a href="{% url 'yt_navigation' %}" class="dropdown-link {% if request.resolver_match.url_name == 'yt_navigation' %}active{% endif %}">
                 <i class="fas fa-map-location-dot"></i> Marshrutlar
             </a>
-            <a href="{% url 'add_haridor' %}" class="dropdown-link {% if request.path == '/add/haridor/' %}active{% endif %}">
+            {% endif %}
+            <a href="{% url 'add_haridor' %}" class="dropdown-link {% if request.resolver_match.url_name == 'add_haridor' or request.resolver_match.url_name == 'mijoz_detail' %}active{% endif %}">
                 <i class="fas fa-store"></i> Haridor qo'shish
             </a>
-            <a href="{% url 'qaytarish' %}" class="dropdown-link {% if request.path == '/qaytarish/' %}active{% endif %}">
+            {% if request.user.type == 'savdogar' %}
+            <a href="{% url 'savdogar_savdolar' %}" class="dropdown-link {% if request.resolver_match.url_name == 'savdogar_savdolar' %}active{% endif %}">
+                <i class="fas fa-receipt"></i> Savdolar
+            </a>
+            <a href="{% url 'nasiya_savdolar' %}" class="dropdown-link {% if request.resolver_match.url_name == 'nasiya_savdolar' %}active{% endif %}">
+                <i class="fas fa-hand-holding-dollar"></i> Nasiya
+            </a>
+            {% endif %}
+            {% if request.user.type != 'savdogar' %}
+            <a href="{% url 'qaytarish' %}" class="dropdown-link {% if request.resolver_match.url_name == 'qaytarish' %}active{% endif %}">
                 <i class="fas fa-box-open"></i> Qaytarish
             </a>
+            {% endif %}
         </div>
 
         <div style="height: 1px; background: var(--slate-100);"></div>
@@ -542,9 +695,15 @@
             <a href="{% url 'profile' user.username %}" class="dropdown-link">
                 <i class="fas fa-user-circle"></i> Profil sozlamalari
             </a>
+            {% if request.user.type == 'savdogar' %}
+            <a href="{% url 'savdogar_hisobot' %}" class="dropdown-link">
+                <i class="fas fa-file-invoice"></i> Kunlik hisobotlar
+            </a>
+            {% else %}
             <a href="{% url 'yetkazuvchi_hisobot' request.user.username %}" class="dropdown-link">
                 <i class="fas fa-file-invoice"></i> Kunlik hisobotlar
             </a>
+            {% endif %}
             <a href="{% url 'logout' %}" class="dropdown-link logout">
                 <i class="fas fa-right-from-bracket"></i> Tizimdan chiqish
             </a>
@@ -578,6 +737,82 @@
         document.addEventListener('click', () => {
             const dd = document.getElementById('userDropdown');
             if (dd) dd.classList.remove('active');
+        });
+
+        // Notification Bell Logic
+        const notifHistory = [];
+        let unreadCount = 0;
+
+        window.toggleNotifPanel = function(event) {
+            if (event) { event.preventDefault(); event.stopPropagation(); }
+            const panel = document.getElementById('notifPanel');
+            panel.classList.toggle('open');
+            if (panel.classList.contains('open')) markAllRead();
+        };
+        function markAllRead() {
+            unreadCount = 0; updateBellBadge();
+            document.querySelectorAll('.notif-panel-item.unread').forEach(el => el.classList.remove('unread'));
+            document.querySelectorAll('.notif-unread-dot').forEach(el => el.remove());
+        }
+        window.clearAllNotifs = function() {
+            notifHistory.length = 0; unreadCount = 0;
+            updateBellBadge(); renderNotifPanel();
+        };
+        function updateBellBadge() {
+            const badge = document.getElementById('notifBadge');
+            const btn   = document.getElementById('notifBellBtn');
+            if (!badge || !btn) return;
+            if (unreadCount > 0) {
+                badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+                badge.classList.add('visible'); btn.classList.add('has-unread');
+            } else {
+                badge.classList.remove('visible'); btn.classList.remove('has-unread');
+            }
+        }
+        function ringBell() {
+            const btn = document.getElementById('notifBellBtn');
+            if (!btn) return;
+            btn.classList.add('ringing');
+            setTimeout(() => btn.classList.remove('ringing'), 700);
+        }
+        function addToNotifPanel(title, message, type) {
+            const timeStr = new Date().toLocaleTimeString('uz-UZ', {hour:'2-digit', minute:'2-digit'});
+            notifHistory.unshift({title, message, type, timeStr, unread: true});
+            if (notifHistory.length > 30) notifHistory.pop();
+            const panel = document.getElementById('notifPanel');
+            if (panel && !panel.classList.contains('open')) {
+                unreadCount++; updateBellBadge(); ringBell();
+            }
+            renderNotifPanel();
+        }
+        window.addToNotifPanel = addToNotifPanel;
+        function renderNotifPanel() {
+            const list  = document.getElementById('notifPanelList');
+            const empty = document.getElementById('notifPanelEmpty');
+            if (!list) return;
+            if (notifHistory.length === 0) {
+                list.innerHTML = ''; list.appendChild(empty); empty.style.display = 'block'; return;
+            }
+            empty.style.display = 'none';
+            const icons = { success:'fa-circle-check', warning:'fa-triangle-exclamation', info:'fa-circle-info' };
+            list.innerHTML = notifHistory.map(n => `
+                <div class="notif-panel-item ${n.unread ? 'unread' : ''}">
+                    <div class="notif-panel-icon ${n.type}"><i class="fa-solid ${icons[n.type]||'fa-circle-info'}"></i></div>
+                    <div class="notif-panel-body">
+                        <div class="notif-panel-title">${n.title}</div>
+                        <div class="notif-panel-msg">${n.message}</div>
+                        <div class="notif-panel-time">${n.timeStr}</div>
+                    </div>
+                    ${n.unread ? '<span class="notif-unread-dot"></span>' : ''}
+                </div>
+            `).join('');
+        }
+        document.addEventListener('click', function(e) {
+            const bw = document.getElementById('notifBellWrapper');
+            if (bw && !bw.contains(e.target)) {
+                const panel = document.getElementById('notifPanel');
+                if (panel) panel.classList.remove('open');
+            }
         });
 
         // WebSocket Notifications & Heartbeat
@@ -629,7 +864,9 @@
                     try {
                         const data = JSON.parse(e.data);
                         if (data.title && data.message) {
-                            showNotification(data.title, data.message, data.type || 'info');
+                            const t = data.type || 'info';
+                            showNotification(data.title, data.message, t);
+                            addToNotifPanel(data.title, data.message, t);
                         }
                     } catch(err) {}
                 };

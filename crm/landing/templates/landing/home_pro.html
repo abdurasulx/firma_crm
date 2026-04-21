@@ -1,0 +1,109 @@
+{% extends 'landing/base.html' %}
+{% load static %}
+
+{% block title %}StockFirm CRM - ombor, savdo va yetkazib berish uchun SaaS platforma{% endblock %}
+
+{% block content %}
+<section class="section" style="padding-top:72px;">
+    <div class="container grid-2">
+        <div>
+            <div class="pill" style="margin-bottom:22px;">Yangi avlod firma boshqaruvi</div>
+            <h1 class="hero-title">Ombor, savdo va yetkazib berish endi bitta tizimda.</h1>
+            <p class="lead" style="margin:24px 0 30px; max-width:620px;">
+                StockFirm CRM ishlab chiqarish, zaxira, kuryerlar, mijozlar, nasiya, billing va real vaqt analitikasini bir joyga jamlaydi. Har bir firma o'z subdomaini bilan mustaqil ishlaydi.
+            </p>
+            <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                <a href="{% url 'register_company' %}" class="btn btn-primary">30 kunlik sinovni boshlash</a>
+                <a href="{% url 'marketing_page' 'features' %}" class="btn btn-outline">Platformani ko'rish</a>
+            </div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:26px;">
+                <span class="pill">Subdomain SaaS</span>
+                <span class="pill">Nasiya nazorati</span>
+                <span class="pill">Kuryer GPS</span>
+                <span class="pill">Click billing</span>
+            </div>
+        </div>
+        <div class="mockup">
+            <div class="mockup-screen">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <strong>Bugungi boshqaruv</strong>
+                    <span style="color:#86efac;">Live</span>
+                </div>
+                <div class="dash-row">
+                    <div class="dash-card">
+                        <span style="color:rgba(255,255,255,.62);">Kunlik savdo</span>
+                        <h2 style="font-size:42px; margin-top:10px;">18.4M so'm</h2>
+                    </div>
+                    <div class="dash-card">
+                        <span style="color:rgba(255,255,255,.62);">Past zaxira</span>
+                        <h2 style="font-size:42px; margin-top:10px; color:#86efac;">7</h2>
+                    </div>
+                </div>
+                <div class="dash-card" style="margin-top:14px;">
+                    <div style="display:flex; justify-content:space-between;"><span>Yetkazuvchi: Aziz</span><b style="color:#86efac;">Online</b></div>
+                    <div style="height:10px; background:rgba(255,255,255,.09); border-radius:999px; margin-top:18px;"><div style="height:100%; width:72%; background:#10b981; border-radius:999px;"></div></div>
+                </div>
+                <div class="grid-3" style="margin-top:14px;">
+                    <div class="dash-card"><b>124</b><br><span style="color:rgba(255,255,255,.62);">mijoz</span></div>
+                    <div class="dash-card"><b>36</b><br><span style="color:rgba(255,255,255,.62);">mahsulot</span></div>
+                    <div class="dash-card"><b>9</b><br><span style="color:rgba(255,255,255,.62);">hodim</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section">
+    <div class="container">
+        <div class="proof-bar">
+            <div class="proof-item"><strong>1 kun</strong><span>ichida ishga tushirish</span></div>
+            <div class="proof-item"><strong>360°</strong><span>firma jarayonlari nazorati</span></div>
+            <div class="proof-item"><strong>24/7</strong><span>subdomain orqali kirish</span></div>
+            <div class="proof-item"><strong>0</strong><span>qo'lda Excel chalkashligi</span></div>
+        </div>
+    </div>
+</section>
+
+<section class="section" id="features">
+    <div class="container">
+        <div style="max-width:760px; margin-bottom:34px;">
+            <div class="eyebrow">Nega StockFirm</div>
+            <h2 class="section-title" style="margin-top:12px;">Firma o'sganda ham tartib buzilmaydi.</h2>
+        </div>
+        <div class="grid-3">
+            <a class="card" href="{% url 'marketing_page' 'inventory' %}"><div class="feature-icon">01</div><h3>Ombor nazorati</h3><p>Mahsulot kirimi, chiqimi, minimal zaxira va audit tarixi aniq yuritiladi.</p></a>
+            <a class="card" href="{% url 'marketing_page' 'sales' %}"><div class="feature-icon">02</div><h3>Savdo oqimi</h3><p>Kuryer sotuvlari, to'lov turi, chek va mijoz tarixi bir joyda.</p></a>
+            <a class="card" href="{% url 'marketing_page' 'delivery' %}"><div class="feature-icon">03</div><h3>Yetkazib berish</h3><p>Har bir yetkazuvchining zaxirasi va lokatsiyasi alohida kuzatiladi.</p></a>
+            <a class="card" href="{% url 'marketing_page' 'nasiya' %}"><div class="feature-icon">04</div><h3>Nasiya boshqaruvi</h3><p>Qarzlar, qisman to'lovlar va muddati o'tgan nasiya savdolar nazoratda.</p></a>
+            <a class="card" href="{% url 'marketing_page' 'analytics' %}"><div class="feature-icon">05</div><h3>Analitika</h3><p>Qaysi mahsulot ko'p sotilmoqda, qaysi do'kon faol, qayerda zaxira xavfi bor.</p></a>
+            <a class="card" href="{% url 'marketing_page' 'billing' %}"><div class="feature-icon">06</div><h3>SaaS billing</h3><p>Tariflar, trial, Click to'lov va feature gating tizimli boshqariladi.</p></a>
+        </div>
+    </div>
+</section>
+
+<section class="section" style="background:var(--dark); color:white;">
+    <div class="container grid-2">
+        <div>
+            <div class="eyebrow" style="color:#86efac;">Marketing emas, operatsion foyda</div>
+            <h2 class="section-title" style="margin-top:12px;">Har kuni javob beradigan savollar.</h2>
+            <p class="lead" style="margin-top:18px; color:rgba(255,255,255,.68);">Qaysi hodim qancha sotdi? Qaysi mahsulot tugayapti? Qaysi mijoz qarzdor? Qaysi kuryer qayerda? StockFirm bu savollarga tez javob beradi.</p>
+        </div>
+        <div class="grid-2" style="gap:14px;">
+            <div class="dash-card"><b>Omborda nima qoldi?</b><p style="color:rgba(255,255,255,.62); margin-top:8px;">Minimal zaxira signal beradi.</p></div>
+            <div class="dash-card"><b>Kim javobgar?</b><p style="color:rgba(255,255,255,.62); margin-top:8px;">Harakatlar jurnalga tushadi.</p></div>
+            <div class="dash-card"><b>Pul qayerda?</b><p style="color:rgba(255,255,255,.62); margin-top:8px;">Naqd, karta, nasiya ajraladi.</p></div>
+            <div class="dash-card"><b>O'sish bormi?</b><p style="color:rgba(255,255,255,.62); margin-top:8px;">Hisobot va grafiklar ko'rsatadi.</p></div>
+        </div>
+    </div>
+</section>
+
+<section class="section">
+    <div class="container" style="text-align:center;">
+        <div class="eyebrow">Boshlash oson</div>
+        <h2 class="section-title" style="max-width:820px; margin:12px auto 18px;">Bugun ro'yxatdan o'ting, ertadan jarayonlarni tizimda ko'ring.</h2>
+        <p class="lead" style="max-width:720px; margin:0 auto 28px;">Yangi firma oching, subdomain tanlang, hodimlarni qo'shing va birinchi mahsulotlaringizni kiriting. Murakkab IT jamoa shart emas.</p>
+        <a href="{% url 'register_company' %}" class="btn btn-primary">Firmamni ochish</a>
+        <a href="{% url 'marketing_page' 'implementation' %}" class="btn btn-outline" style="margin-left:8px;">Joriy qilish rejasi</a>
+    </div>
+</section>
+{% endblock %}

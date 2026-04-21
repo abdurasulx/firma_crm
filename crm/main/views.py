@@ -6,7 +6,7 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.utils import timezone
 from django.shortcuts import redirect
-from .models import BACKUP_CHOICES, Plan, HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri, Savdo, YuklamaSorov, MiqdorQoshish, HaridorDukon, AmalLog, qaytarilgan_mahsulotlar, PlanRequest
+from .models import BACKUP_CHOICES, BillingPaymentLink, Plan, HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri, Savdo, YuklamaSorov, MiqdorQoshish, HaridorDukon, AmalLog, qaytarilgan_mahsulotlar, PlanRequest, ProductionMaterialRequest, StockHistory
 from .functions import mahsulotlar_miqdori, makenewform, yuklama_maker, accptyuk, sotishm, sotuv_new_form ,yetkazuvchi_mahsulot_filter, get_bugungi_savdo_summ, add_spctoint
 from .plan_utils import company_has_access
 import datetime as dt
@@ -49,10 +49,20 @@ def end_setup(request):
 
 from .services.stock_service import (
     approve_miqdor_qoshish_service, 
-    approve_yuklama_sorov_service
+    approve_yuklama_sorov_service,
+    approve_material_request_service,
+    reject_material_request_service,
 )
 from .services.auth_service import create_user_service, update_user_service
+from .services.billing_service import (
+    consume_billing_payment_link,
+    create_billing_payment_link,
+    get_billing_dashboard_data,
+    get_company_dashboard_url,
+    get_company_login_url,
+)
 from .analytics.services import get_dashboard_stats
+from .credit_utils import CREDIT_TERM_MARKUPS, build_credit_terms
 
 User = get_user_model()
 # Create your views here.
@@ -91,9 +101,7 @@ def login(request):
                     messages.warning(request, "Sizning tarifingizda Telegram bot xizmati mavjud emas.")
                 
                 from django.conf import settings
-                base_domain = getattr(settings, 'BASE_DOMAIN', 'stockfirm.uz')
-                scheme = "http" if any(x in base_domain for x in ["localhost", "lvh.me"]) else "https"
-                return redirect(f"{scheme}://{request.user.company.subdomain}.{base_domain}/")
+                return redirect(get_company_dashboard_url(request.user.company, getattr(settings, 'BASE_DOMAIN', 'stockfirm.uz')))
             
             # 2. Not authenticated? Check for existing link for auto-login
             # Auto-login should only work if tariff is ON or if user is owner
@@ -106,9 +114,7 @@ def login(request):
                     auth_login(request, linked_user)
                     messages.success(request, f"Xush kelibsiz, {linked_user.tuliq_ismi or linked_user.username}! (Telegram orqali kirildi)")
                     from django.conf import settings
-                    base_domain = getattr(settings, 'BASE_DOMAIN', 'stockfirm.uz')
-                    scheme = "http" if any(x in base_domain for x in ["localhost", "lvh.me"]) else "https"
-                    return redirect(f"{scheme}://{linked_user.company.subdomain}.{base_domain}/")
+                    return redirect(get_company_dashboard_url(linked_user.company, getattr(settings, 'BASE_DOMAIN', 'stockfirm.uz')))
                 else:
                     messages.warning(request, "Sizning tarifingizda Telegram bot xizmati mavjud emas.")
             
@@ -153,9 +159,7 @@ def login(request):
                 if not request.company:
                     # Redirect to subdomain if logging in from landing
                     from django.conf import settings
-                    base_domain = getattr(settings, 'BASE_DOMAIN', 'stockfirm.uz')
-                    scheme = "http" if any(x in base_domain for x in ["localhost", "lvh.me"]) else "https"
-                    return redirect(f"{scheme}://{user_company.subdomain}.{base_domain}/")
+                    return redirect(get_company_dashboard_url(user_company, getattr(settings, 'BASE_DOMAIN', 'stockfirm.uz')))
                 return redirect('main')
             else:
                 messages.error(request, "Siz ushbu firmaga tegishli emassiz!")
@@ -174,11 +178,19 @@ def select_plan(request, plan_id):
     
     plan = get_object_or_404(Plan, id=plan_id, is_active=True)
     company = request.company
+    current_staff_count = User.objects.filter(company=company).exclude(type='ega').count()
     
     # Check for existing pending request
     if PlanRequest.objects.filter(company=company, status='pending').exists():
         messages.warning(request, "Sizda kutilayotgan tarif so'rovi mavjud. Iltimos, admin tasdiqlashini kuting.")
         return redirect('main')
+
+    if plan.max_users != 0 and current_staff_count > plan.max_users:
+        messages.error(
+            request,
+            f"Bu tarifni tanlab bo'lmaydi. Hozir {current_staff_count} ta hodimingiz bor, tarif esa {plan.max_users} tagacha ruxsat beradi."
+        )
+        return redirect('select_plan_page')
 
     # If they are just starting (no plan yet), we might still want approval or immediate? 
     # User said "tasdiqlasa keyin ozgarsin", so always approval.
@@ -201,6 +213,7 @@ def select_custom_plan(request):
         return redirect('main')
 
     company = request.company
+    current_staff_count = User.objects.filter(company=company).exclude(type='ega').count()
 
     # Check for existing pending request
     if PlanRequest.objects.filter(company=company, status='pending').exists():
@@ -215,6 +228,13 @@ def select_custom_plan(request):
         if staff_count > 55:
             staff_count = 0  # 0 indicates unlimited
             unlimited_staff = True
+
+    if staff_count != 0 and staff_count < current_staff_count:
+        messages.error(
+            request,
+            f"Maxsus tarifdagi hodim limiti kamida {current_staff_count} bo'lishi kerak. Chunki hozir {current_staff_count} ta hodim mavjud."
+        )
+        return redirect('select_plan_page')
     has_bot = 'has_bot' in request.POST
     has_analytics = 'has_analytics' in request.POST
     has_map = 'has_map' in request.POST
@@ -279,20 +299,85 @@ def request_trial(request):
     messages.success(request, "Sinov muddati uchun so'rov yuborildi. Tez orada tasdiqlanadi.")
     return redirect('main')
 
+
+@login_required(login_url='login')
+def billing_page(request):
+    if request.user.type != 'ega':
+        return redirect('main')
+
+    billing_data = get_billing_dashboard_data(request.company)
+    return render(request, 'billing.html', billing_data)
+
+
+@login_required(login_url='login')
+@require_POST
+def create_billing_link(request):
+    if request.user.type != 'ega':
+        return redirect('main')
+
+    try:
+        from .click_views import CLICK_MERCHANT_ID, CLICK_SERVICE_ID
+
+        payment_link = create_billing_payment_link(
+            request.company,
+            service_id=CLICK_SERVICE_ID,
+            merchant_id=CLICK_MERCHANT_ID,
+        )
+        if payment_link.status == 'created' and payment_link.opened_at is None:
+            messages.success(request, "To'lov silkasini tayyorlab qo'ydik. U billing sahifasida saqlanadi.")
+    except ValueError as exc:
+        messages.warning(request, str(exc))
+
+    return redirect('billing_page')
+
+
+@login_required(login_url='login')
+def open_billing_link(request, token):
+    if request.user.type != 'ega':
+        return redirect('main')
+
+    payment_link = get_object_or_404(BillingPaymentLink, token=token, company=request.company)
+    try:
+        payment_link = consume_billing_payment_link(payment_link)
+    except ValueError as exc:
+        messages.warning(request, str(exc))
+        return redirect('billing_page')
+
+    return redirect(payment_link.click_url)
+
 @login_required(login_url='login')
 def select_plan_page(request):
     """Tarif o'zgartirish sahifasi"""
     if request.user.type != 'ega':
         return redirect('main')
     
-    if PlanRequest.objects.filter(company=request.company, status='pending').exists():
+    # Faqat tarif so'rovi (trial emas) kutilayotgan bo'lsa blok qilamiz
+    if PlanRequest.objects.filter(company=request.company, status='pending', is_trial=False).exists():
         messages.warning(request, "Sizda kutilayotgan tarif so'rovi mavjud.")
         return redirect('main')
     
+    # Trial eligibility
+    from datetime import timedelta
+    can_request_trial = False
+    trial_pending = PlanRequest.objects.filter(company=request.company, is_trial=True, status='pending').exists()
+    days_since_creation = (timezone.now() - request.company.created_at).days
+    if (
+        not request.company.has_used_trial
+        and days_since_creation <= 10
+        and not trial_pending
+        and not request.company.is_on_trial
+    ):
+        can_request_trial = True
+    
     plans = Plan.objects.filter(is_active=True).order_by('price')
+    current_staff_count = User.objects.filter(company=request.company).exclude(type='ega').count()
     return render(request, 'select_plan_page.html', {
         'plans': plans,
-        'backup_choices': BACKUP_CHOICES
+        'backup_choices': BACKUP_CHOICES,
+        'can_request_trial': can_request_trial,
+        'trial_pending': trial_pending,
+        'days_since_creation': days_since_creation,
+        'current_staff_count': current_staff_count,
     })
 
 @login_required(login_url='login')
@@ -300,13 +385,14 @@ def main(request):
     payload={}
     user=request.user
     
-    if user.type == 'pazanda':
+    if user.type in ['pazanda', 'ishlab_chiqaruvchi']:
         now = timezone.localtime()
         today_start = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.min))
         today_end = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.max))
         pz = Pazanda.objects.get(user=request.user)
         payload['sorovlar'] = YuklamaSorov.objects.filter(company=request.company, pazanda=pz, mode='waiting').all()
-        payload['zaxira_mahsulotlar']=Mahsulot.objects.filter(company=request.company)
+        payload['zaxira_mahsulotlar']=Mahsulot.objects.filter(company=request.company, warehouse_type='finished')
+        payload['material_sorovlar']=ProductionMaterialRequest.objects.filter(company=request.company, producer=pz)[:8]
         zapros=MiqdorQoshish.objects.filter(company=request.company, pazanda=pz,vaqt_sana__range=(today_start, today_end)).all()
         payload['qms']=len(zapros)
         payload['kunlik_miqdorlar'] = zapros
@@ -316,7 +402,7 @@ def main(request):
             yuklamalar = mahsulotlar_miqdori( YetkazibBeruvchi.objects.get(user=request.user).mahsulotlar) or []
             
             payload['yuklamalar'] = yuklamalar
-            mahs=Mahsulot.objects.filter(company=request.company)
+            mahs=Mahsulot.objects.filter(company=request.company, warehouse_type='finished')
             payload['zaxira_mahsulotlar'] = mahs
             payload['lnmahs']=len(mahs)
 
@@ -374,10 +460,56 @@ def main(request):
             payload['savdo'] = savdo
             # reqyuklama=YuklamaSorov.objects.filter(user=YetkazibBeruvchi.objects.get(user=request.user),tasdiq=False, mode='waiting',sana=dt.date.today() ).all()
             payload['reqyuklama'] = reqyuklama
-            mahs=Mahsulot.objects.filter(company=request.company)
+            mahs=Mahsulot.objects.filter(company=request.company, warehouse_type='finished')
             payload['zaxira_mahsulotlar'] = mahs
             
             return render(request, 'yetkazuvchi_dashboard.html',payload)
+    elif user.type == 'omborchi':
+        if request.method == 'POST':
+            request_id = request.POST.get('material_request_id')
+            if request_id:
+                if 'approve' in request.POST:
+                    success, message = approve_material_request_service(request_id, request.user)
+                elif 'reject' in request.POST:
+                    success, message = reject_material_request_service(request_id, request.user)
+                else:
+                    success, message = False, "Amal noto'g'ri tanlandi."
+
+                if success:
+                    messages.success(request, message)
+                else:
+                    messages.error(request, message)
+                return redirect('main')
+
+        payload['finished_products'] = Mahsulot.objects.filter(
+            company=request.company,
+            warehouse_type='finished'
+        ).order_by('nomi')
+        payload['materials'] = Mahsulot.objects.filter(
+            company=request.company,
+            warehouse_type='semi_finished'
+        ).order_by('nomi')
+        payload['pending_material_requests'] = ProductionMaterialRequest.objects.filter(
+            company=request.company,
+            status='waiting'
+        ).select_related('producer__user', 'material')[:30]
+        payload['recent_material_requests'] = ProductionMaterialRequest.objects.filter(
+            company=request.company
+        ).select_related('producer__user', 'material', 'reviewed_by')[:20]
+        return render(request, 'warehouse_dashboard.html', payload)
+    elif user.type == 'savdogar':
+        now = timezone.localtime()
+        today_start = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.min))
+        month_start = timezone.make_aware(dt.datetime.combine(now.date().replace(day=1), dt.time.min))
+        today_sales = Savdo.objects.filter(company=request.company, savdogar=request.user, vaqt_sana__gte=today_start)
+        month_sales = Savdo.objects.filter(company=request.company, savdogar=request.user, vaqt_sana__gte=month_start)
+        payload['today_sales_count'] = today_sales.count()
+        payload['today_sales_amount'] = today_sales.aggregate(t=Sum('summa'))['t'] or 0
+        payload['month_sales_amount'] = month_sales.aggregate(t=Sum('summa'))['t'] or 0
+        payload['nasiya_count'] = Savdo.objects.filter(company=request.company, savdogar=request.user, st='nasiya', tulandi=False).count()
+        payload['recent_sales'] = Savdo.objects.filter(company=request.company, savdogar=request.user).select_related('haridor_dukon').order_by('-vaqt_sana')[:8]
+        payload['products'] = Mahsulot.objects.filter(company=request.company, warehouse_type='finished').order_by('nomi')[:10]
+        return render(request, 'savdogar_dashboard.html', payload)
             
     
     hodims = User.objects.filter(company=request.company).exclude(type='ega').order_by('-date_joined')[:6]  # Faqat 6 ta
@@ -402,14 +534,18 @@ def main(request):
 
     # Trial eligibility check
     from datetime import timedelta
-    can_request_trial = False
-    if not request.company.has_used_trial and (request.company.created_at + timedelta(days=10) >= timezone.now()):
-        # Check if already pending
-        if not PlanRequest.objects.filter(company=request.company, is_trial=True, status='pending').exists():
-            can_request_trial = True
+    trial_pending = PlanRequest.objects.filter(company=request.company, is_trial=True, status='pending').exists()
+    days_since_creation = (timezone.now() - request.company.created_at).days
+    can_request_trial = (
+        not request.company.has_used_trial
+        and days_since_creation <= 10
+        and not trial_pending
+        and not request.company.is_on_trial
+    )
     
     payload['can_request_trial'] = can_request_trial
-    payload['trial_pending'] = PlanRequest.objects.filter(company=request.company, is_trial=True, status='pending').exists()
+    payload['trial_pending'] = trial_pending
+    payload['days_since_creation'] = days_since_creation
 
     # Oyning 1-kunining 00:00:00 va bugungi 23:59:59
     month_start = timezone.make_aware(dt.datetime.combine(now.replace(day=1).date(), dt.time.min))
@@ -480,7 +616,7 @@ def logout_view(request):
 @login_required(login_url='login')
 @login_required(login_url='login')
 def add_haridor(request):
-    if request.user.type in ['yetkazib_beruvchi', 'ega']:
+    if request.user.type in ['yetkazib_beruvchi', 'savdogar', 'ega']:
         if request.method == 'POST':
             nomi = request.POST.get('nomi')
             egasi = request.POST.get('egasi')
@@ -513,12 +649,14 @@ def add_haridor(request):
     return redirect('main')
 @login_required(login_url='login')
 def profile_view(request, username):
-    user =  User.objects.get(username=username)
+    user = get_object_or_404(User, username=username, company=request.company)
     if request.method == 'GET':
     
         if request.user.type ==  'yetkazib_beruvchi':
             return render(request, 'ytprofile.html', {'user': user})
-        elif request.user.type == 'pazanda':
+        elif request.user.type == 'savdogar':
+            return render(request, 'egaprofile.html', {'user': user})
+        elif request.user.type in ['pazanda', 'ishlab_chiqaruvchi']:
             return render(request, 'pzprofile.html', {'user': user})
         elif request.user.type=='ega':
             if user.type == 'yetkazib_beruvchi':
@@ -589,7 +727,7 @@ def crtuser(request):
 
 @login_required(login_url='login')
 def editusr(request, username):
-    user_edit = get_object_or_404(User, username=username)
+    user_edit = get_object_or_404(User, username=username, company=request.company)
     mn = ''
     mr = ''
     all_mahsulotlar = []
@@ -599,7 +737,7 @@ def editusr(request, username):
         yb = YetkazibBeruvchi.objects.get(user=user_edit)
         mn = yb.bmh
         mr = yb.bmr.url if yb.bmr else ''
-        all_mahsulotlar = Mahsulot.objects.all().order_by('nomi')
+        all_mahsulotlar = Mahsulot.objects.filter(company=request.company, warehouse_type='finished').order_by('nomi')
         
         # Parse current stock string into dict {nom: miqdor}
         from .functions import mahsulotlar_miqdori
@@ -636,7 +774,7 @@ def editusr(request, username):
         if user.type == 'yetkazib_beruvchi':
             yb = YetkazibBeruvchi.objects.get(user=user)
             new_yuklamalar_str = ""
-            all_mahs = Mahsulot.objects.all()
+            all_mahs = Mahsulot.objects.filter(company=request.company, warehouse_type='finished')
             for m in all_mahs:
                 miqdor = request.POST.get(f'qty_{m.id}') # Use ID as sent from updated template
                 if miqdor and float(miqdor) > 0:
@@ -656,8 +794,8 @@ def editusr(request, username):
     })
 @login_required(login_url='login')
 def seemahsulot(request, mahsulot_id):
-    mahsulot = Mahsulot.objects.get(id=mahsulot_id)
-    turs = MahsulotTuri.objects.filter(company=request.company)
+    mahsulot = get_object_or_404(Mahsulot, id=mahsulot_id, company=request.company)
+    turs = MahsulotTuri.objects.all().order_by('nomi')
     if request.method == 'POST':
         if 'nomi' in request.POST:
             nnomi = request.POST.get('nomi')
@@ -673,11 +811,13 @@ def seemahsulot(request, mahsulot_id):
 
         mahsulot.miqdori = request.POST.get('miqdori')
         mahsulot.narxi = request.POST.get('narxi')
+        if request.POST.get('warehouse_type'):
+            mahsulot.warehouse_type = request.POST.get('warehouse_type')
         
         # Look up by ID as sent from the template <option value="{{ tur.id }}">
         turi_id = request.POST.get('turi')
         if turi_id:
-            mahsulot.turi = MahsulotTuri.objects.get(id=turi_id, company=request.company)
+            mahsulot.turi = get_object_or_404(MahsulotTuri, id=turi_id)
             
         if 'rasmi' in request.FILES:
             mahsulot.rasmi = request.FILES['rasmi']
@@ -685,19 +825,21 @@ def seemahsulot(request, mahsulot_id):
         mahsulot.save()
         messages.success(request, "Mahsulot muvaffaqiyatli saqlandi.")
         return redirect('mahsulotlar_list')
-    return render(request, 'seemahsulot.html', {'mahsulot': mahsulot, 'turs': turs})
+    return render(request, 'seemahsulot.html', {'mahsulot': mahsulot, 'turs': turs, 'warehouse_types': Mahsulot.WAREHOUSE_TYPES})
 @login_required(login_url='login')
 def createmahsulot(request):
-    tur=MahsulotTuri.objects.filter(company=request.company)
+    tur=MahsulotTuri.objects.all().order_by('nomi')
     payload={}  
     payload['turs']=tur
+    payload['warehouse_types']=Mahsulot.WAREHOUSE_TYPES
     if request.method == 'POST':
         nomi = request.POST.get('nomi')
         miqdori = request.POST.get('miqdori')
-        turi=MahsulotTuri.objects.get(nomi=request.POST.get('turi'), company=request.company)
+        turi=get_object_or_404(MahsulotTuri, id=request.POST.get('turi'))
         rasmi = request.FILES.get('rasmi')
         narxi=request.POST.get('narxi')
-        mh=Mahsulot.objects.create(nomi=nomi, miqdori=miqdori, turi=turi, narxi=narxi, rasmi=rasmi, company=request.company)
+        warehouse_type = request.POST.get('warehouse_type') or 'finished'
+        mh=Mahsulot.objects.create(nomi=nomi, miqdori=miqdori, turi=turi, narxi=narxi, rasmi=rasmi, company=request.company, warehouse_type=warehouse_type)
         mh.save()
         # Activity log
         AmalLog.objects.create(
@@ -714,7 +856,7 @@ def deleteprdct(request, product_id):
     if request.method == 'POST':
         confirm_text = request.POST.get('confirm_text')
         if confirm_text == 'OCHIR':
-            if mhs.stockhistory_set.exists() or mhs.yuklamasorov_set.exists() or mhs.deliverystock_set.exists() or mhs.miqdorqoshish_set.exists():
+            if mhs.stockhistory_set.exists() or mhs.yuklamasorov_set.exists() or mhs.deliverystock_set.exists() or mhs.miqdorqoshish_set.exists() or mhs.production_material_requests.exists():
                 from django.contrib import messages
                 messages.error(request, "Ushbu mahsulot bo'yicha tarixiy yozuvlar mavjud! Uni o'chirish audit xatoliklariga olib keladi. Iltimos, o'rniga nomini 'Eskirgan' deb o'zgartiring.")
                 return redirect('seeproduct', mahsulot_id=product_id)
@@ -729,17 +871,62 @@ def deleteprdct(request, product_id):
     return redirect('seeproduct', mahsulot_id=product_id)
 @login_required(login_url='login')
 def addmiqdor(request):
-    if request.user.type=='pazanda':        
+    if request.user.type in ['pazanda', 'ishlab_chiqaruvchi']:
         
         payload={}
-        payload['mahsulotlar']=Mahsulot.objects.filter(company=request.company)
+        payload['mahsulotlar']=Mahsulot.objects.filter(company=request.company, warehouse_type='finished')
+        payload['materials']=Mahsulot.objects.filter(company=request.company, warehouse_type='semi_finished')
         
         if request.method == 'POST':
-            ok=1
-            mxs=Mahsulot.objects.get(nomi=request.POST.get('mahsulot'), company=request.company)
+            pz=Pazanda.objects.get(user=request.user)
+
+            if 'request_material' in request.POST:
+                material = get_object_or_404(
+                    Mahsulot,
+                    id=request.POST.get('material'),
+                    company=request.company,
+                    warehouse_type='semi_finished'
+                )
+                try:
+                    qty = float(request.POST.get('material_qty') or 0)
+                except (TypeError, ValueError):
+                    qty = 0
+                if qty <= 0:
+                    messages.error(request, "So'raladigan material miqdori 0 dan katta bo'lishi kerak.")
+                    return redirect('add_miqdor')
+
+                material_request = ProductionMaterialRequest.objects.create(
+                    company=request.company,
+                    producer=pz,
+                    material=material,
+                    qty=qty,
+                    note=request.POST.get('material_note') or None
+                )
+                StockHistory.objects.create(
+                    company=request.company,
+                    actor_user=request.user,
+                    mahsulot=material,
+                    event_type='RAW_REQUESTED',
+                    old_qty=material.miqdori,
+                    new_qty=material.miqdori,
+                    delta=0
+                )
+                messages.success(request, f"{material.nomi} uchun {qty} {material.turi.nomi} material so'rovi yuborildi.")
+                send_ws_notification(
+                    request.company.subdomain,
+                    "Yangi material so'rovi",
+                    f"{pz.tuliq_ismi} {material.nomi}dan {qty} {material.turi.nomi} so'radi.",
+                    'info'
+                )
+                return redirect('main')
+
+            mxs=Mahsulot.objects.get(
+                id=request.POST.get('mahsulot'),
+                company=request.company,
+                warehouse_type='finished'
+            )
             mqdr=request.POST.get('miqdor')
             rasmi=request.FILES.get('rasm')
-            pz=Pazanda.objects.get(user=request.user)
             # Create request for this company (Unapproved initially)
             nw=MiqdorQoshish.objects.create(
                 company=request.company,
@@ -770,12 +957,15 @@ def addmiqdor(request):
     return redirect('main')
 @login_required(login_url='login')
 def add_yuklama(request):
+    if request.user.type not in ['pazanda', 'ishlab_chiqaruvchi']:
+        return redirect('main')
+
     pazanda = Pazanda.objects.get(user=request.user)
-    mahsulotlar = Mahsulot.objects.filter(company=request.company)
+    mahsulotlar = Mahsulot.objects.filter(company=request.company, warehouse_type='finished')
     yetkazuvchilar = YetkazibBeruvchi.objects.filter(company=request.company)
 
     if request.method == "POST":
-        mahsulot = Mahsulot.objects.get(id=request.POST['mahsulot'], company=request.company)
+        mahsulot = Mahsulot.objects.get(id=request.POST['mahsulot'], company=request.company, warehouse_type='finished')
         miqdor = float(request.POST['miqdor'])
         yetkazuvchi = YetkazibBeruvchi.objects.get(id=request.POST['yetkazuvchi'], company=request.company)
         
@@ -796,6 +986,8 @@ def add_yuklama(request):
     })
 @login_required(login_url='login')
 def sotish(request):
+    if request.user.type == 'savdogar':
+        return redirect('savdogar_sotish')
     
     if request.user.type == 'yetkazib_beruvchi':
         yt = YetkazibBeruvchi.objects.get(user=request.user)
@@ -882,6 +1074,263 @@ def sotish(request):
     return render(request, 'ytsot.html', {'mahsulotlar': mahsulotlar,'haridorlar':xaridorlar})
 
 
+@login_required(login_url='login')
+def savdogar_sotish(request):
+    if request.user.type != 'savdogar':
+        return redirect('main')
+
+    from .functions import new_yuklama
+    mahsulotlar_qs = Mahsulot.objects.filter(company=request.company, warehouse_type='finished').order_by('nomi')
+    mahsulotlar = [
+        new_yuklama(m.nomi, m.miqdori, m.turi.nomi if m.turi else '', m.narxi)
+        for m in mahsulotlar_qs
+        if m.miqdori > 0
+    ]
+    xaridorlar = HaridorDukon.objects.filter(company=request.company)
+
+    if request.method == "POST":
+        from django.db import transaction
+
+        with transaction.atomic():
+            rasm = request.FILES.get('rasm')
+            turi = request.POST.get('st')
+            haridor = HaridorDukon.objects.get(id=request.POST.get('haridor'), company=request.company)
+            oluvchi = request.POST.get('oluvchi')
+            sotilganlar = []
+            summa = 0
+
+            for mahsulot in Mahsulot.objects.select_for_update().filter(company=request.company, warehouse_type='finished'):
+                miqdor = request.POST.get(f'miqdor_{mahsulot.nomi}')
+                if not miqdor or miqdor == '0':
+                    continue
+
+                qty = float(miqdor)
+                if qty <= 0:
+                    continue
+                if mahsulot.miqdori < qty:
+                    messages.error(request, f"{mahsulot.nomi} omborda yetarli emas.")
+                    return redirect('savdogar_sotish')
+
+                old_qty = mahsulot.miqdori
+                mahsulot.miqdori -= qty
+                mahsulot.save(update_fields=['miqdori'])
+                StockHistory.objects.create(
+                    company=request.company,
+                    actor_user=request.user,
+                    mahsulot=mahsulot,
+                    event_type='DEDUCT',
+                    old_qty=old_qty,
+                    new_qty=mahsulot.miqdori,
+                    delta=-qty,
+                )
+                sotilganlar.append((mahsulot.nomi, qty, mahsulot.narxi))
+                summa += qty * float(mahsulot.narxi)
+
+            if not sotilganlar:
+                messages.error(request, "Kamida bitta mahsulot tanlang.")
+                return redirect('savdogar_sotish')
+
+            txt = ''.join([f'{nom} {qty} {narx},' for nom, qty, narx in sotilganlar])
+            credit_terms = None
+            final_summa = summa
+            if turi == 'nasiya':
+                if not request.company.credit_sales_enabled:
+                    messages.error(request, "Bu firmada nasiya savdo o'chirilgan.")
+                    return redirect('savdogar_sotish')
+                credit_terms = build_credit_terms(summa, request.POST.get('credit_term_months'), request.company, haridor.nomi)
+                final_summa = credit_terms['total']
+
+            savdo = Savdo.objects.create(
+                savdogar=request.user,
+                haridor_dukon=haridor,
+                smm=txt,
+                smr=rasm,
+                oluvchining_ismi=oluvchi,
+                tulandi=(turi != 'nasiya'),
+                tasdiq_kutilmoqda=(turi != 'nasiya'),
+                st=turi,
+                base_summa=summa,
+                summa=final_summa,
+                credit_term_months=credit_terms['months'] if credit_terms else None,
+                credit_markup_percent=credit_terms['markup_percent'] if credit_terms else 0,
+                credit_due_date=credit_terms['due_date'] if credit_terms else None,
+                credit_contract_text=credit_terms['contract_text'] if credit_terms else None,
+                company=request.company,
+            )
+            if turi == 'nasiya':
+                send_ws_notification(
+                    request.company.subdomain,
+                    "Yangi muddatli nasiya savdo",
+                    f"{request.user.tuliq_ismi or request.user.username} {haridor.nomi}ga {credit_terms['months']} oyga {final_summa:,.0f} so'mlik nasiya savdo qildi.",
+                    'warning'
+                )
+            AmalLog.objects.create(
+                user=request.user,
+                company=request.company,
+                amal_shifri=f"savdogar_savdo|{haridor.nomi}|{summa}"
+            )
+            messages.success(request, "Savdo muvaffaqiyatli saqlandi.")
+            return redirect('savdogar_savdolar')
+
+    return render(request, 'ytsot.html', {
+        'mahsulotlar': mahsulotlar,
+        'haridorlar': xaridorlar,
+        'base_template': 'ytbase.html',
+        'sales_title': 'Savdogar savdosi',
+        'sales_subtitle': "Tayyor mahsulot omboridan sotuv qiling",
+        'credit_terms': CREDIT_TERM_MARKUPS,
+        'credit_sales_enabled': request.company.credit_sales_enabled,
+    })
+
+
+@login_required(login_url='login')
+def savdogar_savdolar(request):
+    if request.user.type != 'savdogar':
+        return redirect('main')
+
+    sales = Savdo.objects.filter(
+        company=request.company,
+        savdogar=request.user,
+    ).select_related('haridor_dukon').order_by('-vaqt_sana')
+
+    payment_filter = request.GET.get('payment', '')
+    if payment_filter:
+        sales = sales.filter(st=payment_filter)
+
+    paginator = Paginator(sales, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    return render(request, 'savdogar_savdolar.html', {
+        'page_obj': page_obj,
+        'payment_filter': payment_filter,
+        'total_amount': sales.aggregate(t=Sum('summa'))['t'] or 0,
+        'sales_count': sales.count(),
+    })
+
+
+@login_required(login_url='login')
+def savdogar_hisobot(request):
+    if request.user.type != 'savdogar':
+        return redirect('main')
+
+    now = timezone.localtime()
+    from_date_str = request.GET.get('from')
+    to_date_str = request.GET.get('to')
+
+    try:
+        from_date = dt.date.fromisoformat(from_date_str) if from_date_str else now.date().replace(day=1)
+        to_date = dt.date.fromisoformat(to_date_str) if to_date_str else now.date()
+    except ValueError:
+        from_date = now.date().replace(day=1)
+        to_date = now.date()
+
+    from_dt = timezone.make_aware(dt.datetime.combine(from_date, dt.time.min))
+    to_dt = timezone.make_aware(dt.datetime.combine(to_date, dt.time.max))
+
+    sales = Savdo.objects.filter(
+        company=request.company,
+        savdogar=request.user,
+        vaqt_sana__range=(from_dt, to_dt)
+    ).select_related('haridor_dukon').order_by('-vaqt_sana')
+
+    context = {
+        'sales': sales,
+        'from_date': from_date.isoformat(),
+        'to_date': to_date.isoformat(),
+        'total_sales': sales.count(),
+        'total_amount': sales.aggregate(t=Sum('summa'))['t'] or 0,
+        'naqd_amount': sales.filter(st='naqd').aggregate(t=Sum('summa'))['t'] or 0,
+        'karta_amount': sales.filter(st='karta').aggregate(t=Sum('summa'))['t'] or 0,
+        'nasiya_amount': sales.filter(st='nasiya').aggregate(t=Sum('summa'))['t'] or 0,
+        'nasiya_unpaid': sales.filter(st='nasiya', tulandi=False).aggregate(t=Sum('summa'))['t'] or 0,
+    }
+    return render(request, 'savdogar_hisobot.html', context)
+
+
+@login_required(login_url='login')
+def admin_savdogar_hisobot(request):
+    if request.user.type != 'ega':
+        return redirect('main')
+
+    now = timezone.localtime()
+    from_date_str = request.GET.get('from')
+    to_date_str = request.GET.get('to')
+    savdogar_id = request.GET.get('savdogar')
+
+    try:
+        from_date = dt.date.fromisoformat(from_date_str) if from_date_str else now.date().replace(day=1)
+        to_date = dt.date.fromisoformat(to_date_str) if to_date_str else now.date()
+    except ValueError:
+        from_date = now.date().replace(day=1)
+        to_date = now.date()
+
+    from_dt = timezone.make_aware(dt.datetime.combine(from_date, dt.time.min))
+    to_dt = timezone.make_aware(dt.datetime.combine(to_date, dt.time.max))
+
+    sales = Savdo.objects.filter(
+        company=request.company,
+        savdogar__isnull=False,
+        vaqt_sana__range=(from_dt, to_dt)
+    ).select_related('savdogar', 'haridor_dukon').order_by('-vaqt_sana')
+
+    if savdogar_id:
+        sales = sales.filter(savdogar_id=savdogar_id)
+
+    savdogarlar = User.objects.filter(company=request.company, type='savdogar').order_by('tuliq_ismi')
+    seller_stats = []
+    for seller in savdogarlar:
+        seller_sales = sales.filter(savdogar=seller)
+        if seller_sales.exists():
+            seller_stats.append({
+                'seller': seller,
+                'sales_count': seller_sales.count(),
+                'total_amount': seller_sales.aggregate(t=Sum('summa'))['t'] or 0,
+                'nasiya_amount': seller_sales.filter(st='nasiya').aggregate(t=Sum('summa'))['t'] or 0,
+            })
+
+    return render(request, 'admin_savdogar_hisobot.html', {
+        'sales': sales[:100],
+        'seller_stats': seller_stats,
+        'savdogarlar': savdogarlar,
+        'savdogar_filter': savdogar_id or '',
+        'from_date': from_date.isoformat(),
+        'to_date': to_date.isoformat(),
+        'total_sales': sales.count(),
+        'total_amount': sales.aggregate(t=Sum('summa'))['t'] or 0,
+        'naqd_amount': sales.filter(st='naqd').aggregate(t=Sum('summa'))['t'] or 0,
+        'karta_amount': sales.filter(st='karta').aggregate(t=Sum('summa'))['t'] or 0,
+        'nasiya_amount': sales.filter(st='nasiya').aggregate(t=Sum('summa'))['t'] or 0,
+    })
+
+
+@login_required(login_url='login')
+def credit_settings_view(request):
+    if request.user.type != 'ega':
+        return redirect('main')
+
+    company = request.company
+    if request.method == 'POST':
+        company.credit_sales_enabled = request.POST.get('credit_sales_enabled') == 'on'
+        company.credit_contract_template = request.POST.get('credit_contract_template') or ''
+        company.credit_rules_note = request.POST.get('credit_rules_note') or ''
+        company.credit_early_discount_percent = request.POST.get('credit_early_discount_percent') or 0
+        company.credit_late_penalty_percent = request.POST.get('credit_late_penalty_percent') or 0
+        company.save(update_fields=[
+            'credit_sales_enabled',
+            'credit_contract_template',
+            'credit_rules_note',
+            'credit_early_discount_percent',
+            'credit_late_penalty_percent',
+        ])
+        messages.success(request, "Nasiya savdo sozlamalari saqlandi.")
+        return redirect('credit_settings')
+
+    return render(request, 'credit_settings.html', {
+        'company': company,
+        'credit_terms': CREDIT_TERM_MARKUPS,
+    })
+
+
 # ============================================
 # API Endpoint for Browser Notifications
 # ============================================
@@ -947,7 +1396,7 @@ def check_new_deliveries(request):
 @login_required(login_url='login')
 def pz_sorov_tarixi(request):
     """Pazanda uchun: o'zi yuborgan barcha YuklamaSorov larni ko'rish."""
-    if request.user.type != 'pazanda':
+    if request.user.type not in ['pazanda', 'ishlab_chiqaruvchi']:
         return redirect('main')
 
     pazanda = Pazanda.objects.get(user=request.user)
@@ -982,7 +1431,7 @@ def yetkazuvchi_hisobot(request, username):
     if request.user.type != 'ega' and request.user.username != username:
         return redirect('main')
 
-    target_user = get_object_or_404(User, username=username, type='yetkazib_beruvchi')
+    target_user = get_object_or_404(User, username=username, type='yetkazib_beruvchi', company=request.company)
     yb = get_object_or_404(YetkazibBeruvchi, user=target_user)
 
     # Determine base template
@@ -1095,7 +1544,7 @@ def pazanda_hisobot(request, username):
     if request.user.type != 'ega' and request.user.username != username:
         return redirect('main')
 
-    target_user = get_object_or_404(User, username=username, type='pazanda')
+    target_user = get_object_or_404(User, username=username, type__in=['pazanda', 'ishlab_chiqaruvchi'], company=request.company)
     pz = get_object_or_404(Pazanda, user=target_user)
 
     # Determine base template

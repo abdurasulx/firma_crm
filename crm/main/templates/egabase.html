@@ -6,6 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}StockFirm CRM{% endblock %}</title>
+    <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
@@ -512,7 +513,191 @@
             transition: all 0.3s ease;
         }
 
-        /* Notifications */
+        /* ── Notification Bell Button ── */
+        .notif-bell-btn {
+            position: relative;
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            background: var(--bg-light);
+            border: 1px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            color: var(--text-light);
+            font-size: 18px;
+        }
+        .notif-bell-btn:hover {
+            background: var(--bg-white);
+            border-color: var(--border-color);
+            color: var(--text-dark);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .notif-bell-btn.has-unread {
+            color: var(--primary-color);
+        }
+        .notif-bell-badge {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 18px;
+            height: 18px;
+            background: var(--danger-color);
+            border-radius: 50%;
+            font-size: 10px;
+            font-weight: 700;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid white;
+            opacity: 0;
+            transform: scale(0);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .notif-bell-badge.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+        @keyframes bell-ring {
+            0%   { transform: rotate(0deg); }
+            10%  { transform: rotate(-20deg); }
+            30%  { transform: rotate(20deg); }
+            50%  { transform: rotate(-15deg); }
+            70%  { transform: rotate(10deg); }
+            90%  { transform: rotate(-5deg); }
+            100% { transform: rotate(0deg); }
+        }
+        .notif-bell-btn.ringing i {
+            animation: bell-ring 0.6s ease;
+        }
+
+        /* ── Notification Panel ── */
+        .notif-panel {
+            position: absolute;
+            top: calc(100% + 12px);
+            right: 0;
+            width: 360px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.14);
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 9000;
+        }
+        .notif-panel.open {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        .notif-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .notif-panel-header h4 {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+        .notif-panel-clear {
+            font-size: 12px;
+            color: var(--primary-color);
+            font-weight: 600;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+        .notif-panel-clear:hover {
+            background: rgba(16,185,129,0.08);
+        }
+        .notif-panel-list {
+            max-height: 380px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #e5e7eb transparent;
+        }
+        .notif-panel-list::-webkit-scrollbar { width: 4px; }
+        .notif-panel-list::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
+        .notif-panel-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px 20px;
+            border-bottom: 1px solid #f3f4f6;
+            transition: background 0.15s;
+        }
+        .notif-panel-item:hover { background: #f9fafb; }
+        .notif-panel-item.unread { background: rgba(16,185,129,0.04); }
+        .notif-panel-item-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            flex-shrink: 0;
+        }
+        .notif-panel-item-icon.success { background: rgba(34,197,94,0.12); color: #22c55e; }
+        .notif-panel-item-icon.warning { background: rgba(245,158,11,0.12); color: #f59e0b; }
+        .notif-panel-item-icon.info    { background: rgba(102,126,234,0.12); color: var(--secondary-color); }
+        .notif-panel-item-body { flex: 1; min-width: 0; }
+        .notif-panel-item-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .notif-panel-item-msg {
+            font-size: 12px;
+            color: var(--text-light);
+            line-height: 1.4;
+        }
+        .notif-panel-item-time {
+            font-size: 11px;
+            color: #9ca3af;
+            margin-top: 4px;
+        }
+        .notif-unread-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            flex-shrink: 0;
+            margin-top: 6px;
+        }
+        .notif-panel-empty {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-light);
+        }
+        .notif-panel-empty i {
+            font-size: 36px;
+            margin-bottom: 10px;
+            opacity: 0.3;
+            display: block;
+        }
+        .notif-panel-empty p { font-size: 13px; }
+        .notif-bell-wrapper {
+            position: relative;
+        }
+
+        /* ── Toast Notifications (bottom-right) ── */
         #notification-container {
             position: fixed;
             bottom: 24px;
@@ -526,7 +711,7 @@
 
         .notification {
             width: 320px;
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.97);
             backdrop-filter: blur(10px);
             border-radius: 12px;
             padding: 16px;
@@ -537,6 +722,8 @@
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             border-left: 4px solid var(--primary-color);
             pointer-events: auto;
+            position: relative;
+            overflow: hidden;
         }
 
         .notification.show {
@@ -545,7 +732,7 @@
 
         .notification-success { border-left-color: var(--success-color); }
         .notification-warning { border-left-color: var(--warning-color); }
-        .notification-info { border-left-color: var(--secondary-color); }
+        .notification-info    { border-left-color: var(--secondary-color); }
 
         .notification-icon {
             font-size: 20px;
@@ -553,51 +740,40 @@
         }
         .notification-success .notification-icon { color: var(--success-color); }
         .notification-warning .notification-icon { color: var(--warning-color); }
-        .notification-info .notification-icon { color: var(--secondary-color); }
+        .notification-info    .notification-icon { color: var(--secondary-color); }
 
-        .notification-content {
-            flex: 1;
-        }
-
+        .notification-content { flex: 1; }
         .notification-title {
             font-weight: 700;
             font-size: 14px;
             color: var(--text-dark);
             margin-bottom: 4px;
         }
-
         .notification-message {
             font-size: 13px;
             color: var(--text-light);
             line-height: 1.4;
         }
-
         .notification-progress {
             position: absolute;
-            bottom: 0;
-            left: 0;
+            bottom: 0; left: 0;
             height: 3px;
             background: rgba(0,0,0,0.05);
             width: 100%;
             border-radius: 0 0 0 12px;
         }
-        
         .notification.show .notification-progress::after {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            height: 100%;
-            width: 100%;
-            background: inherit;
+            top: 0; left: 0;
+            height: 100%; width: 100%;
             background-color: currentColor;
             opacity: 0.3;
             animation: notification-progress 4s linear forwards;
         }
-
         @keyframes notification-progress {
             from { width: 100%; }
-            to { width: 0%; }
+            to   { width: 0%; }
         }
 
         /* Online Deliverers Sidebar Section */
@@ -733,7 +909,7 @@
                 <div class="sidebar-section-label">Asosiy</div>
                 <ul class="sidebar-menu">
                     <li class="menu-item">
-                        <a href="{% url 'main' %}" class="menu-link {% if request.path == '/' %}active{% endif %}"
+                        <a href="{% url 'main' %}" class="menu-link {% if request.resolver_match.url_name == 'main' %}active{% endif %}"
                             data-title="Dashboard">
                             <span class="menu-icon"><i class="fa-solid fa-house"></i></span>
                             <span class="menu-text">Dashboard</span>
@@ -741,7 +917,7 @@
                     </li>
                     <li class="menu-item">
                         <a href="{% url 'hodimlar_list' %}"
-                            class="menu-link {% if '/hodimlar/' in request.path or '/edituser/' in request.path or '/createuser/' in request.path %}active{% endif %}"
+                            class="menu-link {% if request.resolver_match.url_name == 'hodimlar_list' or request.resolver_match.url_name == 'edituser' or request.resolver_match.url_name == 'crtuser' %}active{% endif %}"
                             data-title="Hodimlar">
                             <span class="menu-icon"><i class="fa-solid fa-users"></i></span>
                             <span class="menu-text">Hodimlar</span>
@@ -749,7 +925,7 @@
                     </li>
                     <li class="menu-item">
                         <a href="{% url 'mahsulotlar_list' %}"
-                            class="menu-link {% if '/mahsulotlar/' in request.path or '/product/' in request.path %}active{% endif %}"
+                            class="menu-link {% if request.resolver_match.url_name == 'mahsulotlar_list' or request.resolver_match.url_name == 'seeproduct' or request.resolver_match.url_name == 'createproduct' or request.resolver_match.url_name == 'delprdct' %}active{% endif %}"
                             data-title="Mahsulotlar">
                             <span class="menu-icon"><i class="fa-solid fa-box"></i></span>
                             <span class="menu-text">Mahsulotlar</span>
@@ -757,7 +933,7 @@
                     </li>
                     <li class="menu-item">
                         <a href="{% url 'mijozlar_list' %}"
-                            class="menu-link {% if '/mijozlar/' in request.path or '/mijoz/' in request.path %}active{% endif %}"
+                            class="menu-link {% if request.resolver_match.url_name == 'mijozlar_list' or request.resolver_match.url_name == 'mijoz_detail' %}active{% endif %}"
                             data-title="Mijozlar">
                             <span class="menu-icon"><i class="fa-solid fa-store"></i></span>
                             <span class="menu-text">Mijozlar</span>
@@ -768,7 +944,7 @@
                 <ul class="sidebar-menu">
                     <li class="menu-item">
                         <a href="{% url 'hisobotlar' %}"
-                            class="menu-link {% if '/hisobotlar/' in request.path %}active{% endif %}"
+                            class="menu-link {% if request.resolver_match.url_name == 'hisobotlar' or request.resolver_match.url_name == 'pazanda_hisobot' or request.resolver_match.url_name == 'yetkazuvchi_hisobot' %}active{% endif %}"
                             data-title="Hisobotlar">
                             <span class="menu-icon"><i class="fa-solid fa-chart-bar"></i></span>
                             <span class="menu-text">Hisobotlar</span>
@@ -777,7 +953,7 @@
                     {% if has_analytics %}
                     <li class="menu-item">
                         <a href="{% url 'analytics_dashboard' %}"
-                            class="menu-link {% if '/analytics/' in request.path %}active{% endif %}"
+                            class="menu-link {% if request.resolver_match.url_name == 'analytics_dashboard' %}active{% endif %}"
                             data-title="AI Analytics">
                             <span class="menu-icon"><i class="fa-solid fa-robot"></i></span>
                             <span class="menu-text">AI Analytics</span>
@@ -787,7 +963,7 @@
                     {% if has_map %}
                     <li class="menu-item">
                         <a href="{% url 'map_dashboard' %}"
-                            class="menu-link {% if '/map/' in request.path %}active{% endif %}"
+                            class="menu-link {% if request.resolver_match.url_name == 'map_dashboard' %}active{% endif %}"
                             data-title="Real-vaqt Xaritasi">
                             <span class="menu-icon"><i class="fa-solid fa-map-location-dot"></i></span>
                             <span class="menu-text">Xarita</span>
@@ -796,7 +972,7 @@
                     {% endif %}
                     <li class="menu-item">
                         <a href="{% url 'amallog' %}"
-                            class="menu-link {% if '/amallar/' in request.path %}active{% endif %}"
+                            class="menu-link {% if request.resolver_match.url_name == 'amallog' %}active{% endif %}"
                             data-title="Amallar Jurnali">
                             <span class="menu-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
                             <span class="menu-text">Amallar Jurnali</span>
@@ -804,7 +980,7 @@
                     </li>
                     <li class="menu-item">
                         <a href="{% url 'qaytarishlar' %}"
-                            class="menu-link {% if '/qaytarishlar/' in request.path %}active{% endif %}"
+                            class="menu-link {% if request.resolver_match.url_name == 'qaytarishlar' or request.resolver_match.url_name == 'qaytarish_tasdiq' or request.resolver_match.url_name == 'qaytarish_rad' %}active{% endif %}"
                             data-title="Qaytarilgan Mahsulotlar">
                             <span class="menu-icon"><i class="fa-solid fa-rotate-left"></i></span>
                             <span class="menu-text">Qaytarilgan Mahsulotlar</span>
@@ -812,15 +988,47 @@
                     </li>
                     <li class="menu-item">
                         <a href="{% url 'nasiya_savdolar' %}"
-                            class="menu-link {% if '/nasiya-savdolar/' in request.path %}active{% endif %}"
+                            class="menu-link {% if request.resolver_match.url_name == 'nasiya_savdolar' or request.resolver_match.url_name == 'add_nasiya_payment' %}active{% endif %}"
                             data-title="Nasiya Savdolar">
                             <span class="menu-icon"><i class="fa-solid fa-credit-card"></i></span>
                             <span class="menu-text">Nasiya Savdolar</span>
                         </a>
                     </li>
                     <li class="menu-item">
+                        <a href="{% url 'savdogar_nasiya_admin' %}"
+                            class="menu-link {% if request.resolver_match.url_name == 'savdogar_nasiya_admin' %}active{% endif %}"
+                            data-title="Savdogar Nasiya">
+                            <span class="menu-icon"><i class="fa-solid fa-hand-holding-dollar"></i></span>
+                            <span class="menu-text">Savdogar Nasiya</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{% url 'admin_savdogar_hisobot' %}"
+                            class="menu-link {% if request.resolver_match.url_name == 'admin_savdogar_hisobot' %}active{% endif %}"
+                            data-title="Savdogar Hisobot">
+                            <span class="menu-icon"><i class="fa-solid fa-store"></i></span>
+                            <span class="menu-text">Savdogar Hisobot</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{% url 'credit_settings' %}"
+                            class="menu-link {% if request.resolver_match.url_name == 'credit_settings' %}active{% endif %}"
+                            data-title="Nasiya Sozlamalari">
+                            <span class="menu-icon"><i class="fa-solid fa-file-contract"></i></span>
+                            <span class="menu-text">Nasiya Sozlamalari</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{% url 'billing_page' %}"
+                            class="menu-link {% if request.resolver_match.url_name == 'billing_page' or request.resolver_match.url_name == 'create_billing_link' or request.resolver_match.url_name == 'open_billing_link' %}active{% endif %}"
+                            data-title="Billing">
+                            <span class="menu-icon"><i class="fa-solid fa-wallet"></i></span>
+                            <span class="menu-text">Billing{% if billing_data.is_current %} &bull; OK{% endif %}</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
                         <a href="{% url 'select_plan_page' %}"
-                            class="menu-link {% if '/select-plan-page/' in request.path %}active{% endif %}"
+                            class="menu-link {% if request.resolver_match.url_name == 'select_plan_page' or request.resolver_match.url_name == 'select_plan' or request.resolver_match.url_name == 'select_custom_plan' or request.resolver_match.url_name == 'request_trial' %}active{% endif %}"
                             data-title="Tarifni O'zgartirish">
                             <span class="menu-icon"><i class="fa-solid fa-star"></i></span>
                             <span class="menu-text">Tarifni O'zgartirish</span>
@@ -829,7 +1037,7 @@
                     {% if request.user.type == 'ega' and backup_type != 'none' %}
                     <li class="menu-item">
                         <a href="{% url 'restore_view' %}"
-                            class="menu-link {% if '/backup/restore/' in request.path %}active{% endif %}"
+                            class="menu-link {% if request.resolver_match.url_name == 'restore_view' or request.resolver_match.url_name == 'prepare_backup_page' or request.resolver_match.url_name == 'download_backup' %}active{% endif %}"
                             data-title="Ma'lumotlarni Tiklash">
                             <span class="menu-icon"><i class="fa-solid fa-cloud-arrow-up"></i></span>
                             <span class="menu-text">Ma'lumotlarni Tiklash</span>
@@ -878,6 +1086,27 @@
             </div>
 
             <div class="header-actions">
+                <!-- Notification Bell -->
+                <div class="notif-bell-wrapper" id="notifBellWrapper">
+                    <div class="notif-bell-btn" id="notifBellBtn" onclick="toggleNotifPanel(event)" title="Bildirishnomalar">
+                        <i class="fa-solid fa-bell"></i>
+                        <span class="notif-bell-badge" id="notifBadge">0</span>
+                    </div>
+                    <!-- Notification Panel -->
+                    <div class="notif-panel" id="notifPanel">
+                        <div class="notif-panel-header">
+                            <h4><i class="fa-solid fa-bell" style="margin-right:8px;opacity:0.7;"></i>Bildirishnomalar</h4>
+                            <button class="notif-panel-clear" onclick="clearAllNotifs()">Hammasini o'qish</button>
+                        </div>
+                        <div class="notif-panel-list" id="notifPanelList">
+                            <div class="notif-panel-empty" id="notifPanelEmpty">
+                                <i class="fa-solid fa-bell-slash"></i>
+                                <p>Hozircha bildirishnoma yo'q</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="user-profile" id="userProfile" onclick="toggleUserDropdown()">
                     <img src="{% if request.user.rasmi %}{{ request.user.rasmi.url }}{% else %}{% static 'images/default_avatar.jpg' %}{% endif %}"
                         alt="Avatar" class="user-avatar">
@@ -1046,8 +1275,105 @@
             }
         });
 
-        // Close dropdown when clicking outside
+        // Notification Bell Logic
+        const notifHistory = [];
+        let unreadCount = 0;
+
+        window.toggleNotifPanel = function(event) {
+            if (event) { event.preventDefault(); event.stopPropagation(); }
+            const panel = document.getElementById('notifPanel');
+            const bellWrapper = document.getElementById('notifBellWrapper');
+            panel.classList.toggle('open');
+            if (panel.classList.contains('open')) {
+                // Mark all as read when opening
+                markAllRead();
+            }
+        };
+
+        function markAllRead() {
+            unreadCount = 0;
+            updateBellBadge();
+            document.querySelectorAll('.notif-panel-item.unread').forEach(el => el.classList.remove('unread'));
+            document.querySelectorAll('.notif-unread-dot').forEach(el => el.remove());
+        }
+
+        window.clearAllNotifs = function() {
+            notifHistory.length = 0;
+            unreadCount = 0;
+            updateBellBadge();
+            renderNotifPanel();
+        };
+
+        function updateBellBadge() {
+            const badge = document.getElementById('notifBadge');
+            const btn   = document.getElementById('notifBellBtn');
+            if (unreadCount > 0) {
+                badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+                badge.classList.add('visible');
+                btn.classList.add('has-unread');
+            } else {
+                badge.classList.remove('visible');
+                btn.classList.remove('has-unread');
+            }
+        }
+
+        function ringBell() {
+            const btn = document.getElementById('notifBellBtn');
+            btn.classList.add('ringing');
+            setTimeout(() => btn.classList.remove('ringing'), 700);
+        }
+
+        function addToNotifPanel(title, message, type) {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('uz-UZ', {hour:'2-digit', minute:'2-digit'});
+            notifHistory.unshift({title, message, type, timeStr, unread: true});
+            if (notifHistory.length > 30) notifHistory.pop();
+            const isPanelOpen = document.getElementById('notifPanel').classList.contains('open');
+            if (!isPanelOpen) {
+                unreadCount++;
+                updateBellBadge();
+                ringBell();
+            }
+            renderNotifPanel();
+        }
+
+        function renderNotifPanel() {
+            const list  = document.getElementById('notifPanelList');
+            const empty = document.getElementById('notifPanelEmpty');
+            if (notifHistory.length === 0) {
+                list.innerHTML = '';
+                list.appendChild(empty);
+                empty.style.display = 'block';
+                return;
+            }
+            empty.style.display = 'none';
+            const icons = {
+                success: 'fa-circle-check',
+                warning: 'fa-triangle-exclamation',
+                info:    'fa-circle-info'
+            };
+            list.innerHTML = notifHistory.map((n, i) => `
+                <div class="notif-panel-item ${n.unread ? 'unread' : ''}">
+                    <div class="notif-panel-item-icon ${n.type}">
+                        <i class="fa-solid ${icons[n.type] || 'fa-circle-info'}"></i>
+                    </div>
+                    <div class="notif-panel-item-body">
+                        <div class="notif-panel-item-title">${n.title}</div>
+                        <div class="notif-panel-item-msg">${n.message}</div>
+                        <div class="notif-panel-item-time">${n.timeStr}</div>
+                    </div>
+                    ${n.unread ? '<span class="notif-unread-dot"></span>' : ''}
+                </div>
+            `).join('');
+        }
+
+        // Close notification panel when clicking outside
         document.addEventListener('click', function (event) {
+            const bellWrapper = document.getElementById('notifBellWrapper');
+            const panel = document.getElementById('notifPanel');
+            if (bellWrapper && !bellWrapper.contains(event.target)) {
+                panel.classList.remove('open');
+            }
             const userProfile = document.getElementById('userProfile');
             if (userProfile && !userProfile.contains(event.target)) {
                 userProfile.classList.remove('active');
@@ -1111,7 +1437,9 @@
                     try {
                         const data = JSON.parse(e.data);
                         if (data.type === 'pong') return; // Ignore pong
-                        showNotification(data.title, data.message, data.type);
+                        const notifType = data.type || 'info';
+                        showNotification(data.title, data.message, notifType);
+                        addToNotifPanel(data.title, data.message, notifType);
                     } catch (err) {
                         console.error("Notification WS Error:", err);
                     }

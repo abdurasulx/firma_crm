@@ -380,6 +380,29 @@
         {% endfor %}
     </div>
 </div>
+
+{% if can_request_trial or trial_pending %}
+<div style="margin-top: 24px; background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); border-radius: 16px; padding: 24px 28px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; box-shadow: 0 8px 24px rgba(109,40,217,0.25);">
+    <div style="display: flex; align-items: center; gap: 16px;">
+        <div style="width: 52px; height: 52px; background: rgba(255,255,255,0.15); border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <i class="fa-solid fa-flask" style="font-size: 22px; color: white;"></i>
+        </div>
+        <div>
+            <div style="font-size: 16px; font-weight: 800; color: white; margin-bottom: 4px;">🎁 1 Oylik Bepul Sinov Davri</div>
+            <div style="font-size: 13px; color: rgba(255,255,255,0.85);">Ro'yxatdan o'tganingizga {{ days_since_creation }} kun bo'ldi. To'lovsiz 30 kun barcha imkoniyatlardan foydalaning!</div>
+        </div>
+    </div>
+    {% if can_request_trial %}
+    <a href="{% url 'request_trial' %}" style="background: white; color: #6d28d9; padding: 12px 24px; border-radius: 12px; text-decoration: none; font-weight: 800; font-size: 14px; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+        <i class="fa-solid fa-flask" style="margin-right: 6px;"></i> Sinov Muddatini So'rash
+    </a>
+    {% else %}
+    <div style="background: rgba(255,255,255,0.2); color: white; padding: 12px 24px; border-radius: 12px; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+        <i class="fa-solid fa-spinner fa-spin"></i> So'rovingiz ko'rib chiqilmoqda...
+    </div>
+    {% endif %}
+</div>
+{% endif %}
 {% elif request.user.type == 'ega' and not has_pending_request %}
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); flex-wrap: wrap; gap: 15px;">
     <div>
@@ -424,8 +447,9 @@
         {% if request.company.plan or request.company.is_custom_plan %}
             {% with plan_price=request.company.plan.price|default:request.company.custom_price %}
             {% if plan_price > 0 %}
-            <a href="{% url 'click_pay_redirect' %}" target="_blank" class="action-btn" style="background: #00a5ff; border-color: #00a5ff; color: white; padding: 12px 20px;">
-                <i class="fa-solid fa-credit-card" style="color: white; margin-right: 8px;"></i> Click to'lov
+            <a href="{% url 'billing_page' %}" class="action-btn" style="background: {% if billing_data.is_current %}#ecfdf5{% else %}#00a5ff{% endif %}; border-color: {% if billing_data.is_current %}#bbf7d0{% else %}#00a5ff{% endif %}; color: {% if billing_data.is_current %}#166534{% else %}white{% endif %}; padding: 12px 20px;">
+                <i class="fa-solid fa-wallet" style="color: inherit; margin-right: 8px;"></i>
+                {% if billing_data.is_current %}Billing holati{% else %}Billing va to'lov{% endif %}
             </a>
             {% endif %}
             {% endwith %}

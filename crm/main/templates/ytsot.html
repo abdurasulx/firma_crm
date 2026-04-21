@@ -1,4 +1,4 @@
-{% extends 'ytbase.html' %}
+{% extends base_template|default:'ytbase.html' %}
 {% load static %}
 
 {% block title %}Yangi sotuv - StockFirm{% endblock %}
@@ -268,8 +268,8 @@
 
 <div class="sales-container">
     <div style="margin-bottom: 2rem;">
-        <h1 style="font-size: 1.5rem; font-weight: 800; color: var(--slate-900);">🛒 Yangi sotuv</h1>
-        <p style="color: var(--slate-500); font-weight: 500;">Mahsulotlarni va haridorni tanlang</p>
+        <h1 style="font-size: 1.5rem; font-weight: 800; color: var(--slate-900);">{{ sales_title|default:"Yangi sotuv" }}</h1>
+        <p style="color: var(--slate-500); font-weight: 500;">{{ sales_subtitle|default:"Mahsulotlarni va haridorni tanlang" }}</p>
     </div>
 
     <form method="POST" enctype="multipart/form-data" id="sotish-form">
@@ -341,6 +341,35 @@
             <input type="hidden" name="st" id="pay-input" value="naqd">
         </div>
 
+        {% if credit_terms %}
+        <div class="form-card" id="credit-card" style="display:none;">
+            <label class="form-label">Nasiya muddati</label>
+            {% if credit_sales_enabled|default:True %}
+            <select name="credit_term_months" id="credit-term" class="form-select" onchange="recalc()">
+                {% for months, percent in credit_terms.items %}
+                <option value="{{ months }}">{{ months }} oy - {{ percent|floatformat:0 }}% ustama</option>
+                {% endfor %}
+            </select>
+            <div style="margin-top:12px; padding:12px; border-radius:12px; background:#f8fafc; border:1px solid #e2e8f0;">
+                <div style="display:flex; justify-content:space-between; gap:12px; margin-bottom:6px;">
+                    <span style="color:#64748b; font-weight:700;">Asosiy summa</span>
+                    <strong id="credit-base">0 so'm</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between; gap:12px; margin-bottom:6px;">
+                    <span style="color:#64748b; font-weight:700;">Ustama</span>
+                    <strong id="credit-markup">0 so'm</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between; gap:12px;">
+                    <span style="color:#0f172a; font-weight:900;">Shartnoma summasi</span>
+                    <strong id="credit-total" style="color:#dc2626;">0 so'm</strong>
+                </div>
+            </div>
+            {% else %}
+            <div style="padding:14px;border-radius:12px;background:#fef2f2;color:#991b1b;font-weight:800;">Bu firmada nasiya savdo o'chirilgan.</div>
+            {% endif %}
+        </div>
+        {% endif %}
+
         <div class="form-card">
             <label class="form-label">Chek rasmi <span style="color:var(--danger)">*</span></label>
             <label for="id_rasm" class="upload-area" id="upload-label">
@@ -380,6 +409,11 @@
     PRODUCT_DATA.forEach(p => BY_IDX[p.idx] = p);
 
     const totals = {};
+    const CREDIT_MARKUPS = {
+        {% for months, percent in credit_terms.items %}
+        "{{ months }}": {{ percent|stringformat:"f" }}{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    };
 
     function stepBy(idx, delta) {
         const p = BY_IDX[idx];
@@ -404,7 +438,18 @@
             const p = BY_IDX[idx];
             if (p) total += totals[idx] * p.narx;
         }
-        document.getElementById('total-display').textContent = total.toLocaleString('uz-UZ') + " so'm";
+        const payType = document.getElementById('pay-input').value;
+        let displayTotal = total;
+        if (payType === 'nasiya') {
+            const term = document.getElementById('credit-term');
+            const percent = term ? Number(CREDIT_MARKUPS[term.value] || 0) : 0;
+            const markup = total * percent / 100;
+            displayTotal = total + markup;
+            document.getElementById('credit-base').textContent = total.toLocaleString('uz-UZ') + " so'm";
+            document.getElementById('credit-markup').textContent = markup.toLocaleString('uz-UZ') + " so'm";
+            document.getElementById('credit-total').textContent = displayTotal.toLocaleString('uz-UZ') + " so'm";
+        }
+        document.getElementById('total-display').textContent = displayTotal.toLocaleString('uz-UZ') + " so'm";
         
         const hasSelection = Object.values(totals).some(val => val > 0);
         document.getElementById('submit-btn').disabled = !hasSelection;
@@ -414,6 +459,9 @@
         document.querySelectorAll('.pay-option').forEach(opt => opt.classList.remove('active'));
         el.classList.add('active');
         document.getElementById('pay-input').value = val;
+        const creditCard = document.getElementById('credit-card');
+        if (creditCard) creditCard.style.display = val === 'nasiya' ? 'block' : 'none';
+        recalc();
     }
 
     function onFileChange(input) {

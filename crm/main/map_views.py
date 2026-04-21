@@ -98,6 +98,8 @@ def api_map_data(request):
     
     sales_data = []
     for s in sales:
+        if not s.yetkazib_beruvchi:
+            continue
         sales_data.append({
             'shop_name': s.haridor_dukon.nomi,
             'summa': float(s.summa),

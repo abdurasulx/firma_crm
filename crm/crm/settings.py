@@ -19,13 +19,24 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load .env file
 load_dotenv(BASE_DIR / '.env')
+LOG_DIR = BASE_DIR / 'logs'
+LOG_DIR.mkdir(exist_ok=True)
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-fallback-key-for-dev')
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY') or os.getenv('SECRET_KEY', 'django-insecure-fallback-key-for-dev')
+
+CLICK_SERVICE_ID = os.getenv('CLICK_SERVICE_ID') or os.getenv('SERVICE_ID', '')
+CLICK_MERCHANT_ID = os.getenv('CLICK_MERCHANT_ID') or os.getenv('MERCHANT_ID', '')
+CLICK_SECRET_KEY = os.getenv('CLICK_SECRET_KEY') or os.getenv('SECRET_KEY', '')
+CLICK_ALLOWED_IPS = [
+    ip.strip()
+    for ip in os.getenv('CLICK_ALLOWED_IPS', '').split(',')
+    if ip.strip()
+]
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
@@ -35,8 +46,9 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
 CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',')
 if not any(CSRF_TRUSTED_ORIGINS):
     CSRF_TRUSTED_ORIGINS = [
-        'https://crm.stockfirm.uz',
-        'https://www.crm.stockfirm.uz',
+        'https://stockfirm.uz',
+        'https://www.stockfirm.uz',
+        'https://admin.stockfirm.uz',
         'https://*.stockfirm.uz',
     ]
 
@@ -104,12 +116,29 @@ WSGI_APPLICATION = 'crm.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+DB_ENGINE = os.getenv('DB_ENGINE', 'sqlite').lower()
+
+if DB_ENGINE == 'mysql':
+    DATABASES = {
+        'default': {
+            'ENGINE': os.getenv('DB_BACKEND', 'mysql.connector.django'),
+            'NAME': os.getenv('DB_NAME'),
+            'USER': os.getenv('DB_USER'),
+            'PASSWORD': os.getenv('DB_PASSWORD'),
+            'HOST': os.getenv('DB_HOST', '127.0.0.1'),
+            'PORT': os.getenv('DB_PORT', '3306'),
+            'OPTIONS': {
+                'charset': 'utf8mb4',
+            },
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.getenv('SQLITE_PATH', BASE_DIR / 'db.sqlite3'),
+        }
+    }
 
 
 # Password validation
@@ -157,6 +186,13 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 AUTH_USER_MODEL = 'main.User' 
+AUTHENTICATION_BACKENDS = [
+    'main.auth_backends.CompanyAwareModelBackend',
+]
+
+# Username is intentionally unique per company, not globally.
+# CompanyAwareModelBackend scopes authentication by the current tenant/company.
+SILENCED_SYSTEM_CHECKS = ['auth.W004']
 
 # Default primary key field typex
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
@@ -173,5 +209,39 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
 # Telegram Bot Settings
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', 'YOUR_BOT_TOKEN_HERE')
-BASE_DOMAIN = os.getenv('BASE_DOMAIN', 'localhost:8000')
+BASE_DOMAIN = os.getenv('BASE_DOMAIN', 'stockfirm.uz')
+LANDING_DOMAINS = [
+    domain.strip().split(':')[0]
+    for domain in os.getenv('LANDING_DOMAINS', f'{BASE_DOMAIN},www.{BASE_DOMAIN}').split(',')
+    if domain.strip()
+]
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 LOGIN_URL = '/login/'
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'click': {
+            'format': '%(asctime)s %(levelname)s %(message)s',
+        },
+    },
+    'handlers': {
+        'click_file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOG_DIR / 'click.log',
+            'maxBytes': 5 * 1024 * 1024,
+            'backupCount': 10,
+            'formatter': 'click',
+            'encoding': 'utf-8',
+        },
+    },
+    'loggers': {
+        'click': {
+            'handlers': ['click_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}

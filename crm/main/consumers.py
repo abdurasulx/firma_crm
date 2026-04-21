@@ -1,6 +1,9 @@
 import json
+import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
+
+logger = logging.getLogger(__name__)
 
 class NotificationConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -10,8 +13,12 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         headers = dict(self.scope['headers'])
         host = headers.get(b'host', b'').decode()
         subdomain = host.split('.')[0] if '.' in host else 'default'
-        with open('/tmp/ws_debug.log', 'a') as f:
-            f.write(f"CONNECT ATTEMPT FROM {self.scope['user']} (Auth: {self.scope['user'].is_authenticated}) HOST: {host}\n")
+        logger.debug(
+            "WS connect attempt user=%s authenticated=%s host=%s",
+            self.scope['user'],
+            self.scope['user'].is_authenticated,
+            host,
+        )
         
         if self.scope["user"].is_authenticated:
             self.group_name = f"notifications_{subdomain}"

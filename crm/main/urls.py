@@ -2,15 +2,16 @@ from django.conf import settings
 from django.conf.urls.static import static
 from .views import (
     login, main, end_setup, add_haridor, profile_view, crtuser, editusr, 
-    sotish, seemahsulot, createmahsulot, deleteprdct, addmiqdor, 
+    sotish, savdogar_sotish, savdogar_savdolar, savdogar_hisobot, admin_savdogar_hisobot, credit_settings_view, seemahsulot, createmahsulot, deleteprdct, addmiqdor, 
     add_yuklama, logout_view, check_new_deliveries, pz_sorov_tarixi, 
     yetkazuvchi_hisobot, pazanda_hisobot, 
     select_plan, select_custom_plan, select_plan_page, yt_navigation,
+    billing_page, create_billing_link, open_billing_link,
     request_trial
 )
 from .hisobot_views import hisobotlar_view
 from .list_views import hodimlar_list, mahsulotlar_list
-from .nasiya_views import nasiya_savdolar_view, add_nasiya_payment
+from .nasiya_views import nasiya_savdolar_view, add_nasiya_payment, savdogar_nasiya_admin_view
 from .mijoz_views import mijozlar_list, mijoz_detail
 from .log_views import amallog_view, savdo_chek
 from .qaytarish_views import qaytarish_view, qaytarishlar_view, qaytarish_tasdiq, qaytarish_rad
@@ -29,6 +30,7 @@ urlpatterns = [
     path('logout/', logout_view, name='logout'),
     path('hisobotlar/', hisobotlar_view, name='hisobotlar'),
     path('nasiya-savdolar/', nasiya_savdolar_view, name='nasiya_savdolar'),
+    path('savdogar-nasiya/', savdogar_nasiya_admin_view, name='savdogar_nasiya_admin'),
     path('nasiya-payment/<int:savdo_id>/', add_nasiya_payment, name='add_nasiya_payment'),
     path('mijozlar/', mijozlar_list, name='mijozlar_list'),
     path('mijoz/<int:mijoz_id>/', mijoz_detail, name='mijoz_detail'),
@@ -44,11 +46,19 @@ urlpatterns = [
     path('add/miqdor/', addmiqdor, name='add_miqdor'),
     path('add/yuklama', add_yuklama, name='add_yuklama'),
     path('sotish/' , sotish, name='sotish'),
+    path('savdogar/sotish/', savdogar_sotish, name='savdogar_sotish'),
+    path('savdogar/savdolar/', savdogar_savdolar, name='savdogar_savdolar'),
+    path('savdogar/hisobot/', savdogar_hisobot, name='savdogar_hisobot'),
+    path('admin/savdogar-hisobot/', admin_savdogar_hisobot, name='admin_savdogar_hisobot'),
+    path('settings/credit/', credit_settings_view, name='credit_settings'),
     path('api/check-new-deliveries/', check_new_deliveries, name='api_check_deliveries'),
     path('pazanda/sorovlar/', pz_sorov_tarixi, name='pz_sorov_tarixi'),
     path('hisobot/yetkazuvchi/<str:username>/', yetkazuvchi_hisobot, name='yetkazuvchi_hisobot'),
     path('hisobot/pazanda/<str:username>/', pazanda_hisobot, name='pazanda_hisobot'),
     path('navigation/', yt_navigation, name='yt_navigation'),
+    path('billing/', billing_page, name='billing_page'),
+    path('billing/create-link/', create_billing_link, name='create_billing_link'),
+    path('billing/open/<str:token>/', open_billing_link, name='open_billing_link'),
     path('amallar/', amallog_view, name='amallog'),
     path('savdo/<int:savdo_id>/chek/', savdo_chek, name='savdo_chek'),
     path('qaytarish/', qaytarish_view, name='qaytarish'),

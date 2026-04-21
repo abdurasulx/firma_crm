@@ -5,7 +5,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}StockFirm CRM - Pazanda{% endblock %}</title>
+    <title>{% block title %}StockFirm CRM - Ishlab chiqaruvchi{% endblock %}</title>
+    <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
@@ -286,17 +287,103 @@
             }
         }
 
-        /* Notifications */
-        #notification-container {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            pointer-events: none;
+        /* ── Notification Bell ── */
+        .notif-bell-wrapper { position: relative; }
+        .notif-bell-btn {
+            width: 38px; height: 38px;
+            border-radius: 10px;
+            background: #f1f5f9;
+            border: 1px solid transparent;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-muted);
+            font-size: 17px;
+            position: relative;
         }
+        .notif-bell-btn:hover {
+            background: white;
+            border-color: var(--border);
+            color: var(--text-dark);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+        .notif-bell-btn.has-unread { color: var(--primary); }
+        .notif-bell-badge {
+            position: absolute; top: 5px; right: 5px;
+            width: 17px; height: 17px;
+            background: #ef4444;
+            border-radius: 50%;
+            font-size: 9px; font-weight: 700; color: white;
+            display: flex; align-items: center; justify-content: center;
+            border: 2px solid white;
+            opacity: 0; transform: scale(0);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .notif-bell-badge.visible { opacity: 1; transform: scale(1); }
+        @keyframes bell-ring {
+            0%{transform:rotate(0)} 10%{transform:rotate(-20deg)}
+            30%{transform:rotate(20deg)} 50%{transform:rotate(-15deg)}
+            70%{transform:rotate(10deg)} 90%{transform:rotate(-5deg)} 100%{transform:rotate(0)}
+        }
+        .notif-bell-btn.ringing i { animation: bell-ring 0.6s ease; }
+
+        /* ── Notification Panel ── */
+        .notif-panel {
+            position: absolute; top: calc(100% + 10px); right: 0;
+            width: 340px; background: white;
+            border-radius: 14px;
+            box-shadow: 0 16px 40px rgba(0,0,0,0.12);
+            border: 1px solid var(--border);
+            overflow: hidden;
+            opacity: 0; visibility: hidden;
+            transform: translateY(-8px);
+            transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+            z-index: 500;
+        }
+        .notif-panel.open { opacity: 1; visibility: visible; transform: translateY(0); }
+        .notif-panel-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border);
+        }
+        .notif-panel-header h4 { font-size: 14px; font-weight: 700; color: var(--text-dark); }
+        .notif-panel-clear {
+            font-size: 11px; color: var(--primary); font-weight: 600;
+            background: none; border: none; cursor: pointer;
+            padding: 3px 7px; border-radius: 5px;
+            transition: background 0.2s;
+        }
+        .notif-panel-clear:hover { background: #fef3c7; }
+        .notif-panel-list { max-height: 340px; overflow-y: auto; scrollbar-width: thin; }
+        .notif-panel-item {
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 12px 18px; border-bottom: 1px solid #f3f4f6;
+            transition: background 0.15s;
+        }
+        .notif-panel-item:hover { background: #f9fafb; }
+        .notif-panel-item.unread { background: rgba(245,158,11,0.04); }
+        .notif-panel-icon {
+            width: 32px; height: 32px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; flex-shrink: 0;
+        }
+        .notif-panel-icon.success { background: rgba(16,185,129,0.12); color: #10b981; }
+        .notif-panel-icon.warning { background: rgba(245,158,11,0.12); color: #f59e0b; }
+        .notif-panel-icon.info    { background: rgba(59,130,246,0.12); color: #3b82f6; }
+        .notif-panel-body { flex: 1; min-width: 0; }
+        .notif-panel-title {
+            font-size: 12px; font-weight: 600; color: var(--text-dark);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .notif-panel-msg { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
+        .notif-panel-time { font-size: 10px; color: #9ca3af; margin-top: 3px; }
+        .notif-unread-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: var(--primary); flex-shrink: 0; margin-top: 5px;
+        }
+        .notif-panel-empty { text-align: center; padding: 36px 16px; color: var(--text-muted); }
+        .notif-panel-empty i { font-size: 32px; opacity: 0.3; display: block; margin-bottom: 8px; }
+        .notif-panel-empty p { font-size: 12px; }
 
         .notification {
             width: 320px;
@@ -385,8 +472,8 @@
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-brand">
             <a href="{% url 'main' %}" style="text-decoration:none;">
-                <div class="logo-text">🍳 StockFirm</div>
-                <div class="logo-sub">Pazanda Moduli</div>
+                <div class="logo-text">🏭 StockFirm</div>
+                <div class="logo-sub">Ishlab chiqarish moduli</div>
             </a>
         </div>
 
@@ -396,37 +483,37 @@
                 alt="avatar">
             <div class="user-info">
                 <div class="user-name">{{ request.user.tuliq_ismi }}</div>
-                <div class="user-role">👨‍🍳 Pazanda</div>
+                <div class="user-role">Ishlab chiqaruvchi</div>
             </div>
         </div>
 
         <nav class="sidebar-nav">
             <div class="nav-section-label">Bosh sahifa</div>
-            <a href="{% url 'main' %}" class="nav-item {% block nav_main %}{% endblock %}">
+            <a href="{% url 'main' %}" class="nav-item {% if request.resolver_match.url_name == 'main' %}active{% endif %} {% block nav_main %}{% endblock %}">
                 <i class="fa-solid fa-house"></i>
                 <span>Dashboard</span>
             </a>
 
             <div class="nav-section-label">Faoliyat</div>
-            <a href="{% url 'add_miqdor' %}" class="nav-item {% block nav_miqdor %}{% endblock %}">
+            <a href="{% url 'add_miqdor' %}" class="nav-item {% if request.resolver_match.url_name == 'add_miqdor' %}active{% endif %} {% block nav_miqdor %}{% endblock %}">
                 <i class="fa-solid fa-plus-circle"></i>
-                <span>Miqdor Qo'shish</span>
+                <span>Ishlab chiqarish</span>
             </a>
-            <a href="{% url 'add_yuklama' %}" class="nav-item {% block nav_yuklama %}{% endblock %}">
+            <a href="{% url 'add_yuklama' %}" class="nav-item {% if request.resolver_match.url_name == 'add_yuklama' %}active{% endif %} {% block nav_yuklama %}{% endblock %}">
                 <i class="fa-solid fa-truck-fast"></i>
                 <span>Yuklama Yaratish</span>
             </a>
-            <a href="{% url 'pz_sorov_tarixi' %}" class="nav-item {% block nav_sorovlar %}{% endblock %}">
+            <a href="{% url 'pz_sorov_tarixi' %}" class="nav-item {% if request.resolver_match.url_name == 'pz_sorov_tarixi' %}active{% endif %} {% block nav_sorovlar %}{% endblock %}">
                 <i class="fa-solid fa-clock-rotate-left"></i>
                 <span>So'rovlar Tarixi</span>
             </a>
-            <a href="{% url 'pazanda_hisobot' request.user.username %}" class="nav-item">
+            <a href="{% url 'pazanda_hisobot' request.user.username %}" class="nav-item {% if request.resolver_match.url_name == 'pazanda_hisobot' %}active{% endif %}">
                 <i class="fa-solid fa-chart-line"></i>
                 <span>Kunlik Hisobot</span>
             </a>
 
             <div class="nav-section-label">Profil</div>
-            <a href="{% url 'profile' request.user.username %}" class="nav-item {% block nav_profile %}{% endblock %}">
+            <a href="{% url 'profile' request.user.username %}" class="nav-item {% if request.resolver_match.url_name == 'profile' %}active{% endif %} {% block nav_profile %}{% endblock %}">
                 <i class="fa-solid fa-user-circle"></i>
                 <span>Mening Profilim</span>
             </a>
@@ -449,10 +536,29 @@
                 </button>
                 <div class="topbar-left">
                     <div class="page-title">{% block page_title %}Dashboard{% endblock %}</div>
-                    <div class="page-subtitle">{% block page_subtitle %}StockFirm – Pazanda moduli{% endblock %}</div>
+                    <div class="page-subtitle">{% block page_subtitle %}StockFirm – ishlab chiqarish moduli{% endblock %}</div>
                 </div>
             </div>
             <div class="topbar-right">
+                <!-- Notification Bell -->
+                <div class="notif-bell-wrapper" id="notifBellWrapper">
+                    <div class="notif-bell-btn" id="notifBellBtn" onclick="toggleNotifPanel(event)" title="Bildirishnomalar">
+                        <i class="fa-solid fa-bell"></i>
+                        <span class="notif-bell-badge" id="notifBadge">0</span>
+                    </div>
+                    <div class="notif-panel" id="notifPanel">
+                        <div class="notif-panel-header">
+                            <h4><i class="fa-solid fa-bell" style="margin-right:6px;opacity:0.6;"></i>Bildirishnomalar</h4>
+                            <button class="notif-panel-clear" onclick="clearAllNotifs()">Hammasini o'qish</button>
+                        </div>
+                        <div class="notif-panel-list" id="notifPanelList">
+                            <div class="notif-panel-empty" id="notifPanelEmpty">
+                                <i class="fa-solid fa-bell-slash"></i>
+                                <p>Hozircha bildirishnoma yo'q</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <a href="{% url 'profile' request.user.username %}" style="text-decoration:none;">
                     <img src="{% if request.user.rasmi %}{{ request.user.rasmi }}{% else %}{% static 'images/default_avatar.jpg' %}{% endif %}"
                         style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid var(--primary);"
@@ -496,6 +602,74 @@
             document.getElementById('sidebar').classList.remove('open');
             document.getElementById('sidebarOverlay').classList.remove('active');
         }
+
+        // Notification Bell Logic
+        const notifHistory = [];
+        let unreadCount = 0;
+
+        window.toggleNotifPanel = function(event) {
+            if (event) { event.preventDefault(); event.stopPropagation(); }
+            const panel = document.getElementById('notifPanel');
+            panel.classList.toggle('open');
+            if (panel.classList.contains('open')) markAllRead();
+        };
+        function markAllRead() {
+            unreadCount = 0; updateBellBadge();
+            document.querySelectorAll('.notif-panel-item.unread').forEach(el => el.classList.remove('unread'));
+            document.querySelectorAll('.notif-unread-dot').forEach(el => el.remove());
+        }
+        window.clearAllNotifs = function() {
+            notifHistory.length = 0; unreadCount = 0;
+            updateBellBadge(); renderNotifPanel();
+        };
+        function updateBellBadge() {
+            const badge = document.getElementById('notifBadge');
+            const btn   = document.getElementById('notifBellBtn');
+            if (unreadCount > 0) {
+                badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+                badge.classList.add('visible'); btn.classList.add('has-unread');
+            } else {
+                badge.classList.remove('visible'); btn.classList.remove('has-unread');
+            }
+        }
+        function ringBell() {
+            const btn = document.getElementById('notifBellBtn');
+            btn.classList.add('ringing');
+            setTimeout(() => btn.classList.remove('ringing'), 700);
+        }
+        function addToNotifPanel(title, message, type) {
+            const timeStr = new Date().toLocaleTimeString('uz-UZ', {hour:'2-digit', minute:'2-digit'});
+            notifHistory.unshift({title, message, type, timeStr, unread: true});
+            if (notifHistory.length > 30) notifHistory.pop();
+            if (!document.getElementById('notifPanel').classList.contains('open')) {
+                unreadCount++; updateBellBadge(); ringBell();
+            }
+            renderNotifPanel();
+        }
+        function renderNotifPanel() {
+            const list  = document.getElementById('notifPanelList');
+            const empty = document.getElementById('notifPanelEmpty');
+            if (notifHistory.length === 0) {
+                list.innerHTML = ''; list.appendChild(empty); empty.style.display = 'block'; return;
+            }
+            empty.style.display = 'none';
+            const icons = { success:'fa-circle-check', warning:'fa-triangle-exclamation', info:'fa-circle-info' };
+            list.innerHTML = notifHistory.map(n => `
+                <div class="notif-panel-item ${n.unread ? 'unread' : ''}">
+                    <div class="notif-panel-icon ${n.type}"><i class="fa-solid ${icons[n.type]||'fa-circle-info'}"></i></div>
+                    <div class="notif-panel-body">
+                        <div class="notif-panel-title">${n.title}</div>
+                        <div class="notif-panel-msg">${n.message}</div>
+                        <div class="notif-panel-time">${n.timeStr}</div>
+                    </div>
+                    ${n.unread ? '<span class="notif-unread-dot"></span>' : ''}
+                </div>
+            `).join('');
+        }
+        document.addEventListener('click', function(e) {
+            const bw = document.getElementById('notifBellWrapper');
+            if (bw && !bw.contains(e.target)) document.getElementById('notifPanel').classList.remove('open');
+        });
 
         // WebSocket Notifications & Heartbeat
         (function() {
@@ -546,7 +720,9 @@
                 notificationSocket.onmessage = function(e) {
                     const data = json_safe_parse(e.data);
                     if (data && data.title && data.message) {
-                        showNotification(data.title, data.message, data.type || 'info');
+                        const t = data.type || 'info';
+                        showNotification(data.title, data.message, t);
+                        addToNotifPanel(data.title, data.message, t);
                     }
                 };
 

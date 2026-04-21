@@ -98,6 +98,10 @@ def mahsulotlar_list(request):
     tur_filter = request.GET.get('tur', '')
     if tur_filter:
         mahsulotlar = mahsulotlar.filter(turi__id=tur_filter)
+
+    warehouse_filter = request.GET.get('warehouse_type', '')
+    if warehouse_filter:
+        mahsulotlar = mahsulotlar.filter(warehouse_type=warehouse_filter)
     
     # Sorting
     sort_order = request.GET.get('sort', 'name')
@@ -134,13 +138,15 @@ def mahsulotlar_list(request):
     
     # Get all product types for filter dropdown
     from .models import MahsulotTuri
-    mahsulot_turlari = MahsulotTuri.objects.filter(company=request.company)
+    mahsulot_turlari = MahsulotTuri.objects.all().order_by('nomi')
     
     context = {
         'mahsulotlar': page_obj,
         'total': mahsulotlar.count(),
         'search_query': search_query,
         'tur_filter': tur_filter,
+        'warehouse_filter': warehouse_filter,
+        'warehouse_types': Mahsulot.WAREHOUSE_TYPES,
         'sort_order': sort_order,
         'mahsulot_turlari': mahsulot_turlari
     }

@@ -8,7 +8,7 @@ from django.conf import settings
 from django.utils import timezone
 from django.contrib.auth.hashers import make_password
 from .models import (
-    User, Mahsulot, MahsulotTuri, Savdo, 
+    User, Mahsulot, Savdo, 
     HaridorDukon, Pazanda, YetkazibBeruvchi, 
     AmalLog, qaytarilgan_mahsulotlar, NasiyaTolov,
     YuklamaSorov, MiqdorQoshish, DeliveryStock, StockHistory
@@ -25,7 +25,6 @@ def generate_backup(company, start_date=None, end_date=None):
     
     # Modellarni tartib bilan yig'amiz
     models_to_backup = [
-        (MahsulotTuri, MahsulotTuri.objects.filter(company=company)),
         (Mahsulot, Mahsulot.objects.filter(company=company)),
         (HaridorDukon, HaridorDukon.objects.filter(company=company)),
         (Savdo, Savdo.objects.filter(company=company)),

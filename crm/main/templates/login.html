@@ -6,6 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>StockFirm CRM - Tizimga kirish</title>
+    <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -69,17 +70,23 @@
         }
 
         .logo-box {
-            width: 64px;
-            height: 64px;
-            background: var(--primary);
-            color: white;
-            border-radius: 1.25rem;
+            width: 132px;
+            height: 96px;
+            background: transparent;
+            color: inherit;
+            border-radius: 0;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2rem;
-            margin: 0 auto 1.5rem;
-            box-shadow: 0 8px 16px rgba(79, 70, 229, 0.25);
+            margin: 0 auto 1.25rem;
+            box-shadow: none;
+        }
+
+        .logo-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
         }
 
         .login-header h1 {
@@ -211,7 +218,7 @@
     <div class="login-card">
         <div class="login-header">
             <div class="logo-box">
-                <i class="fas fa-truck-fast"></i>
+                <img src="{% static 'brand/logo-st-mark.svg' %}" alt="StockFirm ST logo">
             </div>
             <h1>StockFirm CRM</h1>
             <p>Xush kelibsiz! Tizimga kiring.</p>
@@ -281,4 +288,4 @@
     </script>
 </body>
 
-</html>
+</html>

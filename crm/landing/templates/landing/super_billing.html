@@ -233,12 +233,16 @@
                                 <i class="fa-solid fa-ban"></i>
                             </button>
                         {% else %}
-                            <button type="submit" name="action" value="mark_paid" class="action-btn action-btn-pay" title="To'lovni kiritish (+1 oy)">
-                                <i class="fa-solid fa-money-bills"></i> To'ladi (+1 oy)
-                            </button>
+                            {% if debug_mode %}
+                                <button type="submit" name="action" value="mark_paid" class="action-btn action-btn-pay" title="To'lovni kiritish (+1 oy)">
+                                    <i class="fa-solid fa-money-bills"></i> To'ladi (+1 oy)
+                                </button>
+                            {% endif %}
                         {% endif %}
-                        
+
+                        {% if company.payment_status == 'paid' or debug_mode %}
                         <div style="width: 1px; height: 16px; background: var(--border); display: inline-block; margin: 0 5px; vertical-align: middle;"></div>
+                        {% endif %}
                         
                         {% if company.is_active %}
                             <button type="submit" name="action" value="toggle_active" class="action-btn action-btn-stop" title="Tizimga kirishni to'xtatish (blokлаш)">

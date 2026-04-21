@@ -1,11 +1,13 @@
 from django.contrib.auth import authenticate, get_user_model
+from django.db import transaction
 from ..models import YetkazibBeruvchi, Pazanda
 
 User = get_user_model()
 
+@transaction.atomic
 def create_user_service(username, password, fullname, user_type, phone=None, profile_photo=None, car_info=None, car_photo=None, company=None):
     """Securely creates a new user and its profile."""
-    if User.objects.filter(username=username).exists():
+    if User.objects.filter(username=username, company=company).exists():
         return None, "Ushbu login allaqachon mavjud!"
 
     user = User.objects.create_user(
@@ -13,10 +15,9 @@ def create_user_service(username, password, fullname, user_type, phone=None, pro
         password=password, 
         tuliq_ismi=fullname, 
         tel_raqami=phone,
-        company=company
+        company=company,
+        type=user_type,
     )
-    user.type = user_type
-    user.save()
 
     if user_type == 'yetkazib_beruvchi':
         YetkazibBeruvchi.objects.create(
@@ -27,7 +28,7 @@ def create_user_service(username, password, fullname, user_type, phone=None, pro
             bmh=car_info,
             company=company
         )
-    elif user_type == 'pazanda':
+    elif user_type in ['pazanda', 'ishlab_chiqaruvchi']:
         Pazanda.objects.create(
             user=user, 
             tuliq_ismi=fullname, 
@@ -39,6 +40,9 @@ def create_user_service(username, password, fullname, user_type, phone=None, pro
 
 def update_user_service(user, username, fullname, phone, password=None, profile_photo=None, car_info=None, car_photo=None, is_active=None):
     """Securely updates user information and profile."""
+    if User.objects.filter(company=user.company, username=username).exclude(pk=user.pk).exists():
+        return None, "Ushbu login allaqachon mavjud!"
+
     user.username = username
     user.tuliq_ismi = fullname
     user.tel_raqami = phone
@@ -60,7 +64,7 @@ def update_user_service(user, username, fullname, phone, password=None, profile_
         if profile_photo:
             yb.rasmi = profile_photo
         yb.save()
-    elif user.type == 'pazanda':
+    elif user.type in ['pazanda', 'ishlab_chiqaruvchi']:
         pz = Pazanda.objects.get(user=user)
         pz.tuliq_ismi = fullname
         if profile_photo:

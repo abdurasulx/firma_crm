@@ -605,7 +605,7 @@
         <table class="data-table">
             <thead>
                 <tr>
-                    <th>Yetkazuvchi</th>
+                    <th>Sotuvchi</th>
                     <th>Savdolar</th>
                     <th>Summa</th>
                     <th>Amallar</th>
@@ -654,7 +654,15 @@
                 <tr>
                     <td>{{ savdo.vaqt_sana|date:"d.m.Y H:i" }}</td>
                     <td><strong>{{ savdo.haridor_dukon.nomi }}</strong></td>
-                    <td>{{ savdo.yetkazib_beruvchi.tuliq_ismi }}</td>
+                    <td>
+                        {% if savdo.yetkazib_beruvchi %}
+                        {{ savdo.yetkazib_beruvchi.tuliq_ismi }}
+                        {% elif savdo.savdogar %}
+                        {{ savdo.savdogar.tuliq_ismi|default:savdo.savdogar.username }}
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
                     <td><strong>{{ savdo.summa|floatformat:0 }}</strong> so'm</td>
                     <td>
                         {% if savdo.st == 'naqd' %}

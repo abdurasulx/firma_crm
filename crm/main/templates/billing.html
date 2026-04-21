@@ -1,0 +1,147 @@
+{% extends 'egabase.html' %}
+
+{% block content %}
+<div style="display: flex; flex-direction: column; gap: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap;">
+        <div>
+            <h2 style="margin: 0; color: #0f172a; font-size: 28px; font-weight: 800;">Billing</h2>
+            <p style="margin: 8px 0 0; color: #64748b;">To'lov holati, yaratilgan silka va to'lov sabablarini shu yerda ko'rasiz.</p>
+        </div>
+        <a href="{% url 'select_plan_page' %}" style="padding: 12px 18px; border-radius: 12px; text-decoration: none; background: #eff6ff; color: #2563eb; font-weight: 700;">
+            <i class="fa-solid fa-layer-group" style="margin-right: 8px;"></i> Tariflar
+        </a>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px;">
+        <div style="background: linear-gradient(135deg, #0f172a, #1e293b); color: white; border-radius: 22px; padding: 28px;">
+            <div style="display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: flex-start;">
+                <div>
+                    <div style="font-size: 13px; text-transform: uppercase; opacity: 0.7; letter-spacing: 1px; font-weight: 700;">Joriy Tarif</div>
+                    <div style="font-size: 30px; font-weight: 900; margin-top: 8px;">{{ current_plan_name }}</div>
+                    <div style="margin-top: 12px; font-size: 15px; opacity: 0.88;">{{ billing_reason }}</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); border-radius: 18px; padding: 18px 20px; min-width: 220px;">
+                    <div style="font-size: 12px; opacity: 0.7; font-weight: 700; text-transform: uppercase;">Oylik summa</div>
+                    <div style="font-size: 34px; font-weight: 900; color: #34d399; margin-top: 8px;">${{ monthly_price_usd|floatformat:2 }}</div>
+                    {% if next_payment_date %}
+                    <div style="font-size: 13px; opacity: 0.8; margin-top: 8px;">Keyingi to'lov: {{ next_payment_date|date:"d.m.Y H:i" }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div style="margin-top: 24px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+                {% if is_current %}
+                <span style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 16px; border-radius: 999px; background: rgba(52,211,153,0.16); color: #a7f3d0; font-weight: 800;">
+                    <i class="fa-solid fa-circle-check"></i> To'lov faol
+                </span>
+                {% else %}
+                <span style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 16px; border-radius: 999px; background: rgba(248,113,113,0.14); color: #fecaca; font-weight: 800;">
+                    <i class="fa-solid fa-circle-exclamation"></i> To'lov kutilmoqda
+                </span>
+                {% endif %}
+
+                {% if latest_link %}
+                <span style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 16px; border-radius: 999px; background: rgba(255,255,255,0.08); color: white; font-weight: 700;">
+                    So'nggi silka: {{ latest_link.get_status_display }}
+                </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div style="background: white; border-radius: 22px; padding: 24px; border: 1px solid #e2e8f0;">
+            <h3 style="margin: 0 0 16px; color: #0f172a; font-size: 18px; font-weight: 800;">To'lov harakati</h3>
+            {% if is_current %}
+            <div style="padding: 16px; border-radius: 16px; background: #f0fdf4; color: #166534; font-weight: 700; line-height: 1.6;">
+                Joriy davr uchun to'lov qilingan. Shu sabab to'lov tugmasi ko'rsatilmaydi.
+            </div>
+            {% else %}
+                {% if latest_link and latest_link.status == 'created' %}
+                <a href="{% url 'open_billing_link' latest_link.token %}" style="display: inline-flex; width: 100%; justify-content: center; align-items: center; gap: 10px; padding: 15px 18px; border-radius: 14px; background: #10b981; color: white; text-decoration: none; font-weight: 800;">
+                    <i class="fa-solid fa-up-right-from-square"></i> Tayyor silka orqali to'lash
+                </a>
+                <p style="margin: 12px 0 0; color: #64748b; font-size: 13px; line-height: 1.6;">Bu silka faqat bir marta ochiladi. Ochilgandan keyin qayta ishlatib bo'lmaydi.</p>
+                {% else %}
+                <form method="post" action="{% url 'create_billing_link' %}">
+                    {% csrf_token %}
+                    <button type="submit" style="display: inline-flex; width: 100%; justify-content: center; align-items: center; gap: 10px; padding: 15px 18px; border-radius: 14px; border: none; background: #2563eb; color: white; font-weight: 800; cursor: pointer;">
+                        <i class="fa-solid fa-link"></i> Yangi to'lov silkasini yaratish
+                    </button>
+                </form>
+                <p style="margin: 12px 0 0; color: #64748b; font-size: 13px; line-height: 1.6;">Yangi silka yaratilgach billing sahifada saqlanadi va statusi shu yerda ko'rinadi.</p>
+                {% endif %}
+            {% endif %}
+
+            {% if latest_link %}
+            <div style="margin-top: 18px; padding: 16px; border-radius: 16px; background: #f8fafc; border: 1px solid #e2e8f0;">
+                <div style="font-size: 12px; color: #64748b; font-weight: 700; text-transform: uppercase;">So'nggi yaratilgan to'lov</div>
+                <div style="font-size: 16px; color: #0f172a; font-weight: 800; margin-top: 8px;">{{ latest_link.reason }}</div>
+                <div style="margin-top: 10px; color: #475569; font-size: 14px; line-height: 1.7;">
+                    Status: <b>{{ latest_link.get_status_display }}</b><br>
+                    Yaratilgan: <b>{{ latest_link.created_at|date:"d.m.Y H:i" }}</b><br>
+                    {% if latest_link.opened_at %}Ochildi: <b>{{ latest_link.opened_at|date:"d.m.Y H:i" }}</b><br>{% endif %}
+                    {% if latest_link.paid_at %}To'landi: <b>{{ latest_link.paid_at|date:"d.m.Y H:i" }}</b>{% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div style="background: white; border-radius: 22px; padding: 24px; border: 1px solid #e2e8f0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;">
+            <div>
+                <h3 style="margin: 0; color: #0f172a; font-size: 20px; font-weight: 800;">To'lovlar tarixi</h3>
+                <p style="margin: 6px 0 0; color: #64748b;">Har bir yaratilgan to'lov uchun sabab va status saqlanadi.</p>
+            </div>
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: #f8fafc; color: #334155;">
+                        <th style="text-align: left; padding: 14px 16px;">Sabab</th>
+                        <th style="text-align: left; padding: 14px 16px;">Summa</th>
+                        <th style="text-align: left; padding: 14px 16px;">Status</th>
+                        <th style="text-align: left; padding: 14px 16px;">Yaratilgan</th>
+                        <th style="text-align: left; padding: 14px 16px;">Harakat</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment_link in payment_links %}
+                    <tr style="border-top: 1px solid #e2e8f0;">
+                        <td style="padding: 16px;">
+                            <div style="font-weight: 700; color: #0f172a;">{{ payment_link.reason }}</div>
+                            <div style="font-size: 12px; color: #64748b; margin-top: 4px;">{{ payment_link.billing_period_start|date:"F Y" }}</div>
+                        </td>
+                        <td style="padding: 16px; color: #0f172a; font-weight: 700;">
+                            ${{ payment_link.amount_usd|floatformat:2 }}<br>
+                            <span style="font-size: 12px; color: #64748b;">{{ payment_link.amount_uzs|floatformat:0 }} so'm</span>
+                        </td>
+                        <td style="padding: 16px;">
+                            <span style="display: inline-flex; padding: 8px 12px; border-radius: 999px; font-size: 12px; font-weight: 800;
+                                {% if payment_link.status == 'paid' %}background:#ecfdf5;color:#166534;
+                                {% elif payment_link.status == 'created' %}background:#eff6ff;color:#1d4ed8;
+                                {% elif payment_link.status == 'opened' %}background:#fff7ed;color:#c2410c;
+                                {% else %}background:#fef2f2;color:#b91c1c;{% endif %}">
+                                {{ payment_link.get_status_display }}
+                            </span>
+                        </td>
+                        <td style="padding: 16px; color: #475569;">{{ payment_link.created_at|date:"d.m.Y H:i" }}</td>
+                        <td style="padding: 16px;">
+                            {% if payment_link.status == 'created' %}
+                            <a href="{% url 'open_billing_link' payment_link.token %}" style="color: #2563eb; font-weight: 700; text-decoration: none;">Ochish</a>
+                            {% else %}
+                            <span style="color: #94a3b8; font-weight: 700;">Qayta ochilmaydi</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" style="padding: 28px 16px; text-align: center; color: #64748b;">Hali to'lov silkalari yaratilmagan.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

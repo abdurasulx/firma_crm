@@ -1,0 +1,43 @@
+services:
+  web:
+    build:
+      context: ./crm
+      dockerfile: Dockerfile
+    container_name: stockfirm-web
+    restart: unless-stopped
+    env_file:
+      - ./crm/.env
+    environment:
+      DEBUG: "False"
+      SQLITE_PATH: /app/data/db.sqlite3
+    ports:
+      - "127.0.0.1:8021:8000"
+    volumes:
+      - ./data:/app/data
+      - ./media:/app/media
+      - ./staticfiles:/app/staticfiles
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/', timeout=5)\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  bot:
+    build:
+      context: ./crm
+      dockerfile: Dockerfile
+    container_name: stockfirm-bot
+    restart: unless-stopped
+    env_file:
+      - ./crm/.env
+    environment:
+      DEBUG: "False"
+      SQLITE_PATH: /app/data/db.sqlite3
+    command: ["python", "bot_service.py"]
+    volumes:
+      - ./data:/app/data
+      - ./media:/app/media
+      - ./staticfiles:/app/staticfiles
+    depends_on:
+      - web

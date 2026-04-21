@@ -524,7 +524,9 @@
 
             <select name="role" class="filter-select" onchange="this.form.submit()">
                 <option value="">Barcha lavozimlar</option>
-                <option value="pazanda" {% if role_filter == 'pazanda' %}selected{% endif %}>Pazanda</option>
+                <option value="pazanda" {% if role_filter == 'pazanda' %}selected{% endif %}>Ishlab chiqaruvchi</option>
+                <option value="omborchi" {% if role_filter == 'omborchi' %}selected{% endif %}>Omborchi</option>
+                <option value="savdogar" {% if role_filter == 'savdogar' %}selected{% endif %}>Savdogar</option>
                 <option value="yetkazib_beruvchi" {% if role_filter == 'yetkazib_beruvchi' %}selected{% endif %}>Yetkazib
                     beruvchi</option>
             </select>
@@ -595,6 +597,12 @@
                                 style="background:#fef3c7; color:#d97706; border:1px solid #fde68a;">
                                 <i class="fa-solid fa-chart-line"></i>
                             </a>
+                            {% endif %}
+                            {% if x.type  ==  'savdogar' %}
+                            <span class="action-btn" title="Savdogar hisobotni o'z sahifasidan ko'radi"
+                                style="background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;">
+                                <i class="fa-solid fa-store"></i>
+                            </span>
                             {% endif %}
                             <a href="{% url 'edituser' x.username %}" class="action-btn edit" title="Tahrirlash">
                                 <i class="fa-solid fa-pen"></i>

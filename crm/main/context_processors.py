@@ -1,4 +1,6 @@
 from main.models import Company
+from main.services.billing_service import get_billing_dashboard_data
+from django.db.utils import OperationalError, ProgrammingError
 
 def plan_context(request):
     """
@@ -58,6 +60,7 @@ def plan_context(request):
             'max_users': max_users,
             'backup_type': backup_type,
             'is_backup_available': is_backup_available,
+            'billing_data': _safe_billing_data(company),
         }
     
     # Default values if no company or plan
@@ -70,4 +73,26 @@ def plan_context(request):
         'max_users': 5,
         'backup_type': 'none',
         'is_backup_available': False,
+        'billing_data': {
+            'is_current': False,
+            'monthly_price_usd': 0,
+            'latest_link': None,
+            'payment_links': [],
+            'next_payment_date': None,
+            'billing_reason': '',
+        },
     }
+
+
+def _safe_billing_data(company):
+    try:
+        return get_billing_dashboard_data(company)
+    except (OperationalError, ProgrammingError):
+        return {
+            'is_current': False,
+            'monthly_price_usd': 0,
+            'latest_link': None,
+            'payment_links': [],
+            'next_payment_date': None,
+            'billing_reason': '',
+        }

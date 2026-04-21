@@ -1,7 +1,7 @@
-{% extends 'egabase.html' %}
+{% extends base_template|default:'egabase.html' %}
 {% load static %}
 
-{% block title %}💳 Nasiya Savdolar{% endblock %}
+{% block title %}{{ page_title|default:"Nasiya Savdolar" }}{% endblock %}
 
 {% block content %}
 <style>
@@ -544,7 +544,7 @@
 </style>
 
 <div class="page-header">
-    <h1>💳 Nasiya Savdolar Boshqaruvi</h1>
+    <h1>{{ page_title|default:"Nasiya Savdolar Boshqaruvi" }}</h1>
     <p>To'langan va to'lanmagan nasiya savdolarni kuzatish</p>
 </div>
 
@@ -557,6 +557,22 @@
     </div>
     <a href="?status=overdue" class="ob-btn">Ko'rish →</a>
 </div>
+{% endif %}
+
+{% if savdogarlar %}
+<form method="get" class="filter-tabs">
+    <select name="savdogar" class="filter-tab" onchange="this.form.submit()">
+        <option value="">Barcha savdogarlar</option>
+        {% for seller in savdogarlar %}
+        <option value="{{ seller.id }}" {% if savdogar_filter == seller.id|stringformat:"s" %}selected{% endif %}>
+            {{ seller.tuliq_ismi|default:seller.username }}
+        </option>
+        {% endfor %}
+    </select>
+    {% if status_filter != 'all' %}
+    <input type="hidden" name="status" value="{{ status_filter }}">
+    {% endif %}
+</form>
 {% endif %}
 
 <!-- Filter Tabs -->
@@ -619,6 +635,22 @@
             <span class="info-label">Jami Summa</span>
             <span class="info-value">{{ item.savdo.summa|floatformat:0 }} so'm</span>
         </div>
+        {% if item.savdo.credit_term_months %}
+        <div class="info-item">
+            <span class="info-label">Muddat / Ustama</span>
+            <span class="info-value">{{ item.savdo.credit_term_months }} oy / {{ item.savdo.credit_markup_percent|floatformat:0 }}%</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Yopilish sanasi</span>
+            <span class="info-value">{{ item.credit_summary.final_due_date|date:"d.m.Y" }}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Grafik holati</span>
+            <span class="info-value {% if item.credit_summary.status_type == 'late' %}debt{% elif item.credit_summary.status_type == 'early' or item.credit_summary.status_type == 'paid' %}paid{% endif %}">
+                {{ item.credit_summary.status_label }}
+            </span>
+        </div>
+        {% endif %}
         <div class="info-item">
             <span class="info-label">To'langan</span>
             <span class="info-value paid">{{ item.total_payments|floatformat:0 }} so'm</span>
@@ -628,10 +660,41 @@
             <span class="info-value debt">{{ item.remaining|floatformat:0 }} so'm</span>
         </div>
         <div class="info-item">
-            <span class="info-label">Yetkazuvchi</span>
-            <span class="info-value">{{ item.savdo.yetkazib_beruvchi.tuliq_ismi }}</span>
+            <span class="info-label">Sotuvchi</span>
+            <span class="info-value">
+                {% if item.savdo.yetkazib_beruvchi %}
+                {{ item.savdo.yetkazib_beruvchi.tuliq_ismi }}
+                {% elif item.savdo.savdogar %}
+                {{ item.savdo.savdogar.tuliq_ismi|default:item.savdo.savdogar.username }}
+                {% else %}
+                -
+                {% endif %}
+            </span>
         </div>
     </div>
+
+    {% if item.savdo.credit_term_months %}
+    <div style="padding:12px 14px; border-radius:14px; background:#f8fafc; border:1px solid #e2e8f0; margin-bottom:14px;">
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; font-size:13px;">
+            <div><strong>Hozirgacha to'lanishi kerak:</strong> {{ item.credit_summary.expected_paid|floatformat:0 }} so'm</div>
+            {% if item.credit_summary.overdue_amount > 0 %}
+            <div style="color:#dc2626;"><strong>Kechikkan qism:</strong> {{ item.credit_summary.overdue_amount|floatformat:0 }} so'm</div>
+            {% endif %}
+            {% if item.credit_summary.late_penalty > 0 %}
+            <div style="color:#dc2626;"><strong>Kechikish ustamasi:</strong> {{ item.credit_summary.late_penalty|floatformat:0 }} so'm</div>
+            {% endif %}
+            {% if item.credit_summary.early_discount_hint > 0 and item.credit_summary.status_type == 'early' %}
+            <div style="color:#059669;"><strong>Oldindan to'lash chegirma izohi:</strong> {{ item.credit_summary.early_discount_hint|floatformat:0 }} so'mgacha</div>
+            {% endif %}
+        </div>
+        {% if item.savdo.credit_contract_text %}
+        <details style="margin-top:10px;">
+            <summary style="cursor:pointer;font-weight:900;color:#0f172a;">Shartnoma matni</summary>
+            <div style="margin-top:8px;color:#475569;white-space:pre-wrap;">{{ item.savdo.credit_contract_text }}</div>
+        </details>
+        {% endif %}
+    </div>
+    {% endif %}
 
     {% if item.savdo.summa > 0 %}
     <div class="progress-bar">

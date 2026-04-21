@@ -12,7 +12,43 @@
         </a>
     </div>
 
-    <!-- Standard Plans -->
+    <div style="margin-bottom: 20px; padding: 16px 18px; border-radius: 14px; background: #eff6ff; color: #1e3a8a; font-weight: 600;">
+        Hozirgi faol hodimlar soni: <b>{{ current_staff_count }}</b>. Tarif tanlashda limit shu sondan kam bo'lsa tugma faolsiz bo'ladi.
+    </div>
+
+    {% if can_request_trial or trial_pending %}
+    <div style="margin-bottom: 28px; background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); border-radius: 18px; padding: 24px 32px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; box-shadow: 0 10px 30px rgba(109,40,217,0.3);">
+        <div style="display: flex; align-items: center; gap: 18px;">
+            <div style="width: 56px; height: 56px; background: rgba(255,255,255,0.15); border-radius: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <i class="fa-solid fa-flask" style="font-size: 26px; color: white;"></i>
+            </div>
+            <div>
+                <div style="font-size: 18px; font-weight: 800; color: white; margin-bottom: 5px;">🎁 1 Oylik Bepul Sinov Davri mavjud!</div>
+                <div style="font-size: 13px; color: rgba(255,255,255,0.9); line-height: 1.5;">
+                    Firma ro'yxatdan o'tganiga hali <b style="color: #fde68a;">{{ days_since_creation }} kun</b> bo'ldi.
+                    To'lovsiz <b style="color: #fde68a;">30 kun</b> davomida barcha premium imkoniyatlardan foydalaning!
+                </div>
+                <div style="margin-top: 8px; display: flex; gap: 10px; flex-wrap: wrap;">
+                    <span style="background: rgba(255,255,255,0.15); color: white; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;"><i class="fa-solid fa-check" style="margin-right: 4px;"></i>Telegram Bot</span>
+                    <span style="background: rgba(255,255,255,0.15); color: white; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;"><i class="fa-solid fa-check" style="margin-right: 4px;"></i>AI Analitika</span>
+                    <span style="background: rgba(255,255,255,0.15); color: white; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;"><i class="fa-solid fa-check" style="margin-right: 4px;"></i>Real-vaqt Xaritasi</span>
+                    <span style="background: rgba(255,255,255,0.15); color: white; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;"><i class="fa-solid fa-check" style="margin-right: 4px;"></i>Cheksiz hodimlar</span>
+                </div>
+            </div>
+        </div>
+        {% if can_request_trial %}
+        <a href="{% url 'request_trial' %}" style="background: white; color: #6d28d9; padding: 14px 28px; border-radius: 14px; text-decoration: none; font-weight: 800; font-size: 15px; white-space: nowrap; box-shadow: 0 6px 20px rgba(0,0,0,0.15); transition: all 0.2s; flex-shrink: 0;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 30px rgba(0,0,0,0.2)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 6px 20px rgba(0,0,0,0.15)'">
+            <i class="fa-solid fa-flask" style="margin-right: 8px;"></i> Sinov Muddatini So'rash
+        </a>
+        {% else %}
+        <div style="background: rgba(255,255,255,0.15); color: white; padding: 14px 24px; border-radius: 14px; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+            <i class="fa-solid fa-clock fa-spin"></i> So'rovingiz ko'rib chiqilmoqda...
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+
     <div class="section-card" style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 30px; border-radius: 16px;">
         <h3 style="margin-bottom: 24px; font-size: 20px; font-weight: 700; color: #0f172a;"><i class="fa-solid fa-gem" style="color: #3b82f6;"></i> Standart Tariflar</h3>
         
@@ -21,6 +57,8 @@
             <div style="background: white; border: 2px solid {% if request.company.plan == plan %}#10b981{% else %}#e2e8f0{% endif %}; border-radius: 20px; padding: 32px; display: flex; flex-direction: column; justify-content: space-between; position: relative; transition: all 0.3s ease; {% if request.company.plan == plan %}transform: scale(1.02); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);{% endif %}">
                 {% if request.company.plan == plan %}
                 <div style="position: absolute; top: -12px; right: 20px; background: #10b981; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; text-transform: uppercase;">Faol</div>
+                {% elif plan.max_users != 0 and current_staff_count > plan.max_users %}
+                <div style="position: absolute; top: -12px; right: 20px; background: #ef4444; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; text-transform: uppercase;">Limit yetmaydi</div>
                 {% endif %}
                 
                 <div>
@@ -34,6 +72,12 @@
                             <i class="fa-solid fa-circle-check" style="color: #10b981;"></i> 
                             {% if plan.max_users == 0 %}Cheksiz hodim{% else %}{{ plan.max_users }} ta hodimgacha{% endif %}
                         </li>
+                        {% if plan.max_users != 0 and current_staff_count > plan.max_users %}
+                        <li style="display: flex; align-items: center; gap: 12px; font-size: 14px; color: #dc2626; font-weight: 700;">
+                            <i class="fa-solid fa-triangle-exclamation" style="color: #dc2626;"></i>
+                            Hozir sizda {{ current_staff_count }} ta hodim bor
+                        </li>
+                        {% endif %}
                         <li style="display: flex; align-items: center; gap: 12px; font-size: 15px; color: #475569;">
                             <i class="fa-solid {% if plan.has_telegram_bot %}fa-circle-check{% else %}fa-circle-xmark{% endif %}" style="color: {% if plan.has_telegram_bot %}#10b981{% else %}#cbd5e1{% endif %};"></i> 
                             Telegram Bot
@@ -56,6 +100,10 @@
                 {% if request.company.plan == plan %}
                 <div style="background: #f0fdf4; color: #10b981; padding: 14px; border-radius: 12px; text-align: center; font-weight: 700;">
                     Ushbu tarif faol
+                </div>
+                {% elif plan.max_users != 0 and current_staff_count > plan.max_users %}
+                <div style="background: #fef2f2; color: #dc2626; padding: 14px; border-radius: 12px; text-align: center; font-weight: 700;">
+                    Hodim limiti yetarli emas
                 </div>
                 {% else %}
                 <a href="{% url 'select_plan' plan.id %}" style="background: #3b82f6; color: white; padding: 14px; border-radius: 12px; text-align: center; font-weight: 700; text-decoration: none; transition: all 0.3s ease; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);" onmouseover="this.style.background='#2563eb'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='#3b82f6'; this.style.transform='translateY(0)';">
@@ -83,7 +131,7 @@
                         <label style="display: block; font-weight: 700; margin-bottom: 12px; color: #1e293b;">1. Hodimlar Chegarasi</label>
                         <div style="background: #f8fafc; padding: 20px; border-radius: 16px; border: 1px solid #f1f5f9;">
                             <div style="display: flex; align-items: center; gap: 20px;">
-                                <input type="number" name="staff_count" id="staff_count_page" value="{{ request.company.custom_max_users|default:5 }}" min="1" max="100" 
+                                <input type="number" name="staff_count" id="staff_count_page" value="{% if request.company.custom_max_users and request.company.custom_max_users > current_staff_count %}{{ request.company.custom_max_users }}{% else %}{{ current_staff_count|default:5 }}{% endif %}" min="{{ current_staff_count|default:1 }}" max="100" 
                                        style="width: 100px; padding: 12px; border-radius: 10px; border: 1px solid #cbd5e1; font-weight: 800; text-align: center; font-size: 18px;">
                                 <span style="font-weight: 600; color: #64748b;">$1 / hodim</span>
                             </div>
@@ -158,6 +206,7 @@
                         <div>
                             <span style="font-size: 12px; text-transform: uppercase; opacity: 0.6; letter-spacing: 1px; font-weight: 700; display: block; margin-bottom: 4px;">Umumiy Oylik To'lov:</span>
                             <span style="font-size: 42px; font-weight: 900; color: #10b981;" id="total-price-page">$0.00</span>
+                            <div style="font-size: 12px; color: rgba(255,255,255,0.7); margin-top: 6px;">Minimal limit: {{ current_staff_count }} hodim</div>
                         </div>
                         <button type="submit" style="background: #10b981; color: white; padding: 16px 32px; border: none; border-radius: 14px; font-weight: 800; font-size: 16px; cursor: pointer; transition: all 0.3s ease;" onmouseover="this.style.transform='translateY(-2px)';" onmouseout="this.style.transform='translateY(0)';">
                             So'rov yuborish
@@ -188,6 +237,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const hasAnalytics = document.getElementById('has_analytics_page');
     const backupRadios = document.querySelectorAll('input[name="backup_type"]');
     const totalPriceEl = document.getElementById('total-price-page');
+    const minStaffCount = {{ current_staff_count|default:0 }};
 
     function calculatePrice() {
         let price = 0;
@@ -205,10 +255,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 calculatePrice();
                 return;
             }
-            if (val < 1) val = 1;
+            if (val < minStaffCount) val = minStaffCount || 1;
 
             staffInput.disabled = false;
             staffInput.style.opacity = '1';
+            staffInput.value = val;
             price += val * 1;
         }
 

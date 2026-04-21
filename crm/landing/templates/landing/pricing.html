@@ -1,49 +1,78 @@
 {% extends 'landing/base.html' %}
 
+{% block title %}StockFirm CRM tariflari - oddiy va shaffof narxlar{% endblock %}
+{% block meta_description %}StockFirm CRM tariflari: kichik firma, o'sayotgan biznes va individual joriy qilish uchun mos SaaS rejalar.{% endblock %}
+
 {% block content %}
-<section class="container animate-fade" style="text-align: center; padding: 4rem 0;">
-    <h2 style="font-size: 3rem; font-weight: 800; margin-bottom: 1rem;">Oddiy va Shaffof <span style="color: var(--primary);">Narxlar</span></h2>
-    <p style="color: var(--text-muted); margin-bottom: 4rem;">Biznesingiz hajmiga qarab eng ma'qul tarifni tanlang.</p>
+<section class="section" style="padding-top:72px;">
+    <div class="container" style="text-align:center;">
+        <div class="eyebrow">Tariflar</div>
+        <h1 class="hero-title" style="max-width:900px; margin:14px auto 18px;">Firma hajmiga mos, tushunarli narxlar.</h1>
+        <p class="lead" style="max-width:720px; margin:0 auto 34px;">
+            Avval tizimni sinab ko'ring, keyin jamoangiz va jarayonlaringizga mos tarifni tanlang. Har bir tarif ombor, savdo va nasiya nazoratini tartibga solish uchun tuzilgan.
+        </p>
+    </div>
+</section>
 
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
-        <div class="glass-card">
-            <h3 style="margin-bottom: 1rem;">Startap</h3>
-            <div style="font-size: 2.5rem; font-weight: 800; margin-bottom: 1rem;">Bepul</div>
-            <p style="color: var(--text-muted); margin-bottom: 2rem;">Kichik biznes uchun ideal</p>
-            <ul style="list-style: none; text-align: left; margin-bottom: 2.5rem; color: var(--text-muted);">
-                <li style="margin-bottom: 0.75rem;">✓ 1 ta firma</li>
-                <li style="margin-bottom: 0.75rem;">✓ 5 tagacha xodim</li>
-                <li style="margin-bottom: 0.75rem;">✓ Cheksiz mahsulotlar</li>
-                <li style="margin-bottom: 0.75rem;">✓ 1 oylik tahlil</li>
-            </ul>
-            <a href="{% url 'register_company' %}" class="btn btn-outline" style="display: block;">Hozir boshlash</a>
+<section class="section" style="padding-top:20px;">
+    <div class="container">
+        <div class="grid-3">
+            <div class="glass-card">
+                <div class="pill">Boshlash uchun</div>
+                <h3 style="font-size:28px; margin:22px 0 8px;">Startap</h3>
+                <div style="font-size:42px; font-weight:900; font-family:'Space Grotesk'; margin-bottom:10px;">Bepul</div>
+                <p style="color:var(--muted); margin-bottom:24px;">Kichik firma CRM jarayonini sinab ko'rishi uchun.</p>
+                <ul style="list-style:none; display:grid; gap:12px; margin-bottom:28px; color:var(--muted);">
+                    <li>&#10003; 1 ta firma</li>
+                    <li>&#10003; 5 tagacha xodim</li>
+                    <li>&#10003; Ombor va mahsulotlar</li>
+                    <li>&#10003; Asosiy savdo hisobotlari</li>
+                </ul>
+                <a href="{% url 'register_company' %}" class="btn btn-outline" style="width:100%;">Bepul boshlash</a>
+            </div>
+
+            <div class="glass-card" style="border-color:var(--green); transform:translateY(-12px); box-shadow:0 28px 80px rgba(5,150,105,.16);">
+                <div style="position:absolute; top:-15px; right:24px; background:var(--green); color:white; padding:7px 13px; border-radius:999px; font-size:12px; font-weight:900;">ENG MOS</div>
+                <div class="pill">O'sayotgan firma</div>
+                <h3 style="font-size:28px; margin:22px 0 8px;">Biznes</h3>
+                <div style="font-size:42px; font-weight:900; font-family:'Space Grotesk'; margin-bottom:10px;">$29<span style="font-size:16px; color:var(--muted);">/oy</span></div>
+                <p style="color:var(--muted); margin-bottom:24px;">Savdo, yetkazib berish va rahbar nazorati bir joyda.</p>
+                <ul style="list-style:none; display:grid; gap:12px; margin-bottom:28px; color:var(--muted);">
+                    <li>&#10003; Xodimlar va rollar</li>
+                    <li>&#10003; Nasiya va qisman to'lovlar</li>
+                    <li>&#10003; Analitika dashboard</li>
+                    <li>&#10003; Click billing va tarif nazorati</li>
+                </ul>
+                <a href="{% url 'register_company' %}" class="btn btn-primary" style="width:100%;">Tarifni tanlash</a>
+            </div>
+
+            <div class="glass-card">
+                <div class="pill">Moslashtirilgan</div>
+                <h3 style="font-size:28px; margin:22px 0 8px;">Enterprise</h3>
+                <div style="font-size:42px; font-weight:900; font-family:'Space Grotesk'; margin-bottom:10px;">Aloqa</div>
+                <p style="color:var(--muted); margin-bottom:24px;">Katta jamoa, maxsus limitlar va individual joriy qilish uchun.</p>
+                <ul style="list-style:none; display:grid; gap:12px; margin-bottom:28px; color:var(--muted);">
+                    <li>&#10003; Custom tarif va limitlar</li>
+                    <li>&#10003; Maxsus integratsiyalar</li>
+                    <li>&#10003; Migratsiya yordami</li>
+                    <li>&#10003; Ustuvor qo'llab-quvvatlash</li>
+                </ul>
+                <a href="{% url 'marketing_page' 'contact' %}" class="btn btn-outline" style="width:100%;">Bog'lanish</a>
+            </div>
         </div>
+    </div>
+</section>
 
-        <div class="glass-card" style="border-color: var(--primary); transform: scale(1.05); box-shadow: 0 10px 30px rgba(99, 102, 241, 0.1);">
-            <div style="position: absolute; top: -15px; right: 20px; background: var(--primary); padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700;">POPULYAR</div>
-            <h3 style="margin-bottom: 1rem;">Biznes</h3>
-            <div style="font-size: 2.5rem; font-weight: 800; margin-bottom: 1rem;">$29<span style="font-size: 1rem; color: var(--text-muted);">/oy</span></div>
-            <p style="color: var(--text-muted); margin-bottom: 2rem;">Rivojlanayotgan jamoalar uchun</p>
-            <ul style="list-style: none; text-align: left; margin-bottom: 2.5rem;">
-                <li style="margin-bottom: 0.75rem;">✓ 1 ta firma (Wildcard)</li>
-                <li style="margin-bottom: 0.75rem;">✓ Cheksiz xodimlar</li>
-                <li style="margin-bottom: 0.75rem;">✓ To'liq tahliliy dashboard</li>
-                <li style="margin-bottom: 0.75rem;">✓ Telegram bot integratsiyasi</li>
-            </ul>
-            <a href="{% url 'register_company' %}" class="btn btn-primary" style="display: block;">Tanlash</a>
-        </div>
-
-        <div class="glass-card">
-            <h3 style="margin-bottom: 1rem;">Enterprise</h3>
-            <div style="font-size: 2.5rem; font-weight: 800; margin-bottom: 1rem;">Aloqa</div>
-            <p style="color: var(--text-muted); margin-bottom: 2rem;">Katta kompaniyalar uchun</p>
-            <ul style="list-style: none; text-align: left; margin-bottom: 2.5rem; color: var(--text-muted);">
-                <li style="margin-bottom: 0.75rem;">✓ Maxsus integratsiyalar</li>
-                <li style="margin-bottom: 0.75rem;">✓ Shaxsiy menejer</li>
-                <li style="margin-bottom: 0.75rem;">✓ 24/7 VIP qo'llab-quvvatlash</li>
-                <li style="margin-bottom: 0.75rem;">✓ Cheksiz imkoniyatlar</li>
-            </ul>
-            <a href="#" class="btn btn-outline" style="display: block;">Biz bilan bog'lanish</a>
+<section class="section" style="padding-top:20px;">
+    <div class="container card" style="background:var(--dark); color:white;">
+        <div class="grid-2">
+            <div>
+                <div class="eyebrow" style="color:#86efac;">Narxdan ko'ra muhimroq narsa</div>
+                <h2 class="section-title" style="margin-top:12px;">Tizim o'zini tartib va vaqt tejalishi bilan oqlashi kerak.</h2>
+            </div>
+            <p class="lead" style="color:rgba(255,255,255,.68);">
+                StockFirm CRM rahbarga Excel fayllarni yig'ish, xodimlardan og'zaki hisobot so'rash va qarzlarni qo'lda tekshirish vaqtini kamaytiradi. Asosiy foyda: nazorat, tezlik va xatoliklar kamayishi.
+            </p>
         </div>
     </div>
 </section>

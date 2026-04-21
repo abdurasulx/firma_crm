@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.conf import settings
 from .models import Company
+from .services.billing_service import sync_company_lifecycle
 
 class CompanyMiddleware:
     def __init__(self, get_response):
@@ -14,6 +15,8 @@ class CompanyMiddleware:
         
         host = request.get_host().split(':')[0]
         base_domain = getattr(settings, 'BASE_DOMAIN', 'stockfirm.uz').split(':')[0]
+        landing_domains = set(getattr(settings, 'LANDING_DOMAINS', []))
+        landing_domains.update({base_domain, f"www.{base_domain}"})
         parts = host.split('.')
 
         # Default values
@@ -26,7 +29,7 @@ class CompanyMiddleware:
         request.has_map = False
 
         # Check if it's the landing page or local dev
-        is_base = host == base_domain or host == f"www.{base_domain}"
+        is_base = host in landing_domains
         is_local = host in ["127.0.0.1", "localhost", "lvh.me"]
         
         if is_base or is_local:
@@ -43,33 +46,8 @@ class CompanyMiddleware:
             subdomain = parts[0]
             try:
                 company = Company.objects.get(subdomain=subdomain)
-                
-                # Check lifecycle status
-                from django.utils import timezone
-                now = timezone.now()
-                
-                # 1. Automatic Setup Expiration
-                if company.setup_mode and company.setup_expires_at and now > company.setup_expires_at:
-                    company.setup_mode = False
-                    company.setup_expires_at = None
-                    company.save()
-                
-                # 2. Trial Expiration Check
-                if company.is_on_trial and company.trial_expires_at and now > company.trial_expires_at:
-                    # Trial tugadi — doimo is_on_trial ni False qilish
-                    company.is_on_trial = False
-                    company.trial_expires_at = None
-                    if not company.plan and not company.is_custom_plan:
-                        # Agar hech qanday tarif yo'q bo'lsa — firmani deaktiv qilish
-                        company.is_active = False
-                    company.save()
-                        
-                # 3. Grace Period Expiration Check (Unpaid past 3 days)
-                from datetime import timedelta
-                payment_reason = None
-                if company.payment_status == 'unpaid' and company.next_payment_date:
-                    if now > company.next_payment_date + timedelta(days=3):
-                        payment_reason = 'payment_overdue'
+                lifecycle_state = sync_company_lifecycle(company)
+                payment_reason = lifecycle_state['payment_reason']
 
                 if not company.is_active:
                     return render(request, 'suspended.html', {'company': company, 'reason': 'stopped'}, status=403)

@@ -2,6 +2,7 @@ from django.urls import path, include
 from . import views
 from .views import (
     landing_home,
+    marketing_page,
     pricing_view,
     register_company,
     custom_404,
@@ -14,6 +15,7 @@ from main.views import login
 
 urlpatterns = [
     path('', landing_home, name='landing_home'),
+    path('platform/<slug:slug>/', marketing_page, name='marketing_page'),
     path('pricing/', pricing_view, name='pricing'),
     path('register/', register_company, name='register_company'),
     path('login/', login, name='login'),

@@ -1,0 +1,55 @@
+{% extends 'egabase.html' %}
+
+{% block title %}Nasiya Sozlamalari{% endblock %}
+
+{% block content %}
+<div style="background:#0f172a;color:white;border-radius:24px;padding:30px;margin-bottom:22px;">
+    <h1 style="margin:0 0 8px;font-size:30px;">Nasiya savdo sozlamalari</h1>
+    <p style="margin:0;color:#cbd5e1;">Muddatli savdo shartnomasi, erta to'lov va kechikish qoidalari shu yerda boshqariladi.</p>
+</div>
+
+<div style="display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:22px;">
+    <form method="post" style="background:white;border:1px solid #e2e8f0;border-radius:20px;padding:24px;box-shadow:0 12px 30px rgba(15,23,42,.06);">
+        {% csrf_token %}
+        <label style="display:flex;gap:10px;align-items:center;font-weight:900;color:#0f172a;margin-bottom:18px;">
+            <input type="checkbox" name="credit_sales_enabled" {% if company.credit_sales_enabled %}checked{% endif %}>
+            Nasiya savdoni yoqish
+        </label>
+
+        <div style="margin-bottom:18px;">
+            <label style="display:block;font-weight:900;color:#0f172a;margin-bottom:8px;">Shartnoma shabloni</label>
+            <textarea name="credit_contract_template" rows="8" style="width:100%;padding:14px;border:1px solid #cbd5e1;border-radius:14px;">{{ company.credit_contract_template }}</textarea>
+            <div style="font-size:12px;color:#64748b;margin-top:6px;">Kalitlar: {% verbatim %}{{ company }}, {{ customer }}, {{ months }}, {{ base }}, {{ markup_percent }}, {{ markup }}, {{ total }}, {{ due_date }}{% endverbatim %}</div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;">
+            <div>
+                <label style="display:block;font-weight:900;color:#0f172a;margin-bottom:8px;">Oldindan to'lash chegirmasi (%)</label>
+                <input type="number" step="0.01" name="credit_early_discount_percent" value="{{ company.credit_early_discount_percent }}" style="width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:14px;">
+            </div>
+            <div>
+                <label style="display:block;font-weight:900;color:#0f172a;margin-bottom:8px;">Kechikish ustamasi (%)</label>
+                <input type="number" step="0.01" name="credit_late_penalty_percent" value="{{ company.credit_late_penalty_percent }}" style="width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:14px;">
+            </div>
+        </div>
+
+        <div style="margin-bottom:18px;">
+            <label style="display:block;font-weight:900;color:#0f172a;margin-bottom:8px;">To'lov ko'payishi/ozayishi haqida izoh</label>
+            <textarea name="credit_rules_note" rows="5" style="width:100%;padding:14px;border:1px solid #cbd5e1;border-radius:14px;">{{ company.credit_rules_note }}</textarea>
+        </div>
+
+        <button style="border:0;background:#059669;color:white;border-radius:14px;padding:13px 18px;font-weight:900;">Saqlash</button>
+    </form>
+
+    <div style="background:white;border:1px solid #e2e8f0;border-radius:20px;padding:22px;box-shadow:0 12px 30px rgba(15,23,42,.06);height:max-content;">
+        <h3 style="margin:0 0 14px;color:#0f172a;">Muddat bo'yicha ustama</h3>
+        {% for months, percent in credit_terms.items %}
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #edf2f7;">
+            <span style="font-weight:800;">{{ months }} oy</span>
+            <strong style="color:#dc2626;">{{ percent|floatformat:0 }}%</strong>
+        </div>
+        {% endfor %}
+        <p style="color:#64748b;font-size:13px;line-height:1.6;margin-top:14px;">Bu foizlar nasiya savdo yaratilgan paytda mahsulot summasiga qo'shiladi va shartnoma summasi sifatida saqlanadi.</p>
+    </div>
+</div>
+{% endblock %}

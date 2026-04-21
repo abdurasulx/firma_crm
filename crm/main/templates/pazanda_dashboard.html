@@ -1,7 +1,7 @@
 {% extends 'pzbase.html' %}
 {% load static %}
 
-{% block title %}Pazanda Dashboard{% endblock %}
+{% block title %}Ishlab chiqaruvchi Dashboard{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
 {% block page_subtitle %}Bugungi faoliyatingiz haqida umumiy ma'lumot{% endblock %}
 {% block nav_main %}active{% endblock %}
@@ -24,7 +24,7 @@
     }
 
     .hero-card::after {
-        content: '🍳';
+        content: '';
         position: absolute;
         right: 32px;
         top: 50%;
@@ -348,10 +348,10 @@
 <div class="hero-card">
     <div>
         <h1>Assalomu alaykum, {{ request.user.tuliq_ismi }}!</h1>
-        <p>Bugun ham mahsulotlarni boshqarish tayyor.</p>
+        <p>Bugun ham ishlab chiqarish va ombor so'rovlari tayyor.</p>
         <div class="hero-actions">
             <a href="{% url 'add_miqdor' %}" class="btn-hero primary">
-                <i class="fa-solid fa-plus"></i> Miqdor Qo'shish
+                <i class="fa-solid fa-plus"></i> Ishlab chiqarish
             </a>
             <a href="{% url 'add_yuklama' %}" class="btn-hero secondary">
                 <i class="fa-solid fa-truck-fast"></i> Yuklama Yaratish
@@ -366,21 +366,21 @@
         <div class="stat-icon amber">📦</div>
         <div class="stat-text">
             <div class="value">{{ zaxira_mahsulotlar|length }}</div>
-            <div class="label">Mahsulot turi</div>
+            <div class="label">Tayyor mahsulot turi</div>
         </div>
     </div>
     <div class="stat-box">
         <div class="stat-icon green">✅</div>
         <div class="stat-text">
             <div class="value">{{ qms|default:"0" }}</div>
-            <div class="label">Bugungi qo'shimlar</div>
+            <div class="label">Bugungi ishlab chiqarish</div>
         </div>
     </div>
     <div class="stat-box">
         <div class="stat-icon blue">🚚</div>
         <div class="stat-text">
             <div class="value">{{ sorovlar|length|default:"0" }}</div>
-            <div class="label">Yuborilgan so'rovlar</div>
+            <div class="label">Yuklama so'rovlari</div>
         </div>
     </div>
 </div>
@@ -424,7 +424,7 @@
             <div class="quick-actions">
                 <a href="{% url 'add_miqdor' %}" class="qa-btn amber">
                     <i class="fa-solid fa-plus-circle"></i>
-                    Miqdor Qo'shish
+                    Ishlab chiqarish
                 </a>
                 <a href="{% url 'add_yuklama' %}" class="qa-btn blue">
                     <i class="fa-solid fa-truck-fast"></i>
@@ -486,6 +486,35 @@
                     {% else %}
                     <span style="color:#d97706;font-weight:600;">⏳ Kutilmoqda</span>
                     {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if material_sorovlar %}
+<div class="content-card" style="margin-top:20px;">
+    <div class="card-head">
+        <h3><i class="fa-solid fa-clipboard-list" style="color:#16a34a;margin-right:8px;"></i>Material so'rovlari</h3>
+        <span class="card-badge" style="background:#dcfce7;color:#15803d;">{{ material_sorovlar|length }}</span>
+    </div>
+    <div class="card-body">
+        {% for sorov in material_sorovlar %}
+        <div class="act-item">
+            <div class="act-dot send"><i class="fa-solid fa-boxes-stacked"></i></div>
+            <div class="act-info">
+                <div class="act-title">{{ sorov.material.nomi }} - {{ sorov.qty }} {{ sorov.material.turi.nomi }}</div>
+                <div class="act-sub">
+                    {% if sorov.status == 'approved' %}
+                    <span style="color:#16a34a;font-weight:600;">Tasdiqlandi</span>
+                    {% elif sorov.status == 'rejected' %}
+                    <span style="color:#dc2626;font-weight:600;">Rad etildi</span>
+                    {% else %}
+                    <span style="color:#d97706;font-weight:600;">Kutilmoqda</span>
+                    {% endif %}
+                    {% if sorov.note %} - {{ sorov.note }}{% endif %}
                 </div>
             </div>
         </div>

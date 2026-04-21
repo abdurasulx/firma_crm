@@ -385,6 +385,13 @@
                 {% endfor %}
             </select>
 
+            <select name="warehouse_type" class="filter-select" onchange="this.form.submit()">
+                <option value="">Barcha omborlar</option>
+                {% for value, label in warehouse_types %}
+                <option value="{{ value }}" {% if warehouse_filter == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+
             <select name="sort" class="filter-select" onchange="this.form.submit()">
                 <option value="name" {% if sort_order == 'name' %}selected{% endif %}>Nomi (A-Z)</option>
                 <option value="price_high" {% if sort_order == 'price_high' %}selected{% endif %}>Narx (Yuqori)</option>
@@ -475,7 +482,7 @@
         <div>{{ total }} ta mahsulotdan <b>{{ mahsulotlar.start_index }}-{{ mahsulotlar.end_index }}</b> ko'rsatilmoqda</div>
         <div class="page-list">
             {% if mahsulotlar.has_previous %}
-            <a href="?page={{ mahsulotlar.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if tur_filter %}&tur={{ tur_filter }}{% endif %}{% if sort_order %}&sort={{ sort_order }}{% endif %}"
+            <a href="?page={{ mahsulotlar.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if tur_filter %}&tur={{ tur_filter }}{% endif %}{% if warehouse_filter %}&warehouse_type={{ warehouse_filter }}{% endif %}{% if sort_order %}&sort={{ sort_order }}{% endif %}"
                class="page-link"><i class="fa-solid fa-chevron-left"></i></a>
             {% endif %}
 
@@ -483,13 +490,13 @@
                 {% if mahsulotlar.number == i %}
                     <span class="page-link active">{{ i }}</span>
                 {% else %}
-                    <a href="?page={{ i }}{% if search_query %}&q={{ search_query }}{% endif %}{% if tur_filter %}&tur={{ tur_filter }}{% endif %}{% if sort_order %}&sort={{ sort_order }}{% endif %}"
+                    <a href="?page={{ i }}{% if search_query %}&q={{ search_query }}{% endif %}{% if tur_filter %}&tur={{ tur_filter }}{% endif %}{% if warehouse_filter %}&warehouse_type={{ warehouse_filter }}{% endif %}{% if sort_order %}&sort={{ sort_order }}{% endif %}"
                        class="page-link">{{ i }}</a>
                 {% endif %}
             {% endfor %}
 
             {% if mahsulotlar.has_next %}
-            <a href="?page={{ mahsulotlar.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if tur_filter %}&tur={{ tur_filter }}{% endif %}{% if sort_order %}&sort={{ sort_order }}{% endif %}"
+            <a href="?page={{ mahsulotlar.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if tur_filter %}&tur={{ tur_filter }}{% endif %}{% if warehouse_filter %}&warehouse_type={{ warehouse_filter }}{% endif %}{% if sort_order %}&sort={{ sort_order }}{% endif %}"
                class="page-link"><i class="fa-solid fa-chevron-right"></i></a>
             {% endif %}
         </div>

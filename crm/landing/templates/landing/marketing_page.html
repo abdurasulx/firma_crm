@@ -1,0 +1,54 @@
+{% extends 'landing/base.html' %}
+
+{% block title %}{{ page.title }} - StockFirm CRM{% endblock %}
+{% block meta_description %}{{ page.lead }}{% endblock %}
+
+{% block content %}
+<section class="section" style="padding-top:72px;">
+    <div class="container grid-2">
+        <div>
+            <div class="eyebrow">{{ page.eyebrow }}</div>
+            <h1 class="hero-title" style="margin-top:14px;">{{ page.title }}</h1>
+            <p class="lead" style="margin-top:24px;">{{ page.lead }}</p>
+            <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:30px;">
+                <a href="{% url 'register_company' %}" class="btn btn-primary">Bepul boshlash</a>
+                <a href="{% url 'pricing' %}" class="btn btn-outline">Tariflarni ko'rish</a>
+            </div>
+        </div>
+        <div class="card" style="background:var(--dark); color:white;">
+            <div class="eyebrow" style="color:#86efac;">Operatsion karta</div>
+            <div style="display:grid; gap:12px; margin-top:18px;">
+                {% for title, text in page.items %}
+                <div style="padding:18px; border-radius:18px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.08);">
+                    <strong>{{ title }}</strong>
+                    <p style="color:rgba(255,255,255,.66); margin-top:6px;">{{ text }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section" style="padding-top:20px;">
+    <div class="container">
+        <div class="grid-3">
+            {% for title, text in page.items %}
+            <div class="card">
+                <div class="feature-icon">{{ forloop.counter|stringformat:"02d" }}</div>
+                <h3>{{ title }}</h3>
+                <p>{{ text }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<section class="section" style="padding-top:30px;">
+    <div class="container card" style="text-align:center; background:linear-gradient(135deg,#f0fdf4,#ffffff);">
+        <div class="eyebrow">Keyingi qadam</div>
+        <h2 class="section-title" style="max-width:760px; margin:12px auto 18px;">Jarayonlaringizni qo'lda emas, tizim orqali boshqaring.</h2>
+        <p class="lead" style="max-width:720px; margin:0 auto 28px;">StockFirm CRM kichik firma uchun ham sodda, o'sayotgan biznes uchun esa tartibli boshqaruv asosi bo'ladi.</p>
+        <a href="{% url 'register_company' %}" class="btn btn-primary">Firmamni ochish</a>
+    </div>
+</section>
+{% endblock %}

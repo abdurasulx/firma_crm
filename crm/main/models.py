@@ -1,5 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.validators import UnicodeUsernameValidator
+from django.utils.translation import gettext_lazy as _
+from uuid import uuid4
 
 BACKUP_CHOICES = (
     ('none', 'Yo\'q ($0)'),
@@ -57,6 +60,19 @@ class Company(models.Model):
     is_on_trial = models.BooleanField(default=False)
     trial_expires_at = models.DateTimeField(null=True, blank=True)
     has_used_trial = models.BooleanField(default=False)
+
+    # Credit sales settings
+    credit_sales_enabled = models.BooleanField(default=True)
+    credit_contract_template = models.TextField(
+        blank=True,
+        default="Nasiya shartnomasi: {{ company }} va {{ customer }} o'rtasida {{ months }} oy muddatga {{ total }} so'mlik savdo."
+    )
+    credit_early_discount_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    credit_late_penalty_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    credit_rules_note = models.TextField(
+        blank=True,
+        default="3 oy - 10%, 6 oy - 15%, 9 oy - 20%, 12 oy - 30% ustama. To'lov grafigi oyma-oy nazorat qilinadi."
+    )
     
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -91,10 +107,20 @@ class PlanRequest(models.Model):
 
 # --- USER MODELI ---
 class User(AbstractUser):
+    username_validator = UnicodeUsernameValidator()
+    username = models.CharField(
+        _("username"),
+        max_length=150,
+        validators=[username_validator],
+        help_text=_("150 ta belgigacha. Harf, raqam va @/./+/-/_ belgilaridan foydalaning."),
+    )
     company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True, blank=True)
     id = models.BigAutoField(primary_key=True)
     USER_TYPES = (
-        ('pazanda', 'Pazanda'),
+        ('pazanda', 'Ishlab chiqaruvchi'),
+        ('ishlab_chiqaruvchi', 'Ishlab chiqaruvchi'),
+        ('omborchi', 'Omborchi'),
+        ('savdogar', 'Savdogar'),
         ('yetkazib_beruvchi', 'Yetkazib Beruvchi'),
         ('ega', 'Ega'),
     )
@@ -107,6 +133,10 @@ class User(AbstractUser):
     tel_raqami = models.CharField(max_length=100, blank=True, null=True)
     is_active = models.BooleanField(default=True)
     
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['company', 'username'], name='unique_username_per_company'),
+        ]
 
     def __str__(self):
         return f"{self.username} ({self.type})"
@@ -117,7 +147,7 @@ class User(AbstractUser):
                 return YetkazibBeruvchi.objects.get(user=self).rasmi.url
             except YetkazibBeruvchi.DoesNotExist:
                 return None
-        elif self.type == 'pazanda':
+        elif self.type in ['pazanda', 'ishlab_chiqaruvchi']:
             try:
                 return Pazanda.objects.get(user=self).rasmi.url
             except Pazanda.DoesNotExist:
@@ -144,7 +174,6 @@ class HaridorDukon(models.Model):
 
 # --- MAHSULOT TURI ---
 class MahsulotTuri(models.Model):
-    company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True, blank=True)
     nomi = models.CharField(max_length=100)  # kg, dona, l
 
     def __str__(self):
@@ -153,11 +182,16 @@ class MahsulotTuri(models.Model):
 
 # --- MAHSULOT ---
 class Mahsulot(models.Model):
+    WAREHOUSE_TYPES = (
+        ('finished', 'Tayyor mahsulotlar ombori'),
+        ('semi_finished', 'Yarim tayyor mahsulotlar ombori'),
+    )
     company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True, blank=True)
     nomi = models.CharField(max_length=255)
     rasmi = models.ImageField(upload_to='mahsulotlar/')
     narxi = models.DecimalField(max_digits=10, decimal_places=2)
     turi = models.ForeignKey(MahsulotTuri, on_delete=models.CASCADE)
+    warehouse_type = models.CharField(max_length=20, choices=WAREHOUSE_TYPES, default='finished')
     miqdori = models.FloatField(default=0)
     min_miqdori = models.FloatField(default=10, help_text="Bu miqdordan kam bo'lsa ogohlantirish chiqadi")
 
@@ -240,7 +274,8 @@ class Savdo(models.Model):
     )
 
     haridor_dukon = models.ForeignKey(HaridorDukon, on_delete=models.CASCADE)
-    yetkazib_beruvchi = models.ForeignKey(YetkazibBeruvchi, on_delete=models.CASCADE)
+    yetkazib_beruvchi = models.ForeignKey(YetkazibBeruvchi, on_delete=models.CASCADE, null=True, blank=True)
+    savdogar = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='savdolar')
     company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True, blank=True)
     vaqt_sana = models.DateTimeField(auto_now_add=True)
     oluvchining_ismi = models.CharField(max_length=255)
@@ -248,6 +283,11 @@ class Savdo(models.Model):
     smr = models.ImageField(upload_to='savdo/')
     st = models.CharField(max_length=20, choices=ST_CHOICES)
     summa=models.FloatField(null=True, blank=True)
+    base_summa = models.FloatField(null=True, blank=True)
+    credit_term_months = models.PositiveSmallIntegerField(null=True, blank=True)
+    credit_markup_percent = models.FloatField(default=0)
+    credit_due_date = models.DateField(null=True, blank=True)
+    credit_contract_text = models.TextField(blank=True, null=True)
     tulandi = models.BooleanField(default=False)
     tasdiq_kutilmoqda = models.BooleanField(default=False)
     # Sotuvchining lokatsiyasi
@@ -277,10 +317,15 @@ class Savdo(models.Model):
                         from .bot_logic import send_telegram_notification
                         owner = User.objects.filter(company=self.company, type='ega').first()
                         if owner and owner.tg_id:
+                            seller_name = (
+                                self.yetkazib_beruvchi.tuliq_ismi
+                                if self.yetkazib_beruvchi
+                                else (self.savdogar.tuliq_ismi if self.savdogar else "Noma'lum")
+                            )
                             msg = (
                                 f"💰 <b>Yangi to'lov tasdiqlandi!</b>\n\n"
                                 f"🏢 Do'kon: {self.haridor_dukon.nomi}\n"
-                                f"👤 Mashul: {self.yetkazib_beruvchi.tuliq_ismi}\n"
+                                f"👤 Sotuvchi: {seller_name}\n"
                                 f"💵 Summa: {self.summa:,.0f} so'm\n"
                                 f"📅 Vaqt: {self.vaqt_sana.strftime('%d.%m.%Y %H:%M') if self.vaqt_sana else 'Hozir'}"
                             )
@@ -366,6 +411,9 @@ class StockHistory(models.Model):
         ('DEDUCT', 'Kamaytirildi (Savdo/Yuklash)'),
         ('RETURN', 'Qaytarildi'),
         ('REQUEST_APPROVED', 'Sorov tasdiqlandi'),
+        ('RAW_REQUESTED', 'Ishlab chiqarish uchun so\'rov yuborildi'),
+        ('RAW_APPROVED', 'Yarim tayyor mahsulot ombordan berildi'),
+        ('RAW_REJECTED', 'Yarim tayyor mahsulot so\'rovi rad etildi'),
         ('ADJUST', 'Admin tomonidan tuzatildi'),
     )
 
@@ -388,6 +436,31 @@ class StockHistory(models.Model):
         return f"{self.event_type} - {self.mahsulot.nomi} ({self.delta})"
 
 
+class ProductionMaterialRequest(models.Model):
+    STATUS_CHOICES = (
+        ('waiting', 'Kutilmoqda'),
+        ('approved', 'Tasdiqlandi'),
+        ('rejected', 'Rad etildi'),
+    )
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='material_requests')
+    producer = models.ForeignKey(Pazanda, on_delete=models.CASCADE, related_name='material_requests')
+    material = models.ForeignKey(Mahsulot, on_delete=models.CASCADE, related_name='production_material_requests')
+    qty = models.FloatField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='waiting')
+    note = models.TextField(blank=True, null=True)
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_material_requests')
+    created_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Ishlab chiqarish material so'rovi"
+        verbose_name_plural = "Ishlab chiqarish material so'rovlari"
+
+    def __str__(self):
+        return f"{self.producer} - {self.material} - {self.qty}"
+
+
 # --- CLICK TRANSACTION MODEL ---
 class ClickTransaction(models.Model):
     STATUS_CHOICES = (
@@ -396,7 +469,9 @@ class ClickTransaction(models.Model):
         ('canceled', 'Bekor qilingan'),
         ('error', 'Xatolik'),
     )
-    click_trans_id = models.CharField(max_length=255)
+    click_trans_id = models.CharField(max_length=255, unique=True)
+    click_paydoc_id = models.CharField(max_length=255, blank=True, default='')
+    service_id = models.CharField(max_length=255, blank=True, default='')
     merchant_trans_id = models.CharField(max_length=255)
     company = models.ForeignKey('Company', on_delete=models.CASCADE, related_name='click_transactions')
     amount = models.DecimalField(max_digits=12, decimal_places=2)
@@ -410,6 +485,41 @@ class ClickTransaction(models.Model):
     perform_time = models.DateTimeField(null=True, blank=True)
     cancel_time = models.DateTimeField(null=True, blank=True)
     error_reason = models.TextField(blank=True, null=True)
+    payment_reason = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
         return f"ClickTrans {self.click_trans_id} - {self.company.name} - {self.amount}"
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['merchant_trans_id']),
+            models.Index(fields=['status']),
+        ]
+
+
+class BillingPaymentLink(models.Model):
+    STATUS_CHOICES = (
+        ('created', 'Yaratilgan'),
+        ('opened', 'Ochildi'),
+        ('paid', 'To\'langan'),
+        ('failed', 'Xatolik'),
+        ('canceled', 'Bekor qilingan'),
+    )
+
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='billing_payment_links')
+    token = models.CharField(max_length=64, unique=True, default=uuid4, editable=False)
+    reason = models.CharField(max_length=255)
+    billing_period_start = models.DateField()
+    amount_usd = models.DecimalField(max_digits=12, decimal_places=2)
+    amount_uzs = models.DecimalField(max_digits=14, decimal_places=2)
+    click_url = models.TextField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='created')
+    opened_at = models.DateTimeField(null=True, blank=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.company.name} - {self.reason} - {self.status}"

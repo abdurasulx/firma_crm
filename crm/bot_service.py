@@ -2,7 +2,7 @@ import os
 import django
 import logging
 import sys
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
 # 1. Setup Django
@@ -70,7 +70,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         token = generate_tg_link_token(chat_id)
         login_url = f"{scheme}://{subdomain}.{base_domain}/login/?tg_id={chat_id}&hash={token}"
         
-        keyboard = [[InlineKeyboardButton("🖥 Saytga kirish (Auto-login)", url=login_url)]]
+        keyboard = [[InlineKeyboardButton("🖥 Saytga kirish (Auto-login)", web_app=WebAppInfo(url=login_url))]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         await update.message.reply_text(
@@ -86,7 +86,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         token = generate_tg_link_token(chat_id)
         link_url = f"{scheme}://{base_domain}/login/?tg_id={chat_id}&hash={token}"
         
-        keyboard = [[InlineKeyboardButton("🔗 Hisobni bog'lash", url=link_url)]]
+        keyboard = [[InlineKeyboardButton(
+                text="🔗 Hisobni bog'lash",
+                web_app=WebAppInfo(url=link_url)
+            )]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         await update.message.reply_text(

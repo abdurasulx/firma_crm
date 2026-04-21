@@ -283,8 +283,20 @@
                             <i class="fa-solid fa-scale-balanced"></i>
                             <select id="turi" name="turi" class="form-control" required>
                                 {% for tur in turs %}
-                                <option value="{{ tur.nomi }}" {% if turi == tur.nomi %}selected{% endif %}>{{ tur.nomi }}
+                                <option value="{{ tur.id }}" {% if turi == tur.id %}selected{% endif %}>{{ tur.nomi }}
                                 </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Ombor turi</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-warehouse"></i>
+                            <select id="warehouse_type" name="warehouse_type" class="form-control" required>
+                                {% for value, label in warehouse_types %}
+                                <option value="{{ value }}">{{ label }}</option>
                                 {% endfor %}
                             </select>
                         </div>

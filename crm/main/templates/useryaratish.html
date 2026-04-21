@@ -106,7 +106,9 @@
         <div class="form-group">
             <label for="turi">Xodim turi</label>
             <select id="turi" name="turi" required onchange="toggleMashinaFields()">
-                <option value="pazanda" {% if turi == 'pazanda' %}selected{% endif %}>Pazanda</option>
+                <option value="pazanda" {% if turi == 'pazanda' %}selected{% endif %}>Ishlab chiqaruvchi</option>
+                <option value="omborchi" {% if turi == 'omborchi' %}selected{% endif %}>Omborchi</option>
+                <option value="savdogar" {% if turi == 'savdogar' %}selected{% endif %}>Savdogar</option>
                 <option value="yetkazib_beruvchi" {% if turi == 'yetkazib_beruvchi' %}selected{% endif %}>Yetkazib beruvchi</option>
             </select>
         </div>

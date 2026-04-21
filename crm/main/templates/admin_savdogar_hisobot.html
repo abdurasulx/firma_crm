@@ -1,0 +1,70 @@
+{% extends 'egabase.html' %}
+
+{% block title %}Savdogar Hisoboti{% endblock %}
+
+{% block content %}
+<div style="background:#0f172a;color:white;border-radius:24px;padding:30px;margin-bottom:22px;">
+    <h1 style="margin:0 0 8px;font-size:30px;">Savdogarlar hisoboti</h1>
+    <p style="margin:0;color:#cbd5e1;">Bu sahifada faqat savdogar roli qilgan savdolar ko'rinadi. Yetkazuvchi savdolari umumiy hisobotda qoladi.</p>
+</div>
+
+<form method="get" style="background:white;border:1px solid #e2e8f0;border-radius:18px;padding:18px;display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
+    <div>
+        <label style="display:block;color:#64748b;font-weight:800;font-size:12px;margin-bottom:6px;">Savdogar</label>
+        <select name="savdogar" style="padding:11px 12px;border:1px solid #cbd5e1;border-radius:12px;min-width:220px;">
+            <option value="">Barcha savdogarlar</option>
+            {% for seller in savdogarlar %}
+            <option value="{{ seller.id }}" {% if savdogar_filter == seller.id|stringformat:"s" %}selected{% endif %}>
+                {{ seller.tuliq_ismi|default:seller.username }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label style="display:block;color:#64748b;font-weight:800;font-size:12px;margin-bottom:6px;">Boshlanish</label>
+        <input type="date" name="from" value="{{ from_date }}" style="padding:11px 12px;border:1px solid #cbd5e1;border-radius:12px;">
+    </div>
+    <div>
+        <label style="display:block;color:#64748b;font-weight:800;font-size:12px;margin-bottom:6px;">Tugash</label>
+        <input type="date" name="to" value="{{ to_date }}" style="padding:11px 12px;border:1px solid #cbd5e1;border-radius:12px;">
+    </div>
+    <button style="align-self:end;border:0;background:#059669;color:white;border-radius:12px;padding:12px 18px;font-weight:900;">Ko'rish</button>
+</form>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;margin-bottom:22px;">
+    <div style="background:white;border:1px solid #e2e8f0;border-radius:18px;padding:20px;"><div style="color:#64748b;font-weight:800;">Savdo soni</div><div style="font-size:28px;font-weight:900;color:#0f172a;">{{ total_sales }}</div></div>
+    <div style="background:white;border:1px solid #e2e8f0;border-radius:18px;padding:20px;"><div style="color:#64748b;font-weight:800;">Jami</div><div style="font-size:28px;font-weight:900;color:#059669;">{{ total_amount|floatformat:0 }}</div></div>
+    <div style="background:white;border:1px solid #e2e8f0;border-radius:18px;padding:20px;"><div style="color:#64748b;font-weight:800;">Naqd</div><div style="font-size:28px;font-weight:900;color:#2563eb;">{{ naqd_amount|floatformat:0 }}</div></div>
+    <div style="background:white;border:1px solid #e2e8f0;border-radius:18px;padding:20px;"><div style="color:#64748b;font-weight:800;">Karta</div><div style="font-size:28px;font-weight:900;color:#7c3aed;">{{ karta_amount|floatformat:0 }}</div></div>
+    <div style="background:white;border:1px solid #e2e8f0;border-radius:18px;padding:20px;"><div style="color:#64748b;font-weight:800;">Nasiya</div><div style="font-size:28px;font-weight:900;color:#dc2626;">{{ nasiya_amount|floatformat:0 }}</div></div>
+</div>
+
+{% if seller_stats %}
+<div style="background:white;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;margin-bottom:22px;">
+    <div style="padding:18px 20px;border-bottom:1px solid #e2e8f0;font-weight:900;color:#0f172a;">Savdogarlar kesimi</div>
+    {% for row in seller_stats %}
+    <div style="display:grid;grid-template-columns:1fr repeat(3,auto);gap:18px;padding:15px 20px;border-bottom:1px solid #edf2f7;align-items:center;">
+        <strong>{{ row.seller.tuliq_ismi|default:row.seller.username }}</strong>
+        <span>{{ row.sales_count }} ta</span>
+        <span style="font-weight:900;color:#059669;">{{ row.total_amount|floatformat:0 }} so'm</span>
+        <span style="font-weight:900;color:#dc2626;">Nasiya: {{ row.nasiya_amount|floatformat:0 }}</span>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div style="background:white;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;">
+    <div style="padding:18px 20px;border-bottom:1px solid #e2e8f0;font-weight:900;color:#0f172a;">Oxirgi savdogar savdolari</div>
+    {% for s in sales %}
+    <div style="display:grid;grid-template-columns:1fr auto;gap:14px;padding:16px 20px;border-bottom:1px solid #edf2f7;">
+        <div>
+            <div style="font-weight:900;color:#0f172a;">{{ s.haridor_dukon.nomi }}</div>
+            <div style="color:#64748b;font-size:13px;">{{ s.savdogar.tuliq_ismi|default:s.savdogar.username }} - {{ s.vaqt_sana|date:"d.m.Y H:i" }} - {{ s.get_st_display }}</div>
+        </div>
+        <div style="font-weight:900;color:#059669;">{{ s.summa|floatformat:0 }} so'm</div>
+    </div>
+    {% empty %}
+    <div style="padding:50px;text-align:center;color:#64748b;">Bu davrda savdogar savdosi yo'q.</div>
+    {% endfor %}
+</div>
+{% endblock %}

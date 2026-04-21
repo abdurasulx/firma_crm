@@ -1,9 +1,9 @@
 {% extends 'pzbase.html' %}
 {% load static %}
 
-{% block title %}Miqdor Qo'shish{% endblock %}
-{% block page_title %}Miqdor Qo'shish{% endblock %}
-{% block page_subtitle %}Ombor zaxirasiga yangi mahsulot miqdori kiriting{% endblock %}
+{% block title %}Ishlab chiqarish{% endblock %}
+{% block page_title %}Ishlab chiqarish{% endblock %}
+{% block page_subtitle %}Tayyor mahsulot kiriting yoki ishlab chiqarish uchun material so'rang{% endblock %}
 {% block nav_miqdor %}active{% endblock %}
 
 {% block extra_head %}
@@ -12,8 +12,14 @@
         background: var(--bg-card);
         border-radius: var(--radius);
         box-shadow: var(--shadow);
-        max-width: 580px;
         overflow: hidden;
+    }
+
+    .production-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 22px;
+        align-items: start;
     }
 
     .form-card-head {
@@ -153,10 +159,11 @@
 {% endblock %}
 
 {% block content %}
+<div class="production-grid">
 <div class="form-card">
     <div class="form-card-head">
-        <h2><i class="fa-solid fa-plus-circle"></i> Miqdor Qo'shish</h2>
-        <p>Ishlab chiqarilgan mahsulot miqdorini zaxiraga kiriting</p>
+        <h2><i class="fa-solid fa-box"></i> Tayyor mahsulot</h2>
+        <p>Ishlab chiqarilgan tayyor mahsulotni omborga kiriting</p>
     </div>
     <div class="form-card-body">
         <form method="POST" enctype="multipart/form-data">
@@ -166,7 +173,7 @@
                 <label for="mahsulot">Mahsulot</label>
                 <select name="mahsulot" id="mahsulot" class="form-control" required>
                     {% for m in mahsulotlar %}
-                    <option value="{{ m.nomi }}">{{ m.nomi }} ({{ m.turi.nomi }})</option>
+                    <option value="{{ m.id }}">{{ m.nomi }} ({{ m.turi.nomi }})</option>
                     {% endfor %}
                 </select>
             </div>
@@ -196,6 +203,46 @@
             </button>
         </form>
     </div>
+</div>
+
+<div class="form-card">
+    <div class="form-card-head">
+        <h2><i class="fa-solid fa-clipboard-list"></i> Material so'rash</h2>
+        <p>Yarim tayyor mahsulotlar omboridan ishlab chiqarish uchun so'rov yuboring</p>
+    </div>
+    <div class="form-card-body">
+        <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="request_material" value="1">
+
+            <div class="form-group">
+                <label for="material">Material</label>
+                <select name="material" id="material" class="form-control" required>
+                    {% for m in materials %}
+                    <option value="{{ m.id }}">{{ m.nomi }} - qoldiq: {{ m.miqdori }} {{ m.turi.nomi }}</option>
+                    {% empty %}
+                    <option value="">Yarim tayyor mahsulot topilmadi</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="material_qty">So'raladigan miqdor</label>
+                <input type="number" name="material_qty" id="material_qty" class="form-control" required min="0.01" step="0.01" placeholder="0.00">
+            </div>
+
+            <div class="form-group">
+                <label for="material_note">Izoh (ixtiyoriy)</label>
+                <textarea name="material_note" id="material_note" class="form-control" rows="4" placeholder="Masalan: bugungi partiya uchun"></textarea>
+            </div>
+
+            <button type="submit" class="btn-submit">
+                <i class="fa-solid fa-paper-plane"></i>
+                So'rov yuborish
+            </button>
+        </form>
+    </div>
+</div>
 </div>
 {% endblock %}
 

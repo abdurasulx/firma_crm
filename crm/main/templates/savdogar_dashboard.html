@@ -1,0 +1,77 @@
+{% extends 'ytbase.html' %}
+
+{% block title %}Savdogar Dashboard{% endblock %}
+
+{% block content %}
+<div style="max-width:1100px;margin:0 auto;">
+    <div style="background:linear-gradient(135deg,#052e2b,#059669); color:white; border-radius:28px; padding:34px; margin-bottom:24px; box-shadow:0 22px 50px rgba(5,150,105,.22);">
+        <div style="display:flex; justify-content:space-between; gap:20px; align-items:center; flex-wrap:wrap;">
+            <div>
+                <div style="font-size:13px; font-weight:900; letter-spacing:.12em; text-transform:uppercase; opacity:.75;">Savdogar paneli</div>
+                <h1 style="margin:8px 0 8px; font-size:34px; line-height:1.1;">{{ request.user.tuliq_ismi|default:request.user.username }}</h1>
+                <p style="margin:0; opacity:.82; font-size:16px;">Tayyor mahsulot omboridan savdo qiling, nasiya va hisobotlarni alohida kuzating.</p>
+            </div>
+            <a href="{% url 'savdogar_sotish' %}" style="background:white;color:#047857;text-decoration:none;padding:15px 20px;border-radius:16px;font-weight:900;box-shadow:0 12px 30px rgba(0,0,0,.12);">
+                <i class="fa-solid fa-cart-plus"></i> Yangi savdo
+            </a>
+        </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:24px;">
+        <div style="background:white;border-radius:20px;padding:22px;border:1px solid #e2e8f0;box-shadow:0 12px 30px rgba(15,23,42,.06);">
+            <div style="color:#64748b;font-weight:800;">Bugungi savdolar</div>
+            <div style="font-size:30px;font-weight:900;color:#0f172a;margin-top:8px;">{{ today_sales_count }}</div>
+        </div>
+        <div style="background:white;border-radius:20px;padding:22px;border:1px solid #e2e8f0;box-shadow:0 12px 30px rgba(15,23,42,.06);">
+            <div style="color:#64748b;font-weight:800;">Bugungi summa</div>
+            <div style="font-size:30px;font-weight:900;color:#059669;margin-top:8px;">{{ today_sales_amount|floatformat:0 }}</div>
+        </div>
+        <div style="background:white;border-radius:20px;padding:22px;border:1px solid #e2e8f0;box-shadow:0 12px 30px rgba(15,23,42,.06);">
+            <div style="color:#64748b;font-weight:800;">Oylik summa</div>
+            <div style="font-size:30px;font-weight:900;color:#2563eb;margin-top:8px;">{{ month_sales_amount|floatformat:0 }}</div>
+        </div>
+        <div style="background:white;border-radius:20px;padding:22px;border:1px solid #e2e8f0;box-shadow:0 12px 30px rgba(15,23,42,.06);">
+            <div style="color:#64748b;font-weight:800;">Ochiq nasiya</div>
+            <div style="font-size:30px;font-weight:900;color:#dc2626;margin-top:8px;">{{ nasiya_count }}</div>
+        </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr);gap:22px;">
+        <div style="background:white;border-radius:22px;border:1px solid #e2e8f0;box-shadow:0 12px 30px rgba(15,23,42,.06);overflow:hidden;">
+            <div style="padding:20px 22px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;">
+                <h3 style="margin:0;color:#0f172a;">So'nggi savdolar</h3>
+                <a href="{% url 'savdogar_savdolar' %}" style="color:#059669;font-weight:900;text-decoration:none;">Barchasi</a>
+            </div>
+            <div style="padding:8px 22px 18px;">
+                {% for s in recent_sales %}
+                <div style="display:flex;justify-content:space-between;gap:14px;padding:14px 0;border-bottom:1px solid #edf2f7;">
+                    <div>
+                        <div style="font-weight:900;color:#0f172a;">{{ s.haridor_dukon.nomi }}</div>
+                        <div style="color:#64748b;font-size:13px;">{{ s.get_st_display }} - {{ s.vaqt_sana|date:"d.m.Y H:i" }}</div>
+                    </div>
+                    <div style="font-weight:900;color:#059669;">{{ s.summa|floatformat:0 }} so'm</div>
+                </div>
+                {% empty %}
+                <div style="padding:42px 0;text-align:center;color:#64748b;">Hali savdo yo'q.</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div style="background:white;border-radius:22px;border:1px solid #e2e8f0;box-shadow:0 12px 30px rgba(15,23,42,.06);overflow:hidden;">
+            <div style="padding:20px 22px;border-bottom:1px solid #e2e8f0;">
+                <h3 style="margin:0;color:#0f172a;">Tayyor mahsulotlar</h3>
+            </div>
+            <div style="padding:8px 22px 18px;">
+                {% for p in products %}
+                <div style="display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #edf2f7;">
+                    <span style="font-weight:800;color:#0f172a;">{{ p.nomi }}</span>
+                    <span style="font-weight:900;color:#2563eb;">{{ p.miqdori }} {{ p.turi.nomi }}</span>
+                </div>
+                {% empty %}
+                <div style="padding:24px 0;color:#64748b;">Tayyor mahsulot yo'q.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
