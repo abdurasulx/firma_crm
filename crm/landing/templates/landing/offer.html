@@ -1,0 +1,138 @@
+{% extends 'landing/base.html' %}
+
+{% block title %}Ommaviy Oferta - StockFirm CRM{% endblock %}
+{% block meta_description %}StockFirm CRM xizmatidan foydalanish bo'yicha ommaviy oferta shartlari.{% endblock %}
+
+{% block content %}
+<section class="container" style="padding: 48px 0 60px;">
+    <div style="max-width: 860px; margin: 0 auto; font-family: 'Inter', sans-serif; color: #1e293b; line-height: 1.8;">
+
+        <div style="margin-bottom: 32px;">
+            <div style="font-size: 13px; font-weight: 600; color: #10b981; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">Huquqiy hujjat</div>
+            <h1 style="font-size: clamp(28px, 5vw, 44px); font-weight: 800; margin-bottom: 14px;">Ommaviy Oferta</h1>
+            <p style="color: #64748b; font-size: 15px;">
+                Ushbu hujjat <strong>StockFirm CRM</strong> xizmatidan foydalanish bo'yicha ommaviy oferta hisoblanadi.
+                Ro'yxatdan o'tish yoki xizmatdan foydalanish orqali siz quyidagi shartlarni qabul qilasiz.
+            </p>
+            <p style="color: #94a3b8; font-size: 13px; margin-top: 8px;">Oxirgi yangilanish: 13.06.2026</p>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 28px;">
+
+            {% for section in sections %}
+            <div style="border: 1px solid #e2e8f0; border-radius: 16px; padding: 28px 32px; background: #fff;">
+                <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 14px; color: #0f172a;">
+                    {{ forloop.counter }}. {{ section.title }}
+                </h2>
+                {{ section.body }}
+            </div>
+            {% endfor %}
+
+            <!-- Static sections -->
+            <div style="border: 1px solid #e2e8f0; border-radius: 16px; padding: 28px 32px; background: #fff;">
+                <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 14px; color: #0f172a;">1. Umumiy qoidalar</h2>
+                <p>Ushbu Ommaviy Oferta (keyingi o'rinlarda — «Oferta») <strong>StockFirm CRM</strong> platformasi xizmatlaridan foydalanish shartlarini belgilaydi.</p>
+                <p style="margin-top: 10px;">Oferta aksept qilingan paytdan boshlab, ya'ni foydalanuvchi ro'yxatdan o'tgan yoki xizmatni faollashtirgan paytdan boshlab kuchga kiradi va xizmat shartnomasi hisoblanadi.</p>
+                <p style="margin-top: 10px;">Xizmat ko'rsatuvchi: StockFirm CRM platformasi, <strong>stockfirm.uz</strong> domeni orqali taqdim etiladi.</p>
+            </div>
+
+            <div style="border: 1px solid #e2e8f0; border-radius: 16px; padding: 28px 32px; background: #fff;">
+                <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 14px; color: #0f172a;">2. Xizmat tavsifi</h2>
+                <p>StockFirm CRM — ombor, savdo, yetkazib berish va moliyaviy jarayonlarni avtomatlashtiruvchi bulutli SaaS platforma.</p>
+                <ul style="margin-top: 12px; padding-left: 20px; display: flex; flex-direction: column; gap: 6px;">
+                    <li>Har bir firma alohida subdomen (<code>firma.stockfirm.uz</code>) orqali izolyatsiyalangan muhitda ishlaydi</li>
+                    <li>Tizim 24/7 rejimida ishlashi ta'minlanadi (texnik xizmat vaqtlari bundan mustasno)</li>
+                    <li>Ma'lumotlar xavfsizligi va konfidensiallik ta'minlanadi</li>
+                    <li>Tarifga qarab qo'shimcha imkoniyatlar (xarita, AI analitika, Telegram bot va boshqalar) taqdim etiladi</li>
+                </ul>
+            </div>
+
+            <div style="border: 1px solid #e2e8f0; border-radius: 16px; padding: 28px 32px; background: #fff;">
+                <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 14px; color: #0f172a;">3. Tariflar va to'lov tartibi</h2>
+                <p>Xizmatdan foydalanish oylik obuna asosida amalga oshiriladi.</p>
+                <ul style="margin-top: 12px; padding-left: 20px; display: flex; flex-direction: column; gap: 6px;">
+                    <li><strong>30 kunlik bepul sinov muddati</strong> — ro'yxatdan o'tgandan so'ng barcha asosiy imkoniyatlar bepul taqdim etiladi</li>
+                    <li>Oylik to'lov miqdori tanlangan tarif va xodimlar soniga qarab belgilanadi</li>
+                    <li>To'lov Click.uz orqali amalga oshiriladi</li>
+                    <li>To'lov muddati o'tgach, xizmat to'xtatilishi mumkin</li>
+                    <li>To'langan mablag' qaytarilmaydi (texnik nosozlik bundan mustasno)</li>
+                </ul>
+            </div>
+
+            <div style="border: 1px solid #e2e8f0; border-radius: 16px; padding: 28px 32px; background: #fff;">
+                <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 14px; color: #0f172a;">4. Nasiya savdo moduli shartlari</h2>
+                <p>Savdogar moduli orqali nasiya savdo amalga oshirilganda quyidagi shartlar qo'llaniladi:</p>
+                <ul style="margin-top: 12px; padding-left: 20px; display: flex; flex-direction: column; gap: 6px;">
+                    <li>Nasiya muddati va ustama foizi tizim qoidalariga asosan hisoblanadi</li>
+                    <li>Muddatdan <strong>oldin</strong> to'lansa — ustama foizi kamayadi (chiziqli interpolatsiya)</li>
+                    <li>Muddatdan <strong>kech</strong> to'lansa — keyingi muddat ustamasi proportsional qo'llaniladi</li>
+                    <li>Shartnoma PDF ko'rinishida saqlanadi va har ikkala tomon imzosi talab qilinadi</li>
+                    <li>Barcha nasiya bitimlar xaridorning pasport nusxasi bilan rasmiylashtiriladi</li>
+                </ul>
+                <div style="margin-top: 16px; padding: 14px 18px; background: #f0fdf4; border-left: 4px solid #10b981; border-radius: 8px; font-size: 13px; color: #065f46;">
+                    <strong>Ustama jadval:</strong> 3 oy — 10% | 6 oy — 15% | 9 oy — 20% | 12 oy — 30%
+                </div>
+            </div>
+
+            <div style="border: 1px solid #e2e8f0; border-radius: 16px; padding: 28px 32px; background: #fff;">
+                <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 14px; color: #0f172a;">5. Foydalanuvchi majburiyatlari</h2>
+                <ul style="padding-left: 20px; display: flex; flex-direction: column; gap: 6px;">
+                    <li>To'g'ri va haqiqiy ma'lumotlarni kiritish</li>
+                    <li>Login ma'lumotlarini uchinchi shaxslarga bermaslik</li>
+                    <li>Tizimdan faqat qonuniy maqsadlarda foydalanish</li>
+                    <li>To'lovlarni belgilangan muddatda amalga oshirish</li>
+                    <li>Xodimlar va mijozlar ma'lumotlarini himoya qilish</li>
+                </ul>
+            </div>
+
+            <div style="border: 1px solid #e2e8f0; border-radius: 16px; padding: 28px 32px; background: #fff;">
+                <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 14px; color: #0f172a;">6. Xizmat ko'rsatuvchi majburiyatlari</h2>
+                <ul style="padding-left: 20px; display: flex; flex-direction: column; gap: 6px;">
+                    <li>Xizmatning uzluksiz ishlashini ta'minlash</li>
+                    <li>Foydalanuvchi ma'lumotlarini uchinchi shaxslarga bermaslik</li>
+                    <li>Texnik muammolar haqida foydalanuvchini xabardor qilish</li>
+                    <li>Ma'lumotlarning xavfsizligini ta'minlash</li>
+                    <li>Yangi imkoniyatlar va xizmat sifatini oshirib borish</li>
+                </ul>
+            </div>
+
+            <div style="border: 1px solid #e2e8f0; border-radius: 16px; padding: 28px 32px; background: #fff;">
+                <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 14px; color: #0f172a;">7. Ma'lumotlar maxfiyligi</h2>
+                <p>Foydalanuvchilarning shaxsiy ma'lumotlari O'zbekiston Respublikasining "Shaxsga doir ma'lumotlar to'g'risida"gi qonuniga muvofiq himoya qilinadi.</p>
+                <p style="margin-top: 10px;">Ma'lumotlar faqat xizmatni ko'rsatish maqsadida ishlatiladi va uchinchi shaxslarga o'tkazilmaydi.</p>
+            </div>
+
+            <div style="border: 1px solid #e2e8f0; border-radius: 16px; padding: 28px 32px; background: #fff;">
+                <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 14px; color: #0f172a;">8. Xizmatni bekor qilish</h2>
+                <ul style="padding-left: 20px; display: flex; flex-direction: column; gap: 6px;">
+                    <li>Foydalanuvchi istalgan vaqtda xizmatdan voz kecha oladi</li>
+                    <li>To'langan davrga mos xizmat ko'rsatish davom ettiriladi</li>
+                    <li>Xizmat ko'rsatuvchi to'lov amalga oshirilmagan taqdirda xizmatni to'xtatish huquqiga ega</li>
+                    <li>Ofertani qo'pol ravishda buzgan foydalanuvchilar bloklanishi mumkin</li>
+                </ul>
+            </div>
+
+            <div style="border: 1px solid #e2e8f0; border-radius: 16px; padding: 28px 32px; background: #fff;">
+                <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 14px; color: #0f172a;">9. Nizolarni hal qilish</h2>
+                <p>Tomonlar o'rtasida kelib chiqadigan nizolar birinchi navbatda muzokaralar yo'li bilan hal qilinadi.</p>
+                <p style="margin-top: 10px;">Muzokaralar natija bermagan taqdirda nizo O'zbekiston Respublikasi qonunchiligiga muvofiq sud tartibida hal qilinadi.</p>
+                <p style="margin-top: 10px;">Aloqa: <strong>support@stockfirm.uz</strong></p>
+            </div>
+
+            <div style="border: 1px solid #e2e8f0; border-radius: 16px; padding: 28px 32px; background: #fff;">
+                <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 14px; color: #0f172a;">10. Ofertaga o'zgartishlar</h2>
+                <p>Xizmat ko'rsatuvchi ushbu Ofertaga o'zgartishlar kiritish huquqini o'zida saqlab qoladi.</p>
+                <p style="margin-top: 10px;">O'zgartishlar <strong>stockfirm.uz/offer</strong> sahifasida e'lon qilinadi va e'lon qilingan kundan boshlab kuchga kiradi.</p>
+                <p style="margin-top: 10px;">Xizmatdan foydalanishni davom ettirish yangi shartlarni qabul qilish sifatida hisoblanadi.</p>
+            </div>
+
+        </div>
+
+        <div style="margin-top: 40px; padding: 24px; background: #f8fafc; border-radius: 16px; text-align: center; color: #64748b; font-size: 14px;">
+            Savollar uchun: <a href="mailto:support@stockfirm.uz" style="color: #10b981; font-weight: 600;">support@stockfirm.uz</a>
+            &nbsp;|&nbsp; <strong>stockfirm.uz</strong>
+        </div>
+
+    </div>
+</section>
+{% endblock %}
