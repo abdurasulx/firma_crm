@@ -15,34 +15,32 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path, include
-from django.shortcuts import redirect
-from landing import views as landing_views
-
-def root_routing_view(request):
-    if getattr(request, 'is_landing', False):
-        return include('landing.urls') # Note: include doesn't work directly in views like this easily in standard Django
-    return include('main.urls')
-
-# Simplified logic: use URLconfs directly or a routing wrapper
-urlpatterns = [
-    path('admin/', admin.site.urls),
-]
-
-# dynamic inclusion based on middleware flags
-def get_urls(request):
-    if getattr(request, 'is_landing', False):
-        return 'landing.urls'
-    return 'main.urls'
-
-# Actually, the best way in Django for this is to include both but let middleware/views handle the logic, 
-# or use a custom URL dispatcher. But for a simple SaaS, we can just include them both 
-# and let the views in each app check for request.is_landing.
+from django.conf import settings
+from django.urls import path, include, re_path
+from django.views.static import serve
 
 urlpatterns = [
-    path('admin_panel/', admin.site.urls), # Rename to avoid confusion with subdomain admin
+    path('admin_panel/', admin.site.urls),
     path('', include('landing.urls')),
     path('', include('main.urls')),
 ]
+
+if settings.SERVE_MEDIA_FILES:
+    urlpatterns += [
+        re_path(
+            r'^media/(?P<path>.*)$',
+            serve,
+            {'document_root': settings.MEDIA_ROOT},
+        ),
+    ]
+
+if settings.SERVE_STATIC_FILES:
+    urlpatterns += [
+        re_path(
+            r'^static/(?P<path>.*)$',
+            serve,
+            {'document_root': settings.STATIC_ROOT},
+        ),
+    ]
 
 handler404 = 'landing.views.custom_404'

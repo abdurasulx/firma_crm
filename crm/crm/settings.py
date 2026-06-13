@@ -19,24 +19,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load .env file
 load_dotenv(BASE_DIR / '.env')
-LOG_DIR = BASE_DIR / 'logs'
-LOG_DIR.mkdir(exist_ok=True)
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('DJANGO_SECRET_KEY') or os.getenv('SECRET_KEY', 'django-insecure-fallback-key-for-dev')
-
-CLICK_SERVICE_ID = os.getenv('CLICK_SERVICE_ID') or os.getenv('SERVICE_ID', '')
-CLICK_MERCHANT_ID = os.getenv('CLICK_MERCHANT_ID') or os.getenv('MERCHANT_ID', '')
-CLICK_SECRET_KEY = os.getenv('CLICK_SECRET_KEY') or os.getenv('SECRET_KEY', '')
-CLICK_ALLOWED_IPS = [
-    ip.strip()
-    for ip in os.getenv('CLICK_ALLOWED_IPS', '').split(',')
-    if ip.strip()
-]
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-fallback-key-for-dev')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
@@ -87,11 +76,33 @@ LOGOUT_REDIRECT_URL = '/login/'
 ROOT_URLCONF = 'crm.urls'
 ASGI_APPLICATION = 'crm.asgi.application'
 
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
-    },
-}
+REDIS_URL = os.getenv('REDIS_URL')
+
+if REDIS_URL:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                'hosts': [REDIS_URL],
+            },
+        },
+    }
+else:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        },
+    }
+
+if os.getenv('USE_REDIS_CHANNEL_LAYER', '').lower() in ('1', 'true', 'yes'):
+    CHANNEL_LAYERS = {
+        'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+                'hosts': [os.getenv('REDIS_URL', 'redis://redis:6379/0')],
+            },
+        },
+    }
 
 TEMPLATES = [
     {
@@ -180,18 +191,17 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 STATIC_ROOT = BASE_DIR / 'staticfiles' 
+SERVE_STATIC_FILES = os.getenv('SERVE_STATIC_FILES', 'True') == 'True'
 
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+SERVE_MEDIA_FILES = os.getenv('SERVE_MEDIA_FILES', 'True') == 'True'
 
 AUTH_USER_MODEL = 'main.User' 
 AUTHENTICATION_BACKENDS = [
     'main.auth_backends.CompanyAwareModelBackend',
 ]
-
-# Username is intentionally unique per company, not globally.
-# CompanyAwareModelBackend scopes authentication by the current tenant/company.
 SILENCED_SYSTEM_CHECKS = ['auth.W004']
 
 # Default primary key field typex
@@ -208,7 +218,9 @@ SESSION_SAVE_EVERY_REQUEST = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
 # Telegram Bot Settings
-TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', 'YOUR_BOT_TOKEN_HERE')
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
+if not DEBUG and not TELEGRAM_BOT_TOKEN:
+    raise ValueError("TELEGRAM_BOT_TOKEN muhit o'zgaruvchisi production muhitda majburiy.")
 BASE_DOMAIN = os.getenv('BASE_DOMAIN', 'stockfirm.uz')
 LANDING_DOMAINS = [
     domain.strip().split(':')[0]
@@ -217,31 +229,3 @@ LANDING_DOMAINS = [
 ]
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 LOGIN_URL = '/login/'
-
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'click': {
-            'format': '%(asctime)s %(levelname)s %(message)s',
-        },
-    },
-    'handlers': {
-        'click_file': {
-            'level': 'INFO',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': LOG_DIR / 'click.log',
-            'maxBytes': 5 * 1024 * 1024,
-            'backupCount': 10,
-            'formatter': 'click',
-            'encoding': 'utf-8',
-        },
-    },
-    'loggers': {
-        'click': {
-            'handlers': ['click_file'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-    },
-}
