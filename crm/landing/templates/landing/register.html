@@ -110,8 +110,15 @@
                         <input type="text" name="phone" id="phone" class="form-control" placeholder="+998 90 123 45 67" value="{{ post_data.phone }}" required>
                     </div>
                 <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin-top: 1rem;">
-                    <input type="checkbox" name="free_trial" id="free_trial" style="width: 20px; height: 20px; cursor: pointer;">
+                    <input type="checkbox" name="free_trial" id="free_trial" style="width: 20px; height: 20px; cursor: pointer;" {% if post_data.free_trial %}checked{% endif %}>
                     <label for="free_trial" style="margin-bottom: 0; cursor: pointer; color: var(--ink);">1 oylik bepul sinov muddati (Free Trial)</label>
+                </div>
+
+                <div class="form-group" style="display: flex; align-items: flex-start; gap: 10px; margin-top: 1rem;">
+                    <input type="checkbox" name="accept_offer" id="accept_offer" style="width: 20px; height: 20px; cursor: pointer; margin-top: 3px;" required {% if post_data.accept_offer %}checked{% endif %}>
+                    <label for="accept_offer" style="margin-bottom: 0; cursor: pointer; color: var(--ink); line-height: 1.5;">
+                        <a href="{% url 'offer' %}" target="_blank" style="color: var(--primary); font-weight: 800;">Ommaviy oferta</a> shartlarini o'qidim va qabul qilaman.
+                    </label>
                 </div>
 
                 <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1rem; margin-top: 1rem; font-size: 1.1rem;">Ro'yxatdan o'tish</button>

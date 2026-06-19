@@ -453,7 +453,7 @@
 <div class="page-header">
     <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 20px;">
         <div>
-            <h1>📊 Professional Hisobotlar</h1>
+            <h1>{% if report_mode == 'savdogar' %}🧾 Savdogar Hisoboti{% elif report_mode == 'ishlab' %}🏭 Ishlab Chiqaruvchi Hisoboti{% elif report_mode == 'yetkazib' %}🚚 Yetkazib Beruvchi Hisoboti{% else %}📊 Professional Hisobotlar{% endif %}</h1>
             <p>{{ period_label|default:"Hisobot davri" }}</p>
         </div>
         <div class="header-actions">
@@ -462,6 +462,30 @@
             </a>
         </div>
     </div>
+</div>
+
+<!-- Report Mode Selection -->
+<div class="filter-type-tabs">
+    <a class="filter-type-tab {% if report_mode != 'savdogar' and report_mode != 'ishlab' and report_mode != 'yetkazib' %}active{% endif %}"
+        href="?report=umumiy&type={{ filter_type }}&year={{ selected_year }}&month={{ selected_month }}{% if selected_week %}&week={{ selected_week }}{% endif %}{% if selected_day %}&day={{ selected_day }}{% endif %}{% if employee_id %}&employee={{ employee_id }}{% endif %}"
+        style="text-decoration:none;">
+        📊 Umumiy hisobot
+    </a>
+    <a class="filter-type-tab {% if report_mode == 'savdogar' %}active{% endif %}"
+        href="?report=savdogar&type={{ filter_type }}&year={{ selected_year }}&month={{ selected_month }}{% if selected_week %}&week={{ selected_week }}{% endif %}{% if selected_day %}&day={{ selected_day }}{% endif %}{% if employee_id %}&employee={{ employee_id }}{% endif %}"
+        style="text-decoration:none;">
+        🧾 Savdogar hisobot
+    </a>
+    <a class="filter-type-tab {% if report_mode == 'ishlab' %}active{% endif %}"
+        href="?report=ishlab&type={{ filter_type }}&year={{ selected_year }}&month={{ selected_month }}{% if selected_week %}&week={{ selected_week }}{% endif %}{% if selected_day %}&day={{ selected_day }}{% endif %}{% if employee_id %}&employee={{ employee_id }}{% endif %}"
+        style="text-decoration:none;">
+        🏭 Ishlab chiqaruvchi
+    </a>
+    <a class="filter-type-tab {% if report_mode == 'yetkazib' %}active{% endif %}"
+        href="?report=yetkazib&type={{ filter_type }}&year={{ selected_year }}&month={{ selected_month }}{% if selected_week %}&week={{ selected_week }}{% endif %}{% if selected_day %}&day={{ selected_day }}{% endif %}{% if employee_id %}&employee={{ employee_id }}{% endif %}"
+        style="text-decoration:none;">
+        🚚 Yetkazib beruvchi
+    </a>
 </div>
 
 <!-- Filter Type Selection -->
@@ -499,7 +523,7 @@
     <div class="selector-label">📆 Oy tanlang</div>
     <div class="selector-options">
         {% for month in available_months %}
-        <a href="?type={{ filter_type }}&year={{ selected_year }}&month={{ month.number }}{% if employee_id %}&employee={{ employee_id }}{% endif %}"
+        <a href="?report={{ report_mode }}&type={{ filter_type }}&year={{ selected_year }}&month={{ month.number }}{% if employee_id %}&employee={{ employee_id }}{% endif %}"
             class="selector-option {% if month.number  ==  selected_month %}active{% endif %} {% if not month.is_available %}disabled{% endif %}"
             {% if not month.is_available %}onclick="return false;" {% endif %}>
             {{ month.name }}
@@ -513,7 +537,7 @@
     <div class="selector-label">📊 Hafta tanlang</div>
     <div class="selector-options">
         {% for week in available_weeks %}
-        <a href="?type=weekly&year={{ selected_year }}&month={{ selected_month }}&week={{ week.number }}{% if employee_id %}&employee={{ employee_id }}{% endif %}"
+        <a href="?report={{ report_mode }}&type=weekly&year={{ selected_year }}&month={{ selected_month }}&week={{ week.number }}{% if employee_id %}&employee={{ employee_id }}{% endif %}"
             class="selector-option {% if selected_week  ==  week.number|stringformat:'s' %}active{% endif %} {% if not week.is_available %}disabled{% endif %}"
             {% if not week.is_available %}onclick="return false;" {% endif %}>
             Hafta {{ week.number }}<br><small>{{ week.label }}</small>
@@ -527,7 +551,7 @@
     <div class="selector-label">📆 Kun tanlang</div>
     <div class="selector-options">
         {% for day in available_days %}
-        <a href="?type=daily&year={{ selected_year }}&month={{ selected_month }}&day={{ day.number }}{% if employee_id %}&employee={{ employee_id }}{% endif %}"
+        <a href="?report={{ report_mode }}&type=daily&year={{ selected_year }}&month={{ selected_month }}&day={{ day.number }}{% if employee_id %}&employee={{ employee_id }}{% endif %}"
             class="selector-option {% if selected_day  ==  day.number|stringformat:'s' %}active{% endif %} {% if not day.is_available %}disabled{% endif %}"
             {% if not day.is_available %}onclick="return false;" {% endif %}>
             {{ day.number }}
@@ -596,7 +620,7 @@
 </div>
 
 <!-- Yetkazuvchilar Stats (if no employee filter) -->
-{% if not employee_id and yetkazuvchilar_stats %}
+{% if report_mode == 'yetkazib' and not employee_id and yetkazuvchilar_stats %}
 <div class="section">
     <div class="section-header">
         <div class="section-title">🚚 Yetkazuvchilar</div>
@@ -605,7 +629,7 @@
         <table class="data-table">
             <thead>
                 <tr>
-                    <th>Sotuvchi</th>
+                    <th>Xodim</th>
                     <th>Savdolar</th>
                     <th>Summa</th>
                     <th>Amallar</th>
@@ -618,11 +642,128 @@
                     <td><span class="badge info">{{ yt.sales_count }} ta</span></td>
                     <td><strong>{{ yt.total_amount|floatformat:0 }}</strong> so'm</td>
                     <td>
-                        <a href="?type={{ filter_type }}&year={{ selected_year }}&month={{ selected_month }}{% if selected_week %}&week={{ selected_week }}{% endif %}{% if selected_day %}&day={{ selected_day }}{% endif %}&employee={{ yt.user.id }}"
+                        <a href="?report=umumiy&type={{ filter_type }}&year={{ selected_year }}&month={{ selected_month }}{% if selected_week %}&week={{ selected_week }}{% endif %}{% if selected_day %}&day={{ selected_day }}{% endif %}&employee={{ yt.user.id }}"
                             class="detail-link">
                             👁️ Batafsil
                         </a>
                     </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Savdogar Stats -->
+{% if report_mode == 'savdogar' %}
+<div class="section">
+    <div class="section-header">
+        <div class="section-title">🧾 Savdogarlar bo'yicha savdo va nasiya</div>
+    </div>
+    <div class="section-content">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Savdogar</th>
+                    <th>Jami savdo</th>
+                    <th>Naqd</th>
+                    <th>Karta</th>
+                    <th>Nasiya</th>
+                    <th>Nasiya qarz</th>
+                    <th>Amallar</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for seller in savdogarlar_stats %}
+                <tr>
+                    <td><strong>{{ seller.user.tuliq_ismi }}</strong></td>
+                    <td>
+                        <span class="badge info">{{ seller.sales_count }} ta</span><br>
+                        <strong>{{ seller.total_amount|floatformat:0 }}</strong> so'm
+                    </td>
+                    <td>{{ seller.naqd_count }} ta</td>
+                    <td>{{ seller.karta_count }} ta</td>
+                    <td>
+                        <span class="badge warning">{{ seller.nasiya_count }} ta</span><br>
+                        <strong>{{ seller.nasiya_amount|floatformat:0 }}</strong> so'm
+                    </td>
+                    <td>
+                        <strong>{{ seller.nasiya_debt|floatformat:0 }}</strong> so'm<br>
+                        <a href="{% url 'nasiya_savdolar' %}?seller={{ seller.seller_id }}" class="detail-link">
+                            💳 Nasiya holati
+                        </a>
+                    </td>
+                    <td>
+                        <a href="?report=savdogar&type={{ filter_type }}&year={{ selected_year }}&month={{ selected_month }}{% if selected_week %}&week={{ selected_week }}{% endif %}{% if selected_day %}&day={{ selected_day }}{% endif %}&employee={{ seller.user.id }}"
+                            class="detail-link">
+                            👁️ Batafsil
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="empty-state">Savdogar savdolari topilmadi</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Ishlab Chiqaruvchi Stats -->
+{% if report_mode == 'ishlab' %}
+<div class="section">
+    <div class="section-header">
+        <div class="section-title">🏭 Ishlab chiqaruvchilar bo'yicha mahsulot va yuklama</div>
+    </div>
+    <div class="section-content">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Ishlab chiqaruvchi</th>
+                    <th>Ishlab chiqarish</th>
+                    <th>Ombor materiallari</th>
+                    <th>Yuklama so'rovlari</th>
+                    <th>AI xulosa</th>
+                    <th>Holatlar</th>
+                    <th>Amallar</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for worker in ishlab_chiqaruvchilar_stats %}
+                <tr>
+                    <td><strong>{{ worker.user.tuliq_ismi }}</strong></td>
+                    <td>
+                        <span class="badge success">{{ worker.production_count }} ta</span><br>
+                        <strong>{{ worker.production_amount|floatformat:0 }}</strong>
+                    </td>
+                    <td>
+                        <span class="badge info">{{ worker.material_request_count }} ta</span><br>
+                        <strong>Tasdiq: {{ worker.material_approved_count }}</strong>
+                    </td>
+                    <td>
+                        <span class="badge info">{{ worker.shipment_count }} ta</span><br>
+                        <strong>{{ worker.shipment_amount|floatformat:0 }}</strong>
+                    </td>
+                    <td style="max-width:320px; white-space:normal; line-height:1.45;">
+                        {{ worker.ai_summary|default:"Xulosa uchun yetarli harakat yo'q." }}
+                    </td>
+                    <td>
+                        <span class="badge warning">Kutilmoqda: {{ worker.waiting_count }}</span>
+                        <span class="badge success">Tasdiq: {{ worker.done_count }}</span>
+                        <span class="badge danger">Rad: {{ worker.rejected_count }}</span>
+                    </td>
+                    <td>
+                        <a href="{% url 'pazanda_hisobot' worker.user.username %}" class="detail-link">
+                            👁️ Batafsil
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="empty-state">Ishlab chiqaruvchi harakatlari topilmadi</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -653,15 +794,10 @@
                 {% for savdo in recent_sales %}
                 <tr>
                     <td>{{ savdo.vaqt_sana|date:"d.m.Y H:i" }}</td>
-                    <td><strong>{{ savdo.haridor_dukon.nomi }}</strong></td>
+                    <td><strong>{% firstof savdo.haridor_dukon.nomi savdo.oluvchining_ismi %}</strong></td>
                     <td>
-                        {% if savdo.yetkazib_beruvchi %}
-                        {{ savdo.yetkazib_beruvchi.tuliq_ismi }}
-                        {% elif savdo.savdogar %}
-                        {{ savdo.savdogar.tuliq_ismi|default:savdo.savdogar.username }}
-                        {% else %}
-                        -
-                        {% endif %}
+                        {{ savdo.yetkazib_beruvchi.tuliq_ismi }}<br>
+                        <small>{% if savdo.yetkazib_beruvchi.user.type == 'savdogar' %}Savdogar{% else %}Yetkazib beruvchi{% endif %}</small>
                     </td>
                     <td><strong>{{ savdo.summa|floatformat:0 }}</strong> so'm</td>
                     <td>
@@ -702,6 +838,7 @@
 
 <script>
     const filterType = '{{ filter_type|default:"monthly" }}';
+    const reportMode = '{{ report_mode|default:"umumiy" }}';
 
     const selectedYear = {{ selected_year|default:"null" }};
     const selectedMonth = {{ selected_month|default:"null" }};
@@ -712,19 +849,19 @@
     const employeeId = '{{ employee_id|default:"" }}';
 
     function changeFilterType(type) {
-        let url = `?type=${type}&year=${finalYear}&month=${finalMonth}`;
+        let url = `?report=${reportMode}&type=${type}&year=${finalYear}&month=${finalMonth}`;
         if (employeeId) url += `&employee=${employeeId}`;
         window.location.href = url;
     }
 
     function changeYear(year) {
-        let url = `?type=${filterType}&year=${year}&month=${finalMonth}`;
+        let url = `?report=${reportMode}&type=${filterType}&year=${year}&month=${finalMonth}`;
         if (employeeId) url += `&employee=${employeeId}`;
         window.location.href = url;
     }
 
     function changeEmployee(empId) {
-        let url = `?type=${filterType}&year=${finalYear}&month=${finalMonth}`;
+        let url = `?report=${reportMode}&type=${filterType}&year=${finalYear}&month=${finalMonth}`;
         if (empId) url += `&employee=${empId}`;
         window.location.href = url;
     }

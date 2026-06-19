@@ -1,0 +1,84 @@
+{% extends 'egabase.html' %}
+
+{% block title %}Material so'rovlari{% endblock %}
+{% block page_title %}Material so'rovlari{% endblock %}
+
+{% block content %}
+{% include 'warehouse_styles.html' %}
+<div class="warehouse-page">
+<div class="card" style="padding:18px 20px; margin-bottom:18px;">
+    <form method="get" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <select class="field" name="status" style="max-width:220px;" onchange="this.form.submit()">
+            <option value="waiting" {% if status_filter == 'waiting' %}selected{% endif %}>Kutilmoqda</option>
+            <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Tasdiqlangan</option>
+            <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rad etilgan</option>
+            <option value="" {% if not status_filter %}selected{% endif %}>Barchasi</option>
+        </select>
+        <button class="btn" type="submit"><i class="fa-solid fa-filter"></i> Ko'rish</button>
+    </form>
+</div>
+
+<div class="card">
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Sana</th>
+                    <th>Ishlab chiqaruvchi</th>
+                    <th>Material</th>
+                    <th>Maqsad</th>
+                    <th>Holat</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in requests_page %}
+                <tr>
+                    <td>{{ req.created_at|date:"d.m.Y H:i" }}</td>
+                    <td>{{ req.producer.tuliq_ismi }}</td>
+                    <td>
+                        <b>{{ req.material.nomi }}</b>
+                        <div style="font-size:12px; color:var(--muted);">{{ req.qty|floatformat:2 }} {{ req.material.turi.nomi }} so'ralgan, qoldiq {{ req.material.miqdori|floatformat:2 }}</div>
+                    </td>
+                    <td>{{ req.target_product.nomi|default:"-" }}</td>
+                    <td>
+                        {% if req.status == 'waiting' %}<span class="badge amber">Kutilmoqda</span>
+                        {% elif req.status == 'approved' %}<span class="badge green">Tasdiqlangan</span>
+                        {% else %}<span class="badge red">Rad etilgan</span>{% endif %}
+                    </td>
+                    <td style="text-align:right;">
+                        {% if req.status == 'waiting' %}
+                        <form method="post" action="{% url 'warehouse_request_review' req.id %}" class="review-form" style="display:inline-flex; gap:8px;">
+                            {% csrf_token %}
+                            <button class="btn success" type="submit" name="action" value="approve">Tasdiqlash</button>
+                            <button class="btn danger" type="submit" name="action" value="reject">Rad etish</button>
+                        </form>
+                        {% else %}
+                        <span style="color:var(--muted); font-size:12px;">{{ req.reviewed_by.tuliq_ismi|default:req.reviewed_by.username }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" style="text-align:center; padding:42px; color:var(--muted);">So'rov topilmadi.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+</div>
+<script>
+    document.querySelectorAll('.review-form').forEach((form) => {
+        form.addEventListener('submit', (event) => {
+            const clicked = event.submitter;
+            form.querySelectorAll('button').forEach((button) => {
+                button.disabled = true;
+                button.style.opacity = '0.65';
+                button.style.cursor = 'wait';
+            });
+            if (clicked) {
+                clicked.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Yuborilmoqda...';
+            }
+        });
+    });
+</script>
+{% endblock %}

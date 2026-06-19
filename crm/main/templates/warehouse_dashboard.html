@@ -4,37 +4,28 @@
 {% block page_title %}Ombor boshqaruvi{% endblock %}
 
 {% block content %}
+{% include 'warehouse_styles.html' %}
+<div class="warehouse-page">
 <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:20px; margin-bottom:24px;">
     <div style="background:#fff; border-radius:18px; padding:24px; box-shadow:0 10px 30px rgba(15,23,42,.08);">
         <div style="display:flex; align-items:center; gap:14px;">
-            <div style="width:52px; height:52px; border-radius:14px; background:#dcfce7; color:#15803d; display:flex; align-items:center; justify-content:center; font-size:22px;">
-                <i class="fa-solid fa-box"></i>
-            </div>
-            <div>
-                <div style="font-size:30px; font-weight:800; color:#0f172a;">{{ finished_products|length }}</div>
-                <div style="color:#64748b; font-weight:600;">Tayyor mahsulot turi</div>
-            </div>
-        </div>
-    </div>
-    <div style="background:#fff; border-radius:18px; padding:24px; box-shadow:0 10px 30px rgba(15,23,42,.08);">
-        <div style="display:flex; align-items:center; gap:14px;">
-            <div style="width:52px; height:52px; border-radius:14px; background:#fef3c7; color:#b45309; display:flex; align-items:center; justify-content:center; font-size:22px;">
+            <div style="width:52px; height:52px; border-radius:14px; background:#ecfdf5; color:#047857; display:flex; align-items:center; justify-content:center; font-size:22px;">
                 <i class="fa-solid fa-boxes-stacked"></i>
             </div>
             <div>
                 <div style="font-size:30px; font-weight:800; color:#0f172a;">{{ materials|length }}</div>
-                <div style="color:#64748b; font-weight:600;">Yarim tayyor mahsulot turi</div>
+                <div style="color:#64748b; font-weight:600;">Yarim tayyor mahsulotlar</div>
             </div>
         </div>
     </div>
     <div style="background:#fff; border-radius:18px; padding:24px; box-shadow:0 10px 30px rgba(15,23,42,.08);">
         <div style="display:flex; align-items:center; gap:14px;">
-            <div style="width:52px; height:52px; border-radius:14px; background:#dbeafe; color:#1d4ed8; display:flex; align-items:center; justify-content:center; font-size:22px;">
+            <div style="width:52px; height:52px; border-radius:14px; background:#ecfdf5; color:#047857; display:flex; align-items:center; justify-content:center; font-size:22px;">
                 <i class="fa-solid fa-clipboard-list"></i>
             </div>
             <div>
                 <div style="font-size:30px; font-weight:800; color:#0f172a;">{{ pending_material_requests|length }}</div>
-                <div style="color:#64748b; font-weight:600;">Kutilayotgan material so'rovi</div>
+                <div style="color:#64748b; font-weight:600;">Ishlab chiqaruvchi so'rovlari</div>
             </div>
         </div>
     </div>
@@ -47,7 +38,7 @@
                 <h3 style="margin:0; color:#0f172a; font-size:18px;">Material so'rovlari</h3>
                 <p style="margin:4px 0 0; color:#64748b;">Tasdiqlansa yarim tayyor mahsulot omboridan miqdor kamayadi.</p>
             </div>
-            <a href="{% url 'createproduct' %}" style="background:#059669; color:#fff; padding:10px 14px; border-radius:10px; text-decoration:none; font-weight:700;">
+            <a href="{% url 'warehouse_movements' %}" style="background:#059669; color:#fff; padding:10px 14px; border-radius:10px; text-decoration:none; font-weight:700;">
                 <i class="fa-solid fa-plus"></i> Kirim
             </a>
         </div>
@@ -63,13 +54,12 @@
                     </div>
                     <div style="color:#94a3b8; font-size:12px; margin-top:4px;">Qoldiq: {{ req.material.miqdori }} {{ req.material.turi.nomi }}</div>
                 </div>
-                <form method="post" style="display:flex; gap:8px; margin:0;">
+                <form method="post" action="{% url 'warehouse_request_review' req.id %}" style="display:flex; gap:8px; margin:0;">
                     {% csrf_token %}
-                    <input type="hidden" name="material_request_id" value="{{ req.id }}">
-                    <button type="submit" name="approve" value="1" style="border:0; background:#16a34a; color:#fff; padding:10px 14px; border-radius:10px; font-weight:800; cursor:pointer;">
+                    <button type="submit" name="action" value="approve" style="border:0; background:#16a34a; color:#fff; padding:10px 14px; border-radius:10px; font-weight:800; cursor:pointer;">
                         Tasdiqlash
                     </button>
-                    <button type="submit" name="reject" value="1" style="border:1px solid #fecaca; background:#fff1f2; color:#be123c; padding:10px 14px; border-radius:10px; font-weight:800; cursor:pointer;">
+                    <button type="submit" name="action" value="reject" style="border:1px solid #fecaca; background:#fff1f2; color:#be123c; padding:10px 14px; border-radius:10px; font-weight:800; cursor:pointer;">
                         Rad etish
                     </button>
                 </form>
@@ -91,7 +81,7 @@
             </div>
             <div style="padding:8px 20px 16px;">
                 {% for m in materials %}
-                <a href="{% url 'seeproduct' m.id %}" style="display:flex; justify-content:space-between; gap:12px; padding:12px 0; border-bottom:1px solid #edf2f7; color:#0f172a; text-decoration:none;">
+                <a href="{% url 'warehouse_product_edit' m.id %}" style="display:flex; justify-content:space-between; gap:12px; padding:12px 0; border-bottom:1px solid #edf2f7; color:#0f172a; text-decoration:none;">
                     <span style="font-weight:700;">{{ m.nomi }}</span>
                     <span style="color:#15803d; font-weight:800;">{{ m.miqdori }} {{ m.turi.nomi }}</span>
                 </a>
@@ -100,22 +90,7 @@
                 {% endfor %}
             </div>
         </div>
-
-        <div style="background:#fff; border-radius:20px; box-shadow:0 10px 30px rgba(15,23,42,.08); overflow:hidden;">
-            <div style="padding:18px 20px; border-bottom:1px solid #e2e8f0;">
-                <h3 style="margin:0; font-size:16px; color:#0f172a;">Tayyor mahsulot ombori</h3>
-            </div>
-            <div style="padding:8px 20px 16px; max-height:360px; overflow:auto;">
-                {% for m in finished_products %}
-                <a href="{% url 'seeproduct' m.id %}" style="display:flex; justify-content:space-between; gap:12px; padding:12px 0; border-bottom:1px solid #edf2f7; color:#0f172a; text-decoration:none;">
-                    <span style="font-weight:700;">{{ m.nomi }}</span>
-                    <span style="color:#1d4ed8; font-weight:800;">{{ m.miqdori }} {{ m.turi.nomi }}</span>
-                </a>
-                {% empty %}
-                <div style="padding:24px 0; color:#64748b;">Tayyor mahsulotlar kiritilmagan.</div>
-                {% endfor %}
-            </div>
-        </div>
     </div>
+</div>
 </div>
 {% endblock %}

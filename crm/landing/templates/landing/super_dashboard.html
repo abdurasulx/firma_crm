@@ -61,10 +61,10 @@
         letter-spacing: -1px;
     }
 
-    .blue .stat-icon { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
-    .purple .stat-icon { background: rgba(139, 92, 246, 0.2); color: #8b5cf6; }
-    .green .stat-icon { background: rgba(16, 185, 129, 0.2); color: #10b981; }
-    .orange .stat-icon { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+    .blue .stat-icon { background: #dbeafe; color: #2563eb; }
+    .trial .stat-icon { background: #ecfdf5; color: var(--primary); }
+    .green .stat-icon { background: #d1fae5; color: var(--primary-dark); }
+    .orange .stat-icon { background: #fff7ed; color: #f97316; }
 
     .dashboard-grid {
         display: grid;
@@ -112,8 +112,10 @@
         text-transform: uppercase;
     }
 
-    .badge-success { background: rgba(16, 185, 129, 0.15); color: #10b981; }
-    .badge-primary { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+    .badge-success { background: #d1fae5; color: #047857; }
+    .badge-primary { background: #ecfdf5; color: #059669; }
+    .badge-warning { background: #fff7ed; color: #c2410c; }
+    .badge-danger { background: #fef2f2; color: #dc2626; }
 
     .chart-container {
         height: 300px;
@@ -126,28 +128,28 @@
         <div class="stat-icon"><i class="fa-solid fa-building"></i></div>
         <div class="stat-info">
             <span class="label">Jami Firmalar</span>
-            <span class="value">{{ total_companies }}</span>
+            <span class="value" data-super-stat="total_companies">{{ total_companies }}</span>
         </div>
     </div>
     <div class="glass-card stat-card green">
         <div class="stat-icon"><i class="fa-solid fa-check-circle"></i></div>
         <div class="stat-info">
             <span class="label">Faol Firmalar</span>
-            <span class="value">{{ active_companies }}</span>
+            <span class="value" data-super-stat="active_companies">{{ active_companies }}</span>
         </div>
     </div>
-    <div class="glass-card stat-card purple">
+    <div class="glass-card stat-card trial">
         <div class="stat-icon"><i class="fa-solid fa-vial"></i></div>
         <div class="stat-info">
             <span class="label">Sinov Muddatida</span>
-            <span class="value">{{ trial_companies }}</span>
+            <span class="value" data-super-stat="trial_companies">{{ trial_companies }}</span>
         </div>
     </div>
     <div class="glass-card stat-card orange">
         <div class="stat-icon"><i class="fa-solid fa-gears"></i></div>
         <div class="stat-info">
             <span class="label">Sozlash Rejimida</span>
-            <span class="value">{{ setup_companies }}</span>
+            <span class="value" data-super-stat="setup_companies">{{ setup_companies }}</span>
         </div>
     </div>
 </div>
@@ -158,7 +160,7 @@
             <h2 style="font-size: 20px;">Yangi Registratsiyalar</h2>
             <div style="text-align: right;">
                 <span style="font-size: 12px; color: var(--text-dim);">Oxirgi 24 soatda</span>
-                <div style="font-size: 18px; font-weight: 700; color: var(--accent);">+{{ today_registrations }}</div>
+                <div style="font-size: 18px; font-weight: 700; color: var(--accent);">+<span data-super-stat="today_registrations">{{ today_registrations }}</span></div>
             </div>
         </div>
         <div class="table-container">
@@ -171,21 +173,21 @@
                         <th>Holati</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="recentCompaniesBody">
                     {% for company in recent_companies %}
                     <tr>
                         <td><strong>{{ company.name }}</strong></td>
-                        <td><code style="color: var(--primary);">{{ company.subdomain }}</code></td>
+                        <td><code style="color: var(--primary-dark);">{{ company.subdomain }}</code></td>
                         <td>{{ company.created_at|date:"d.m.Y" }}</td>
                         <td>
                             {% if company.setup_mode %}
-                                <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">Sozlanyapti</span>
+                                <span class="badge badge-warning">Sozlanyapti</span>
                             {% elif company.is_on_trial %}
                                 <span class="badge badge-primary">Sinovda</span>
                             {% elif company.is_active %}
                                 <span class="badge badge-success">Faol</span>
                             {% else %}
-                                <span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">To'xtatilgan</span>
+                                <span class="badge badge-danger">To'xtatilgan</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -219,20 +221,20 @@
     const textColor = isLight ? '#1e293b' : '#9ca3af';
     const gridColor = isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)';
 
-    new Chart(ctx, {
+    const growthChart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: {{ chart_labels|safe }},
             datasets: [{
                 label: 'Yangi firmalar',
                 data: {{ chart_data|safe }},
-                borderColor: '#3b82f6',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.12)',
                 tension: 0.4,
                 fill: true,
                 borderWidth: 3,
                 pointBackgroundColor: '#fff',
-                pointBorderColor: '#3b82f6',
+                pointBorderColor: '#10b981',
                 pointRadius: 4,
                 pointHoverRadius: 6
             }]
@@ -246,7 +248,7 @@
                     backgroundColor: isLight ? '#fff' : '#1e293b',
                     titleColor: isLight ? '#1e293b' : '#fff',
                     bodyColor: isLight ? '#1e293b' : '#fff',
-                    borderColor: '#3b82f6',
+                    borderColor: '#10b981',
                     borderWidth: 1,
                     displayColors: false
                 }
@@ -275,15 +277,68 @@
             const newTextColor = isLightNew ? '#1e293b' : '#9ca3af';
             const newGridColor = isLightNew ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)';
             
-            const chart = Chart.getChart('growthChart');
-            chart.options.scales.y.grid.color = newGridColor;
-            chart.options.scales.y.ticks.color = newTextColor;
-            chart.options.scales.x.ticks.color = newTextColor;
-            chart.options.plugins.tooltip.backgroundColor = isLightNew ? '#fff' : '#1e293b';
-            chart.options.plugins.tooltip.titleColor = isLightNew ? '#1e293b' : '#fff';
-            chart.options.plugins.tooltip.bodyColor = isLightNew ? '#1e293b' : '#fff';
-            chart.update();
+            growthChart.options.scales.y.grid.color = newGridColor;
+            growthChart.options.scales.y.ticks.color = newTextColor;
+            growthChart.options.scales.x.ticks.color = newTextColor;
+            growthChart.options.plugins.tooltip.backgroundColor = isLightNew ? '#fff' : '#1e293b';
+            growthChart.options.plugins.tooltip.titleColor = isLightNew ? '#1e293b' : '#fff';
+            growthChart.options.plugins.tooltip.bodyColor = isLightNew ? '#1e293b' : '#fff';
+            growthChart.update();
         }, 100);
     });
+
+    const statusClasses = {
+        success: 'badge-success',
+        primary: 'badge-primary',
+        warning: 'badge-warning',
+        danger: 'badge-danger'
+    };
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        }[char]));
+    }
+
+    window.applySuperAdminUpdate = function(payload) {
+        if (!payload || payload.type !== 'superadmin_update') return;
+
+        Object.entries(payload.stats || {}).forEach(([key, value]) => {
+            document.querySelectorAll(`[data-super-stat="${key}"]`).forEach((el) => {
+                el.textContent = value;
+            });
+        });
+
+        if (payload.chart) {
+            growthChart.data.labels = payload.chart.labels || [];
+            growthChart.data.datasets[0].data = payload.chart.data || [];
+            growthChart.update();
+        }
+
+        const tbody = document.getElementById('recentCompaniesBody');
+        if (!tbody) return;
+
+        const companies = payload.recent_companies || [];
+        if (companies.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-dim);">Hech qanday firma yo\\'q</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = companies.map((company) => {
+            const badgeClass = statusClasses[company.status_class] || 'badge-primary';
+            return `
+                <tr>
+                    <td><strong>${escapeHtml(company.name)}</strong></td>
+                    <td><code style="color: var(--primary-dark);">${escapeHtml(company.subdomain)}</code></td>
+                    <td>${escapeHtml(company.created_at)}</td>
+                    <td><span class="badge ${badgeClass}">${escapeHtml(company.status)}</span></td>
+                </tr>
+            `;
+        }).join('');
+    };
 </script>
 {% endblock %}

@@ -25,7 +25,8 @@ class NasiyaTolov(models.Model):
     qabul_qilgan_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
 
     def __str__(self):
-        return f"{self.savdo.haridor_dukon.nomi} - {self.tolov_summasi}"
+        customer = self.savdo.haridor_dukon.nomi if self.savdo.haridor_dukon else self.savdo.oluvchining_ismi
+        return f"{customer} - {self.tolov_summasi}"
 
     class Meta:
         verbose_name = "Nasiya To'lov"

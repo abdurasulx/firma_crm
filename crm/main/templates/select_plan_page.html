@@ -12,9 +12,41 @@
         </a>
     </div>
 
-    <div style="margin-bottom: 20px; padding: 16px 18px; border-radius: 14px; background: #eff6ff; color: #1e3a8a; font-weight: 600;">
+    <div style="margin-bottom: 20px; padding: 16px 18px; border-radius: 14px; background: #ecfdf5; color: #065f46; font-weight: 600;">
         Hozirgi faol hodimlar soni: <b>{{ current_staff_count }}</b>. Tarif tanlashda limit shu sondan kam bo'lsa tugma faolsiz bo'ladi.
     </div>
+
+    {% if lock_reason %}
+    <div style="margin-bottom: 28px; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 18px; padding: 24px 32px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; box-shadow: 0 10px 30px rgba(0,0,0,0.25);">
+        <div style="width: 56px; height: 56px; background: rgba(255,255,255,0.1); border-radius: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <i class="fa-solid fa-lock" style="font-size: 26px; color: #f59e0b;"></i>
+        </div>
+        <div>
+            {% if lock_reason == 'contact_only' %}
+            <div style="font-size: 18px; font-weight: 800; color: white; margin-bottom: 6px;">Maxsus shartnomaviy tarif faol</div>
+            <div style="font-size: 14px; color: rgba(255,255,255,0.75); line-height: 1.6;">
+                Siz hozirda <b style="color: #f59e0b;">tizim bilan bevosita aloqa orqali</b> berilgan maxsus tarifdasiz.<br>
+                Tarif muddati <b style="color: #fbbf24;">{{ request.company.next_payment_date|date:"d.m.Y" }}</b> da tugaydi.
+                Shu sanagacha tarifni o'zgartirib bo'lmaydi.<br>
+                <span style="opacity: 0.8;">Tarif haqida savol bo'lsa — tizim administratori bilan bog'laning.</span>
+            </div>
+            {% else %}
+            <div style="font-size: 18px; font-weight: 800; color: white; margin-bottom: 6px;">Tarif o'zgartirish bloklangan</div>
+            <div style="font-size: 14px; color: rgba(255,255,255,0.75); line-height: 1.6;">
+                Joriy tarifingizdagi shartnoma muddati <b style="color: #fbbf24;">{{ request.company.next_payment_date|date:"d.m.Y" }}</b> da tugaydi.<br>
+                Muddat tugaguncha tarifni o'zgartirib bo'lmaydi.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if pending_request %}
+    <div style="margin-bottom: 24px; padding: 16px 20px; border-radius: 14px; background: #fefce8; border: 1px solid #fde047; color: #713f12; font-weight: 600; display: flex; align-items: center; gap: 12px;">
+        <i class="fa-solid fa-clock fa-spin" style="color: #d97706;"></i>
+        Sizning tarif o'zgartirish so'rovingiz admin tomonidan ko'rib chiqilmoqda.
+    </div>
+    {% endif %}
 
     {% if can_request_trial or trial_pending %}
     <div style="margin-bottom: 28px; background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); border-radius: 18px; padding: 24px 32px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; box-shadow: 0 10px 30px rgba(109,40,217,0.3);">
@@ -50,7 +82,7 @@
 
 
     <div class="section-card" style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 30px; border-radius: 16px;">
-        <h3 style="margin-bottom: 24px; font-size: 20px; font-weight: 700; color: #0f172a;"><i class="fa-solid fa-gem" style="color: #3b82f6;"></i> Standart Tariflar</h3>
+        <h3 style="margin-bottom: 24px; font-size: 20px; font-weight: 700; color: #0f172a;"><i class="fa-solid fa-gem" style="color: #10b981;"></i> Standart Tariflar</h3>
         
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">
             {% for plan in plans %}
@@ -99,14 +131,22 @@
 
                 {% if request.company.plan == plan %}
                 <div style="background: #f0fdf4; color: #10b981; padding: 14px; border-radius: 12px; text-align: center; font-weight: 700;">
-                    Ushbu tarif faol
+                    <i class="fa-solid fa-circle-check" style="margin-right: 6px;"></i>Ushbu tarif faol
+                </div>
+                {% elif lock_reason %}
+                <div style="background: #f8fafc; color: #94a3b8; padding: 14px; border-radius: 12px; text-align: center; font-weight: 700; cursor: not-allowed;">
+                    <i class="fa-solid fa-lock" style="margin-right: 6px;"></i>Bloklangan
+                </div>
+                {% elif pending_request %}
+                <div style="background: #fefce8; color: #a16207; padding: 14px; border-radius: 12px; text-align: center; font-weight: 700;">
+                    <i class="fa-solid fa-clock" style="margin-right: 6px;"></i>So'rov kutilmoqda
                 </div>
                 {% elif plan.max_users != 0 and current_staff_count > plan.max_users %}
                 <div style="background: #fef2f2; color: #dc2626; padding: 14px; border-radius: 12px; text-align: center; font-weight: 700;">
                     Hodim limiti yetarli emas
                 </div>
                 {% else %}
-                <a href="{% url 'select_plan' plan.id %}" style="background: #3b82f6; color: white; padding: 14px; border-radius: 12px; text-align: center; font-weight: 700; text-decoration: none; transition: all 0.3s ease; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);" onmouseover="this.style.background='#2563eb'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='#3b82f6'; this.style.transform='translateY(0)';">
+                <a href="{% url 'select_plan' plan.id %}" style="background: #10b981; color: white; padding: 14px; border-radius: 12px; text-align: center; font-weight: 700; text-decoration: none; transition: all 0.3s ease; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.28);" onmouseover="this.style.background='#059669'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='#10b981'; this.style.transform='translateY(0)';">
                     Tarifga o'tish
                 </a>
                 {% endif %}
@@ -116,9 +156,14 @@
     </div>
 
     <!-- Custom Plan Builder -->
-    <div style="margin-top: 40px; background: white; border: 2px dashed #10b981; padding: 40px; border-radius: 20px;">
+    <div style="margin-top: 40px; background: white; border: 2px dashed {% if lock_reason or pending_request %}#e2e8f0{% else %}#10b981{% endif %}; padding: 40px; border-radius: 20px; {% if lock_reason or pending_request %}opacity: 0.6; pointer-events: none; user-select: none;{% endif %}">
         <div style="margin-bottom: 30px;">
-            <h3 style="margin: 0; font-size: 24px; font-weight: 800; color: #0f172a;"><i class="fa-solid fa-screwdriver-wrench" style="color: #10b981;"></i> Maxsus Tarif Quruvchi</h3>
+            <h3 style="margin: 0; font-size: 24px; font-weight: 800; color: #0f172a;">
+                <i class="fa-solid {% if lock_reason or pending_request %}fa-lock{% else %}fa-screwdriver-wrench{% endif %}" style="color: {% if lock_reason or pending_request %}#94a3b8{% else %}#10b981{% endif %};"></i>
+                Maxsus Tarif Quruvchi
+                {% if lock_reason %}<span style="font-size: 14px; font-weight: 600; color: #94a3b8; margin-left: 10px;">(bloklangan)</span>{% endif %}
+                {% if pending_request and not lock_reason %}<span style="font-size: 14px; font-weight: 600; color: #a16207; margin-left: 10px;">(so'rov kutilmoqda)</span>{% endif %}
+            </h3>
             <p style="color: #64748b; margin-top: 8px;">Faqat o'zingizga kerakli funksiyalarni tanlang va oylik to'lovni optimallashtiring.</p>
         </div>
 
@@ -147,14 +192,14 @@
                         <div style="display: flex; flex-direction: column; gap: 12px;">
                             <label class="feature-item" style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: #f8fafc; border-radius: 12px; cursor: pointer; border: 1px solid #f1f5f9; transition: all 0.2s;">
                                 <div style="display: flex; align-items: center; gap: 15px;">
-                                    <div style="width: 40px; height: 40px; background: #dbeafe; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
-                                        <i class="fa-solid fa-map-location-dot" style="color: #3b82f6;"></i>
+                                    <div style="width: 40px; height: 40px; background: #ecfdf5; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fa-solid fa-map-location-dot" style="color: #10b981;"></i>
                                     </div>
                                     <span style="font-weight: 600; color: #334155;">Real-vaqt Xaritasi</span>
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 15px;">
-                                    <span style="font-weight: 700; color: #3b82f6;">+$20</span>
-                                    <input type="checkbox" name="has_map" id="has_map_page" {% if request.company.custom_has_map %}checked{% endif %} style="width: 20px; height: 20px; accent-color: #10b981;">
+                                    <span style="font-weight: 700; color: #059669;">+$20</span>
+                                    <input type="checkbox" name="has_map" id="has_map_page" {% if request.company.custom_has_map or request.company.plan.has_map %}checked{% endif %} style="width: 20px; height: 20px; accent-color: #10b981;">
                                 </div>
                             </label>
                             <label class="feature-item" style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: #f8fafc; border-radius: 12px; cursor: pointer; border: 1px solid #f1f5f9; transition: all 0.2s;">
@@ -166,7 +211,7 @@
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 15px;">
                                     <span style="font-weight: 700; color: #0088cc;">+$5</span>
-                                    <input type="checkbox" name="has_bot" id="has_bot_page" {% if request.company.custom_has_telegram_bot %}checked{% endif %} style="width: 20px; height: 20px; accent-color: #10b981;">
+                                    <input type="checkbox" name="has_bot" id="has_bot_page" {% if request.company.custom_has_telegram_bot or request.company.plan.has_telegram_bot %}checked{% endif %} style="width: 20px; height: 20px; accent-color: #10b981;">
                                 </div>
                             </label>
                             <label class="feature-item" style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: #f8fafc; border-radius: 12px; cursor: pointer; border: 1px solid #f1f5f9; transition: all 0.2s;">
@@ -178,7 +223,19 @@
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 15px;">
                                     <span style="font-weight: 700; color: #8b5cf6;">+$15</span>
-                                    <input type="checkbox" name="has_analytics" id="has_analytics_page" {% if request.company.custom_has_analytics %}checked{% endif %} style="width: 20px; height: 20px; accent-color: #10b981;">
+                                    <input type="checkbox" name="has_analytics" id="has_analytics_page" {% if request.company.custom_has_analytics or request.company.plan.has_analytics %}checked{% endif %} style="width: 20px; height: 20px; accent-color: #10b981;">
+                                </div>
+                            </label>
+                            <label class="feature-item" style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: #f8fafc; border-radius: 12px; cursor: pointer; border: 1px solid #f1f5f9; transition: all 0.2s;">
+                                <div style="display: flex; align-items: center; gap: 15px;">
+                                    <div style="width: 40px; height: 40px; background: #ecfdf5; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fa-solid fa-file-signature" style="color: #059669;"></i>
+                                    </div>
+                                    <span style="font-weight: 600; color: #334155;">Savdogar savdo moduli</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 15px;">
+                                    <span style="font-weight: 700; color: #059669;">+$10</span>
+                                    <input type="checkbox" name="has_savdogar_sales" id="has_savdogar_sales_page" {% if request.company.custom_has_savdogar_sales %}checked{% endif %} style="width: 20px; height: 20px; accent-color: #10b981;">
                                 </div>
                             </label>
                         </div>
@@ -235,9 +292,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const hasMap = document.getElementById('has_map_page');
     const hasBot = document.getElementById('has_bot_page');
     const hasAnalytics = document.getElementById('has_analytics_page');
+    const hasSavdogarSales = document.getElementById('has_savdogar_sales_page');
     const backupRadios = document.querySelectorAll('input[name="backup_type"]');
     const totalPriceEl = document.getElementById('total-price-page');
     const minStaffCount = {{ current_staff_count|default:0 }};
+    const backupPrices = {none: 0, monthly: 5, weekly: 15, daily: 30};
 
     function calculatePrice() {
         let price = 0;
@@ -267,20 +326,19 @@ document.addEventListener('DOMContentLoaded', function() {
         if (hasMap.checked) price += 20;
         if (hasBot.checked) price += 5;
         if (hasAnalytics.checked) price += 15;
+        if (hasSavdogarSales.checked) price += 10;
 
         // Backup
         const checkedBackup = document.querySelector('input[name="backup_type"]:checked');
         if (checkedBackup) {
             const backupType = checkedBackup.value;
-            if (backupType === 'monthly') price += 5;
-            else if (backupType === 'weekly') price += 15;
-            else if (backupType === 'daily') price += 30;
+            price += backupPrices[backupType] || 0;
         }
 
         totalPriceEl.textContent = '$' + price.toFixed(2);
     }
 
-    [staffInput, unlimitedCheck, hasMap, hasBot, hasAnalytics].forEach(el => {
+    [staffInput, unlimitedCheck, hasMap, hasBot, hasAnalytics, hasSavdogarSales].forEach(el => {
         el.addEventListener('change', calculatePrice);
     });
     staffInput.addEventListener('input', calculatePrice);

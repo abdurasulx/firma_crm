@@ -4,16 +4,24 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.contrib import messages 
 from django.core.paginator import Paginator
+from django.http import HttpResponse
 from django.utils import timezone
 from django.shortcuts import redirect
-from .models import BACKUP_CHOICES, BillingPaymentLink, Plan, HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri, Savdo, YuklamaSorov, MiqdorQoshish, HaridorDukon, AmalLog, qaytarilgan_mahsulotlar, PlanRequest, ProductionMaterialRequest, StockHistory
+from .models import BACKUP_CHOICES, BillingPaymentLink, Company, Plan, HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri, Savdo, YuklamaSorov, MiqdorQoshish, HaridorDukon, AmalLog, qaytarilgan_mahsulotlar, PlanRequest, NasiyaTolov, ProductionMaterialRequest, StockHistory
 from .functions import mahsulotlar_miqdori, makenewform, yuklama_maker, accptyuk, sotishm, sotuv_new_form ,yetkazuvchi_mahsulot_filter, get_bugungi_savdo_summ, add_spctoint
-from .plan_utils import company_has_access
+from .plan_utils import (
+    company_has_access, get_feature_flags,
+    is_tariff_change_locked, get_tariff_lock_reason,
+    plan_is_visible_to_owner, plan_is_contact_only,
+)
 import datetime as dt
 import json
-from django.db.models import Count, Sum
+from django.db import transaction
+from django.db.models import Count, F, Q, Sum
+from collections import defaultdict
+from decimal import Decimal
 
-def send_ws_notification(company_subdomain, title, message, type='info'):
+def send_ws_notification(company_subdomain, title, message, type='info', refresh=False):
     try:
         from channels.layers import get_channel_layer
         from asgiref.sync import async_to_sync
@@ -25,7 +33,8 @@ def send_ws_notification(company_subdomain, title, message, type='info'):
                     "type": "send_notification",
                     "title": title,
                     "message": message,
-                    "notification_type": type
+                    "notification_type": type,
+                    "refresh": refresh,
                 }
             )
     except Exception as e:
@@ -49,9 +58,7 @@ def end_setup(request):
 
 from .services.stock_service import (
     approve_miqdor_qoshish_service, 
-    approve_yuklama_sorov_service,
-    approve_material_request_service,
-    reject_material_request_service,
+    approve_yuklama_sorov_service
 )
 from .services.auth_service import create_user_service, update_user_service
 from .services.billing_service import (
@@ -61,8 +68,18 @@ from .services.billing_service import (
     get_company_dashboard_url,
     get_company_login_url,
 )
+from landing.realtime import broadcast_superadmin_update
 from .analytics.services import get_dashboard_stats
-from .credit_utils import CREDIT_TERM_MARKUPS, build_credit_terms
+from .services.credit_service import (
+    DEFAULT_SAVDOGAR_CONTRACT_TEMPLATE,
+    SYSTEM_CREDIT_RULES,
+    allowed_credit_terms,
+    build_contract_draft,
+    build_credit_contract,
+    calculate_credit_total,
+    credit_due_date,
+)
+from .credit_utils import add_months
 
 User = get_user_model()
 # Create your views here.
@@ -175,8 +192,18 @@ def select_plan(request, plan_id):
     if request.user.type != 'ega':
         messages.error(request, "Faqat do'kon egasi tarifni o'zgartira oladi.")
         return redirect('main')
+    lock_reason = get_tariff_lock_reason(request.company)
+    if lock_reason == 'contact_only':
+        messages.error(request, f"Siz tizim bilan aloqa orqali olingan maxsus tarifdasiz. Muddat ({request.company.next_payment_date.strftime('%d.%m.%Y')}) tugamaguncha tarifni o'zgartirib bo'lmaydi.")
+        return redirect('main')
+    if lock_reason == 'lock_changes':
+        messages.error(request, f"Ushbu tarif muddati {request.company.next_payment_date.strftime('%d.%m.%Y')} gacha faol. Muddat tugamaguncha tarifni o'zgartirib bo'lmaydi.")
+        return redirect('main')
     
     plan = get_object_or_404(Plan, id=plan_id, is_active=True)
+    if not plan_is_visible_to_owner(plan):
+        messages.error(request, "Bu tarif faqat superadmin tomonidan biriktiriladi.")
+        return redirect('select_plan_page')
     company = request.company
     current_staff_count = User.objects.filter(company=company).exclude(type='ega').count()
     
@@ -200,6 +227,7 @@ def select_plan(request, plan_id):
         is_custom=False,
         status='pending'
     )
+    broadcast_superadmin_update()
     
     messages.success(request, f"{plan.name} tarifi uchun so'rov yuborildi. Admin tasdiqlaganidan so'ng faollashadi.")
     return redirect('main')
@@ -210,6 +238,13 @@ def select_custom_plan(request):
     """Maxsus (Custom) tarif uchun so'rov yuborish"""
     if request.user.type != 'ega':
         messages.error(request, "Faqat do'kon egasi tarifni o'zgartira oladi.")
+        return redirect('main')
+    lock_reason = get_tariff_lock_reason(request.company)
+    if lock_reason == 'contact_only':
+        messages.error(request, f"Siz tizim bilan aloqa orqali olingan maxsus tarifdasiz. Muddat ({request.company.next_payment_date.strftime('%d.%m.%Y')}) tugamaguncha tarifni o'zgartirib bo'lmaydi.")
+        return redirect('main')
+    if lock_reason == 'lock_changes':
+        messages.error(request, f"Ushbu tarif muddati {request.company.next_payment_date.strftime('%d.%m.%Y')} gacha faol. Muddat tugamaguncha tarifni o'zgartirib bo'lmaydi.")
         return redirect('main')
 
     company = request.company
@@ -238,32 +273,36 @@ def select_custom_plan(request):
     has_bot = 'has_bot' in request.POST
     has_analytics = 'has_analytics' in request.POST
     has_map = 'has_map' in request.POST
+    has_savdogar_sales = 'has_savdogar_sales' in request.POST
     backup_type = request.POST.get('backup_type', 'none')
 
-    # Calculate Price
-    price = 0
-    if staff_count == 0: price += 55
-    else: price += staff_count * 1
+    price = Decimal("0.00")
+    if staff_count == 0: price += Decimal("55.00")
+    else: price += Decimal(staff_count)
 
-    if has_map: price += 20
-    if has_bot: price += 5
-    if has_analytics: price += 15
+    if has_map: price += Decimal("20.00")
+    if has_bot: price += Decimal("5.00")
+    if has_analytics: price += Decimal("15.00")
+    if has_savdogar_sales: price += Decimal("10.00")
 
-    if backup_type == 'monthly': price += 5
-    elif backup_type == 'weekly': price += 15
-    elif backup_type == 'daily': price += 30
+    if backup_type == 'monthly': price += Decimal("5.00")
+    elif backup_type == 'weekly': price += Decimal("15.00")
+    elif backup_type == 'daily': price += Decimal("30.00")
 
     PlanRequest.objects.create(
         company=company,
+        plan=company.plan if company.plan and not company.is_custom_plan else None,
         is_custom=True,
         custom_max_users=staff_count,
         custom_has_telegram_bot=has_bot,
         custom_has_analytics=has_analytics,
         custom_has_map=has_map,
+        custom_has_savdogar_sales=has_savdogar_sales,
         custom_backup_type=backup_type,
         custom_price=price,
         status='pending'
     )
+    broadcast_superadmin_update()
 
     messages.success(request, "Maxsus tarif uchun so'rov yuborildi. Admin tasdiqlaganidan so'ng faollashadi.")
     return redirect('main')
@@ -296,6 +335,7 @@ def request_trial(request):
         is_trial=True,
         status='pending'
     )
+    broadcast_superadmin_update()
     messages.success(request, "Sinov muddati uchun so'rov yuborildi. Tez orada tasdiqlanadi.")
     return redirect('main')
 
@@ -306,6 +346,9 @@ def billing_page(request):
         return redirect('main')
 
     billing_data = get_billing_dashboard_data(request.company)
+    paginator = Paginator(billing_data['payment_links'], 8)
+    billing_data['payment_links_page'] = paginator.get_page(request.GET.get('page'))
+    billing_data['payment_links'] = billing_data['payment_links_page'].object_list
     return render(request, 'billing.html', billing_data)
 
 
@@ -332,6 +375,581 @@ def create_billing_link(request):
 
 
 @login_required(login_url='login')
+@require_POST
+def save_savdogar_contract(request):
+    if request.user.type != 'ega':
+        return redirect('main')
+
+    contract_text = (request.POST.get('savdogar_contract_text') or '').strip()
+    if not contract_text:
+        messages.error(request, "Savdogar shartnoma matni bo'sh bo'lishi mumkin emas.")
+        return redirect('billing_page')
+
+    request.company.savdogar_contract_text = contract_text
+    request.company.save(update_fields=['savdogar_contract_text'])
+    messages.success(request, "Savdogar shartnoma matni saqlandi. Tizim qoidalari shartnomaga avtomatik qo'shiladi.")
+    return redirect(request.POST.get('next') or 'savdogar_contract')
+
+
+def get_savdogar_sales_queryset(company):
+    return Savdo.objects.filter(company=company).filter(
+        Q(savdogar__isnull=False) | Q(yetkazib_beruvchi__user__type='savdogar')
+    ).select_related('haridor_dukon', 'yetkazib_beruvchi', 'yetkazib_beruvchi__user', 'savdogar')
+
+
+@login_required(login_url='login')
+def savdogar_admin_dashboard(request):
+    if request.user.type != 'ega':
+        return redirect('main')
+
+    flags = get_feature_flags(request.company)
+    sales = get_savdogar_sales_queryset(request.company)
+    nasiya_sales = sales.filter(st='nasiya')
+    unpaid_nasiya = nasiya_sales.filter(tulandi=False)
+    sellers = User.objects.filter(company=request.company, type='savdogar').order_by('tuliq_ismi', 'username')
+    missing_docs = sales.filter(
+        Q(contract_pdf='') | Q(contract_pdf__isnull=True) |
+        Q(signed_contract_scan='') | Q(signed_contract_scan__isnull=True) |
+        Q(customer_passport_image='') | Q(customer_passport_image__isnull=True)
+    )
+
+    context = {
+        'has_savdogar_sales': flags.get('has_savdogar_sales'),
+        'contract_ready': bool((request.company.savdogar_contract_text or '').strip()),
+        'sellers': sellers,
+        'sales_count': sales.count(),
+        'sales_total': sales.aggregate(total=Sum('summa'))['total'] or 0,
+        'nasiya_count': nasiya_sales.count(),
+        'unpaid_nasiya_count': unpaid_nasiya.count(),
+        'missing_docs_count': missing_docs.count(),
+        'recent_sales': sales.order_by('-vaqt_sana')[:10],
+    }
+    return render(request, 'savdogar_admin_dashboard.html', context)
+
+
+@login_required(login_url='login')
+def savdogar_contract_page(request):
+    if request.user.type != 'ega':
+        return redirect('main')
+
+    flags = get_feature_flags(request.company)
+    return render(request, 'savdogar_contract.html', {
+        'has_savdogar_sales': flags.get('has_savdogar_sales'),
+        'savdogar_contract_text': request.company.savdogar_contract_text or DEFAULT_SAVDOGAR_CONTRACT_TEMPLATE,
+        'credit_rules_note': request.company.credit_rules_note,
+        'system_credit_rules': SYSTEM_CREDIT_RULES,
+    })
+
+
+def _pdf_escape(value):
+    return str(value).replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+
+
+def _pdf_text_width(value, size=12):
+    return len(str(value)) * size * 0.48
+
+
+def _wrap_pdf_text(value, max_width, size=12):
+    words = str(value).split()
+    lines = []
+    current = ""
+    for word in words:
+        proposed = f"{current} {word}".strip()
+        if current and _pdf_text_width(proposed, size) > max_width:
+            lines.append(current)
+            current = word
+        else:
+            current = proposed
+    if current:
+        lines.append(current)
+    return lines or [""]
+
+
+def _is_contract_heading(line):
+    text = line.strip().lstrip("-").strip()
+    if not text:
+        return False
+    if text.startswith(("Shartnoma N:", "Firma:", "Xaridor:", "Sana:", "3 oy", "6 oy", "9 oy", "12 oy", "Tizim qoidasi:")):
+        return False
+    if text.isupper() and "SHARTNOMASI" in text:
+        return False
+    if len(text) > 70 or text.endswith((".", ",", ";", ":")):
+        return False
+    return len(text.split()) <= 5
+
+
+def _contract_pdf_rows(text):
+    rows = []
+    section_no = 0
+    for raw_line in str(text).splitlines():
+        line = raw_line.strip()
+        if not line:
+            rows.append({"kind": "space"})
+            continue
+
+        clean_line = line.lstrip("-").strip()
+        if clean_line.isupper() and "SHARTNOMASI" in clean_line:
+            rows.append({"kind": "title", "text": clean_line})
+        elif line.startswith(("Shartnoma N:", "Firma:", "Xaridor:", "Sana:")):
+            rows.append({"kind": "meta", "text": line})
+        elif _is_contract_heading(line):
+            section_no += 1
+            rows.append({"kind": "heading", "text": f"{section_no}. {clean_line}"})
+        elif line.startswith("Tizim qoidasi:"):
+            rows.append({"kind": "heading", "text": "Tizim ishlash qoidasi"})
+            rows.append({"kind": "paragraph", "text": line, "indent": True})
+        else:
+            rows.append({"kind": "paragraph", "text": clean_line, "indent": line.startswith("-")})
+
+    rows.extend([
+        {"kind": "space"},
+        {"kind": "signature_title", "text": "Tomonlar tasdig'i"},
+        {"kind": "signature"},
+    ])
+    return rows
+
+
+def _build_text_pdf(title, text):
+    page_commands = [[]]
+    y = 805
+
+    def ensure_space(height=22):
+        nonlocal y
+        if y < 70 + height:
+            page_commands.append([])
+            y = 805
+
+    def draw_line(value, x=56, size=12, font="F1", align="left"):
+        nonlocal y
+        ensure_space(size + 10)
+        text_value = _pdf_escape(value)
+        draw_x = x
+        if align == "center":
+            draw_x = max(56, (595 - _pdf_text_width(value, size)) / 2)
+        elif align == "right":
+            draw_x = max(56, 535 - _pdf_text_width(value, size))
+        page_commands[-1].append(f"BT /{font} {size} Tf 1 0 0 1 {draw_x:.2f} {y:.2f} Tm ({text_value}) Tj ET")
+        y -= size + 7
+
+    for row in _contract_pdf_rows(text):
+        kind = row["kind"]
+        if kind == "space":
+            y -= 12
+        elif kind == "meta":
+            draw_line(row["text"], x=56, size=11, font="F1")
+        elif kind == "title":
+            y -= 10
+            draw_line(row["text"], x=56, size=15, font="F2", align="center")
+            y -= 8
+        elif kind == "heading":
+            y -= 8
+            draw_line(row["text"], x=56, size=12, font="F2")
+        elif kind == "signature_title":
+            y -= 10
+            draw_line(row["text"], x=56, size=12, font="F2")
+            y -= 4
+        elif kind == "signature":
+            ensure_space(75)
+            page_commands[-1].append(f"BT /F2 11 Tf 1 0 0 1 56 {y:.2f} Tm (Xaridor imzosi) Tj ET")
+            page_commands[-1].append(f"BT /F2 11 Tf 1 0 0 1 330 {y:.2f} Tm (Firma muhri va imzosi) Tj ET")
+            y -= 32
+            page_commands[-1].append(f"BT /F1 12 Tf 1 0 0 1 56 {y:.2f} Tm (____________________________) Tj ET")
+            page_commands[-1].append(f"BT /F1 12 Tf 1 0 0 1 330 {y:.2f} Tm (____________________________) Tj ET")
+            y -= 22
+            page_commands[-1].append(f"BT /F1 10 Tf 1 0 0 1 56 {y:.2f} Tm (F.I.Sh. va imzo) Tj ET")
+            page_commands[-1].append(f"BT /F1 10 Tf 1 0 0 1 330 {y:.2f} Tm (Firma vakili, muhr) Tj ET")
+            y -= 18
+        else:
+            x = 76 if row.get("indent") else 56
+            max_width = 482 if row.get("indent") else 500
+            for wrapped in _wrap_pdf_text(row["text"], max_width=max_width, size=11):
+                draw_line(wrapped, x=x, size=11, font="F1")
+            y -= 4
+
+    objects = []
+    page_ids = []
+
+    def add_obj(body):
+        objects.append(body)
+        return len(objects)
+
+    regular_font_id = add_obj("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
+    bold_font_id = add_obj("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>")
+    for commands in page_commands:
+        stream = "\n".join(commands).encode("latin-1", "replace")
+        content_id = add_obj(f"<< /Length {len(stream)} >>\nstream\n{stream.decode('latin-1')}\nendstream")
+        page_id = add_obj(
+            f"<< /Type /Page /Parent 0 0 R /MediaBox [0 0 595 842] "
+            f"/Resources << /Font << /F1 {regular_font_id} 0 R /F2 {bold_font_id} 0 R >> >> /Contents {content_id} 0 R >>"
+        )
+        page_ids.append(page_id)
+
+    pages_id = len(objects) + 1
+    for page_id in page_ids:
+        objects[page_id - 1] = objects[page_id - 1].replace("/Parent 0 0 R", f"/Parent {pages_id} 0 R")
+    kids = " ".join(f"{page_id} 0 R" for page_id in page_ids)
+    add_obj(f"<< /Type /Pages /Kids [{kids}] /Count {len(page_ids)} >>")
+    catalog_id = add_obj(f"<< /Type /Catalog /Pages {pages_id} 0 R >>")
+
+    pdf = bytearray(b"%PDF-1.4\n")
+    offsets = [0]
+    for idx, body in enumerate(objects, start=1):
+        offsets.append(len(pdf))
+        pdf.extend(f"{idx} 0 obj\n{body}\nendobj\n".encode("latin-1", "replace"))
+    xref = len(pdf)
+    pdf.extend(f"xref\n0 {len(objects) + 1}\n0000000000 65535 f \n".encode("ascii"))
+    for offset in offsets[1:]:
+        pdf.extend(f"{offset:010d} 00000 n \n".encode("ascii"))
+    pdf.extend(
+        f"trailer\n<< /Size {len(objects) + 1} /Root {catalog_id} 0 R /Title ({_pdf_escape(title)}) >>\n"
+        f"startxref\n{xref}\n%%EOF".encode("latin-1", "replace")
+    )
+    return bytes(pdf)
+
+
+@login_required(login_url='login')
+def savdogar_contract_download(request):
+    if request.user.type not in ['savdogar', 'ega']:
+        return redirect('main')
+    if request.user.type == 'savdogar' and not get_feature_flags(request.company).get('has_savdogar_sales'):
+        messages.error(request, "Savdogar savdo moduli tarifda ochilmagan.")
+        return redirect('main')
+
+    customer = (request.GET.get('customer') or '').strip()
+    if not customer:
+        messages.error(request, "Shartnoma yuklash uchun mijoz ism-familyasini kiriting.")
+        return redirect('sotish')
+
+    payment_type = request.GET.get('payment_type')
+    if payment_type not in ['naqd', 'karta', 'nasiya']:
+        messages.error(request, "Shartnoma uchun to'lov turini tanlang.")
+        return redirect('sotish')
+    try:
+        requested_contract_number = int(request.GET.get('contract_number') or 0)
+    except ValueError:
+        requested_contract_number = 0
+    if requested_contract_number != request.company.savdogar_contract_next_number:
+        messages.error(request, "Shartnoma raqami yangilangan. Sahifani qayta ochib, shartnomani qayta yuklab oling.")
+        return redirect('sotish')
+
+    try:
+        items = json.loads(request.GET.get('items') or '[]')
+    except json.JSONDecodeError:
+        items = []
+    if not items:
+        messages.error(request, "Shartnoma uchun kamida bitta mahsulot tanlang.")
+        return redirect('sotish')
+
+    base_summa = sum(float(item.get('qty') or 0) * float(item.get('price') or 0) for item in items)
+    months = None
+    markup = 0
+    total = base_summa
+    down_payment = 0
+    if payment_type == 'nasiya':
+        try:
+            months = int(request.GET.get('term') or 0)
+            total, markup = calculate_credit_total(base_summa, months)
+            down_payment = float(request.GET.get('down_payment') or 0)
+        except ValueError as exc:
+            messages.error(request, str(exc))
+            return redirect('sotish')
+        if down_payment < 0 or down_payment > total:
+            messages.error(request, "Boshlang'ich to'lov yakuniy summadan katta bo'lishi mumkin emas.")
+            return redirect('sotish')
+
+    text = build_contract_draft(
+        request.company,
+        customer,
+        contract_number=requested_contract_number,
+        payment_type=payment_type,
+        items=items,
+        base_summa=base_summa,
+        total=total,
+        months=months,
+        markup=markup,
+        down_payment=down_payment,
+    )
+    pdf_bytes = _build_text_pdf("Savdogar shartnomasi", text)
+    filename = f"savdogar_shartnoma_{customer[:40].replace(' ', '_')}.pdf"
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+
+@login_required(login_url='login')
+def savdogar_sales_page(request):
+    if request.user.type != 'ega':
+        return redirect('main')
+
+    sales = get_savdogar_sales_queryset(request.company).order_by('-vaqt_sana')
+    seller_id = request.GET.get('seller')
+    payment_type = request.GET.get('payment')
+
+    if seller_id:
+        sales = sales.filter(Q(savdogar_id=seller_id) | Q(yetkazib_beruvchi__user_id=seller_id))
+    if payment_type in ['naqd', 'karta', 'nasiya']:
+        sales = sales.filter(st=payment_type)
+
+    paginator = Paginator(sales, 25)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    return render(request, 'savdogar_sales.html', {
+        'page_obj': page_obj,
+        'sellers': User.objects.filter(company=request.company, type='savdogar').order_by('tuliq_ismi', 'username'),
+        'seller_id': seller_id or '',
+        'payment_type': payment_type or '',
+        'total_amount': sales.aggregate(total=Sum('summa'))['total'] or 0,
+        'sales_count': sales.count(),
+    })
+
+
+@login_required(login_url='login')
+def savdogar_admin_credit_page(request):
+    if request.user.type != 'ega':
+        return redirect('main')
+
+    sales = get_savdogar_sales_queryset(request.company).filter(st='nasiya').order_by('-vaqt_sana')
+    seller_id = request.GET.get('seller')
+    if seller_id:
+        sales = sales.filter(Q(savdogar_id=seller_id) | Q(yetkazib_beruvchi__user_id=seller_id))
+
+    rows = []
+    for sale in sales:
+        paid = NasiyaTolov.objects.filter(savdo=sale).aggregate(total=Sum('tolov_summasi'))['total'] or 0
+        remaining = max(float(sale.summa or 0) - float(paid), 0)
+        rows.append({
+            'sale': sale,
+            'paid': paid,
+            'remaining': remaining,
+            'overdue': bool(sale.credit_due_date and sale.credit_due_date < timezone.localdate() and remaining > 0),
+        })
+
+    return render(request, 'savdogar_admin_credit.html', {
+        'rows': rows,
+        'sellers': User.objects.filter(company=request.company, type='savdogar').order_by('tuliq_ismi', 'username'),
+        'seller_id': seller_id or '',
+        'open_count': sum(1 for row in rows if row['remaining'] > 0),
+        'debt_total': sum(row['remaining'] for row in rows),
+    })
+
+
+@login_required(login_url='login')
+def savdogar_admin_products_page(request):
+    if request.user.type != 'ega':
+        return redirect('main')
+
+    products = Mahsulot.objects.filter(company=request.company, is_savdogar_product=True).order_by('nomi')
+    return render(request, 'savdogar_admin_products.html', {'products': products})
+
+
+@login_required(login_url='login')
+def savdogar_admin_analytics_page(request):
+    if request.user.type != 'ega':
+        return redirect('main')
+
+    sales = list(get_savdogar_sales_queryset(request.company).order_by('-vaqt_sana')[:1000])
+    analytics_payload = _savdogar_analytics_payload(sales)
+    total_amount = sum(float(sale.summa or 0) for sale in sales)
+    return render(request, 'savdogar_admin_analytics.html', {
+        'analytics_json': json.dumps(analytics_payload),
+        'sales_count': len(sales),
+        'total_amount': total_amount,
+        'avg_sale': total_amount / len(sales) if sales else 0,
+        'nasiya_count': sum(1 for sale in sales if sale.st == 'nasiya'),
+    })
+
+
+def _get_savdogar_profile(request):
+    return get_object_or_404(YetkazibBeruvchi, user=request.user, company=request.company)
+
+
+def _parse_savdo_items(smm):
+    items = []
+    for raw_item in (smm or '').split(','):
+        raw_item = raw_item.strip()
+        if not raw_item:
+            continue
+        parts = raw_item.rsplit(' ', 2)
+        if len(parts) != 3:
+            continue
+        name, qty, price = parts
+        try:
+            qty_value = float(qty)
+            price_value = float(price)
+        except ValueError:
+            continue
+        items.append({
+            'name': name,
+            'qty': qty_value,
+            'price': price_value,
+            'total': qty_value * price_value,
+        })
+    return items
+
+
+def _savdogar_sales_for_user(request):
+    seller = _get_savdogar_profile(request)
+    return Savdo.objects.filter(
+        company=request.company,
+        yetkazib_beruvchi=seller,
+    ).select_related('haridor_dukon', 'yetkazib_beruvchi', 'savdogar').order_by('-vaqt_sana')
+
+
+def _credit_rows_for_sales(sales, today=None):
+    today = today or timezone.localdate()
+    sales = list(sales)
+    paid_by_sale = {
+        row['savdo_id']: row['total'] or 0
+        for row in NasiyaTolov.objects.filter(savdo__in=sales)
+        .values('savdo_id')
+        .annotate(total=Sum('tolov_summasi'))
+    }
+    rows = []
+    for sale in sales:
+        paid = paid_by_sale.get(sale.id, 0)
+        remaining = max(float(sale.summa or 0) - float(paid), 0)
+        term_months = int(sale.credit_term_months or 0)
+        sale_date = timezone.localtime(sale.vaqt_sana).date() if sale.vaqt_sana else today
+        monthly_due = (float(sale.summa or 0) / term_months) if term_months else 0
+        next_due_date = sale.credit_due_date
+        overdue_amount = 0
+
+        if term_months and monthly_due:
+            for month_index in range(1, term_months + 1):
+                due_date = add_months(sale_date, month_index)
+                expected_paid = monthly_due * month_index
+                if float(paid) + 0.01 < expected_paid:
+                    next_due_date = due_date
+                    overdue_amount = max(expected_paid - float(paid), 0) if due_date < today else 0
+                    break
+
+        days_to_due = (next_due_date - today).days if next_due_date else None
+        rows.append({
+            'sale': sale,
+            'paid': paid,
+            'remaining': remaining,
+            'next_due_date': next_due_date,
+            'overdue_amount': overdue_amount,
+            'days_to_due': days_to_due,
+            'overdue': bool(days_to_due is not None and days_to_due < 0 and remaining > 0),
+            'due_soon': bool(days_to_due is not None and 0 <= days_to_due <= 7 and remaining > 0),
+        })
+    return rows
+
+
+def _savdogar_analytics_payload(sales):
+    today = timezone.localdate()
+    day_labels = []
+    daily_totals = []
+    daily_counts = []
+    for offset in range(6, -1, -1):
+        day = today - dt.timedelta(days=offset)
+        day_sales = [sale for sale in sales if timezone.localtime(sale.vaqt_sana).date() == day]
+        day_labels.append(day.strftime('%d.%m'))
+        daily_totals.append(round(sum(float(sale.summa or 0) for sale in day_sales), 2))
+        daily_counts.append(len(day_sales))
+
+    payment_totals = {'naqd': 0, 'karta': 0, 'nasiya': 0}
+    payment_counts = {'naqd': 0, 'karta': 0, 'nasiya': 0}
+    product_totals = defaultdict(float)
+    product_qty = defaultdict(float)
+    customer_totals = defaultdict(float)
+
+    for sale in sales:
+        payment_totals[sale.st] = payment_totals.get(sale.st, 0) + float(sale.summa or 0)
+        payment_counts[sale.st] = payment_counts.get(sale.st, 0) + 1
+        customer_name = sale.haridor_dukon.nomi if sale.haridor_dukon else sale.oluvchining_ismi
+        customer_totals[customer_name or "Noma'lum"] += float(sale.summa or 0)
+        for item in _parse_savdo_items(sale.smm):
+            product_totals[item['name']] += item['total']
+            product_qty[item['name']] += item['qty']
+
+    top_products = sorted(product_totals.items(), key=lambda item: item[1], reverse=True)[:7]
+    top_customers = sorted(customer_totals.items(), key=lambda item: item[1], reverse=True)[:7]
+
+    return {
+        'day_labels': day_labels,
+        'daily_totals': daily_totals,
+        'daily_counts': daily_counts,
+        'payment_labels': ["Naqd", "Karta", "Nasiya"],
+        'payment_totals': [round(payment_totals.get(key, 0), 2) for key in ['naqd', 'karta', 'nasiya']],
+        'payment_counts': [payment_counts.get(key, 0) for key in ['naqd', 'karta', 'nasiya']],
+        'product_labels': [item[0] for item in top_products],
+        'product_totals': [round(item[1], 2) for item in top_products],
+        'product_qty': [round(product_qty[item[0]], 2) for item in top_products],
+        'customer_labels': [item[0] for item in top_customers],
+        'customer_totals': [round(item[1], 2) for item in top_customers],
+    }
+
+
+@login_required(login_url='login')
+def savdogar_my_sales(request):
+    if request.user.type != 'savdogar':
+        return redirect('main')
+
+    sales = _savdogar_sales_for_user(request)
+    payment_type = request.GET.get('payment', '')
+    query = (request.GET.get('q') or '').strip()
+    if payment_type in ['naqd', 'karta', 'nasiya']:
+        sales = sales.filter(st=payment_type)
+    if query:
+        sales = sales.filter(Q(oluvchining_ismi__icontains=query) | Q(smm__icontains=query))
+
+    paginator = Paginator(sales, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    return render(request, 'savdogar_my_sales.html', {
+        'page_obj': page_obj,
+        'payment_type': payment_type,
+        'query': query,
+        'sales_count': sales.count(),
+        'total_amount': sales.aggregate(total=Sum('summa'))['total'] or 0,
+    })
+
+
+@login_required(login_url='login')
+def savdogar_my_credit(request):
+    if request.user.type != 'savdogar':
+        return redirect('main')
+
+    sales = _savdogar_sales_for_user(request).filter(st='nasiya', tulandi=False)
+    rows = _credit_rows_for_sales(sales)
+
+    return render(request, 'savdogar_my_credit.html', {
+        'rows': rows,
+        'open_count': sum(1 for row in rows if row['remaining'] > 0),
+        'debt_total': sum(row['remaining'] for row in rows),
+        'due_soon_count': sum(1 for row in rows if row['due_soon']),
+        'overdue_count': sum(1 for row in rows if row['overdue']),
+    })
+
+
+@login_required(login_url='login')
+def savdogar_my_products(request):
+    if request.user.type != 'savdogar':
+        return redirect('main')
+
+    products = Mahsulot.objects.filter(company=request.company, is_savdogar_product=True).order_by('nomi')
+    return render(request, 'savdogar_my_products.html', {'products': products})
+
+
+@login_required(login_url='login')
+def savdogar_analytics_page(request):
+    if request.user.type != 'savdogar':
+        return redirect('main')
+
+    sales = list(_savdogar_sales_for_user(request)[:500])
+    analytics_payload = _savdogar_analytics_payload(sales)
+    total_amount = sum(float(sale.summa or 0) for sale in sales)
+    return render(request, 'savdogar_analytics.html', {
+        'analytics_json': json.dumps(analytics_payload),
+        'sales_count': len(sales),
+        'total_amount': total_amount,
+        'avg_sale': total_amount / len(sales) if sales else 0,
+        'nasiya_count': sum(1 for sale in sales if sale.st == 'nasiya'),
+    })
+
+
+@login_required(login_url='login')
 def open_billing_link(request, token):
     if request.user.type != 'ega':
         return redirect('main')
@@ -350,27 +968,28 @@ def select_plan_page(request):
     """Tarif o'zgartirish sahifasi"""
     if request.user.type != 'ega':
         return redirect('main')
-    
+
+    company = request.company
+    lock_reason = get_tariff_lock_reason(company)
+
     # Faqat tarif so'rovi (trial emas) kutilayotgan bo'lsa blok qilamiz
-    if PlanRequest.objects.filter(company=request.company, status='pending', is_trial=False).exists():
-        messages.warning(request, "Sizda kutilayotgan tarif so'rovi mavjud.")
-        return redirect('main')
-    
+    pending_request = PlanRequest.objects.filter(company=company, status='pending', is_trial=False).exists()
+
     # Trial eligibility
-    from datetime import timedelta
     can_request_trial = False
-    trial_pending = PlanRequest.objects.filter(company=request.company, is_trial=True, status='pending').exists()
-    days_since_creation = (timezone.now() - request.company.created_at).days
+    trial_pending = PlanRequest.objects.filter(company=company, is_trial=True, status='pending').exists()
+    days_since_creation = (timezone.now() - company.created_at).days
     if (
-        not request.company.has_used_trial
+        not company.has_used_trial
         and days_since_creation <= 10
         and not trial_pending
-        and not request.company.is_on_trial
+        and not company.is_on_trial
+        and not lock_reason
     ):
         can_request_trial = True
-    
-    plans = Plan.objects.filter(is_active=True).order_by('price')
-    current_staff_count = User.objects.filter(company=request.company).exclude(type='ega').count()
+
+    plans = [plan for plan in Plan.objects.filter(is_active=True).order_by('price') if plan_is_visible_to_owner(plan)]
+    current_staff_count = User.objects.filter(company=company).exclude(type='ega').count()
     return render(request, 'select_plan_page.html', {
         'plans': plans,
         'backup_choices': BACKUP_CHOICES,
@@ -378,6 +997,8 @@ def select_plan_page(request):
         'trial_pending': trial_pending,
         'days_since_creation': days_since_creation,
         'current_staff_count': current_staff_count,
+        'lock_reason': lock_reason,
+        'pending_request': pending_request,
     })
 
 @login_required(login_url='login')
@@ -389,20 +1010,124 @@ def main(request):
         now = timezone.localtime()
         today_start = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.min))
         today_end = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.max))
-        pz = Pazanda.objects.get(user=request.user)
+        try:
+            pz = Pazanda.objects.get(user=request.user, company=request.company)
+        except Pazanda.DoesNotExist:
+            messages.error(request, "Profil topilmadi. Administrator bilan bog'laning.")
+            return redirect('login')
         payload['sorovlar'] = YuklamaSorov.objects.filter(company=request.company, pazanda=pz, mode='waiting').all()
         payload['zaxira_mahsulotlar']=Mahsulot.objects.filter(company=request.company, warehouse_type='finished')
-        payload['material_sorovlar']=ProductionMaterialRequest.objects.filter(company=request.company, producer=pz)[:8]
+        payload['material_requests'] = ProductionMaterialRequest.objects.filter(company=request.company, producer=pz)[:8]
         zapros=MiqdorQoshish.objects.filter(company=request.company, pazanda=pz,vaqt_sana__range=(today_start, today_end)).all()
         payload['qms']=len(zapros)
         payload['kunlik_miqdorlar'] = zapros
         return render(request, 'pazanda_dashboard.html',payload)
+    elif user.type == 'omborchi':
+        pending_material_requests = ProductionMaterialRequest.objects.filter(
+            company=request.company,
+            status='waiting',
+            material__warehouse_type='semi_finished',
+        ).select_related('producer', 'producer__user', 'material', 'material__turi', 'target_product')
+
+        if request.method == 'POST':
+            with transaction.atomic():
+                req = ProductionMaterialRequest.objects.select_for_update().select_related('material').get(
+                    id=request.POST.get('material_request_id'),
+                    company=request.company,
+                    status='waiting',
+                    material__warehouse_type='semi_finished',
+                )
+                material = req.material
+                old_qty = material.miqdori
+                if 'approve' in request.POST:
+                    if old_qty < req.qty:
+                        messages.error(request, f"{material.nomi} omborda yetarli emas. Qoldiq: {old_qty:g} {material.turi.nomi}.")
+                        return redirect('main')
+                    material.miqdori = old_qty - req.qty
+                    material.save(update_fields=['miqdori'])
+                    req.status = 'approved'
+                    event_type = 'RAW_APPROVED'
+                    delta = -req.qty
+                    messages.success(request, "Material so'rovi tasdiqlandi va ombor qoldig'i kamaytirildi.")
+                else:
+                    req.status = 'rejected'
+                    event_type = 'RAW_REJECTED'
+                    delta = 0
+                    messages.success(request, "Material so'rovi rad etildi.")
+                req.reviewed_by = request.user
+                req.reviewed_at = timezone.now()
+                req.save(update_fields=['status', 'reviewed_by', 'reviewed_at'])
+                StockHistory.objects.create(
+                    actor_user=request.user,
+                    company=request.company,
+                    mahsulot=material,
+                    event_type=event_type,
+                    old_qty=old_qty,
+                    new_qty=material.miqdori,
+                    delta=delta,
+                )
+            return redirect('main')
+
+        payload.update({
+            'materials': Mahsulot.objects.filter(company=request.company, warehouse_type='semi_finished').order_by('nomi'),
+            'pending_material_requests': pending_material_requests,
+        })
+        return render(request, 'warehouse_dashboard.html', payload)
+    elif user.type == 'savdogar':
+        seller = get_object_or_404(YetkazibBeruvchi, user=request.user, company=request.company)
+        now = timezone.localtime()
+        today_start = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.min))
+        today_end = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.max))
+
+        today_sales = Savdo.objects.filter(
+            company=request.company,
+            yetkazib_beruvchi=seller,
+            vaqt_sana__range=(today_start, today_end)
+        )
+        nasiya_sales = Savdo.objects.filter(
+            company=request.company,
+            yetkazib_beruvchi=seller,
+            st='nasiya',
+            tulandi=False
+        )
+        credit_rows = _credit_rows_for_sales(nasiya_sales, today=now.date())
+        open_credit_rows = [row for row in credit_rows if row['remaining'] > 0]
+        due_soon_rows = [row for row in open_credit_rows if row['due_soon']]
+        overdue_rows = [row for row in open_credit_rows if row['overdue']]
+        analytics_sales = list(Savdo.objects.filter(
+            company=request.company,
+            yetkazib_beruvchi=seller,
+            vaqt_sana__gte=timezone.now() - dt.timedelta(days=7),
+        ).select_related('haridor_dukon', 'yetkazib_beruvchi', 'savdogar').order_by('-vaqt_sana'))
+
+        payload.update({
+            'seller': seller,
+            'today_sales': today_sales.order_by('-vaqt_sana')[:8],
+            'today_sales_count': today_sales.count(),
+            'today_sales_sum': today_sales.aggregate(total=Sum('summa'))['total'] or 0,
+            'nasiya_count': len(open_credit_rows),
+            'nasiya_debt': sum(row['remaining'] for row in open_credit_rows),
+            'credit_due_soon_count': len(due_soon_rows),
+            'credit_overdue_count': len(overdue_rows),
+            'credit_due_soon_rows': due_soon_rows[:5],
+            'credit_overdue_rows': overdue_rows[:5],
+            'savdogar_contract_ready': bool((request.company.savdogar_contract_text or '').strip()),
+            'zaxira_mahsulotlar': Mahsulot.objects.filter(company=request.company, is_savdogar_product=True).order_by('nomi'),
+            'lnmahs': Mahsulot.objects.filter(company=request.company, is_savdogar_product=True).count(),
+            'analytics_json': json.dumps(_savdogar_analytics_payload(analytics_sales)),
+        })
+        return render(request, 'savdogar_dashboard.html', payload)
     elif user.type == 'yetkazib_beruvchi':
+        try:
+            yt_obj = YetkazibBeruvchi.objects.get(user=request.user, company=request.company)
+        except YetkazibBeruvchi.DoesNotExist:
+            messages.error(request, "Profil topilmadi. Administrator bilan bog'laning.")
+            return redirect('login')
         if request.method == 'GET':
-            yuklamalar = mahsulotlar_miqdori( YetkazibBeruvchi.objects.get(user=request.user).mahsulotlar) or []
-            
+            yuklamalar = mahsulotlar_miqdori(yt_obj.mahsulotlar) or []
+
             payload['yuklamalar'] = yuklamalar
-            mahs=Mahsulot.objects.filter(company=request.company, warehouse_type='finished')
+            mahs=Mahsulot.objects.filter(company=request.company)
             payload['zaxira_mahsulotlar'] = mahs
             payload['lnmahs']=len(mahs)
 
@@ -410,10 +1135,9 @@ def main(request):
             today_start = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.min))
             today_end = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.max))
 
-            reqyuklama = YuklamaSorov.objects.filter(company=request.company, user=YetkazibBeruvchi.objects.get(user=request.user), mode="waiting").all()
-            # reqyuklama=YuklamaSorov.objects.filter(user=YetkazibBeruvchi.objects.get(user=request.user),tasdiq=False, mode='waiting',sana=dt.date.today() ).all()
+            reqyuklama = YuklamaSorov.objects.filter(company=request.company, user=yt_obj, mode="waiting").all()
             payload['reqyuklama'] = reqyuklama
-            savdo=Savdo.objects.filter(company=request.company, yetkazib_beruvchi=YetkazibBeruvchi.objects.get(user=request.user),vaqt_sana__range=(today_start, today_end)).all()
+            savdo=Savdo.objects.filter(company=request.company, yetkazib_beruvchi=yt_obj, vaqt_sana__range=(today_start, today_end)).all()
             payload['savdo'] = savdo
             nfs=yetkazuvchi_mahsulot_filter(savdo)
             payload['nfs'] = nfs
@@ -444,8 +1168,8 @@ def main(request):
                     )
                 
                 return redirect('main')
-            yuklamalar = mahsulotlar_miqdori( YetkazibBeruvchi.objects.get(user=request.user).mahsulotlar) or []
-            savdo=Savdo.objects.filter(yetkazib_beruvchi=YetkazibBeruvchi.objects.get(user=request.user))
+            yuklamalar = mahsulotlar_miqdori(yt_obj.mahsulotlar) or []
+            savdo=Savdo.objects.filter(company=request.company, yetkazib_beruvchi=yt_obj)
             payload['savdo'] = savdo
             nfs=yetkazuvchi_mahsulot_filter(savdo)
             payload['nfs'] = nfs
@@ -455,61 +1179,15 @@ def main(request):
             today_start = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.min))
             today_end = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.max))
 
-            reqyuklama = YuklamaSorov.objects.filter(company=request.company, user=YetkazibBeruvchi.objects.get(user=request.user), mode="waiting").all()
-            savdo=Savdo.objects.filter(company=request.company, yetkazib_beruvchi=YetkazibBeruvchi.objects.get(user=request.user),vaqt_sana__range=(today_start, today_end)).all()
+            reqyuklama = YuklamaSorov.objects.filter(company=request.company, user=yt_obj, mode="waiting").all()
+            savdo=Savdo.objects.filter(company=request.company, yetkazib_beruvchi=yt_obj, vaqt_sana__range=(today_start, today_end)).all()
             payload['savdo'] = savdo
             # reqyuklama=YuklamaSorov.objects.filter(user=YetkazibBeruvchi.objects.get(user=request.user),tasdiq=False, mode='waiting',sana=dt.date.today() ).all()
             payload['reqyuklama'] = reqyuklama
-            mahs=Mahsulot.objects.filter(company=request.company, warehouse_type='finished')
+            mahs=Mahsulot.objects.filter(company=request.company)
             payload['zaxira_mahsulotlar'] = mahs
             
             return render(request, 'yetkazuvchi_dashboard.html',payload)
-    elif user.type == 'omborchi':
-        if request.method == 'POST':
-            request_id = request.POST.get('material_request_id')
-            if request_id:
-                if 'approve' in request.POST:
-                    success, message = approve_material_request_service(request_id, request.user)
-                elif 'reject' in request.POST:
-                    success, message = reject_material_request_service(request_id, request.user)
-                else:
-                    success, message = False, "Amal noto'g'ri tanlandi."
-
-                if success:
-                    messages.success(request, message)
-                else:
-                    messages.error(request, message)
-                return redirect('main')
-
-        payload['finished_products'] = Mahsulot.objects.filter(
-            company=request.company,
-            warehouse_type='finished'
-        ).order_by('nomi')
-        payload['materials'] = Mahsulot.objects.filter(
-            company=request.company,
-            warehouse_type='semi_finished'
-        ).order_by('nomi')
-        payload['pending_material_requests'] = ProductionMaterialRequest.objects.filter(
-            company=request.company,
-            status='waiting'
-        ).select_related('producer__user', 'material')[:30]
-        payload['recent_material_requests'] = ProductionMaterialRequest.objects.filter(
-            company=request.company
-        ).select_related('producer__user', 'material', 'reviewed_by')[:20]
-        return render(request, 'warehouse_dashboard.html', payload)
-    elif user.type == 'savdogar':
-        now = timezone.localtime()
-        today_start = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.min))
-        month_start = timezone.make_aware(dt.datetime.combine(now.date().replace(day=1), dt.time.min))
-        today_sales = Savdo.objects.filter(company=request.company, savdogar=request.user, vaqt_sana__gte=today_start)
-        month_sales = Savdo.objects.filter(company=request.company, savdogar=request.user, vaqt_sana__gte=month_start)
-        payload['today_sales_count'] = today_sales.count()
-        payload['today_sales_amount'] = today_sales.aggregate(t=Sum('summa'))['t'] or 0
-        payload['month_sales_amount'] = month_sales.aggregate(t=Sum('summa'))['t'] or 0
-        payload['nasiya_count'] = Savdo.objects.filter(company=request.company, savdogar=request.user, st='nasiya', tulandi=False).count()
-        payload['recent_sales'] = Savdo.objects.filter(company=request.company, savdogar=request.user).select_related('haridor_dukon').order_by('-vaqt_sana')[:8]
-        payload['products'] = Mahsulot.objects.filter(company=request.company, warehouse_type='finished').order_by('nomi')[:10]
-        return render(request, 'savdogar_dashboard.html', payload)
             
     
     hodims = User.objects.filter(company=request.company).exclude(type='ega').order_by('-date_joined')[:6]  # Faqat 6 ta
@@ -602,7 +1280,7 @@ def main(request):
     if user.type == 'ega':
         days_since_creation = (timezone.now() - request.company.created_at).days
         payload['days_since_creation'] = days_since_creation
-        payload['plans'] = Plan.objects.filter(is_active=True).order_by('price')
+        payload['plans'] = [plan for plan in Plan.objects.filter(is_active=True).order_by('price') if plan_is_visible_to_owner(plan)]
         payload['backup_choices'] = BACKUP_CHOICES
         payload['has_pending_request'] = PlanRequest.objects.filter(company=request.company, status='pending').exists()
     
@@ -645,38 +1323,95 @@ def add_haridor(request):
             messages.success(request, "Yangi haridor muvaffaqiyatli qo‘shildi!")
             return redirect('main')  # yoki kerakli sahifaga
     
-        return render(request, 'add_haridor.html')
+        base_template = 'sgbase.html' if request.user.type == 'savdogar' else 'ytbase.html'
+        return render(request, 'add_haridor.html', {'base_template': base_template})
     return redirect('main')
 @login_required(login_url='login')
 def profile_view(request, username):
     user = get_object_or_404(User, username=username, company=request.company)
     if request.method == 'GET':
     
-        if request.user.type ==  'yetkazib_beruvchi':
-            return render(request, 'ytprofile.html', {'user': user})
-        elif request.user.type == 'savdogar':
-            return render(request, 'egaprofile.html', {'user': user})
+        if request.user.type in ['yetkazib_beruvchi', 'savdogar']:
+            base_template = 'sgbase.html' if request.user.type == 'savdogar' else 'ytbase.html'
+            return render(request, 'ytprofile.html', {'user': user, 'base_template': base_template})
         elif request.user.type in ['pazanda', 'ishlab_chiqaruvchi']:
             return render(request, 'pzprofile.html', {'user': user})
+        elif request.user.type == 'omborchi':
+            return render(request, 'egaprofile.html', {'user': user, 'profile_stats': None})
         elif request.user.type=='ega':
-            if user.type == 'yetkazib_beruvchi':
+            if user.type in ['yetkazib_beruvchi', 'savdogar']:
                 yuklamalar = mahsulotlar_miqdori( YetkazibBeruvchi.objects.get(user=user).mahsulotlar) or []
                 return render(request, 'egayt.html',{'user': user,'yuklamalar': yuklamalar})
-            return render(request, 'egaprofile.html', {'user': user})
+            company = request.company
+            flags = get_feature_flags(company)
+            profile_stats = {
+                'staff_count': User.objects.filter(company=company).exclude(type='ega').count(),
+                'active_staff_count': User.objects.filter(company=company, is_active=True).exclude(type='ega').count(),
+                'product_count': Mahsulot.objects.filter(company=company).count(),
+                'customer_count': HaridorDukon.objects.filter(company=company).count(),
+                'month_sales_total': Savdo.objects.filter(
+                    company=company,
+                    vaqt_sana__gte=timezone.localtime().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                ).aggregate(total=Sum('summa'))['total'] or 0,
+                'open_nasiya_count': Savdo.objects.filter(company=company, st='nasiya', tulandi=False).count(),
+                'has_savdogar_sales': flags.get('has_savdogar_sales'),
+                'savdogar_contract_ready': bool((company.savdogar_contract_text or '').strip()),
+            }
+            return render(request, 'egaprofile.html', {'user': user, 'profile_stats': profile_stats})
     elif request.method == 'POST':
         if request.user.type == 'ega':
+            if user.type == 'ega':
+                new_username = (request.POST.get('username') or '').strip()
+                fullname = (request.POST.get('tuliq_ismi') or '').strip()
+                phone = (request.POST.get('telefon') or '').strip()
+                email = (request.POST.get('email') or '').strip()
+                password = request.POST.get('password')
+
+                if not new_username or not fullname:
+                    messages.error(request, "Login va to'liq ism majburiy.")
+                    return redirect('profile', username=user.username)
+
+                if User.objects.filter(company=request.company, username=new_username).exclude(pk=user.pk).exists():
+                    messages.error(request, "Ushbu login boshqa foydalanuvchida mavjud.")
+                    return redirect('profile', username=user.username)
+
+                user.username = new_username
+                user.tuliq_ismi = fullname
+                user.tel_raqami = phone
+                user.email = email
+                if password:
+                    user.set_password(password)
+                user.save()
+
+                messages.success(request, "Profil ma'lumotlari saqlandi.")
+                return redirect('profile', username=user.username)
+
+            if request.user.pk == user.pk and user.type != 'ega':
+                phone = (request.POST.get('telefon') or '').strip()
+                email = (request.POST.get('email') or '').strip()
+                password = request.POST.get('password')
+                user.tel_raqami = phone
+                user.email = email
+                if password:
+                    user.set_password(password)
+                user.save()
+                messages.success(request, "Profil ma'lumotlari saqlandi.")
+                return redirect('profile', username=user.username)
+
             res=''
-            if user.type == 'yetkazib_beruvchi':
+            if user.type in ['yetkazib_beruvchi', 'savdogar']:
                 # Note: Keeping legacy stock adjustment for now as a fallback, 
                 # but ideally this should also use a service.
                 for i in request.POST:
-                    
-                    nomi=Mahsulot.objects.filter(nomi=i)
+                    nomi = Mahsulot.objects.filter(nomi=i)
                     if nomi.exists():
-                        
-                        mq=request.POST[i]
-                        if mq!="0":
-                            res+=f"{i} {mq},"
+                        mq = request.POST.get(i, '0')
+                        try:
+                            mq_float = float(mq)
+                        except (ValueError, TypeError):
+                            continue
+                        if mq_float != 0:
+                            res += f"{i} {mq},"
                 
                 yt=YetkazibBeruvchi.objects.get(user=user)
                 yt.mahsulotlar=res
@@ -689,6 +1424,11 @@ def crtuser(request):
         # Check plan limit
         company = request.user.company
         if company:
+            requested_type = request.POST.get('turi')
+            flags = get_feature_flags(company)
+            if requested_type == 'savdogar' and not flags.get('has_savdogar_sales'):
+                messages.error(request, "Savdogar rolini ochish uchun maxsus tarifda $10 lik Savdogar savdo modulini yoqing.")
+                return render(request, 'useryaratish.html', request.POST.dict())
 
             # Get max_users from custom plan or standard plan
             if company.is_custom_plan:
@@ -737,7 +1477,7 @@ def editusr(request, username):
         yb = YetkazibBeruvchi.objects.get(user=user_edit)
         mn = yb.bmh
         mr = yb.bmr.url if yb.bmr else ''
-        all_mahsulotlar = Mahsulot.objects.filter(company=request.company, warehouse_type='finished').order_by('nomi')
+        all_mahsulotlar = Mahsulot.objects.filter(company=request.company).order_by('nomi')
         
         # Parse current stock string into dict {nom: miqdor}
         from .functions import mahsulotlar_miqdori
@@ -774,7 +1514,7 @@ def editusr(request, username):
         if user.type == 'yetkazib_beruvchi':
             yb = YetkazibBeruvchi.objects.get(user=user)
             new_yuklamalar_str = ""
-            all_mahs = Mahsulot.objects.filter(company=request.company, warehouse_type='finished')
+            all_mahs = Mahsulot.objects.filter(company=request.company)
             for m in all_mahs:
                 miqdor = request.POST.get(f'qty_{m.id}') # Use ID as sent from updated template
                 if miqdor and float(miqdor) > 0:
@@ -811,13 +1551,13 @@ def seemahsulot(request, mahsulot_id):
 
         mahsulot.miqdori = request.POST.get('miqdori')
         mahsulot.narxi = request.POST.get('narxi')
-        if request.POST.get('warehouse_type'):
-            mahsulot.warehouse_type = request.POST.get('warehouse_type')
         
         # Look up by ID as sent from the template <option value="{{ tur.id }}">
         turi_id = request.POST.get('turi')
         if turi_id:
             mahsulot.turi = get_object_or_404(MahsulotTuri, id=turi_id)
+        mahsulot.warehouse_type = request.POST.get('warehouse_type', mahsulot.warehouse_type)
+        mahsulot.is_savdogar_product = 'is_savdogar_product' in request.POST
             
         if 'rasmi' in request.FILES:
             mahsulot.rasmi = request.FILES['rasmi']
@@ -825,21 +1565,21 @@ def seemahsulot(request, mahsulot_id):
         mahsulot.save()
         messages.success(request, "Mahsulot muvaffaqiyatli saqlandi.")
         return redirect('mahsulotlar_list')
-    return render(request, 'seemahsulot.html', {'mahsulot': mahsulot, 'turs': turs, 'warehouse_types': Mahsulot.WAREHOUSE_TYPES})
+    return render(request, 'seemahsulot.html', {'mahsulot': mahsulot, 'turs': turs})
 @login_required(login_url='login')
 def createmahsulot(request):
     tur=MahsulotTuri.objects.all().order_by('nomi')
     payload={}  
     payload['turs']=tur
-    payload['warehouse_types']=Mahsulot.WAREHOUSE_TYPES
     if request.method == 'POST':
         nomi = request.POST.get('nomi')
         miqdori = request.POST.get('miqdori')
         turi=get_object_or_404(MahsulotTuri, id=request.POST.get('turi'))
         rasmi = request.FILES.get('rasmi')
         narxi=request.POST.get('narxi')
-        warehouse_type = request.POST.get('warehouse_type') or 'finished'
-        mh=Mahsulot.objects.create(nomi=nomi, miqdori=miqdori, turi=turi, narxi=narxi, rasmi=rasmi, company=request.company, warehouse_type=warehouse_type)
+        warehouse_type = request.POST.get('warehouse_type', 'finished')
+        is_savdogar_product = 'is_savdogar_product' in request.POST
+        mh=Mahsulot.objects.create(nomi=nomi, miqdori=miqdori, turi=turi, narxi=narxi, rasmi=rasmi, company=request.company, warehouse_type=warehouse_type, is_savdogar_product=is_savdogar_product)
         mh.save()
         # Activity log
         AmalLog.objects.create(
@@ -856,7 +1596,7 @@ def deleteprdct(request, product_id):
     if request.method == 'POST':
         confirm_text = request.POST.get('confirm_text')
         if confirm_text == 'OCHIR':
-            if mhs.stockhistory_set.exists() or mhs.yuklamasorov_set.exists() or mhs.deliverystock_set.exists() or mhs.miqdorqoshish_set.exists() or mhs.production_material_requests.exists():
+            if mhs.stockhistory_set.exists() or mhs.yuklamasorov_set.exists() or mhs.deliverystock_set.exists() or mhs.miqdorqoshish_set.exists():
                 from django.contrib import messages
                 messages.error(request, "Ushbu mahsulot bo'yicha tarixiy yozuvlar mavjud! Uni o'chirish audit xatoliklariga olib keladi. Iltimos, o'rniga nomini 'Eskirgan' deb o'zgartiring.")
                 return redirect('seeproduct', mahsulot_id=product_id)
@@ -874,57 +1614,70 @@ def addmiqdor(request):
     if request.user.type in ['pazanda', 'ishlab_chiqaruvchi']:
         
         payload={}
-        payload['mahsulotlar']=Mahsulot.objects.filter(company=request.company, warehouse_type='finished')
-        payload['materials']=Mahsulot.objects.filter(company=request.company, warehouse_type='semi_finished')
+        payload['mahsulotlar']=Mahsulot.objects.filter(company=request.company, warehouse_type='finished').order_by('nomi')
+        payload['materials']=Mahsulot.objects.filter(company=request.company, warehouse_type='semi_finished').order_by('nomi')
         
         if request.method == 'POST':
-            pz=Pazanda.objects.get(user=request.user)
-
-            if 'request_material' in request.POST:
+            try:
+                pz = Pazanda.objects.get(user=request.user, company=request.company)
+            except Pazanda.DoesNotExist:
+                messages.error(request, "Profil topilmadi. Administrator bilan bog'laning.")
+                return redirect('login')
+            if request.POST.get('action') == 'request_material':
                 material = get_object_or_404(
                     Mahsulot,
                     id=request.POST.get('material'),
                     company=request.company,
                     warehouse_type='semi_finished'
                 )
+                target_product = get_object_or_404(
+                    Mahsulot,
+                    id=request.POST.get('target_product'),
+                    company=request.company,
+                    warehouse_type='finished'
+                )
                 try:
-                    qty = float(request.POST.get('material_qty') or 0)
-                except (TypeError, ValueError):
+                    qty = float((request.POST.get('material_qty') or '0').replace(',', '.'))
+                except ValueError:
                     qty = 0
                 if qty <= 0:
                     messages.error(request, "So'raladigan material miqdori 0 dan katta bo'lishi kerak.")
                     return redirect('add_miqdor')
-
-                material_request = ProductionMaterialRequest.objects.create(
+                if qty > material.miqdori:
+                    unit_name = material.turi.nomi if material.turi else ''
+                    messages.error(
+                        request,
+                        f"{material.nomi} omborda yetarli emas. Qoldiq: {material.miqdori:g} {unit_name}."
+                    )
+                    return redirect('add_miqdor')
+                ProductionMaterialRequest.objects.create(
                     company=request.company,
                     producer=pz,
                     material=material,
+                    target_product=target_product,
                     qty=qty,
-                    note=request.POST.get('material_note') or None
+                    note=request.POST.get('material_note') or ''
                 )
                 StockHistory.objects.create(
-                    company=request.company,
                     actor_user=request.user,
+                    company=request.company,
                     mahsulot=material,
                     event_type='RAW_REQUESTED',
                     old_qty=material.miqdori,
                     new_qty=material.miqdori,
-                    delta=0
+                    delta=0,
                 )
-                messages.success(request, f"{material.nomi} uchun {qty} {material.turi.nomi} material so'rovi yuborildi.")
                 send_ws_notification(
                     request.company.subdomain,
                     "Yangi material so'rovi",
-                    f"{pz.tuliq_ismi} {material.nomi}dan {qty} {material.turi.nomi} so'radi.",
-                    'info'
+                    f"{pz.tuliq_ismi} {target_product.nomi} uchun {qty:g} {material.turi.nomi} {material.nomi} so'radi.",
+                    'warning',
+                    refresh=True
                 )
+                messages.success(request, "Material so'rovi omborchiga yuborildi.")
                 return redirect('main')
 
-            mxs=Mahsulot.objects.get(
-                id=request.POST.get('mahsulot'),
-                company=request.company,
-                warehouse_type='finished'
-            )
+            mxs=Mahsulot.objects.get(id=request.POST.get('mahsulot'), company=request.company, warehouse_type='finished')
             mqdr=request.POST.get('miqdor')
             rasmi=request.FILES.get('rasm')
             # Create request for this company (Unapproved initially)
@@ -940,7 +1693,6 @@ def addmiqdor(request):
             # Delegate to atomic service to prevent race conditions and log history
             success, message = approve_miqdor_qoshish_service(nw.id, request.user)
             if not success:
-                from django.contrib import messages
                 messages.error(request, message)
                 return redirect('main')
             
@@ -959,24 +1711,60 @@ def addmiqdor(request):
 def add_yuklama(request):
     if request.user.type not in ['pazanda', 'ishlab_chiqaruvchi']:
         return redirect('main')
-
-    pazanda = Pazanda.objects.get(user=request.user)
-    mahsulotlar = Mahsulot.objects.filter(company=request.company, warehouse_type='finished')
-    yetkazuvchilar = YetkazibBeruvchi.objects.filter(company=request.company)
+    try:
+        pazanda = Pazanda.objects.get(user=request.user, company=request.company)
+    except Pazanda.DoesNotExist:
+        messages.error(request, "Profil topilmadi. Administrator bilan bog'laning.")
+        return redirect('main')
+    mahsulotlar = Mahsulot.objects.filter(company=request.company)
+    yetkazuvchilar = YetkazibBeruvchi.objects.filter(company=request.company, user__type='yetkazib_beruvchi')
 
     if request.method == "POST":
-        mahsulot = Mahsulot.objects.get(id=request.POST['mahsulot'], company=request.company, warehouse_type='finished')
-        miqdor = float(request.POST['miqdor'])
-        yetkazuvchi = YetkazibBeruvchi.objects.get(id=request.POST['yetkazuvchi'], company=request.company)
+        mahsulot_id = request.POST.get('mahsulot')
+        miqdor_str = request.POST.get('miqdor')
+        yetkazuvchi_id = request.POST.get('yetkazuvchi')
+
+        if not mahsulot_id or not miqdor_str or not yetkazuvchi_id:
+            messages.error(request, "Barcha maydonlarni to'ldiring.")
+            return render(request, 'add_yuklama.html', {'mahsulotlar': mahsulotlar, 'yetkazuvchilar': yetkazuvchilar})
+
+        try:
+            miqdor = float(miqdor_str)
+        except ValueError:
+            messages.error(request, "Miqdor raqam bo'lishi kerak.")
+            return render(request, 'add_yuklama.html', {'mahsulotlar': mahsulotlar, 'yetkazuvchilar': yetkazuvchilar})
+
+        if miqdor <= 0:
+            messages.error(request, "Miqdor musbat bo'lishi kerak.")
+            return render(request, 'add_yuklama.html', {'mahsulotlar': mahsulotlar, 'yetkazuvchilar': yetkazuvchilar})
+
+        try:
+            mahsulot = Mahsulot.objects.get(id=mahsulot_id, company=request.company)
+        except Mahsulot.DoesNotExist:
+            messages.error(request, "Mahsulot topilmadi.")
+            return render(request, 'add_yuklama.html', {'mahsulotlar': mahsulotlar, 'yetkazuvchilar': yetkazuvchilar})
+
+        try:
+            yetkazuvchi = YetkazibBeruvchi.objects.get(id=yetkazuvchi_id, company=request.company)
+        except YetkazibBeruvchi.DoesNotExist:
+            messages.error(request, "Yetkazuvchi topilmadi.")
+            return render(request, 'add_yuklama.html', {'mahsulotlar': mahsulotlar, 'yetkazuvchilar': yetkazuvchilar})
         
 
-        YuklamaSorov.objects.create(
+        yuklama = YuklamaSorov.objects.create(
             pazanda=pazanda,
             mahsulot=mahsulot,
             user=yetkazuvchi,
             miqdor=miqdor,
             mode='waiting',
             company=request.company
+        )
+        send_ws_notification(
+            request.company.subdomain,
+            "Yangi yuklama",
+            f"{pazanda.tuliq_ismi} {yetkazuvchi.tuliq_ismi} uchun {miqdor:g} ta {mahsulot.nomi} so'radi.",
+            "success",
+            refresh=True
         )
         return redirect('main')
 
@@ -986,73 +1774,243 @@ def add_yuklama(request):
     })
 @login_required(login_url='login')
 def sotish(request):
-    if request.user.type == 'savdogar':
-        return redirect('savdogar_sotish')
     
-    if request.user.type == 'yetkazib_beruvchi':
-        yt = YetkazibBeruvchi.objects.get(user=request.user)
+    if request.user.type in ['yetkazib_beruvchi', 'savdogar']:
+        try:
+            yt = YetkazibBeruvchi.objects.get(user=request.user, company=request.company)
+        except YetkazibBeruvchi.DoesNotExist:
+            messages.error(request, "Profil topilmadi. Administrator bilan bog'laning.")
+            return redirect('main')
         usr=request.user
-        mahsulotlar = mahsulotlar_miqdori(yt.mahsulotlar, company=request.company)
+        credit_terms = list(allowed_credit_terms())
+        if request.user.type == 'savdogar':
+            flags = get_feature_flags(request.company)
+            if not flags.get('has_savdogar_sales'):
+                messages.error(request, "Savdogar savdo moduli tarifda ochilmagan. Ega billing/tarif sahifasidan $10 modulni yoqishi kerak.")
+                return redirect('main')
+            if not (request.company.savdogar_contract_text or '').strip():
+                messages.error(request, "Ega avval savdogar shartnoma matnini shakllantirishi kerak. Shundan keyin savdogar savdo qila oladi.")
+                return redirect('main')
+        if request.user.type == 'savdogar':
+            mahsulotlar = [
+                {
+                    'nom': m.nomi,
+                    'miqdor': m.miqdori,
+                    'turi': m.turi,
+                    'narx': m.narxi,
+                }
+                for m in Mahsulot.objects.filter(company=request.company, is_savdogar_product=True).order_by('nomi')
+            ]
+        else:
+            mahsulotlar = mahsulotlar_miqdori(yt.mahsulotlar, company=request.company)
         xaridorlar=HaridorDukon.objects.filter(company=request.company)
         
         if request.method == "POST":
             from django.db import transaction
-            
-            with transaction.atomic():
+            try:
+              with transaction.atomic():
                 yt = YetkazibBeruvchi.objects.select_for_update().get(user=request.user)
-                # Re-parse mahsulotlar inside the locked transaction to get latest string
-                mahsulotlar = mahsulotlar_miqdori(yt.mahsulotlar, company=request.company)
+                company = request.company
+                if request.user.type == 'savdogar':
+                    company = Company.objects.select_for_update().get(pk=request.company.pk)
+                    try:
+                        requested_contract_number = int(request.POST.get('contract_number_preview') or 0)
+                    except ValueError:
+                        requested_contract_number = 0
+                    if requested_contract_number != company.savdogar_contract_next_number:
+                        messages.error(request, "Shartnoma raqami yangilangan. Shartnomani qayta yuklab olib, savdoni qayta saqlang.")
+                        return redirect('sotish')
+                if request.user.type == 'savdogar':
+                    mahsulotlar = [
+                        {
+                            'nom': m.nomi,
+                            'miqdor': m.miqdori,
+                            'turi': m.turi,
+                            'narx': m.narxi,
+                            'object': m,
+                        }
+                        for m in Mahsulot.objects.select_for_update().filter(company=request.company, is_savdogar_product=True).order_by('nomi')
+                    ]
+                else:
+                    # Re-parse mahsulotlar inside the locked transaction to get latest string
+                    mahsulotlar = mahsulotlar_miqdori(yt.mahsulotlar, company=request.company)
                 
                 rasm=request.FILES.get('rasm')
                 turi =request.POST.get('st')
-                haridor= HaridorDukon.objects.get(id=request.POST.get('haridor'), company=request.company)
-                oluvchi=request.POST.get('oluvchi')
+                contract_pdf = request.FILES.get('contract_pdf')
+                signed_contract_scan = request.FILES.get('signed_contract_scan')
+                customer_passport_image = request.FILES.get('customer_passport_image')
+                haridor = None
+                if request.user.type != 'savdogar':
+                    haridor = HaridorDukon.objects.get(id=request.POST.get('haridor'), company=request.company)
+                oluvchi=(request.POST.get('oluvchi') or '').strip()
+                if request.user.type == 'savdogar' and not oluvchi:
+                    messages.error(request, "Savdogar savdosi uchun mijoz ism-familyasini kiriting.")
+                    return redirect('sotish')
+
+                if request.user.type == 'savdogar' and (not contract_pdf or not signed_contract_scan or not customer_passport_image):
+                    messages.error(request, "Savdogar har bir savdoda PDF shartnoma, imzolangan skan va ID karta/pasport rasmini biriktirishi shart.")
+                    return redirect('sotish')
+
+                credit_months = None
+                credit_markup = 0
+                credit_total = None
+                credit_contract_text = ""
+                down_payment = 0
+                if turi == 'nasiya':
+                    if not company.credit_sales_enabled:
+                        messages.error(request, "Bu firmada nasiya savdo o'chirilgan.")
+                        return redirect('sotish')
+                    try:
+                        credit_months = int(request.POST.get('credit_term_months') or 0)
+                        credit_total, credit_markup = calculate_credit_total(0, credit_months)
+                        down_payment = float(request.POST.get('credit_down_payment') or 0)
+                    except ValueError as exc:
+                        messages.error(request, str(exc))
+                        return redirect('sotish')
+
                 sotilganlar = []
                 for m in mahsulotlar:
-                    miqdor = request.POST.get(f'miqdor_{m.nom}')
+                    nom = m['nom'] if isinstance(m, dict) else m.nom
+                    mavjud = float(m['miqdor'] if isinstance(m, dict) else m.miqdor)
+                    miqdor = request.POST.get(f'miqdor_{nom}')
                     if miqdor and miqdor != '0':
-                        m.miqdor -= float(miqdor)
-                        sotilganlar.append((m.nom, miqdor))  # Logging uchun
+                        miqdor_float = float(miqdor)
+                        if miqdor_float > mavjud:
+                            messages.error(request, f"{nom} uchun zaxirada yetarli miqdor yo'q.")
+                            return redirect('sotish')
+                        if request.user.type == 'savdogar':
+                            mahsulot_obj = m['object']
+                            mahsulot_obj.miqdori = mavjud - miqdor_float
+                            mahsulot_obj.save(update_fields=['miqdori'])
+                        else:
+                            m.miqdor -= miqdor_float
+                        sotilganlar.append((nom, miqdor))  # Logging uchun
                     
                 if len(sotilganlar) > 0:
                     txt=''
                     summa=0
+                    sale_items = []
                     for s in sotilganlar:
                         mxs = Mahsulot.objects.filter(nomi=s[0], company=request.company).first()
                         if not mxs:
                             # Skip if product was deleted
                             continue
                         txt+=f'{s[0]} {s[1]} {mxs.narxi},'
-                        summa+=float(s[1])*float(mxs.narxi)
-                    # Get seller's current location
-                    seller_lat = yt.last_lat
-                    seller_lng = yt.last_lng
+                        qty = float(s[1])
+                        price = float(mxs.narxi)
+                        summa+=qty*price
+                        sale_items.append({
+                            'name': mxs.nomi,
+                            'qty': qty,
+                            'unit': mxs.turi.nomi if mxs.turi else '',
+                            'price': price,
+                        })
+                    seller_lat = yt.last_lat if request.user.type == 'yetkazib_beruvchi' else None
+                    seller_lng = yt.last_lng if request.user.type == 'yetkazib_beruvchi' else None
+
+                    sale_summa = summa
+                    if turi == 'nasiya':
+                        sale_summa, credit_markup = calculate_credit_total(summa, credit_months)
+                        if down_payment < 0 or down_payment > sale_summa:
+                            messages.error(request, "Boshlang'ich to'lov yakuniy nasiya summadan katta bo'lishi mumkin emas.")
+                            raise ValueError("invalid_down_payment")
+                        credit_contract_text = build_credit_contract(
+                            company,
+                            oluvchi,
+                            summa,
+                            sale_summa,
+                            credit_months,
+                            credit_markup,
+                            contract_number=requested_contract_number if request.user.type == 'savdogar' else None,
+                            items=sale_items,
+                            payment_type=turi,
+                            down_payment=down_payment,
+                        )
+                    contract_number = requested_contract_number if request.user.type == 'savdogar' else None
                     
                     if turi=='nasiya':
-                        svd=Savdo.objects.create(yetkazib_beruvchi=yt,haridor_dukon=haridor,smm=txt,smr=rasm,oluvchining_ismi=oluvchi,tulandi=False,tasdiq_kutilmoqda=False,st=turi,summa=summa, company=request.company, latitude=seller_lat, longitude=seller_lng)
+                        svd=Savdo.objects.create(
+                            yetkazib_beruvchi=yt,
+                            savdogar=request.user if request.user.type == 'savdogar' else None,
+                            haridor_dukon=haridor,
+                            smm=txt,
+                            smr=rasm,
+                            oluvchining_ismi=oluvchi,
+                            tulandi=down_payment >= sale_summa,
+                            tasdiq_kutilmoqda=False,
+                            st=turi,
+                            contract_number=contract_number,
+                            base_summa=summa,
+                            summa=sale_summa,
+                            credit_down_payment=down_payment,
+                            credit_term_months=credit_months,
+                            credit_markup_percent=credit_markup,
+                            credit_due_date=credit_due_date(credit_months),
+                            credit_contract_text=credit_contract_text,
+                            contract_pdf=contract_pdf,
+                            signed_contract_scan=signed_contract_scan,
+                            customer_passport_image=customer_passport_image,
+                            company=request.company,
+                            latitude=seller_lat,
+                            longitude=seller_lng
+                        )
+                        if down_payment > 0:
+                            NasiyaTolov.objects.create(
+                                savdo=svd,
+                                company=request.company,
+                                tolov_summasi=down_payment,
+                                izoh="Boshlang'ich to'lov",
+                                qabul_qilgan_user=request.user,
+                            )
                     else:
-                        svd=Savdo.objects.create(yetkazib_beruvchi=yt,haridor_dukon=haridor,smm=txt,smr=rasm,oluvchining_ismi=oluvchi,tulandi=True,tasdiq_kutilmoqda=True,st=turi,summa=summa, company=request.company, latitude=seller_lat, longitude=seller_lng)
+                        svd=Savdo.objects.create(
+                            yetkazib_beruvchi=yt,
+                            savdogar=request.user if request.user.type == 'savdogar' else None,
+                            haridor_dukon=haridor,
+                            smm=txt,
+                            smr=rasm,
+                            oluvchining_ismi=oluvchi,
+                            tulandi=True,
+                            tasdiq_kutilmoqda=True,
+                            st=turi,
+                            contract_number=contract_number,
+                            base_summa=summa,
+                            summa=summa,
+                            contract_pdf=contract_pdf,
+                            signed_contract_scan=signed_contract_scan,
+                            customer_passport_image=customer_passport_image,
+                            company=request.company,
+                            latitude=seller_lat,
+                            longitude=seller_lng
+                        )
+                    if request.user.type == 'savdogar':
+                        Company.objects.filter(pk=company.pk).update(
+                            savdogar_contract_next_number=F('savdogar_contract_next_number') + 1
+                        )
         
-                    sotishm(txt,yt)
+                    if request.user.type == 'yetkazib_beruvchi':
+                        sotishm(txt,yt)
                     # Activity log
+                    customer_label = haridor.nomi if haridor else oluvchi
                     AmalLog.objects.create(
                         user=request.user,
                         company=request.company,
-                        amal_shifri=f"savdo_yaratish|{haridor.nomi}|{summa}"
+                        amal_shifri=f"savdo_yaratish|{customer_label}|{sale_summa}"
                     )
                     
                     # WebSocket Notification
                     send_ws_notification(
                         request.company.subdomain,
                         "Yangi Savdo",
-                        f"{yt.tuliq_ismi} {haridor.nomi}ga {summa} so'mlik savdo qildi.",
+                        f"{yt.tuliq_ismi} {customer_label}ga {sale_summa} so'mlik savdo qildi.",
                         'info'
                     )
 
                     # Update deliverer location if provided
                     lat = request.POST.get('latitude')
                     lng = request.POST.get('longitude')
-                    if lat and lng:
+                    if request.user.type == 'yetkazib_beruvchi' and lat and lng:
                         yt.last_lat = float(lat)
                         yt.last_lng = float(lng)
                         yt.last_active = timezone.now()
@@ -1066,268 +2024,21 @@ def sotish(request):
                         )
                 
                 return redirect('main')
+            except ValueError as e:
+                if str(e) != 'invalid_down_payment':
+                    messages.error(request, "Noto'g'ri qiymat kiritildi.")
+                return redirect('sotish')
             # Istasa: Savdo modelga yozish
             return redirect('main')
     else:
         return redirect('main')
 
-    return render(request, 'ytsot.html', {'mahsulotlar': mahsulotlar,'haridorlar':xaridorlar})
-
-
-@login_required(login_url='login')
-def savdogar_sotish(request):
-    if request.user.type != 'savdogar':
-        return redirect('main')
-
-    from .functions import new_yuklama
-    mahsulotlar_qs = Mahsulot.objects.filter(company=request.company, warehouse_type='finished').order_by('nomi')
-    mahsulotlar = [
-        new_yuklama(m.nomi, m.miqdori, m.turi.nomi if m.turi else '', m.narxi)
-        for m in mahsulotlar_qs
-        if m.miqdori > 0
-    ]
-    xaridorlar = HaridorDukon.objects.filter(company=request.company)
-
-    if request.method == "POST":
-        from django.db import transaction
-
-        with transaction.atomic():
-            rasm = request.FILES.get('rasm')
-            turi = request.POST.get('st')
-            haridor = HaridorDukon.objects.get(id=request.POST.get('haridor'), company=request.company)
-            oluvchi = request.POST.get('oluvchi')
-            sotilganlar = []
-            summa = 0
-
-            for mahsulot in Mahsulot.objects.select_for_update().filter(company=request.company, warehouse_type='finished'):
-                miqdor = request.POST.get(f'miqdor_{mahsulot.nomi}')
-                if not miqdor or miqdor == '0':
-                    continue
-
-                qty = float(miqdor)
-                if qty <= 0:
-                    continue
-                if mahsulot.miqdori < qty:
-                    messages.error(request, f"{mahsulot.nomi} omborda yetarli emas.")
-                    return redirect('savdogar_sotish')
-
-                old_qty = mahsulot.miqdori
-                mahsulot.miqdori -= qty
-                mahsulot.save(update_fields=['miqdori'])
-                StockHistory.objects.create(
-                    company=request.company,
-                    actor_user=request.user,
-                    mahsulot=mahsulot,
-                    event_type='DEDUCT',
-                    old_qty=old_qty,
-                    new_qty=mahsulot.miqdori,
-                    delta=-qty,
-                )
-                sotilganlar.append((mahsulot.nomi, qty, mahsulot.narxi))
-                summa += qty * float(mahsulot.narxi)
-
-            if not sotilganlar:
-                messages.error(request, "Kamida bitta mahsulot tanlang.")
-                return redirect('savdogar_sotish')
-
-            txt = ''.join([f'{nom} {qty} {narx},' for nom, qty, narx in sotilganlar])
-            credit_terms = None
-            final_summa = summa
-            if turi == 'nasiya':
-                if not request.company.credit_sales_enabled:
-                    messages.error(request, "Bu firmada nasiya savdo o'chirilgan.")
-                    return redirect('savdogar_sotish')
-                credit_terms = build_credit_terms(summa, request.POST.get('credit_term_months'), request.company, haridor.nomi)
-                final_summa = credit_terms['total']
-
-            savdo = Savdo.objects.create(
-                savdogar=request.user,
-                haridor_dukon=haridor,
-                smm=txt,
-                smr=rasm,
-                oluvchining_ismi=oluvchi,
-                tulandi=(turi != 'nasiya'),
-                tasdiq_kutilmoqda=(turi != 'nasiya'),
-                st=turi,
-                base_summa=summa,
-                summa=final_summa,
-                credit_term_months=credit_terms['months'] if credit_terms else None,
-                credit_markup_percent=credit_terms['markup_percent'] if credit_terms else 0,
-                credit_due_date=credit_terms['due_date'] if credit_terms else None,
-                credit_contract_text=credit_terms['contract_text'] if credit_terms else None,
-                company=request.company,
-            )
-            if turi == 'nasiya':
-                send_ws_notification(
-                    request.company.subdomain,
-                    "Yangi muddatli nasiya savdo",
-                    f"{request.user.tuliq_ismi or request.user.username} {haridor.nomi}ga {credit_terms['months']} oyga {final_summa:,.0f} so'mlik nasiya savdo qildi.",
-                    'warning'
-                )
-            AmalLog.objects.create(
-                user=request.user,
-                company=request.company,
-                amal_shifri=f"savdogar_savdo|{haridor.nomi}|{summa}"
-            )
-            messages.success(request, "Savdo muvaffaqiyatli saqlandi.")
-            return redirect('savdogar_savdolar')
-
-    return render(request, 'ytsot.html', {
+    template_name = 'sgsot.html' if request.user.type == 'savdogar' else 'ytsot.html'
+    return render(request, template_name, {
         'mahsulotlar': mahsulotlar,
         'haridorlar': xaridorlar,
-        'base_template': 'ytbase.html',
-        'sales_title': 'Savdogar savdosi',
-        'sales_subtitle': "Tayyor mahsulot omboridan sotuv qiling",
-        'credit_terms': CREDIT_TERM_MARKUPS,
-        'credit_sales_enabled': request.company.credit_sales_enabled,
-    })
-
-
-@login_required(login_url='login')
-def savdogar_savdolar(request):
-    if request.user.type != 'savdogar':
-        return redirect('main')
-
-    sales = Savdo.objects.filter(
-        company=request.company,
-        savdogar=request.user,
-    ).select_related('haridor_dukon').order_by('-vaqt_sana')
-
-    payment_filter = request.GET.get('payment', '')
-    if payment_filter:
-        sales = sales.filter(st=payment_filter)
-
-    paginator = Paginator(sales, 20)
-    page_obj = paginator.get_page(request.GET.get('page'))
-
-    return render(request, 'savdogar_savdolar.html', {
-        'page_obj': page_obj,
-        'payment_filter': payment_filter,
-        'total_amount': sales.aggregate(t=Sum('summa'))['t'] or 0,
-        'sales_count': sales.count(),
-    })
-
-
-@login_required(login_url='login')
-def savdogar_hisobot(request):
-    if request.user.type != 'savdogar':
-        return redirect('main')
-
-    now = timezone.localtime()
-    from_date_str = request.GET.get('from')
-    to_date_str = request.GET.get('to')
-
-    try:
-        from_date = dt.date.fromisoformat(from_date_str) if from_date_str else now.date().replace(day=1)
-        to_date = dt.date.fromisoformat(to_date_str) if to_date_str else now.date()
-    except ValueError:
-        from_date = now.date().replace(day=1)
-        to_date = now.date()
-
-    from_dt = timezone.make_aware(dt.datetime.combine(from_date, dt.time.min))
-    to_dt = timezone.make_aware(dt.datetime.combine(to_date, dt.time.max))
-
-    sales = Savdo.objects.filter(
-        company=request.company,
-        savdogar=request.user,
-        vaqt_sana__range=(from_dt, to_dt)
-    ).select_related('haridor_dukon').order_by('-vaqt_sana')
-
-    context = {
-        'sales': sales,
-        'from_date': from_date.isoformat(),
-        'to_date': to_date.isoformat(),
-        'total_sales': sales.count(),
-        'total_amount': sales.aggregate(t=Sum('summa'))['t'] or 0,
-        'naqd_amount': sales.filter(st='naqd').aggregate(t=Sum('summa'))['t'] or 0,
-        'karta_amount': sales.filter(st='karta').aggregate(t=Sum('summa'))['t'] or 0,
-        'nasiya_amount': sales.filter(st='nasiya').aggregate(t=Sum('summa'))['t'] or 0,
-        'nasiya_unpaid': sales.filter(st='nasiya', tulandi=False).aggregate(t=Sum('summa'))['t'] or 0,
-    }
-    return render(request, 'savdogar_hisobot.html', context)
-
-
-@login_required(login_url='login')
-def admin_savdogar_hisobot(request):
-    if request.user.type != 'ega':
-        return redirect('main')
-
-    now = timezone.localtime()
-    from_date_str = request.GET.get('from')
-    to_date_str = request.GET.get('to')
-    savdogar_id = request.GET.get('savdogar')
-
-    try:
-        from_date = dt.date.fromisoformat(from_date_str) if from_date_str else now.date().replace(day=1)
-        to_date = dt.date.fromisoformat(to_date_str) if to_date_str else now.date()
-    except ValueError:
-        from_date = now.date().replace(day=1)
-        to_date = now.date()
-
-    from_dt = timezone.make_aware(dt.datetime.combine(from_date, dt.time.min))
-    to_dt = timezone.make_aware(dt.datetime.combine(to_date, dt.time.max))
-
-    sales = Savdo.objects.filter(
-        company=request.company,
-        savdogar__isnull=False,
-        vaqt_sana__range=(from_dt, to_dt)
-    ).select_related('savdogar', 'haridor_dukon').order_by('-vaqt_sana')
-
-    if savdogar_id:
-        sales = sales.filter(savdogar_id=savdogar_id)
-
-    savdogarlar = User.objects.filter(company=request.company, type='savdogar').order_by('tuliq_ismi')
-    seller_stats = []
-    for seller in savdogarlar:
-        seller_sales = sales.filter(savdogar=seller)
-        if seller_sales.exists():
-            seller_stats.append({
-                'seller': seller,
-                'sales_count': seller_sales.count(),
-                'total_amount': seller_sales.aggregate(t=Sum('summa'))['t'] or 0,
-                'nasiya_amount': seller_sales.filter(st='nasiya').aggregate(t=Sum('summa'))['t'] or 0,
-            })
-
-    return render(request, 'admin_savdogar_hisobot.html', {
-        'sales': sales[:100],
-        'seller_stats': seller_stats,
-        'savdogarlar': savdogarlar,
-        'savdogar_filter': savdogar_id or '',
-        'from_date': from_date.isoformat(),
-        'to_date': to_date.isoformat(),
-        'total_sales': sales.count(),
-        'total_amount': sales.aggregate(t=Sum('summa'))['t'] or 0,
-        'naqd_amount': sales.filter(st='naqd').aggregate(t=Sum('summa'))['t'] or 0,
-        'karta_amount': sales.filter(st='karta').aggregate(t=Sum('summa'))['t'] or 0,
-        'nasiya_amount': sales.filter(st='nasiya').aggregate(t=Sum('summa'))['t'] or 0,
-    })
-
-
-@login_required(login_url='login')
-def credit_settings_view(request):
-    if request.user.type != 'ega':
-        return redirect('main')
-
-    company = request.company
-    if request.method == 'POST':
-        company.credit_sales_enabled = request.POST.get('credit_sales_enabled') == 'on'
-        company.credit_contract_template = request.POST.get('credit_contract_template') or ''
-        company.credit_rules_note = request.POST.get('credit_rules_note') or ''
-        company.credit_early_discount_percent = request.POST.get('credit_early_discount_percent') or 0
-        company.credit_late_penalty_percent = request.POST.get('credit_late_penalty_percent') or 0
-        company.save(update_fields=[
-            'credit_sales_enabled',
-            'credit_contract_template',
-            'credit_rules_note',
-            'credit_early_discount_percent',
-            'credit_late_penalty_percent',
-        ])
-        messages.success(request, "Nasiya savdo sozlamalari saqlandi.")
-        return redirect('credit_settings')
-
-    return render(request, 'credit_settings.html', {
-        'company': company,
-        'credit_terms': CREDIT_TERM_MARKUPS,
+        'credit_terms': credit_terms,
+        'next_contract_number': request.company.savdogar_contract_next_number,
     })
 
 
@@ -1345,11 +2056,11 @@ def check_new_deliveries(request):
     Returns JSON with count and details of new deliveries since last check.
     """
     if request.user.type != 'yetkazib_beruvchi':
-        return JsonResponse({'error': 'Unauthorized'}, status=403)
+        return JsonResponse({'success': False, 'count': 0, 'deliveries': []}, status=200)
     
     try:
-        yetkazuvchi = YetkazibBeruvchi.objects.get(user=request.user)
-        
+        yetkazuvchi = YetkazibBeruvchi.objects.get(user=request.user, company=request.company)
+
         # Get last check time from session or default to 1 minute ago
         last_check_str = request.session.get('last_delivery_check')
         if last_check_str:
@@ -1363,17 +2074,18 @@ def check_new_deliveries(request):
         new_deliveries = YuklamaSorov.objects.filter(
             user=yetkazuvchi,
             sana__gt=last_check,
+            mode='waiting',
             tasdiq=False
         ).select_related('pazanda__user').order_by('-sana')
         
         deliveries_data = []
         for delivery in new_deliveries:
-            pazanda_name = delivery.pazanda.user.tuliq_ismi if delivery.pazanda else "Noma'lum"
+            pazanda_name = delivery.pazanda.user.tuliq_ismi if delivery.pazanda and delivery.pazanda.user else "Noma'lum"
             deliveries_data.append({
                 'id': delivery.id,
                 'pazanda': pazanda_name,
                 'sana': delivery.sana.strftime('%H:%M'),
-                'mahsulot': delivery.mahsulot.nom if delivery.mahsulot else "Mahsulot",
+                'mahsulot': delivery.mahsulot.nomi if delivery.mahsulot else "Mahsulot",
                 'miqdor': delivery.miqdor
             })
         
@@ -1387,19 +2099,23 @@ def check_new_deliveries(request):
         })
         
     except YetkazibBeruvchi.DoesNotExist:
-        return JsonResponse({'error': 'Delivery user not found'}, status=404)
+        return JsonResponse({'success': False, 'count': 0, 'deliveries': []}, status=200)
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        return JsonResponse({'success': False, 'count': 0, 'deliveries': [], 'error': str(e)}, status=200)
 
 
-# ─── MVP: Pazanda — So'rovlar tarixi ─────────────────────────────────────────
+# ─── MVP: Ishlab chiqaruvchi — So'rovlar tarixi ──────────────────────────────
 @login_required(login_url='login')
 def pz_sorov_tarixi(request):
-    """Pazanda uchun: o'zi yuborgan barcha YuklamaSorov larni ko'rish."""
+    """Ishlab chiqaruvchi uchun: o'zi yuborgan barcha YuklamaSorov larni ko'rish."""
     if request.user.type not in ['pazanda', 'ishlab_chiqaruvchi']:
         return redirect('main')
 
-    pazanda = Pazanda.objects.get(user=request.user)
+    try:
+        pazanda = Pazanda.objects.get(user=request.user, company=request.company)
+    except Pazanda.DoesNotExist:
+        messages.error(request, "Profil topilmadi. Administrator bilan bog'laning.")
+        return redirect('main')
     filter_val = request.GET.get('filter', 'all')
 
     qs = YuklamaSorov.objects.filter(pazanda=pazanda).order_by('-sana')
@@ -1539,7 +2255,7 @@ def yetkazuvchi_hisobot(request, username):
 
 @login_required(login_url='login')
 def pazanda_hisobot(request, username):
-    """Admin yoki pazandaning o'zi uchun: to'liq hisobot."""
+    """Admin yoki ishlab chiqaruvchining o'zi uchun: to'liq hisobot."""
     # Permission check: Only 'ega' or the user themselves
     if request.user.type != 'ega' and request.user.username != username:
         return redirect('main')
@@ -1637,9 +2353,28 @@ def yt_navigation(request):
     """
     if request.user.type != 'yetkazib_beruvchi':
         return redirect('main')
-        
+
     haridorlar = HaridorDukon.objects.filter(company=request.company).order_by('nomi')
-    
+
     return render(request, 'ytnav.html', {
         'haridorlar': haridorlar
     })
+
+
+def offline_page(request):
+    """Service Worker offline fallback sahifasi."""
+    return render(request, 'offline.html', status=200)
+
+
+def service_worker_js(request):
+    """sw.js ni root path dan serve qilish (SW scope uchun zarur)."""
+    import os
+    from django.conf import settings
+    from django.http import FileResponse, Http404
+    sw_path = os.path.join(settings.BASE_DIR, 'static', 'sw.js')
+    if not os.path.exists(sw_path):
+        raise Http404
+    response = FileResponse(open(sw_path, 'rb'), content_type='application/javascript')
+    response['Service-Worker-Allowed'] = '/'
+    response['Cache-Control'] = 'no-cache'
+    return response

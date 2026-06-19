@@ -1,9 +1,12 @@
-from django.urls import path, include
+from django.conf import settings
+from django.urls import path, include, re_path
+from django.views.static import serve
 from . import views
 from .views import (
     landing_home,
     marketing_page,
     pricing_view,
+    offer_view,
     register_company,
     custom_404,
     super_plan_delete,
@@ -17,6 +20,7 @@ urlpatterns = [
     path('', landing_home, name='landing_home'),
     path('platform/<slug:slug>/', marketing_page, name='marketing_page'),
     path('pricing/', pricing_view, name='pricing'),
+    path('offer/', offer_view, name='offer'),
     path('register/', register_company, name='register_company'),
     path('login/', login, name='login'),
     
@@ -44,3 +48,21 @@ urlpatterns = [
     
     path('404/', custom_404, name='custom_404_preview'),
 ]
+
+if settings.SERVE_MEDIA_FILES:
+    urlpatterns += [
+        re_path(
+            r'^media/(?P<path>.*)$',
+            serve,
+            {'document_root': settings.MEDIA_ROOT},
+        ),
+    ]
+
+if settings.SERVE_STATIC_FILES:
+    urlpatterns += [
+        re_path(
+            r'^static/(?P<path>.*)$',
+            serve,
+            {'document_root': settings.STATIC_ROOT},
+        ),
+    ]

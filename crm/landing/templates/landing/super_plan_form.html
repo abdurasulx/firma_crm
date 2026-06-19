@@ -17,7 +17,7 @@
             <div style="grid-column: span 2;">
                 <label style="display: block; margin-bottom: 0.5rem; color: var(--text-dim); font-weight: 500;">Tavsif</label>
                 <textarea name="description" rows="3" 
-                    style="width: 100%; background: var(--input-bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 0.75rem 1rem; color: var(--input-text); font-size: 1rem; transition: all 0.3s;">{{ plan.description|default:'' }}</textarea>
+                    style="width: 100%; background: var(--input-bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 0.75rem 1rem; color: var(--input-text); font-size: 1rem; transition: all 0.3s;">{% if plan_meta %}{{ plan_meta.description }}{% else %}{{ plan.description|default:'' }}{% endif %}</textarea>
             </div>
 
             <div>
@@ -77,6 +77,12 @@
                 <label for="has_map" style="color: var(--text-main); cursor: pointer;">Xarita (Map) mavjud</label>
             </div>
 
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <input type="checkbox" name="has_savdogar_sales" id="has_savdogar_sales" {% if plan_meta.savdogar %}checked{% endif %}
+                    style="width: 1.25rem; height: 1.25rem; accent-color: var(--primary); cursor: pointer;">
+                <label for="has_savdogar_sales" style="color: var(--text-main); cursor: pointer;">Savdogar moduli mavjud</label>
+            </div>
+
             <div>
                 <label style="display: block; margin-bottom: 0.5rem; color: var(--text-dim); font-weight: 500;">Ma'lumotlar zaxirasi</label>
                 <select name="backup_type" style="width: 100%; background: var(--input-bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 0.75rem 1rem; color: var(--input-text); font-size: 1rem;">
@@ -85,6 +91,30 @@
                     <option value="weekly" {% if plan.backup_type == 'weekly' %}selected{% endif %}>Haftalik</option>
                     <option value="daily" {% if plan.backup_type == 'daily' %}selected{% endif %}>Kunlik</option>
                 </select>
+            </div>
+
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-dim); font-weight: 500;">Tarif muddati (oy)</label>
+                <input type="number" name="duration_months" min="1" value="{{ plan_meta.months|default:'1' }}"
+                    style="width: 100%; background: var(--input-bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 0.75rem 1rem; color: var(--input-text); font-size: 1rem;">
+                <div style="font-size:12px; color:var(--text-dim); margin-top:6px;">Masalan: 12 oy uchun $500/$600 aksiya tarif.</div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 14px; justify-content: end;">
+                <label style="display:flex; align-items:flex-start; gap:10px; color:var(--text-main); cursor:pointer;">
+                    <input type="checkbox" name="is_hidden" id="is_hidden_check" {% if plan_meta.hidden %}checked{% endif %} style="width:1.2rem; height:1.2rem; accent-color:var(--primary); margin-top:2px; flex-shrink:0;">
+                    <span>
+                        <span style="font-weight:600;">Faqat aloqa orqali beriladigan tarif</span><br>
+                        <span style="font-size:12px; color:var(--text-dim);">Firma egalari bu tarifni ko'ra olmaydi. Faqat superadmin biriktiradi. Bunday tarifda bo'lgan firma muddat tugamaguncha tarifni o'zgartira olmaydi.</span>
+                    </span>
+                </label>
+                <label style="display:flex; align-items:flex-start; gap:10px; color:var(--text-main); cursor:pointer;">
+                    <input type="checkbox" name="lock_changes" {% if plan_meta.lock_changes %}checked{% endif %} style="width:1.2rem; height:1.2rem; accent-color:var(--primary); margin-top:2px; flex-shrink:0;">
+                    <span>
+                        <span style="font-weight:600;">Tarif o'zgartirishni bloklash</span><br>
+                        <span style="font-size:12px; color:var(--text-dim);">Muddat tugamaguncha firma boshqa tarifga o'ta olmaydi.</span>
+                    </span>
+                </label>
             </div>
         </div>
 
@@ -104,6 +134,7 @@
         const hasAnalytics = document.getElementById('has_analytics');
         const hasTelegramBot = document.getElementById('has_telegram_bot');
         const hasMap = document.getElementById('has_map');
+        const hasSavdogarSales = document.getElementById('has_savdogar_sales');
         const backupSelect = document.querySelector('select[name="backup_type"]');
         
         // Disable readonly state conditionally if needed, but here we just respect the checkbox
@@ -122,6 +153,7 @@
             if (hasAnalytics.checked) total += 15;
             if (hasTelegramBot.checked) total += 5;
             if (hasMap.checked) total += 20;
+            if (hasSavdogarSales.checked) total += 10;
             
             const backupType = backupSelect.value;
             if (backupType === 'monthly') total += 5;
@@ -131,9 +163,10 @@
             priceInput.value = total.toFixed(2);
         }
         
-        const elements = [maxUsersInput, unlimitedCheck, hasAnalytics, hasTelegramBot, hasMap, backupSelect];
+        const elements = [maxUsersInput, unlimitedCheck, hasAnalytics, hasTelegramBot, hasMap, hasSavdogarSales, backupSelect];
         elements.forEach(el => {
             el.addEventListener('change', calculatePrice);
+            el.addEventListener('input', calculatePrice);
         });
         
         // Hozirgi narx bo'sh bo'lsa yoki 0.00 bo'lsa birinchi marta hisoblab qo'yamiz

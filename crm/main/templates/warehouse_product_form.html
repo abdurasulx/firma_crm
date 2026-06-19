@@ -1,0 +1,65 @@
+{% extends 'egabase.html' %}
+{% load l10n %}
+
+{% block title %}{% if product %}Mahsulotni tahrirlash{% else %}Yangi ombor mahsuloti{% endif %}{% endblock %}
+{% block page_title %}{% if product %}Mahsulotni tahrirlash{% else %}Yangi ombor mahsuloti{% endif %}{% endblock %}
+
+{% block content %}
+{% include 'warehouse_styles.html' %}
+<div class="warehouse-page">
+<form method="post" enctype="multipart/form-data" class="card" style="padding:24px; max-width:900px;">
+    {% csrf_token %}
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:18px;">
+        <label>
+            <div style="font-weight:800; margin-bottom:8px;">Mahsulot nomi</div>
+            <input class="field" type="text" name="nomi" value="{{ product.nomi|default:'' }}" required>
+        </label>
+        <label>
+            <div style="font-weight:800; margin-bottom:8px;">O'lchov birligi</div>
+            <select class="field" name="turi" required>
+                {% for tur in turs %}
+                <option value="{{ tur.id }}" {% if product and product.turi_id == tur.id %}selected{% endif %}>{{ tur.nomi }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        {% if warehouse_only %}
+        <input type="hidden" name="warehouse_type" value="semi_finished">
+        {% else %}
+        <label>
+            <div style="font-weight:800; margin-bottom:8px;">Bo'lim</div>
+            <select class="field" name="warehouse_type" required>
+                <option value="semi_finished" {% if not product or product.warehouse_type == 'semi_finished' %}selected{% endif %}>Ombor mahsulotlari</option>
+                <option value="finished" {% if product and product.warehouse_type == 'finished' %}selected{% endif %}>Tayyor mahsulotlar</option>
+            </select>
+        </label>
+        {% endif %}
+        <label>
+            <div style="font-weight:800; margin-bottom:8px;">Narxi</div>
+            <input class="field" type="number" step="0.01" name="narxi" value="{% if product %}{{ product.narxi|unlocalize }}{% else %}0{% endif %}" required>
+        </label>
+        <label>
+            <div style="font-weight:800; margin-bottom:8px;">Miqdori</div>
+            <input class="field" type="number" step="0.01" name="miqdori" value="{% if product %}{{ product.miqdori|unlocalize }}{% else %}0{% endif %}" required>
+        </label>
+        <label>
+            <div style="font-weight:800; margin-bottom:8px;">Minimum qoldiq</div>
+            <input class="field" type="number" step="0.01" name="min_miqdori" value="{% if product %}{{ product.min_miqdori|unlocalize }}{% else %}10{% endif %}" required>
+        </label>
+        <label>
+            <div style="font-weight:800; margin-bottom:8px;">Rasm</div>
+            <input class="field" type="file" name="rasmi" accept="image/*">
+        </label>
+        {% if not warehouse_only %}
+        <label style="display:flex; gap:10px; align-items:center; font-weight:800; padding-top:30px;">
+            <input type="checkbox" name="is_savdogar_product" value="1" {% if product and product.is_savdogar_product %}checked{% endif %}>
+            Savdogar sotadigan mahsulot
+        </label>
+        {% endif %}
+    </div>
+    <div style="display:flex; gap:10px; margin-top:24px;">
+        <button class="btn primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Saqlash</button>
+        <a class="btn" href="{% url 'warehouse_products' %}">Bekor qilish</a>
+    </div>
+</form>
+</div>
+{% endblock %}

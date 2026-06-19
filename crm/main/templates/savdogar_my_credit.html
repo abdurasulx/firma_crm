@@ -1,0 +1,62 @@
+{% extends 'sgbase.html' %}
+
+{% block title %}Nasiya nazorati - StockFirm{% endblock %}
+
+{% block content %}
+<style>
+    .head{margin-bottom:1rem}.head h1{font-size:1.5rem;color:var(--slate-900)}.head p{color:var(--slate-500);font-weight:700}
+    .summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1rem;margin-bottom:1rem}
+    .stat,.panel{background:#fff;border:1px solid var(--slate-200);border-radius:var(--radius);box-shadow:var(--shadow-sm)}
+    .stat{padding:1rem}.stat span{display:block;color:var(--slate-500);font-size:.78rem;font-weight:900;text-transform:uppercase}.stat strong{font-size:1.5rem;color:var(--slate-900)}
+    .credit-list{display:grid;gap:.75rem;padding:1rem}
+    .credit-row{border:1px solid var(--slate-200);border-radius:.9rem;padding:1rem;display:grid;grid-template-columns:1fr auto;gap:1rem;background:var(--slate-50)}
+    .credit-row.overdue{border-color:#fecaca;background:#fff5f5}
+    .credit-row.due-soon{border-color:#fde68a;background:#fffbeb}
+    .name{font-weight:900;color:var(--slate-900)}.meta{color:var(--slate-500);font-weight:700;font-size:.86rem;margin-top:.25rem}
+    .money{text-align:right;font-weight:900;color:var(--slate-900)}.money small{display:block;color:var(--slate-500);font-size:.75rem}
+    .docs{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.7rem}.docs a{font-size:.8rem;font-weight:900;color:var(--primary);text-decoration:none}
+    .empty{text-align:center;color:var(--slate-500);padding:2rem;font-weight:800}
+    @media(max-width:680px){.credit-row{grid-template-columns:1fr}.money{text-align:left}}
+</style>
+
+<div class="head">
+    <h1>Nasiya nazorati</h1>
+    <p>Ochiq qarzlar, to'langan summa va hujjatlar holati</p>
+</div>
+
+<div class="summary">
+    <div class="stat"><span>Ochiq nasiya</span><strong>{{ open_count }}</strong></div>
+    <div class="stat"><span>Qoldiq qarz</span><strong>{{ debt_total|floatformat:0 }} so'm</strong></div>
+    <div class="stat"><span>7 kun ichida</span><strong>{{ due_soon_count }}</strong></div>
+    <div class="stat"><span>Muddati o'tgan</span><strong>{{ overdue_count }}</strong></div>
+</div>
+
+<section class="panel">
+    <div class="credit-list">
+        {% for row in rows %}
+        <div class="credit-row {% if row.overdue %}overdue{% elif row.due_soon %}due-soon{% endif %}">
+            <div>
+                <div class="name">{% firstof row.sale.haridor_dukon.nomi row.sale.oluvchining_ismi %}</div>
+                <div class="meta">
+                    Shartnoma N: {% if row.sale.contract_number %}{{ row.sale.contract_number }}{% else %}-{% endif %}
+                    &middot; {{ row.sale.credit_term_months }} oy &middot; {{ row.sale.vaqt_sana|date:"d.m.Y" }}
+                    {% if row.overdue %} &middot; Muddati o'tgan{% elif row.due_soon %} &middot; {{ row.days_to_due }} kun qoldi{% endif %}
+                    {% if row.next_due_date %} &middot; Navbatdagi to'lov: {{ row.next_due_date|date:"d.m.Y" }}{% endif %}
+                </div>
+                <div class="docs">
+                    {% if row.sale.contract_pdf %}<a href="{{ row.sale.contract_pdf.url }}" target="_blank">PDF</a>{% endif %}
+                    {% if row.sale.signed_contract_scan %}<a href="{{ row.sale.signed_contract_scan.url }}" target="_blank">Imzo</a>{% endif %}
+                    {% if row.sale.customer_passport_image %}<a href="{{ row.sale.customer_passport_image.url }}" target="_blank">ID/Pasport</a>{% endif %}
+                </div>
+            </div>
+            <div class="money">
+                {{ row.remaining|floatformat:0 }} so'm
+                <small>To'langan: {{ row.paid|floatformat:0 }} so'm</small>
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty">Nasiya savdolar yo'q</div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

@@ -7,7 +7,7 @@
             <h2 style="margin: 0; color: #0f172a; font-size: 28px; font-weight: 800;">Billing</h2>
             <p style="margin: 8px 0 0; color: #64748b;">To'lov holati, yaratilgan silka va to'lov sabablarini shu yerda ko'rasiz.</p>
         </div>
-        <a href="{% url 'select_plan_page' %}" style="padding: 12px 18px; border-radius: 12px; text-decoration: none; background: #eff6ff; color: #2563eb; font-weight: 700;">
+        <a href="{% url 'select_plan_page' %}" style="padding: 12px 18px; border-radius: 12px; text-decoration: none; background: #ecfdf5; color: #047857; font-weight: 700;">
             <i class="fa-solid fa-layer-group" style="margin-right: 8px;"></i> Tariflar
         </a>
     </div>
@@ -23,6 +23,12 @@
                 <div style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); border-radius: 18px; padding: 18px 20px; min-width: 220px;">
                     <div style="font-size: 12px; opacity: 0.7; font-weight: 700; text-transform: uppercase;">Oylik summa</div>
                     <div style="font-size: 34px; font-weight: 900; color: #34d399; margin-top: 8px;">${{ monthly_price_usd|floatformat:2 }}</div>
+                    {% if is_prorated_due %}
+                    <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.14);">
+                        <div style="font-size: 12px; opacity: 0.7; font-weight: 700; text-transform: uppercase;">Hozir to'lanadigan farq</div>
+                        <div style="font-size: 24px; font-weight: 900; color: #fbbf24; margin-top: 4px;">${{ payment_due_usd|floatformat:2 }}</div>
+                    </div>
+                    {% endif %}
                     {% if next_payment_date %}
                     <div style="font-size: 13px; opacity: 0.8; margin-top: 8px;">Keyingi to'lov: {{ next_payment_date|date:"d.m.Y H:i" }}</div>
                     {% endif %}
@@ -30,7 +36,11 @@
             </div>
 
             <div style="margin-top: 24px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
-                {% if is_current %}
+                {% if is_free_plan %}
+                <span style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 16px; border-radius: 999px; background: rgba(52,211,153,0.16); color: #a7f3d0; font-weight: 800;">
+                    <i class="fa-solid fa-gift"></i> Bepul tarif faol
+                </span>
+                {% elif is_current %}
                 <span style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 16px; border-radius: 999px; background: rgba(52,211,153,0.16); color: #a7f3d0; font-weight: 800;">
                     <i class="fa-solid fa-circle-check"></i> To'lov faol
                 </span>
@@ -50,25 +60,47 @@
 
         <div style="background: white; border-radius: 22px; padding: 24px; border: 1px solid #e2e8f0;">
             <h3 style="margin: 0 0 16px; color: #0f172a; font-size: 18px; font-weight: 800;">To'lov harakati</h3>
-            {% if is_current %}
-            <div style="padding: 16px; border-radius: 16px; background: #f0fdf4; color: #166534; font-weight: 700; line-height: 1.6;">
-                Joriy davr uchun to'lov qilingan. Shu sabab to'lov tugmasi ko'rsatilmaydi.
+            {% if is_free_plan %}
+            <div style="padding: 16px; border-radius: 16px; background: #ecfdf5; color: #166534; font-weight: 700; line-height: 1.6;">
+                Siz bepul tarifdasiz. Bu tarif uchun to'lov talab qilinmaydi.
             </div>
-            {% else %}
+            {% elif is_prorated_due or latest_link.status == 'created' or latest_link.status == 'opened' %}
+                {% if is_prorated_due %}
+                <div style="padding: 16px; border-radius: 16px; background: #fffbeb; color: #92400e; font-weight: 700; line-height: 1.6; margin-bottom: 14px;">
+                    Avvalgi to'lov hisobga olindi. Hozir faqat qolgan davr uchun tarif farqi to'lanadi: ${{ payment_due_usd|floatformat:2 }}.
+                </div>
+                {% endif %}
                 {% if latest_link and latest_link.status == 'created' %}
-                <a href="{% url 'open_billing_link' latest_link.token %}" style="display: inline-flex; width: 100%; justify-content: center; align-items: center; gap: 10px; padding: 15px 18px; border-radius: 14px; background: #10b981; color: white; text-decoration: none; font-weight: 800;">
+                <a href="{% url 'open_billing_link' latest_link.token %}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; width: 100%; justify-content: center; align-items: center; gap: 10px; padding: 15px 18px; border-radius: 14px; background: #10b981; color: white; text-decoration: none; font-weight: 800;">
                     <i class="fa-solid fa-up-right-from-square"></i> Tayyor silka orqali to'lash
                 </a>
                 <p style="margin: 12px 0 0; color: #64748b; font-size: 13px; line-height: 1.6;">Bu silka faqat bir marta ochiladi. Ochilgandan keyin qayta ishlatib bo'lmaydi.</p>
+                {% elif latest_link and latest_link.status == 'opened' %}
+                <a href="{{ latest_link.click_url }}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; width: 100%; justify-content: center; align-items: center; gap: 10px; padding: 15px 18px; border-radius: 14px; background: #10b981; color: white; text-decoration: none; font-weight: 800;">
+                    <i class="fa-solid fa-up-right-from-square"></i> Ochilgan silkani yangi oynada davom ettirish
+                </a>
+                <p style="margin: 12px 0 0; color: #64748b; font-size: 13px; line-height: 1.6;">Silka ochilgan, lekin to'lov hali tasdiqlanmagan. To'lovni yangi oynada davom ettiring.</p>
                 {% else %}
                 <form method="post" action="{% url 'create_billing_link' %}">
                     {% csrf_token %}
-                    <button type="submit" style="display: inline-flex; width: 100%; justify-content: center; align-items: center; gap: 10px; padding: 15px 18px; border-radius: 14px; border: none; background: #2563eb; color: white; font-weight: 800; cursor: pointer;">
+                    <button type="submit" style="display: inline-flex; width: 100%; justify-content: center; align-items: center; gap: 10px; padding: 15px 18px; border-radius: 14px; border: none; background: #10b981; color: white; font-weight: 800; cursor: pointer;">
                         <i class="fa-solid fa-link"></i> Yangi to'lov silkasini yaratish
                     </button>
                 </form>
                 <p style="margin: 12px 0 0; color: #64748b; font-size: 13px; line-height: 1.6;">Yangi silka yaratilgach billing sahifada saqlanadi va statusi shu yerda ko'rinadi.</p>
                 {% endif %}
+            {% elif is_current %}
+            <div style="padding: 16px; border-radius: 16px; background: #f0fdf4; color: #166534; font-weight: 700; line-height: 1.6;">
+                Joriy davr uchun to'lov qilingan. Shu sabab to'lov tugmasi ko'rsatilmaydi.
+            </div>
+            {% else %}
+                <form method="post" action="{% url 'create_billing_link' %}">
+                    {% csrf_token %}
+                    <button type="submit" style="display: inline-flex; width: 100%; justify-content: center; align-items: center; gap: 10px; padding: 15px 18px; border-radius: 14px; border: none; background: #10b981; color: white; font-weight: 800; cursor: pointer;">
+                        <i class="fa-solid fa-link"></i> Yangi to'lov silkasini yaratish
+                    </button>
+                </form>
+                <p style="margin: 12px 0 0; color: #64748b; font-size: 13px; line-height: 1.6;">Yangi silka yaratilgach billing sahifada saqlanadi va statusi shu yerda ko'rinadi.</p>
             {% endif %}
 
             {% if latest_link %}
@@ -86,49 +118,72 @@
         </div>
     </div>
 
-    <div style="background: white; border-radius: 22px; padding: 24px; border: 1px solid #e2e8f0;">
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;">
+    <div style="background: white; border-radius: 14px; padding: 16px; border: 1px solid #e2e8f0; box-shadow: 0 2px 10px rgba(15,23,42,.04);">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; padding: 0 4px 12px; border-bottom: 1px solid #e2e8f0;">
             <div>
-                <h3 style="margin: 0; color: #0f172a; font-size: 20px; font-weight: 800;">To'lovlar tarixi</h3>
-                <p style="margin: 6px 0 0; color: #64748b;">Har bir yaratilgan to'lov uchun sabab va status saqlanadi.</p>
+                <h3 style="margin: 0; color: #0f172a; font-size: 18px; font-weight: 900;">To'lovlar</h3>
+                <p style="margin: 4px 0 0; color: #64748b; font-size: 13px;">Yaratilgan to'lovlar sababi, summasi va statusi.</p>
             </div>
         </div>
 
         <div style="overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse;">
+            <table style="width: 100%; border-collapse: collapse; min-width: 860px;">
                 <thead>
-                    <tr style="background: #f8fafc; color: #334155;">
-                        <th style="text-align: left; padding: 14px 16px;">Sabab</th>
-                        <th style="text-align: left; padding: 14px 16px;">Summa</th>
-                        <th style="text-align: left; padding: 14px 16px;">Status</th>
-                        <th style="text-align: left; padding: 14px 16px;">Yaratilgan</th>
-                        <th style="text-align: left; padding: 14px 16px;">Harakat</th>
+                    <tr style="background: #f8fafc; color: #64748b; border-bottom: 2px solid #e2e8f0;">
+                        <th style="text-align: left; padding: 10px 12px; font-size: 11px; text-transform: uppercase;">N / Sana</th>
+                        <th style="text-align: left; padding: 10px 12px; font-size: 11px; text-transform: uppercase;">Sababi</th>
+                        <th style="text-align: left; padding: 10px 12px; font-size: 11px; text-transform: uppercase;">Narx</th>
+                        <th style="text-align: left; padding: 10px 12px; font-size: 11px; text-transform: uppercase;">Summa</th>
+                        <th style="text-align: left; padding: 10px 12px; font-size: 11px; text-transform: uppercase;">Status</th>
+                        <th style="text-align: left; padding: 10px 12px; font-size: 11px; text-transform: uppercase;">Harakat</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for payment_link in payment_links %}
-                    <tr style="border-top: 1px solid #e2e8f0;">
-                        <td style="padding: 16px;">
+                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                        <td style="padding: 12px; vertical-align: top;">
+                            <div style="font-weight: 900; color: #0f172a;">#{{ payment_link.id }}</div>
+                            <div style="font-size: 12px; color: #334155; margin-top: 4px;">{{ payment_link.created_at|date:"d.m.Y" }}</div>
+                            <div style="font-size: 11px; color: #64748b;">{{ payment_link.created_at|date:"H:i" }}</div>
+                        </td>
+                        <td style="padding: 12px; vertical-align: top;">
                             <div style="font-weight: 700; color: #0f172a;">{{ payment_link.reason }}</div>
                             <div style="font-size: 12px; color: #64748b; margin-top: 4px;">{{ payment_link.billing_period_start|date:"F Y" }}</div>
                         </td>
-                        <td style="padding: 16px; color: #0f172a; font-weight: 700;">
-                            ${{ payment_link.amount_usd|floatformat:2 }}<br>
-                            <span style="font-size: 12px; color: #64748b;">{{ payment_link.amount_uzs|floatformat:0 }} so'm</span>
+                        <td style="padding: 12px; vertical-align: top;">
+                            <div style="font-weight: 800; color: #0f172a;">${{ payment_link.amount_usd|floatformat:2 }}</div>
+                            <div style="font-size: 11px; color: #64748b; margin-top: 4px;">{{ payment_link.amount_uzs|floatformat:0 }} so'm</div>
                         </td>
-                        <td style="padding: 16px;">
-                            <span style="display: inline-flex; padding: 8px 12px; border-radius: 999px; font-size: 12px; font-weight: 800;
-                                {% if payment_link.status == 'paid' %}background:#ecfdf5;color:#166534;
-                                {% elif payment_link.status == 'created' %}background:#eff6ff;color:#1d4ed8;
+                        <td style="padding: 12px; vertical-align: top;">
+                            <div style="font-weight: 900; color: #0f172a;">${{ payment_link.amount_usd|floatformat:2 }}</div>
+                            <div style="font-size: 11px; color: #64748b; margin-top: 4px;">{% if payment_link.status == 'paid' or latest_link.status == 'paid' and payment_link.status != 'paid' and payment_link.created_at < latest_link.paid_at %}to'langan{% else %}kutilmoqda{% endif %}: {{ payment_link.amount_uzs|floatformat:0 }} UZS</div>
+                        </td>
+                        <td style="padding: 12px; vertical-align: top;">
+                            <span style="display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-width: 116px; padding: 8px 10px; border-radius: 10px; font-size: 12px; font-weight: 900;
+                                {% if payment_link.status == 'paid' or latest_link.status == 'paid' and payment_link.status != 'paid' and payment_link.created_at < latest_link.paid_at %}background:#ecfdf5;color:#166534;
+                                {% elif payment_link.status == 'created' %}background:#ecfdf5;color:#047857;
                                 {% elif payment_link.status == 'opened' %}background:#fff7ed;color:#c2410c;
                                 {% else %}background:#fef2f2;color:#b91c1c;{% endif %}">
-                                {{ payment_link.get_status_display }}
+                                <i class="fa-solid {% if payment_link.status == 'paid' or latest_link.status == 'paid' and payment_link.status != 'paid' and payment_link.created_at < latest_link.paid_at %}fa-circle-check{% elif payment_link.status == 'created' %}fa-clock{% elif payment_link.status == 'opened' %}fa-arrow-up-right-from-square{% else %}fa-circle-xmark{% endif %}"></i>
+                                {% if payment_link.status == 'paid' or latest_link.status == 'paid' and payment_link.status != 'paid' and payment_link.created_at < latest_link.paid_at %}To'landi{% elif payment_link.status == 'created' or payment_link.status == 'opened' %}To'lanmadi{% else %}{{ payment_link.get_status_display }}{% endif %}
                             </span>
+                            {% if payment_link.status == 'paid' and payment_link.paid_at %}
+                            <div style="font-size: 11px; color: #64748b; margin-top: 6px;">{{ payment_link.paid_at|date:"d.m.Y H:i" }}</div>
+                            {% elif latest_link.status == 'paid' and payment_link.status != 'paid' and payment_link.created_at < latest_link.paid_at %}
+                            <div style="font-size: 11px; color: #64748b; margin-top: 6px;">{{ latest_link.paid_at|date:"d.m.Y H:i" }}</div>
+                            {% elif payment_link.opened_at %}
+                            <div style="font-size: 11px; color: #64748b; margin-top: 6px;">ochildi: {{ payment_link.opened_at|date:"d.m.Y H:i" }}</div>
+                            {% endif %}
                         </td>
-                        <td style="padding: 16px; color: #475569;">{{ payment_link.created_at|date:"d.m.Y H:i" }}</td>
-                        <td style="padding: 16px;">
-                            {% if payment_link.status == 'created' %}
-                            <a href="{% url 'open_billing_link' payment_link.token %}" style="color: #2563eb; font-weight: 700; text-decoration: none;">Ochish</a>
+                        <td style="padding: 12px; vertical-align: top;">
+                            {% if is_free_plan %}
+                            <span style="color: #94a3b8; font-weight: 700;">Kerak emas</span>
+                            {% elif payment_link.status == 'paid' or latest_link.status == 'paid' and payment_link.status != 'paid' and payment_link.created_at < latest_link.paid_at %}
+                            <span style="color: #94a3b8; font-weight: 700;">Qayta ochilmaydi</span>
+                            {% elif payment_link.status == 'created' %}
+                            <a href="{% url 'open_billing_link' payment_link.token %}" target="_blank" rel="noopener noreferrer" style="color: #059669; font-weight: 800; text-decoration: none;">Ochish</a>
+                            {% elif payment_link.status == 'opened' %}
+                            <a href="{{ payment_link.click_url }}" target="_blank" rel="noopener noreferrer" style="color: #059669; font-weight: 800; text-decoration: none;">Davom ettirish</a>
                             {% else %}
                             <span style="color: #94a3b8; font-weight: 700;">Qayta ochilmaydi</span>
                             {% endif %}
@@ -136,12 +191,48 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" style="padding: 28px 16px; text-align: center; color: #64748b;">Hali to'lov silkalari yaratilmagan.</td>
+                        <td colspan="6" style="padding: 28px 16px; text-align: center; color: #64748b;">Hali to'lov silkalari yaratilmagan.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+        {% if payment_links_page.paginator.num_pages > 1 %}
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; padding-top:14px; margin-top:10px; border-top:1px solid #e2e8f0;">
+            <div style="color:#64748b; font-size:13px; font-weight:700;">
+                {{ payment_links_page.start_index }}-{{ payment_links_page.end_index }} / {{ payment_links_page.paginator.count }} ta to'lov
+            </div>
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                {% if payment_links_page.has_previous %}
+                <a href="?page={{ payment_links_page.previous_page_number }}" style="display:inline-flex; align-items:center; justify-content:center; min-width:36px; height:36px; padding:0 12px; border:1px solid #e2e8f0; border-radius:10px; color:#0f172a; text-decoration:none; font-weight:800;">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </a>
+                {% else %}
+                <span style="display:inline-flex; align-items:center; justify-content:center; min-width:36px; height:36px; padding:0 12px; border:1px solid #e2e8f0; border-radius:10px; color:#cbd5e1; font-weight:800;">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </span>
+                {% endif %}
+
+                {% for page_num in payment_links_page.paginator.page_range %}
+                    {% if page_num == payment_links_page.number %}
+                    <span style="display:inline-flex; align-items:center; justify-content:center; min-width:36px; height:36px; padding:0 12px; border-radius:10px; background:#10b981; color:white; font-weight:900;">{{ page_num }}</span>
+                    {% elif page_num <= 2 or page_num >= payment_links_page.paginator.num_pages|add:"-1" or page_num >= payment_links_page.number|add:"-1" and page_num <= payment_links_page.number|add:"1" %}
+                    <a href="?page={{ page_num }}" style="display:inline-flex; align-items:center; justify-content:center; min-width:36px; height:36px; padding:0 12px; border:1px solid #e2e8f0; border-radius:10px; color:#0f172a; text-decoration:none; font-weight:800;">{{ page_num }}</a>
+                    {% endif %}
+                {% endfor %}
+
+                {% if payment_links_page.has_next %}
+                <a href="?page={{ payment_links_page.next_page_number }}" style="display:inline-flex; align-items:center; justify-content:center; min-width:36px; height:36px; padding:0 12px; border:1px solid #e2e8f0; border-radius:10px; color:#0f172a; text-decoration:none; font-weight:800;">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </a>
+                {% else %}
+                <span style="display:inline-flex; align-items:center; justify-content:center; min-width:36px; height:36px; padding:0 12px; border:1px solid #e2e8f0; border-radius:10px; color:#cbd5e1; font-weight:800;">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

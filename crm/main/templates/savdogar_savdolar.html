@@ -39,7 +39,7 @@
         {% for s in page_obj %}
         <div style="display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;padding:18px 22px;border-bottom:1px solid #edf2f7;">
             <div>
-                <div style="font-weight:900;color:#0f172a;">{{ s.haridor_dukon.nomi }}</div>
+                <div style="font-weight:900;color:#0f172a;">{% firstof s.haridor_dukon.nomi s.oluvchining_ismi %}</div>
                 <div style="color:#64748b;font-size:13px;margin-top:4px;">{{ s.vaqt_sana|date:"d.m.Y H:i" }} - {{ s.oluvchining_ismi }} - {{ s.get_st_display }}</div>
                 <div style="color:#94a3b8;font-size:12px;margin-top:4px;">{{ s.smm }}</div>
             </div>

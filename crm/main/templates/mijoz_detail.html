@@ -159,7 +159,7 @@
     .badge.success{ background:#ecfdf5; color:#10b981; }
     .badge.danger{ background:#fef2f2; color:#ef4444; }
     .badge.warning{ background:#fffbeb; color:#f59e0b; }
-    .badge.info{ background:#eff6ff; color:#3b82f6; }
+    .badge.info{ background:#ecfdf5; color:#059669; }
 
     /* Table (same style as other pages) */
     .table-container{
@@ -246,14 +246,33 @@
     <div class="detail-header">
         <div class="detail-title">
             <h1>🏪 {{ mijoz.nomi }}</h1>
-            <div class="detail-sub">
-                {{ mijoz.manzil|default:"Manzil kiritilmagan" }}
+            <div class="detail-sub" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                {{ mijoz.joylashuvi|default:"Manzil kiritilmagan" }}
+                {% if mijoz.mijoz_turi == 'vip' %}
+                    <span style="background:#fef3c7;color:#92400e;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:700;">⭐ VIP</span>
+                {% elif mijoz.mijoz_turi == 'doimiy' %}
+                    <span style="background:#dbeafe;color:#1e40af;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:700;">🔁 Doimiy</span>
+                {% else %}
+                    <span style="background:#f1f5f9;color:#64748b;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:700;">Oddiy</span>
+                {% endif %}
             </div>
         </div>
 
-        <a href="{% url 'mijozlar_list' %}" class="back-btn">
-            <i class="fa-solid fa-arrow-left"></i> Orqaga
-        </a>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            {% if request.user.type == 'ega' %}
+            <form method="post" action="{% url 'set_mijoz_turi' mijoz.id %}" style="display:flex;gap:6px;">
+                {% csrf_token %}
+                <select name="mijoz_turi" onchange="this.form.submit()" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;background:#fff;">
+                    <option value="oddiy"  {% if mijoz.mijoz_turi == 'oddiy'  %}selected{% endif %}>Oddiy</option>
+                    <option value="doimiy" {% if mijoz.mijoz_turi == 'doimiy' %}selected{% endif %}>Doimiy</option>
+                    <option value="vip"    {% if mijoz.mijoz_turi == 'vip'    %}selected{% endif %}>VIP</option>
+                </select>
+            </form>
+            {% endif %}
+            <a href="{% url 'mijozlar_list' %}" class="back-btn">
+                <i class="fa-solid fa-arrow-left"></i> Orqaga
+            </a>
+        </div>
     </div>
 
     <!-- Main Statistics -->
@@ -364,7 +383,7 @@
                 <thead>
                     <tr>
                         <th>Sana</th>
-                        <th>Sotuvchi</th>
+                        <th>Yetkazuvchi</th>
                         <th>Summa</th>
                         <th>To'lov</th>
                         <th>Holat</th>
@@ -374,15 +393,7 @@
                     {% for savdo in recent_sales %}
                     <tr>
                         <td data-label="Sana">{{ savdo.vaqt_sana|date:"d.m.Y H:i" }}</td>
-                        <td data-label="Sotuvchi">
-                            {% if savdo.yetkazib_beruvchi %}
-                            {{ savdo.yetkazib_beruvchi.tuliq_ismi }}
-                            {% elif savdo.savdogar %}
-                            {{ savdo.savdogar.tuliq_ismi|default:savdo.savdogar.username }}
-                            {% else %}
-                            -
-                            {% endif %}
-                        </td>
+                        <td data-label="Yetkazuvchi">{{ savdo.yetkazib_beruvchi.tuliq_ismi }}</td>
                         <td data-label="Summa"><b>{{ savdo.summa|floatformat:0 }}</b> so'm</td>
 
                         <td data-label="To'lov">

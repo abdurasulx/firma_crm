@@ -1,0 +1,107 @@
+{% extends 'egabase.html' %}
+
+{% block title %}Savdogar savdolari{% endblock %}
+
+{% block content %}
+<style>
+    .sales-wrap { display: grid; gap: 18px; }
+    .sales-head { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
+    .sales-head h2 { margin: 0; color: #0f172a; font-size: 28px; font-weight: 900; }
+    .sales-head p { margin: 8px 0 0; color: #64748b; font-weight: 600; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; border: 0; border-radius: 12px; padding: 12px 16px; font-weight: 900; cursor: pointer; text-decoration: none; background: #f1f5f9; color: #0f172a; }
+    .filters, .summary, .table-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 18px; box-shadow: 0 10px 30px rgba(15,23,42,.04); }
+    .filters form { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
+    .field label { display: block; margin-bottom: 6px; color: #475569; font-size: 12px; font-weight: 900; text-transform: uppercase; }
+    .field select { min-width: 190px; padding: 11px 12px; border: 1px solid #cbd5e1; border-radius: 12px; background: #fff; }
+    .summary { display: flex; gap: 24px; flex-wrap: wrap; }
+    .summary strong { display: block; color: #0f172a; font-size: 24px; }
+    .summary span { color: #64748b; font-weight: 800; font-size: 12px; text-transform: uppercase; }
+    .table-scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 13px 12px; text-align: left; border-bottom: 1px solid #f1f5f9; white-space: nowrap; }
+    th { color: #64748b; font-size: 12px; text-transform: uppercase; }
+    td { color: #334155; font-weight: 700; }
+    .doc-links { display: flex; gap: 8px; flex-wrap: wrap; }
+    .doc-links a { color: #059669; text-decoration: none; font-weight: 900; font-size: 12px; }
+    .missing { color: #dc2626; font-weight: 900; }
+</style>
+
+<div class="sales-wrap">
+    <div class="sales-head">
+        <div>
+            <h2>Savdogar savdolari</h2>
+            <p>Savdogar qilgan savdolar, nasiya holati va biriktirilgan hujjatlar.</p>
+        </div>
+        <a href="{% url 'savdogar_admin_dashboard' %}" class="btn"><i class="fa-solid fa-arrow-left"></i> Boshqaruv</a>
+    </div>
+
+    <div class="filters">
+        <form method="get">
+            <div class="field">
+                <label>Savdogar</label>
+                <select name="seller">
+                    <option value="">Barchasi</option>
+                    {% for seller in sellers %}
+                    <option value="{{ seller.id }}" {% if seller_id == seller.id|stringformat:'s' %}selected{% endif %}>{{ seller.tuliq_ismi|default:seller.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field">
+                <label>To'lov turi</label>
+                <select name="payment">
+                    <option value="">Barchasi</option>
+                    <option value="naqd" {% if payment_type == 'naqd' %}selected{% endif %}>Naqd</option>
+                    <option value="karta" {% if payment_type == 'karta' %}selected{% endif %}>Karta</option>
+                    <option value="nasiya" {% if payment_type == 'nasiya' %}selected{% endif %}>Nasiya</option>
+                </select>
+            </div>
+            <button class="btn" type="submit"><i class="fa-solid fa-filter"></i> Filtrlash</button>
+        </form>
+    </div>
+
+    <div class="summary">
+        <div><span>Savdolar</span><strong>{{ sales_count }}</strong></div>
+        <div><span>Jami summa</span><strong>{{ total_amount|floatformat:0 }} so'm</strong></div>
+    </div>
+
+    <div class="table-card">
+        <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Sana</th>
+                        <th>Savdogar</th>
+                        <th>Mijoz</th>
+                        <th>To'lov</th>
+                        <th>Summa</th>
+                        <th>Nasiya</th>
+                        <th>Hujjatlar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sale in page_obj %}
+                    <tr>
+                        <td>{{ sale.vaqt_sana|date:"d.m.Y H:i" }}</td>
+                        <td>{{ sale.savdogar.tuliq_ismi|default:sale.yetkazib_beruvchi.tuliq_ismi }}</td>
+                        <td>{% firstof sale.haridor_dukon.nomi sale.oluvchining_ismi %}</td>
+                        <td>{{ sale.get_st_display }}</td>
+                        <td>{{ sale.summa|floatformat:0 }} so'm</td>
+                        <td>{% if sale.st == 'nasiya' %}{% if sale.tulandi %}Yopilgan{% else %}<span class="missing">Ochiq</span>{% endif %}{% else %}-{% endif %}</td>
+                        <td>
+                            <div class="doc-links">
+                                {% if sale.contract_pdf %}<a href="{{ sale.contract_pdf.url }}" target="_blank">PDF</a>{% endif %}
+                                {% if sale.signed_contract_scan %}<a href="{{ sale.signed_contract_scan.url }}" target="_blank">Imzo</a>{% endif %}
+                                {% if sale.customer_passport_image %}<a href="{{ sale.customer_passport_image.url }}" target="_blank">ID</a>{% endif %}
+                                {% if not sale.contract_pdf or not sale.signed_contract_scan or not sale.customer_passport_image %}<span class="missing">To'liq emas</span>{% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" style="text-align:center; color:#64748b; padding:28px;">Savdogar savdolari topilmadi.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

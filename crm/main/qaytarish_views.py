@@ -6,6 +6,7 @@ Yetkazuvchi mahsulot qaytaradi → admin tasdiqlaydi → DeliveryStock kamayadi,
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.db import transaction
 from django.utils import timezone
 from .models import (
     qaytarilgan_mahsulotlar, Mahsulot, YetkazibBeruvchi,
@@ -21,7 +22,7 @@ def qaytarish_view(request):
         return redirect('main')
 
     try:
-        yb = YetkazibBeruvchi.objects.get(user=request.user)
+        yb = YetkazibBeruvchi.objects.get(user=request.user, company=request.company)
     except YetkazibBeruvchi.DoesNotExist:
         return redirect('main')
 
@@ -57,12 +58,11 @@ def qaytarish_view(request):
             messages.error(request, "Bu mahsulot sizda mavjud emas.")
             return redirect('qaytarish')
 
-        # So'rov yaratish (yq=False — tasdiqlash kutilmoqda)
         qaytarilgan_mahsulotlar.objects.create(
             company=request.company,
             mahsulot=mahsulot,
             miqdor=miqdor,
-            yq=False,
+            status=qaytarilgan_mahsulotlar.STATUS_PENDING,
         )
 
         AmalLog.objects.create(
@@ -87,8 +87,12 @@ def qaytarishlar_view(request):
     if request.user.type != 'ega':
         return redirect('main')
 
-    pending = qaytarilgan_mahsulotlar.objects.filter(company=request.company, yq=False).select_related('mahsulot').order_by('-sana')
-    done    = qaytarilgan_mahsulotlar.objects.filter(company=request.company, yq=True).select_related('mahsulot').order_by('-sana')[:50]
+    pending = qaytarilgan_mahsulotlar.objects.filter(
+        company=request.company, status=qaytarilgan_mahsulotlar.STATUS_PENDING
+    ).select_related('mahsulot').order_by('-sana')
+    done = qaytarilgan_mahsulotlar.objects.filter(
+        company=request.company, status__in=[qaytarilgan_mahsulotlar.STATUS_APPROVED, qaytarilgan_mahsulotlar.STATUS_REJECTED]
+    ).select_related('mahsulot').order_by('-sana')[:50]
 
     context = {
         'pending': pending,
@@ -105,25 +109,31 @@ def qaytarish_tasdiq(request, qaytarish_id):
     if request.user.type != 'ega':
         return redirect('main')
 
-    q = get_object_or_404(qaytarilgan_mahsulotlar, id=qaytarish_id, yq=False, company=request.company)
+    q = get_object_or_404(qaytarilgan_mahsulotlar, id=qaytarish_id,
+                          status=qaytarilgan_mahsulotlar.STATUS_PENDING, company=request.company)
 
     if request.method == 'POST':
-        # Mahsulot ombor zaxirasini oshir
-        m = q.mahsulot
-        m.miqdori = (m.miqdori or 0) + q.miqdor
-        m.save()
+        with transaction.atomic():
+            q_locked = qaytarilgan_mahsulotlar.objects.select_for_update().get(pk=q.pk)
+            if q_locked.status != qaytarilgan_mahsulotlar.STATUS_PENDING:
+                messages.warning(request, "Bu qaytarish allaqachon ko'rib chiqilgan.")
+                return redirect('qaytarishlar')
 
-        # So'rovni yopiq deb belgilaymiz
-        q.yq = True
-        q.save()
+            m = Mahsulot.objects.select_for_update().get(pk=q_locked.mahsulot.pk)
+            m.miqdori = (m.miqdori or 0) + q_locked.miqdor
+            m.save(update_fields=['miqdori'])
 
-        AmalLog.objects.create(
-            user=request.user,
-            company=request.company,
-            amal_shifri=f"qaytarish_tasdiq|{m.nomi}|{q.miqdor}"
-        )
+            q_locked.status = qaytarilgan_mahsulotlar.STATUS_APPROVED
+            q_locked.yq = True  # backwards compat
+            q_locked.save(update_fields=['status', 'yq'])
 
-        messages.success(request, f"{m.nomi} uchun {q.miqdor} {m.turi} qaytarish tasdiqlandi.")
+            AmalLog.objects.create(
+                user=request.user,
+                company=request.company,
+                amal_shifri=f"qaytarish_tasdiq|{m.nomi}|{q_locked.miqdor}"
+            )
+
+        messages.success(request, f"{m.nomi} uchun {q_locked.miqdor} {m.turi} qaytarish tasdiqlandi.")
 
     return redirect('qaytarishlar')
 
@@ -135,7 +145,8 @@ def qaytarish_rad(request, qaytarish_id):
     if request.user.type != 'ega':
         return redirect('main')
 
-    q = get_object_or_404(qaytarilgan_mahsulotlar, id=qaytarish_id, yq=False, company=request.company)
+    q = get_object_or_404(qaytarilgan_mahsulotlar, id=qaytarish_id,
+                          status=qaytarilgan_mahsulotlar.STATUS_PENDING, company=request.company)
 
     if request.method == 'POST':
         AmalLog.objects.create(
@@ -143,8 +154,9 @@ def qaytarish_rad(request, qaytarish_id):
             company=request.company,
             amal_shifri=f"qaytarish_rad|{q.mahsulot.nomi}|{q.miqdor}"
         )
-        q.yq = True   # yopish (rad etildi deb belgilash uchun yq=True)
-        q.save()
+        q.status = qaytarilgan_mahsulotlar.STATUS_REJECTED
+        q.yq = True  # backwards compat
+        q.save(update_fields=['status', 'yq'])
         messages.warning(request, f"{q.mahsulot.nomi} qaytarishi rad etildi.")
 
     return redirect('qaytarishlar')

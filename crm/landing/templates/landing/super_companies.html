@@ -27,7 +27,7 @@
     .search-box input {
         background: none;
         border: none;
-        color: white;
+        color: var(--text-main);
         width: 100%;
         outline: none;
     }
@@ -50,7 +50,7 @@
     .company-logo {
         width: 60px;
         height: 60px;
-        background: rgba(255, 255, 255, 0.05);
+        background: #ecfdf5;
         border-radius: 15px;
         display: flex;
         align-items: center;
@@ -88,8 +88,8 @@
     }
 
     .btn-icon:hover {
-        background: rgba(255, 255, 255, 0.05);
-        color: white;
+        background: #ecfdf5;
+        color: var(--primary-dark);
     }
 
     .btn-icon.edit:hover { border-color: var(--primary); color: var(--primary); }
@@ -97,11 +97,20 @@
 </style>
 
 <div class="actions-bar">
-    <div class="search-box">
-        <i class="fa-solid fa-magnifying-glass" style="color: var(--text-dim);"></i>
-        <input type="text" id="companySearch" placeholder="Firma nomi yoki subdomain bo'yicha qidirish..." onkeyup="filterCompanies()">
-    </div>
-    <a href="{% url 'super_company_create' %}" class="btn-primary">
+    <form method="get" style="display:flex; gap:10px; align-items:center; flex:1;">
+        <div class="search-box" style="flex:1; max-width:380px;">
+            <i class="fa-solid fa-magnifying-glass" style="color: var(--text-dim);"></i>
+            <input type="text" name="q" value="{{ q }}" placeholder="Firma nomi yoki subdomain bo'yicha qidirish...">
+        </div>
+        <div style="display:flex; gap:6px;">
+            <a href="?q={{ q }}" style="padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-dim); font-size:13px; font-weight:600; text-decoration:none; {% if not status_filter %}color:var(--primary); border-color:var(--primary);{% endif %}">Barchasi</a>
+            <a href="?q={{ q }}&status=active" style="padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-dim); font-size:13px; font-weight:600; text-decoration:none; {% if status_filter == 'active' %}color:var(--primary); border-color:var(--primary);{% endif %}">Faol</a>
+            <a href="?q={{ q }}&status=trial" style="padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-dim); font-size:13px; font-weight:600; text-decoration:none; {% if status_filter == 'trial' %}color:var(--primary); border-color:var(--primary);{% endif %}">Sinovda</a>
+            <a href="?q={{ q }}&status=inactive" style="padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-dim); font-size:13px; font-weight:600; text-decoration:none; {% if status_filter == 'inactive' %}color:#ef4444; border-color:#ef4444;{% endif %}">To'xtatilgan</a>
+        </div>
+        <button type="submit" class="btn-primary" style="padding:10px 18px; font-size:14px; white-space:nowrap;"><i class="fa-solid fa-search"></i></button>
+    </form>
+    <a href="{% url 'super_company_create' %}" class="btn-primary" style="white-space:nowrap;">
         <i class="fa-solid fa-plus"></i> Yangi Firma Qo'shish
     </a>
 </div>
@@ -126,12 +135,12 @@
                     <i class="fa-solid fa-users" style="margin-right: 5px;"></i> {{ company.total_users }} foydalanuvchi ({% if company.custom_max_users == 0 %}Cheksiz{% else %}{{ company.custom_max_users }} ta{% endif %} xodim)
                     <span style="margin: 0 10px;">|</span>
                     <div style="display: inline-flex; gap: 5px; opacity: 0.8;">
-                        {% if company.custom_has_telegram_bot %}<i class="fa-brands fa-telegram text-primary" title="Telegram Bot"></i>{% endif %}
-                        {% if company.custom_has_analytics %}<i class="fa-solid fa-robot text-purple-500" title="AI Analytics"></i>{% endif %}
-                        {% if company.custom_has_map %}<i class="fa-solid fa-map-location-dot text-info" title="Xarita"></i>{% endif %}
+                        {% if company.custom_has_telegram_bot %}<i class="fa-brands fa-telegram" style="color: var(--primary);" title="Telegram Bot"></i>{% endif %}
+                        {% if company.custom_has_analytics %}<i class="fa-solid fa-robot" style="color: var(--primary-dark);" title="AI Analytics"></i>{% endif %}
+                        {% if company.custom_has_map %}<i class="fa-solid fa-map-location-dot" style="color: #0f766e;" title="Xarita"></i>{% endif %}
                     </div>
                 {% else %}
-                    <span style="background: rgba(59, 130, 246, 0.1); color: var(--primary); padding: 2px 8px; border-radius: 6px; font-weight: 600;">{{ company.plan.name|default:"Plan yo'q" }}</span>
+                    <span style="background: #ecfdf5; color: var(--primary-dark); padding: 2px 8px; border-radius: 6px; font-weight: 600;">{{ company.plan.name|default:"Plan yo'q" }}</span>
                     <span style="margin: 0 10px;">|</span>
                     <i class="fa-solid fa-users" style="margin-right: 5px;"></i> {{ company.total_users }} foydalanuvchi ({% if company.plan and company.plan.max_users == 0 %}Cheksiz{% elif company.plan %}{{ company.plan.max_users }} ta{% else %}5 ta{% endif %} xodim)
                 {% endif %}
@@ -155,28 +164,42 @@
     {% empty %}
     <div class="glass-card" style="text-align: center; padding: 50px;">
         <i class="fa-solid fa-folder-open" style="font-size: 48px; color: var(--text-dim); margin-bottom: 20px;"></i>
-        <p style="color: var(--text-dim);">Hozircha hech qanday firma ro'yxatdan o'tmagan.</p>
+        <p style="color: var(--text-dim);">
+            {% if q %}
+                "<strong>{{ q }}</strong>" bo'yicha natija topilmadi.
+            {% else %}
+                Hozircha hech qanday firma ro'yxatdan o'tmagan.
+            {% endif %}
+        </p>
     </div>
     {% endfor %}
 </div>
 
-<script>
-function filterCompanies() {
-    const input = document.getElementById('companySearch');
-    const filter = input.value.toLowerCase();
-    const list = document.getElementById('companyList');
-    const cards = list.getElementsByClassName('company-card');
-
-    for (let i = 0; i < cards.length; i++) {
-        const name = cards[i].getAttribute('data-name').toLowerCase();
-        const subdomain = cards[i].getAttribute('data-subdomain').toLowerCase();
-        if (name.includes(filter) || subdomain.includes(filter)) {
-            cards[i].style.display = "";
-        } else {
-            cards[i].style.display = "none";
-        }
-    }
-}
-</script>
+{% if page_obj.paginator.num_pages > 1 %}
+<div style="display:flex; align-items:center; justify-content:space-between; margin-top:20px; flex-wrap:wrap; gap:12px;">
+    <span style="font-size:13px; color:var(--text-dim);">
+        {{ page_obj.start_index }}–{{ page_obj.end_index }} / {{ page_obj.paginator.count }} ta firma
+    </span>
+    <div style="display:flex; gap:6px;">
+        <a href="?q={{ q }}&status={{ status_filter }}&page=1" style="width:34px; height:34px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; border:1px solid var(--border); background:var(--card-bg); text-decoration:none; color:var(--text-main); {% if not page_obj.has_previous %}opacity:.35; pointer-events:none;{% endif %}">
+            <i class="fa-solid fa-angles-left" style="font-size:11px;"></i>
+        </a>
+        <a href="?q={{ q }}&status={{ status_filter }}&page={{ page_obj.previous_page_number }}" style="width:34px; height:34px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; border:1px solid var(--border); background:var(--card-bg); text-decoration:none; color:var(--text-main); {% if not page_obj.has_previous %}opacity:.35; pointer-events:none;{% endif %}">
+            <i class="fa-solid fa-angle-left" style="font-size:11px;"></i>
+        </a>
+        {% for num in page_obj.paginator.page_range %}
+            {% if num >= page_obj.number|add:"-2" and num <= page_obj.number|add:"2" %}
+            <a href="?q={{ q }}&status={{ status_filter }}&page={{ num }}" style="width:34px; height:34px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; border:1px solid {% if num == page_obj.number %}var(--primary){% else %}var(--border){% endif %}; background:{% if num == page_obj.number %}var(--primary){% else %}var(--card-bg){% endif %}; color:{% if num == page_obj.number %}white{% else %}var(--text-main){% endif %}; text-decoration:none; font-size:13px; font-weight:600;">{{ num }}</a>
+            {% endif %}
+        {% endfor %}
+        <a href="?q={{ q }}&status={{ status_filter }}&page={{ page_obj.next_page_number }}" style="width:34px; height:34px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; border:1px solid var(--border); background:var(--card-bg); text-decoration:none; color:var(--text-main); {% if not page_obj.has_next %}opacity:.35; pointer-events:none;{% endif %}">
+            <i class="fa-solid fa-angle-right" style="font-size:11px;"></i>
+        </a>
+        <a href="?q={{ q }}&status={{ status_filter }}&page={{ page_obj.paginator.num_pages }}" style="width:34px; height:34px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; border:1px solid var(--border); background:var(--card-bg); text-decoration:none; color:var(--text-main); {% if not page_obj.has_next %}opacity:.35; pointer-events:none;{% endif %}">
+            <i class="fa-solid fa-angles-right" style="font-size:11px;"></i>
+        </a>
+    </div>
+</div>
+{% endif %}
 
 {% endblock %}

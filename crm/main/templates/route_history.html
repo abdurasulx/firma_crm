@@ -1,0 +1,520 @@
+{% extends 'egabase.html' %}
+{% load static %}
+
+{% block title %}Marshrut tarixi - StockFirm CRM{% endblock %}
+{% block page_title %}Marshrut tarixi{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    .route-page {
+        display: grid;
+        gap: 18px;
+    }
+    .route-panel {
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        box-shadow: 0 14px 35px rgba(15, 23, 42, .06);
+        overflow: hidden;
+    }
+    .route-panel.toolbar-panel {
+        overflow: visible;
+        position: relative;
+        z-index: 700;
+    }
+    .route-toolbar {
+        display: grid;
+        grid-template-columns: minmax(220px, 1fr) 220px auto;
+        gap: 12px;
+        padding: 18px;
+        align-items: end;
+    }
+    .field {
+        display: grid;
+        gap: 7px;
+    }
+    .field label {
+        color: var(--text-light);
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+    }
+    .field select,
+    .date-picker-input {
+        width: 100%;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 12px 14px;
+        color: var(--text-dark);
+        background: #f8fafc;
+        font: inherit;
+        font-weight: 700;
+        outline: none;
+    }
+    .field select:focus,
+    .date-picker-input:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 4px rgba(16, 185, 129, .12);
+    }
+    .date-picker {
+        position: relative;
+    }
+    .date-picker-input {
+        cursor: pointer;
+        text-align: left;
+    }
+    .date-calendar {
+        position: absolute;
+        top: calc(100% + 10px);
+        left: 0;
+        width: min(330px, calc(100vw - 36px));
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        box-shadow: 0 22px 55px rgba(15, 23, 42, .18);
+        padding: 14px;
+        z-index: 2000;
+        display: none;
+    }
+    .date-calendar.open {
+        display: block;
+    }
+    .date-calendar-head {
+        display: grid;
+        grid-template-columns: 36px 1fr 36px;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+    .calendar-nav {
+        width: 36px;
+        height: 36px;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        background: #f8fafc;
+        color: var(--text-dark);
+        cursor: pointer;
+        font-weight: 900;
+    }
+    .calendar-title {
+        display: grid;
+        grid-template-columns: 1fr 92px;
+        gap: 8px;
+    }
+    .calendar-title select {
+        padding: 9px 10px;
+        border-radius: 10px;
+        font-size: 13px;
+    }
+    .calendar-weekdays,
+    .calendar-days {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 6px;
+    }
+    .calendar-weekdays span {
+        text-align: center;
+        color: var(--text-light);
+        font-size: 11px;
+        font-weight: 900;
+        text-transform: uppercase;
+    }
+    .calendar-day {
+        height: 36px;
+        border: 1px solid transparent;
+        border-radius: 10px;
+        background: transparent;
+        color: var(--text-dark);
+        cursor: pointer;
+        font-weight: 800;
+    }
+    .calendar-day:hover {
+        border-color: var(--primary-color);
+        background: #ecfdf5;
+    }
+    .calendar-day.active {
+        background: var(--primary-color);
+        color: #fff;
+    }
+    .calendar-day.disabled {
+        color: #cbd5e1;
+        cursor: not-allowed;
+        background: #f8fafc;
+    }
+    .calendar-day.outside {
+        opacity: .45;
+    }
+    .route-btn {
+        border: 0;
+        border-radius: 12px;
+        padding: 13px 18px;
+        background: var(--primary-color);
+        color: #fff;
+        font-weight: 900;
+        cursor: pointer;
+        box-shadow: 0 10px 24px rgba(16, 185, 129, .22);
+    }
+    .route-summary {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(150px, 1fr));
+        gap: 1px;
+        border-top: 1px solid var(--border-color);
+        background: var(--border-color);
+    }
+    .summary-card {
+        background: #fff;
+        padding: 16px 18px;
+    }
+    .summary-card span {
+        display: block;
+        color: var(--text-light);
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+    .summary-card strong {
+        display: block;
+        color: var(--text-dark);
+        font-size: 24px;
+        margin-top: 4px;
+    }
+    .map-shell {
+        position: relative;
+        min-height: 560px;
+    }
+    #routeMap {
+        height: 560px;
+        width: 100%;
+    }
+    .route-empty {
+        position: absolute;
+        inset: 0;
+        display: none;
+        place-items: center;
+        text-align: center;
+        padding: 24px;
+        background: rgba(248, 250, 252, .86);
+        z-index: 500;
+        color: var(--text-light);
+        font-weight: 800;
+    }
+    .route-empty strong {
+        display: block;
+        color: var(--text-dark);
+        font-size: 18px;
+        margin-bottom: 6px;
+    }
+    @media (max-width: 900px) {
+        .route-toolbar { grid-template-columns: 1fr; }
+        .route-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 520px) {
+        .route-summary { grid-template-columns: 1fr; }
+        #routeMap, .map-shell { min-height: 460px; height: 460px; }
+    }
+</style>
+
+<div class="route-page">
+    <section class="route-panel toolbar-panel">
+        <form class="route-toolbar" id="routeForm">
+            <div class="field">
+                <label for="delivererSelect">Haydovchi</label>
+                <select id="delivererSelect" name="deliverer">
+                    {% for deliverer in deliverers %}
+                    <option value="{{ deliverer.id }}" {% if selected_deliverer == deliverer.id|stringformat:"s" %}selected{% endif %}>{{ deliverer.tuliq_ismi }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field">
+                <label for="routeDate">Aktiv kunlar</label>
+                <div class="date-picker" id="routeDatePicker">
+                    <button class="date-picker-input" type="button" id="routeDateButton">Avval haydovchi tanlang</button>
+                    <input id="routeDate" name="date" type="hidden" value="{{ selected_date }}" data-selected="{{ selected_date }}">
+                    <div class="date-calendar" id="routeCalendar">
+                        <div class="date-calendar-head">
+                            <button class="calendar-nav" type="button" id="prevMonth"><i class="fa-solid fa-chevron-left"></i></button>
+                            <div class="calendar-title">
+                                <select id="calendarMonth"></select>
+                                <select id="calendarYear"></select>
+                            </div>
+                            <button class="calendar-nav" type="button" id="nextMonth"><i class="fa-solid fa-chevron-right"></i></button>
+                        </div>
+                        <div class="calendar-weekdays">
+                            <span>Du</span><span>Se</span><span>Ch</span><span>Pa</span><span>Ju</span><span>Sh</span><span>Ya</span>
+                        </div>
+                        <div class="calendar-days" id="calendarDays"></div>
+                    </div>
+                </div>
+            </div>
+            <button class="route-btn" type="submit"><i class="fa-solid fa-magnifying-glass"></i> Ko'rish</button>
+        </form>
+        <div class="route-summary">
+            <div class="summary-card"><span>Masofa</span><strong id="distanceValue">0 km</strong></div>
+            <div class="summary-card"><span>GPS nuqta</span><strong id="pointValue">0</strong></div>
+            <div class="summary-card"><span>Boshlanish</span><strong id="startValue">-</strong></div>
+            <div class="summary-card"><span>Tugash</span><strong id="endValue">-</strong></div>
+        </div>
+    </section>
+
+    <section class="route-panel map-shell">
+        <div id="routeMap"></div>
+        <div class="route-empty" id="routeEmpty">
+            <div>
+                <strong>Bu sana uchun yo'l topilmadi</strong>
+                <span>Haydovchi brauzeri GPS yuborgan bo'lsa, shu yerda marshrut ko'rinadi.</span>
+            </div>
+        </div>
+    </section>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const map = L.map('routeMap').setView([41.311, 69.240], 12);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+            subdomains: 'abcd',
+            maxZoom: 20
+        }).addTo(map);
+
+        const form = document.getElementById('routeForm');
+        const delivererSelect = document.getElementById('delivererSelect');
+        const dateInput = document.getElementById('routeDate');
+        const dateButton = document.getElementById('routeDateButton');
+        const datePicker = document.getElementById('routeDatePicker');
+        const routeCalendar = document.getElementById('routeCalendar');
+        const calendarDays = document.getElementById('calendarDays');
+        const calendarMonth = document.getElementById('calendarMonth');
+        const calendarYear = document.getElementById('calendarYear');
+        const prevMonth = document.getElementById('prevMonth');
+        const nextMonth = document.getElementById('nextMonth');
+        const empty = document.getElementById('routeEmpty');
+        const distanceValue = document.getElementById('distanceValue');
+        const pointValue = document.getElementById('pointValue');
+        const startValue = document.getElementById('startValue');
+        const endValue = document.getElementById('endValue');
+        let routeLayers = [];
+        let endpointLayers = [];
+        let activeDayController = null;
+        let activeDays = [];
+        let visibleMonth = null;
+
+        function clearRoute() {
+            routeLayers.forEach(layer => map.removeLayer(layer));
+            endpointLayers.forEach(layer => map.removeLayer(layer));
+            routeLayers = [];
+            endpointLayers = [];
+        }
+
+        function setSummary(data) {
+            distanceValue.textContent = `${Number(data.distance_km || 0).toLocaleString('uz-UZ')} km`;
+            pointValue.textContent = Number(data.point_count || 0).toLocaleString('uz-UZ');
+            startValue.textContent = data.start_time || '-';
+            endValue.textContent = data.end_time || '-';
+        }
+
+        function drawRoute(data) {
+            clearRoute();
+            setSummary(data);
+            const segments = data.path_segments || [];
+            empty.style.display = segments.length ? 'none' : 'grid';
+
+            const bounds = [];
+            segments.forEach((segment) => {
+                const latLngs = segment.map(point => [point[0], point[1]]);
+                bounds.push(...latLngs);
+                routeLayers.push(L.polyline(latLngs, {
+                    color: '#10b981',
+                    weight: 5,
+                    opacity: .85,
+                    lineCap: 'round',
+                    lineJoin: 'round'
+                }).addTo(map));
+            });
+
+            const flatPath = data.path || [];
+            if (flatPath.length) {
+                const first = flatPath[0];
+                const last = flatPath[flatPath.length - 1];
+                endpointLayers.push(L.circleMarker([first[0], first[1]], {
+                    radius: 7,
+                    color: '#059669',
+                    fillColor: '#10b981',
+                    fillOpacity: 1
+                }).addTo(map).bindPopup(`Boshlanish: ${first[2] || '-'}`));
+                endpointLayers.push(L.circleMarker([last[0], last[1]], {
+                    radius: 7,
+                    color: '#dc2626',
+                    fillColor: '#ef4444',
+                    fillOpacity: 1
+                }).addTo(map).bindPopup(`Tugash: ${last[2] || '-'}`));
+            }
+
+            if (bounds.length) {
+                map.fitBounds(bounds, {padding: [28, 28]});
+            }
+        }
+
+        function loadRoute() {
+            const delivererId = delivererSelect.value;
+            if (!delivererId || !dateInput.value) {
+                drawRoute({path_segments: [], point_count: 0, distance_km: 0});
+                return;
+            }
+            const params = new URLSearchParams({date: dateInput.value});
+            fetch(`/api/map/route/${delivererId}/?${params.toString()}`)
+                .then(response => response.json())
+                .then(drawRoute)
+                .catch(() => {
+                    drawRoute({path_segments: [], point_count: 0, distance_km: 0});
+                });
+        }
+
+        function formatDateLabel(value) {
+            const [year, month, day] = value.split('-');
+            return `${day}.${month}.${year}`;
+        }
+
+        function toDateValue(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function fillMonthYearControls() {
+            const monthNames = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr'];
+            calendarMonth.innerHTML = monthNames.map((name, index) => `<option value="${index}">${name}</option>`).join('');
+            const years = [...new Set(activeDays.map(day => Number(day.slice(0, 4))))].sort((a, b) => a - b);
+            calendarYear.innerHTML = years.map(year => `<option value="${year}">${year}</option>`).join('');
+        }
+
+        function renderCalendar() {
+            calendarDays.innerHTML = '';
+            if (!visibleMonth || !activeDays.length) return;
+            const activeSet = new Set(activeDays);
+            calendarMonth.value = visibleMonth.getMonth();
+            calendarYear.value = visibleMonth.getFullYear();
+            const year = visibleMonth.getFullYear();
+            const month = visibleMonth.getMonth();
+            const firstDay = new Date(year, month, 1);
+            const mondayIndex = (firstDay.getDay() + 6) % 7;
+            const gridStart = new Date(year, month, 1 - mondayIndex);
+
+            for (let i = 0; i < 42; i += 1) {
+                const dayDate = new Date(gridStart);
+                dayDate.setDate(gridStart.getDate() + i);
+                const value = toDateValue(dayDate);
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'calendar-day';
+                button.textContent = dayDate.getDate();
+                if (dayDate.getMonth() !== month) button.classList.add('outside');
+                if (value === dateInput.value) button.classList.add('active');
+                if (!activeSet.has(value)) {
+                    button.classList.add('disabled');
+                    button.disabled = true;
+                } else {
+                    button.addEventListener('click', () => {
+                        dateInput.value = value;
+                        dateButton.textContent = formatDateLabel(value);
+                        routeCalendar.classList.remove('open');
+                        renderCalendar();
+                        loadRoute();
+                    });
+                }
+                calendarDays.appendChild(button);
+            }
+        }
+
+        function setVisibleMonth(value) {
+            const [year, month] = value.split('-').map(Number);
+            visibleMonth = new Date(year, month - 1, 1);
+            renderCalendar();
+        }
+
+        function setDateOptions(days, preferredDate) {
+            activeDays = days;
+            if (!days.length) {
+                dateInput.value = '';
+                dateButton.textContent = 'Marshrut yozuvi yo\'q';
+                dateButton.disabled = true;
+                routeCalendar.classList.remove('open');
+                calendarDays.innerHTML = '';
+                drawRoute({path_segments: [], point_count: 0, distance_km: 0});
+                return;
+            }
+
+            dateButton.disabled = false;
+            dateInput.value = days.includes(preferredDate) ? preferredDate : days[0];
+            dateButton.textContent = formatDateLabel(dateInput.value);
+            fillMonthYearControls();
+            setVisibleMonth(dateInput.value);
+            loadRoute();
+        }
+
+        function loadActiveDays() {
+            const delivererId = delivererSelect.value;
+            const preferredDate = dateInput.dataset.selected || dateInput.value;
+            if (!delivererId) {
+                setDateOptions([], '');
+                return;
+            }
+
+            if (activeDayController) activeDayController.abort();
+            activeDayController = new AbortController();
+
+            dateButton.disabled = true;
+            dateButton.textContent = 'Yuklanmoqda...';
+            routeCalendar.classList.remove('open');
+            fetch(`/api/map/active-days/${delivererId}/`, {signal: activeDayController.signal})
+                .then(response => response.json())
+                .then((data) => {
+                    dateInput.dataset.selected = '';
+                    setDateOptions(data.days || [], preferredDate || data.default_date);
+                })
+                .catch((error) => {
+                    if (error.name !== 'AbortError') {
+                        setDateOptions([], '');
+                    }
+                });
+        }
+
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const params = new URLSearchParams({
+                deliverer: delivererSelect.value,
+                date: dateInput.value
+            });
+            window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+            loadRoute();
+        });
+        delivererSelect.addEventListener('change', loadActiveDays);
+        dateButton.addEventListener('click', () => {
+            if (!dateButton.disabled) routeCalendar.classList.toggle('open');
+        });
+        document.addEventListener('click', (event) => {
+            if (!datePicker.contains(event.target)) routeCalendar.classList.remove('open');
+        });
+        calendarMonth.addEventListener('change', () => {
+            visibleMonth = new Date(Number(calendarYear.value), Number(calendarMonth.value), 1);
+            renderCalendar();
+        });
+        calendarYear.addEventListener('change', () => {
+            visibleMonth = new Date(Number(calendarYear.value), Number(calendarMonth.value), 1);
+            renderCalendar();
+        });
+        prevMonth.addEventListener('click', () => {
+            visibleMonth.setMonth(visibleMonth.getMonth() - 1);
+            renderCalendar();
+        });
+        nextMonth.addEventListener('click', () => {
+            visibleMonth.setMonth(visibleMonth.getMonth() + 1);
+            renderCalendar();
+        });
+        loadActiveDays();
+    });
+</script>
+{% endblock %}

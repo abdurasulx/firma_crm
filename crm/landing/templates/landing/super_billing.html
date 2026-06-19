@@ -49,10 +49,10 @@
         letter-spacing: -1px;
     }
 
-    .blue .stat-icon { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
-    .green .stat-icon { background: rgba(16, 185, 129, 0.2); color: #10b981; }
-    .red .stat-icon { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
-    .orange .stat-icon { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+    .blue .stat-icon { background: #ecfdf5; color: var(--primary); }
+    .green .stat-icon { background: #d1fae5; color: var(--primary-dark); }
+    .red .stat-icon { background: #fef2f2; color: #dc2626; }
+    .orange .stat-icon { background: #fff7ed; color: #f97316; }
 
     .table-container {
         width: 100%;
@@ -92,10 +92,10 @@
         font-weight: 700;
     }
 
-    .badge-success { background: rgba(16, 185, 129, 0.15); color: #10b981; }
-    .badge-error { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
-    .badge-warning { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
-    .badge-info { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+    .badge-success { background: #d1fae5; color: #047857; }
+    .badge-error { background: #fef2f2; color: #dc2626; }
+    .badge-warning { background: #fff7ed; color: #c2410c; }
+    .badge-info { background: #ecfdf5; color: #059669; }
     
     .action-btn {
         background: none;
@@ -124,10 +124,10 @@
     .action-btn-stop:hover { background: #dc2626; }
     
     .action-btn-start {
-        background: #3b82f6;
+        background: var(--primary);
         color: white;
     }
-    .action-btn-start:hover { background: #2563eb; }
+    .action-btn-start:hover { background: var(--primary-dark); }
     
     .action-btn-unpaid {
         background: #f59e0b;
@@ -135,6 +135,90 @@
     }
     .action-btn-unpaid:hover { background: #d97706; }
 
+</style>
+
+<style>
+    .search-bar {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+    }
+    .search-input-wrap {
+        position: relative;
+        flex: 1;
+        min-width: 220px;
+    }
+    .search-input-wrap i {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-dim);
+        font-size: 14px;
+    }
+    .search-input {
+        width: 100%;
+        padding: 10px 14px 10px 38px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--card-bg);
+        color: var(--text-main);
+        font-size: 14px;
+        font-family: inherit;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+    .search-input:focus { border-color: var(--primary); }
+    .filter-tabs {
+        display: flex;
+        gap: 6px;
+    }
+    .filter-tab {
+        padding: 8px 16px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--card-bg);
+        color: var(--text-dim);
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.2s;
+        white-space: nowrap;
+    }
+    .filter-tab:hover { border-color: var(--primary); color: var(--primary); }
+    .filter-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+    .pagination {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 24px 4px;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    .pagination-info { font-size: 13px; color: var(--text-dim); }
+    .pagination-links { display: flex; gap: 6px; align-items: center; }
+    .page-btn {
+        width: 34px;
+        height: 34px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--card-bg);
+        color: var(--text-main);
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+    .page-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .page-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+    .page-btn.disabled { opacity: 0.35; pointer-events: none; }
 </style>
 
 <div class="stats-grid">
@@ -150,6 +234,9 @@
         <div class="stat-info">
             <span class="label">To'langan</span>
             <span class="value">{{ paid_companies }}</span>
+            {% if partial_payment_count %}
+            <span style="font-size:12px; color:#c2410c; font-weight:800;">{{ partial_payment_count }} ta chala to'lov bor</span>
+            {% endif %}
         </div>
     </div>
     <div class="glass-card stat-card red">
@@ -167,6 +254,22 @@
         </div>
     </div>
 </div>
+
+<form method="get" class="search-bar">
+    <div class="search-input-wrap">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" name="q" value="{{ q }}" class="search-input" placeholder="Firma nomi yoki subdomain...">
+    </div>
+    <div class="filter-tabs">
+        <a href="?q={{ q }}" class="filter-tab {% if not status_filter %}active{% endif %}">Barchasi</a>
+        <a href="?q={{ q }}&status=paid" class="filter-tab {% if status_filter == 'paid' %}active{% endif %}">To'langan</a>
+        <a href="?q={{ q }}&status=unpaid" class="filter-tab {% if status_filter == 'unpaid' %}active{% endif %}">Qarzdor</a>
+        <a href="?q={{ q }}&status=inactive" class="filter-tab {% if status_filter == 'inactive' %}active{% endif %}">To'xtatilgan</a>
+    </div>
+    <button type="submit" class="btn-primary" style="padding: 10px 20px; font-size: 14px;">
+        <i class="fa-solid fa-search"></i> Qidirish
+    </button>
+</form>
 
 <div class="glass-card table-container">
     <table>
@@ -190,17 +293,26 @@
                 <td>
                     {% if company.is_custom_plan %}
                         <span class="badge badge-info"><i class="fa-solid fa-screwdriver-wrench"></i> Maxsus</span><br>
-                        <span style="font-weight: 600; font-size: 13px;">${{ company.custom_price }}</span>
+                        <span style="font-weight: 600; font-size: 13px;">${{ company.monthly_price }}</span>
                     {% elif company.plan %}
-                        <span class="badge" style="background: rgba(139, 92, 246, 0.15); color: #8b5cf6;"><i class="fa-solid fa-gem"></i> {{ company.plan.name }}</span><br>
-                        <span style="font-weight: 600; font-size: 13px;">${{ company.plan.price }}</span>
+                        <span class="badge badge-info"><i class="fa-solid fa-gem"></i> {{ company.plan.name }}</span><br>
+                        <span style="font-weight: 600; font-size: 13px;">${{ company.monthly_price }}</span>
+                        {% if company.custom_has_savdogar_sales %}
+                        <br><small style="color: #059669; font-weight: 700;">Savdogar moduli bilan</small>
+                        {% endif %}
                     {% else %}
                         <span class="badge" style="background: rgba(100, 116, 139, 0.15); color: #64748b;">Tarif yo'q</span>
+                    {% endif %}
+                    {% if company.has_prorated_due %}
+                        <br><small style="display:inline-flex; margin-top:6px; color:#c2410c; font-weight:800;">Chala: ${{ company.prorated_amount_usd }}</small>
                     {% endif %}
                 </td>
                 <td>
                     {% if company.setup_mode %}
                         <span class="badge" style="background: #fef3c7; color: #f59e0b;"><i class="fa-solid fa-clock-rotate-left"></i> Sozlashda</span>
+                    {% elif company.has_prorated_due %}
+                        <span class="badge badge-warning"><i class="fa-solid fa-circle-half-stroke"></i> Chala to'lov</span>
+                        <br><small style="color:#c2410c; font-weight:700;">${{ company.prorated_amount_usd }} tarif farqi</small>
                     {% elif company.payment_status == 'paid' %}
                         <span class="badge badge-success"><i class="fa-solid fa-check"></i> To'langan</span>
                     {% else %}
@@ -227,22 +339,22 @@
                 <td style="text-align: right;">
                     <form action="{% url 'update_billing_status' company.id %}" method="post" style="display: inline;">
                         {% csrf_token %}
-                        
-                        {% if company.payment_status == 'paid' %}
+
+                        {% if company.has_prorated_due %}
+                            <button type="submit" name="action" value="mark_prorated_paid" class="action-btn action-btn-pay" title="Tarif farqini to'langan qilish">
+                                <i class="fa-solid fa-money-bill-wave"></i> Farq to'landi
+                            </button>
+                        {% elif company.payment_status == 'paid' %}
                             <button type="submit" name="action" value="mark_unpaid" class="action-btn action-btn-unpaid" title="Qarzdor deb belgilash">
                                 <i class="fa-solid fa-ban"></i>
                             </button>
                         {% else %}
-                            {% if debug_mode %}
-                                <button type="submit" name="action" value="mark_paid" class="action-btn action-btn-pay" title="To'lovni kiritish (+1 oy)">
-                                    <i class="fa-solid fa-money-bills"></i> To'ladi (+1 oy)
-                                </button>
-                            {% endif %}
+                            <button type="submit" name="action" value="mark_paid" class="action-btn action-btn-pay" title="To'lovni kiritish (+1 oy)">
+                                <i class="fa-solid fa-money-bills"></i> To'ladi (+1 oy)
+                            </button>
                         {% endif %}
 
-                        {% if company.payment_status == 'paid' or debug_mode %}
                         <div style="width: 1px; height: 16px; background: var(--border); display: inline-block; margin: 0 5px; vertical-align: middle;"></div>
-                        {% endif %}
                         
                         {% if company.is_active %}
                             <button type="submit" name="action" value="toggle_active" class="action-btn action-btn-stop" title="Tizimga kirishni to'xtatish (blokлаш)">
@@ -259,11 +371,42 @@
             {% empty %}
             <tr>
                 <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-dim);">
-                    Hozircha firmalar yo'q.
+                    {% if q %}
+                        "<strong>{{ q }}</strong>" bo'yicha natija topilmadi.
+                    {% else %}
+                        Hozircha firmalar yo'q.
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="pagination">
+        <span class="pagination-info">
+            {{ page_obj.start_index }}–{{ page_obj.end_index }} / {{ page_obj.paginator.count }} ta firma
+        </span>
+        <div class="pagination-links">
+            <a href="?q={{ q }}&status={{ status_filter }}&page=1" class="page-btn {% if not page_obj.has_previous %}disabled{% endif %}" title="Birinchi">
+                <i class="fa-solid fa-angles-left" style="font-size:11px;"></i>
+            </a>
+            <a href="?q={{ q }}&status={{ status_filter }}&page={{ page_obj.previous_page_number }}" class="page-btn {% if not page_obj.has_previous %}disabled{% endif %}">
+                <i class="fa-solid fa-angle-left" style="font-size:11px;"></i>
+            </a>
+            {% for num in page_obj.paginator.page_range %}
+                {% if num >= page_obj.number|add:"-2" and num <= page_obj.number|add:"2" %}
+                <a href="?q={{ q }}&status={{ status_filter }}&page={{ num }}" class="page-btn {% if num == page_obj.number %}active{% endif %}">{{ num }}</a>
+                {% endif %}
+            {% endfor %}
+            <a href="?q={{ q }}&status={{ status_filter }}&page={{ page_obj.next_page_number }}" class="page-btn {% if not page_obj.has_next %}disabled{% endif %}">
+                <i class="fa-solid fa-angle-right" style="font-size:11px;"></i>
+            </a>
+            <a href="?q={{ q }}&status={{ status_filter }}&page={{ page_obj.paginator.num_pages }}" class="page-btn {% if not page_obj.has_next %}disabled{% endif %}" title="Oxirgi">
+                <i class="fa-solid fa-angles-right" style="font-size:11px;"></i>
+            </a>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

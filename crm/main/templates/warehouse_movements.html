@@ -1,0 +1,86 @@
+{% extends 'egabase.html' %}
+{% load l10n %}
+
+{% block title %}Kirim-chiqim{% endblock %}
+{% block page_title %}Ombor kirim-chiqimlari{% endblock %}
+
+{% block content %}
+{% include 'warehouse_styles.html' %}
+<div class="warehouse-page">
+<div style="display:grid; grid-template-columns:minmax(280px, 420px) 1fr; gap:22px;">
+    <form method="post" class="card" style="padding:24px;">
+        {% csrf_token %}
+        <input type="hidden" name="movement_type" value="in">
+        <h3 style="margin-bottom:18px;">Yangi harakat</h3>
+        <label style="display:block; margin-bottom:14px;">
+            <div style="font-weight:800; margin-bottom:8px;">Mahsulot</div>
+            <select class="field" name="mahsulot" id="movementProduct" required>
+                {% for product in products %}
+                <option value="{{ product.id }}" data-price="{{ product.narxi|unlocalize }}">{{ product.nomi }} - {{ product.miqdori|floatformat:2 }} {{ product.turi.nomi }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label id="movementPriceWrap" style="display:block; margin-bottom:14px;">
+            <div style="font-weight:800; margin-bottom:8px;">Kirim narxi</div>
+            <input class="field" type="number" step="0.01" min="0" name="price" id="movementPrice" required>
+        </label>
+        <label style="display:block; margin-bottom:18px;">
+            <div style="font-weight:800; margin-bottom:8px;">Miqdor</div>
+            <input class="field" type="number" step="0.01" min="0.01" name="qty" required>
+        </label>
+        <button class="btn primary" type="submit" style="width:100%;"><i class="fa-solid fa-check"></i> Saqlash</button>
+    </form>
+
+    <div class="card">
+        <div style="padding:18px 20px; border-bottom:1px solid var(--border);">
+            <h3 style="margin:0;">So'nggi harakatlar</h3>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Sana</th>
+                        <th>Mahsulot</th>
+                        <th>Tur</th>
+                        <th>Delta</th>
+                        <th>Qoldiq</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in recent_history %}
+                    <tr>
+                        <td>{{ item.created_at|date:"d.m.Y H:i" }}</td>
+                        <td>{{ item.mahsulot.nomi }}</td>
+                        <td>{{ item.get_event_type_display }}</td>
+                        <td>
+                            <span class="badge {% if item.delta < 0 %}red{% else %}green{% endif %}">{{ item.delta|floatformat:2 }}</span>
+                        </td>
+                        <td>{{ item.new_qty|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" style="text-align:center; padding:34px; color:var(--muted);">Tarix yo'q.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</div>
+<script>
+    const movementProduct = document.getElementById('movementProduct');
+    const movementPrice = document.getElementById('movementPrice');
+
+    function syncMovementPrice() {
+        if (!movementProduct || !movementPrice) return;
+        if (!movementPrice.value) {
+            movementPrice.value = movementProduct.selectedOptions[0]?.dataset.price || '0';
+        }
+    }
+
+    movementProduct?.addEventListener('change', () => {
+        movementPrice.value = movementProduct.selectedOptions[0]?.dataset.price || '0';
+        syncMovementPrice();
+    });
+    syncMovementPrice();
+</script>
+{% endblock %}

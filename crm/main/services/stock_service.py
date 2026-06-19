@@ -2,7 +2,7 @@ from django.db import transaction
 from django.utils import timezone
 from ..models import (
     Mahsulot, YetkazibBeruvchi, YuklamaSorov, 
-    MiqdorQoshish, DeliveryStock, StockHistory, ProductionMaterialRequest
+    MiqdorQoshish, DeliveryStock, StockHistory
 )
 
 def log_stock_change(actor, mahsulot, old_qty, new_qty, event_type, yetkazib_beruvchi=None, company=None):
@@ -96,54 +96,6 @@ def approve_yuklama_sorov_service(request_id, actor):
     req.save()
 
     return True, "Yuklama muvaffaqiyatli topshirildi."
-
-
-@transaction.atomic
-def approve_material_request_service(request_id, actor):
-    """Omborchi ishlab chiqaruvchi so'ragan yarim tayyor mahsulotni ombordan chiqaradi."""
-    req = ProductionMaterialRequest.objects.select_for_update().select_related('material').get(id=request_id)
-    if req.company_id != getattr(actor, 'company_id', None):
-        return False, "Ushbu so'rov sizning firmangizga tegishli emas."
-    if req.status != 'waiting':
-        return False, "Ushbu so'rov allaqachon ko'rib chiqilgan."
-
-    material = Mahsulot.objects.select_for_update().get(id=req.material_id)
-    if material.company_id != req.company_id:
-        return False, "Material va so'rov firmasi mos emas."
-    if material.warehouse_type != 'semi_finished':
-        return False, "Bu mahsulot yarim tayyor mahsulotlar omboriga tegishli emas."
-    if material.miqdori < req.qty:
-        return False, "Yarim tayyor mahsulot omborida yetarli qoldiq mavjud emas."
-
-    old_qty = material.miqdori
-    new_qty = old_qty - req.qty
-    material.miqdori = new_qty
-    material.save(update_fields=['miqdori'])
-
-    req.status = 'approved'
-    req.reviewed_by = actor
-    req.reviewed_at = timezone.now()
-    req.save(update_fields=['status', 'reviewed_by', 'reviewed_at'])
-
-    log_stock_change(actor, material, old_qty, new_qty, 'RAW_APPROVED', company=req.company)
-    return True, "Material ombordan ishlab chiqaruvchiga berildi."
-
-
-@transaction.atomic
-def reject_material_request_service(request_id, actor):
-    req = ProductionMaterialRequest.objects.select_for_update().get(id=request_id)
-    if req.company_id != getattr(actor, 'company_id', None):
-        return False, "Ushbu so'rov sizning firmangizga tegishli emas."
-    if req.status != 'waiting':
-        return False, "Ushbu so'rov allaqachon ko'rib chiqilgan."
-
-    req.status = 'rejected'
-    req.reviewed_by = actor
-    req.reviewed_at = timezone.now()
-    req.save(update_fields=['status', 'reviewed_by', 'reviewed_at'])
-
-    log_stock_change(actor, req.material, req.material.miqdori, req.material.miqdori, 'RAW_REJECTED', company=req.company)
-    return True, "Material so'rovi rad etildi."
 
 @transaction.atomic
 def adjust_stock_service(mahsulot_id, new_qty, actor):

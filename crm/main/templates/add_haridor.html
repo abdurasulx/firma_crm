@@ -1,4 +1,4 @@
-{% extends 'ytbase.html' %}
+{% extends base_template|default:'ytbase.html' %}
 {% load static %}
 
 {% block title %}Mijoz qo'shish - StockFirm{% endblock %}
@@ -114,7 +114,7 @@
         outline: none;
         border-color: var(--primary);
         background: white;
-        box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+        box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.12);
     }
 
     .form-textarea {
@@ -218,7 +218,7 @@
 
     .upload-trigger:hover {
         border-color: var(--primary);
-        background: rgba(79, 70, 229, 0.05);
+        background: rgba(16, 185, 129, 0.06);
     }
 
     .upload-trigger i { font-size: 1.5rem; color: var(--slate-400); }
@@ -274,13 +274,13 @@
         justify-content: center;
         gap: 0.75rem;
         transition: all 0.3s;
-        box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+        box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.20);
     }
 
     .btn-save:hover {
         background: var(--primary-dark);
         transform: translateY(-2px);
-        box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
+        box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.28);
     }
 
     @media (max-width: 640px) {

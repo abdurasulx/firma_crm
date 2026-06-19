@@ -1,109 +1,1048 @@
 {% extends 'landing/base.html' %}
 {% load static %}
 
-{% block title %}StockFirm CRM - ombor, savdo va yetkazib berish uchun SaaS platforma{% endblock %}
+{% block title %}StockFirm CRM — ombor, savdo va kuryer nazorati{% endblock %}
+
+{% block header %}
+<header class="nav at-top" id="mainNav">
+    <div class="container nav-inner">
+        <a href="{% url 'landing_home' %}" class="brand">
+            <div class="brand-icon"><i class="fas fa-boxes-stacked"></i></div>
+            <span class="brand-name">Stock<span>Firm</span></span>
+        </a>
+        <ul class="nav-links" id="homeNavLinks">
+            <li><a href="#features"   data-spy="features">Imkoniyatlar</a></li>
+            <li><a href="#demo"       data-spy="demo">Demo</a></li>
+            <li><a href="#roles"      data-spy="roles">Rollar</a></li>
+            <li><a href="{% url 'pricing' %}">Tariflar</a></li>
+            <li><a href="{% url 'marketing_page' 'contact' %}">Aloqa</a></li>
+        </ul>
+        <div class="nav-actions">
+            <a href="{% url 'login' %}" class="btn btn-outline btn-sm">Kirish</a>
+            <a href="{% url 'register_company' %}" class="btn btn-primary btn-sm">Bepul boshlash</a>
+        </div>
+        <button class="nav-burger" onclick="document.getElementById('mobileNav').classList.add('open')" aria-label="Menyu">
+            <i class="fas fa-bars"></i>
+        </button>
+    </div>
+</header>
+<div class="mobile-nav" id="mobileNav">
+    <button class="mobile-nav-close" onclick="document.getElementById('mobileNav').classList.remove('open')">
+        <i class="fas fa-times"></i>
+    </button>
+    <a href="#features">Imkoniyatlar</a>
+    <a href="#demo">Demo</a>
+    <a href="#roles">Rollar</a>
+    <a href="{% url 'pricing' %}">Tariflar</a>
+    <a href="{% url 'marketing_page' 'contact' %}">Aloqa</a>
+    <a href="{% url 'login' %}" class="btn btn-outline" style="width:200px;justify-content:center;margin-top:12px;">Kirish</a>
+    <a href="{% url 'register_company' %}" class="btn btn-shimmer" style="width:200px;justify-content:center;">Bepul boshlash</a>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+/* ═══ HERO ═══ */
+.hero {
+    background:
+        radial-gradient(ellipse 90% 70% at 60% -10%, rgba(16,185,129,.12) 0%, transparent 65%),
+        radial-gradient(ellipse 60% 50% at 10% 80%, rgba(52,211,153,.07) 0%, transparent 60%),
+        linear-gradient(180deg, #f0faf5 0%, #ffffff 100%);
+}
+
+/* ═══ SCROLL SHOWCASE ═══ */
+.ss-section {
+    background: var(--dark);
+    position: relative; overflow: hidden;
+    padding: 0;
+}
+.ss-section-orb {
+    position: absolute; border-radius: 50%; filter: blur(120px); pointer-events: none;
+}
+.ss-section-orb-1 {
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(16,185,129,.1) 0%, transparent 70%);
+    top: 10%; right: -10%;
+    animation: float-y-slow 12s ease-in-out infinite;
+}
+.ss-section-orb-2 {
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(52,211,153,.07) 0%, transparent 70%);
+    bottom: 5%; left: -5%;
+    animation: float-y-slow 15s ease-in-out infinite reverse;
+}
+.ss-header {
+    padding: 100px 0 64px;
+    position: relative; z-index: 2;
+}
+.ss-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: start;
+    position: relative; z-index: 2;
+    padding-bottom: 100px;
+}
+
+/* Left: chapters */
+.ss-chapters {}
+.ss-chapter {
+    min-height: 80vh;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 40px 0;
+    opacity: .25;
+    transform: translateX(-16px);
+    transition: opacity .6s cubic-bezier(.22,1,.36,1), transform .6s cubic-bezier(.22,1,.36,1);
+    border-left: 2px solid rgba(255,255,255,.06);
+    padding-left: 32px;
+    position: relative;
+    cursor: default;
+}
+.ss-chapter.active {
+    opacity: 1;
+    transform: translateX(0);
+    border-left-color: var(--brand);
+}
+.ss-chapter-num {
+    font-size: 11px; font-weight: 800; color: rgba(255,255,255,.2);
+    text-transform: uppercase; letter-spacing: .15em;
+    margin-bottom: 12px;
+    transition: color .4s;
+}
+.ss-chapter.active .ss-chapter-num { color: var(--brand); }
+.ss-chapter-icon {
+    width: 48px; height: 48px; border-radius: 14px;
+    background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08);
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,.3); font-size: 20px; margin-bottom: 20px;
+    transition: background .4s, border-color .4s, color .4s, transform .4s, box-shadow .4s;
+}
+.ss-chapter.active .ss-chapter-icon {
+    background: linear-gradient(135deg, rgba(16,185,129,.18), rgba(52,211,153,.08));
+    border-color: rgba(16,185,129,.25); color: var(--brand);
+    transform: scale(1.05); box-shadow: 0 8px 28px rgba(16,185,129,.2);
+}
+.ss-chapter h3 {
+    font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800;
+    letter-spacing: -0.03em; color: rgba(255,255,255,.4);
+    margin-bottom: 14px; line-height: 1.2;
+    transition: color .4s;
+}
+.ss-chapter.active h3 { color: #fff; }
+.ss-chapter p {
+    font-size: 15px; line-height: 1.7; color: rgba(255,255,255,.2);
+    max-width: 420px; transition: color .4s;
+}
+.ss-chapter.active p { color: rgba(255,255,255,.5); }
+.ss-chapter-tags {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px;
+    opacity: 0; transform: translateY(6px);
+    transition: opacity .4s .1s, transform .4s .1s;
+}
+.ss-chapter.active .ss-chapter-tags { opacity: 1; transform: translateY(0); }
+.ss-tag {
+    font-size: 11px; font-weight: 700; color: rgba(255,255,255,.4);
+    background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08);
+    border-radius: 999px; padding: 4px 12px;
+    transition: color .3s, background .3s, border-color .3s;
+}
+.ss-chapter.active .ss-tag { color: #4ade80; background: rgba(16,185,129,.1); border-color: rgba(16,185,129,.2); }
+
+/* Right: sticky preview */
+.ss-preview-col {
+    position: sticky; top: 100px;
+}
+.ss-preview-wrap {
+    position: relative; width: 100%;
+}
+
+/* Panel height placeholder so column has height */
+.ss-panel-sizer { visibility: hidden; pointer-events: none; }
+
+.ss-panel {
+    position: absolute; top: 0; left: 0; right: 0;
+    opacity: 0;
+    transform: translateY(24px) scale(.97);
+    transition: opacity .55s cubic-bezier(.22,1,.36,1), transform .55s cubic-bezier(.22,1,.36,1);
+    pointer-events: none;
+}
+.ss-panel.active {
+    opacity: 1; transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+/* Dots */
+.ss-dots {
+    display: flex; flex-direction: column; gap: 8px;
+    position: absolute; right: -28px; top: 50%;
+    transform: translateY(-50%);
+}
+.ss-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(255,255,255,.15);
+    cursor: pointer; transition: background .3s, transform .3s, height .3s;
+}
+.ss-dot.active { background: var(--brand); height: 20px; border-radius: 3px; transform: none; }
+
+/* Dark glass card for panels */
+.sp-card {
+    background: linear-gradient(145deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
+    backdrop-filter: blur(40px) saturate(1.4);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 24px; overflow: hidden;
+    box-shadow: 0 32px 80px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.07);
+}
+.sp-card-top {
+    background: rgba(255,255,255,.04);
+    border-bottom: 1px solid rgba(255,255,255,.07);
+    padding: 14px 18px;
+    display: flex; align-items: center; justify-content: space-between;
+}
+.sp-card-title { color: rgba(255,255,255,.8); font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.sp-card-title i { color: var(--brand); }
+.sp-card-body { padding: 18px; }
+
+/* ── Stock table rows ── */
+.stock-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 10px; margin-bottom: 6px;
+    background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.05);
+    transition: background .2s;
+}
+.stock-row:hover { background: rgba(255,255,255,.07); }
+.stock-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.stock-dot.ok  { background: #4ade80; box-shadow: 0 0 6px rgba(74,222,128,.5); }
+.stock-dot.low { background: #f59e0b; box-shadow: 0 0 6px rgba(245,158,11,.5); }
+.stock-dot.out { background: #f87171; box-shadow: 0 0 6px rgba(248,113,113,.5); }
+.stock-name { flex: 1; color: rgba(255,255,255,.8); font-size: 13px; font-weight: 600; }
+.stock-qty  { font-size: 12px; font-weight: 700; }
+.stock-qty.ok  { color: #4ade80; }
+.stock-qty.low { color: #f59e0b; }
+.stock-qty.out { color: #f87171; }
+.stock-badge { font-size: 10px; padding: 2px 8px; border-radius: 999px; font-weight: 700; }
+.stock-badge.ok  { background: rgba(74,222,128,.1);  color: #4ade80; }
+.stock-badge.low { background: rgba(245,158,11,.12); color: #f59e0b; }
+.stock-badge.out { background: rgba(248,113,113,.12);color: #f87171; }
+
+/* ── Receipt / savdo ── */
+.receipt-line {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.05);
+    font-size: 13px;
+}
+.receipt-line:last-child { border: none; }
+.receipt-name { color: rgba(255,255,255,.6); }
+.receipt-amount { color: rgba(255,255,255,.85); font-weight: 700; }
+.receipt-total { font-size: 15px; font-weight: 800; color: #fff; }
+.receipt-total .receipt-amount { color: var(--brand); font-size: 18px; }
+.pay-btns { display: flex; gap: 8px; margin-top: 14px; }
+.pay-btn {
+    flex: 1; padding: 10px 6px; border-radius: 10px; font-size: 12px; font-weight: 700;
+    text-align: center; border: 1px solid; cursor: pointer; transition: transform .15s, box-shadow .15s;
+}
+.pay-btn:hover { transform: translateY(-2px); }
+.pay-btn.naqd  { background: rgba(74,222,128,.15);  border-color: rgba(74,222,128,.3);  color: #4ade80; }
+.pay-btn.karta { background: rgba(96,165,250,.12);  border-color: rgba(96,165,250,.25);  color: #93c5fd; }
+.pay-btn.nasiya{ background: rgba(251,191,36,.1);   border-color: rgba(251,191,36,.25);  color: #fcd34d; }
+
+/* ── GPS map ── */
+.gps-map {
+    background: rgba(13,30,24,.7);
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: 14px; height: 160px; position: relative; overflow: hidden;
+    margin-bottom: 12px;
+}
+.map-grid {
+    position: absolute; inset: 0;
+    background-image: linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+    background-size: 24px 24px;
+}
+.map-route {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+}
+.map-dot {
+    position: absolute; width: 12px; height: 12px; border-radius: 50%;
+    background: var(--brand); border: 2px solid #fff;
+    box-shadow: 0 0 0 4px rgba(16,185,129,.3);
+    animation: pulse-dot 2s infinite;
+}
+.map-dot::after {
+    content: ''; position: absolute; inset: -6px; border-radius: 50%;
+    border: 1px solid rgba(16,185,129,.4);
+    animation: pulse-ring 2s infinite;
+}
+.gps-courier-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 10px; margin-bottom: 6px;
+    background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.05);
+}
+.gps-courier-avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 800; color: #fff; flex-shrink: 0;
+}
+
+/* ── Nasiya list ── */
+.nasiya-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 12px; border-radius: 10px; margin-bottom: 6px;
+    background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.05);
+}
+.nasiya-row.overdue { border-color: rgba(248,113,113,.2); background: rgba(248,113,113,.04); }
+.nasiya-row.soon    { border-color: rgba(245,158,11,.2);  background: rgba(245,158,11,.03); }
+.nasiya-name { flex: 1; color: rgba(255,255,255,.75); font-size: 13px; font-weight: 600; }
+.nasiya-amount { font-size: 13px; font-weight: 800; color: rgba(255,255,255,.85); }
+.nasiya-badge { font-size: 10px; padding: 3px 8px; border-radius: 999px; font-weight: 700; margin-left: 8px; }
+.nasiya-badge.overdue { background: rgba(248,113,113,.15); color: #f87171; }
+.nasiya-badge.soon    { background: rgba(245,158,11,.15);  color: #f59e0b; }
+.nasiya-badge.ok      { background: rgba(74,222,128,.1);   color: #4ade80; }
+
+/* ── Analytics chart ── */
+.chart-wrap {
+    background: rgba(13,30,24,.6);
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: 14px; padding: 16px; margin-bottom: 12px;
+}
+.chart-bars {
+    display: flex; align-items: flex-end; gap: 5px; height: 80px;
+    margin-top: 8px;
+}
+.chart-bar-an {
+    flex: 1; border-radius: 4px 4px 0 0;
+    background: linear-gradient(180deg, var(--brand), var(--brand-dark));
+    opacity: .7; transition: opacity .2s, height .6s cubic-bezier(.22,1,.36,1);
+    min-height: 4px;
+}
+.chart-bar-an:hover { opacity: 1; }
+.kpi-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px; border-radius: 10px; margin-bottom: 6px;
+    background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.05);
+}
+.kpi-label { flex: 1; font-size: 13px; font-weight: 600; color: rgba(255,255,255,.65); }
+.kpi-bar-wrap { width: 100px; height: 6px; background: rgba(255,255,255,.08); border-radius: 999px; overflow: hidden; }
+.kpi-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--brand), var(--brand-light)); background-size: 200% 100%; animation: gradient-shift 2s ease infinite; }
+.kpi-pct { font-size: 12px; font-weight: 800; color: var(--brand); width: 32px; text-align: right; }
+
+/* ═══ OTHER SECTIONS ═══ */
+.split-section { display: grid; grid-template-columns: 1fr 1fr; gap: 72px; align-items: center; }
+
+.gps-panel {
+    background: linear-gradient(145deg, rgba(6,14,11,.88), rgba(12,26,20,.92));
+    backdrop-filter: blur(40px) saturate(1.4);
+    border: 1px solid rgba(255,255,255,.09);
+    border-radius: 28px; padding: 28px;
+    box-shadow: 0 32px 80px rgba(6,14,11,.25), inset 0 1px 0 rgba(255,255,255,.06);
+}
+.gps-row {
+    background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.07);
+    border-radius: 14px; padding: 14px;
+    display: flex; align-items: center; justify-content: space-between;
+    transition: background .2s, border-color .2s;
+}
+.gps-row:hover { background: rgba(255,255,255,.09); border-color: rgba(16,185,129,.2); }
+.gps-badge { font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 999px; }
+.gps-badge.green { background: rgba(74,222,128,.15); color: #4ade80; }
+.gps-badge.amber { background: rgba(245,158,11,.15);  color: #f59e0b; }
+.gps-badge.muted { background: rgba(255,255,255,.08); color: rgba(255,255,255,.4); }
+
+.notif-panel-demo {
+    background: linear-gradient(145deg, rgba(6,14,11,.88), rgba(12,26,20,.92));
+    backdrop-filter: blur(40px) saturate(1.4);
+    border: 1px solid rgba(255,255,255,.09);
+    border-radius: 28px; padding: 24px;
+    box-shadow: 0 32px 80px rgba(6,14,11,.25), inset 0 1px 0 rgba(255,255,255,.06);
+}
+.notif-row {
+    border-radius: 13px; padding: 12px;
+    display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+    transition: transform .2s;
+}
+.notif-row:hover { transform: translateX(4px); }
+.notif-row.success { background: rgba(16,185,129,.1);  border: 1px solid rgba(16,185,129,.2); }
+.notif-row.warning { background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.2); }
+.notif-row.neutral { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); }
+.notif-icon {
+    width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
+}
+.notif-icon.success { background: rgba(16,185,129,.2); color: #4ade80; }
+.notif-icon.warning { background: rgba(245,158,11,.15); color: #f59e0b; }
+.notif-icon.neutral { background: rgba(255,255,255,.08); color: rgba(255,255,255,.5); }
+
+.chip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 28px; }
+.chip-card {
+    background: rgba(255,255,255,.7);
+    backdrop-filter: blur(16px) saturate(1.6);
+    border: 1px solid rgba(224,235,230,.8);
+    border-radius: 16px; padding: 16px;
+    transition: transform .2s, box-shadow .2s, border-color .2s;
+}
+.chip-card:hover { transform: translateY(-3px); box-shadow: 0 10px 32px rgba(6,14,11,.08); border-color: rgba(16,185,129,.2); }
+.chip-card i { font-size: 22px; margin-bottom: 8px; display: block; }
+.chip-card b { font-size: 14px; font-weight: 800; display: block; margin-bottom: 3px; }
+.chip-card span { color: var(--muted); font-size: 12px; line-height: 1.4; }
+
+.feat-list { display: flex; flex-direction: column; gap: 14px; margin-top: 28px; }
+.feat-row { display: flex; align-items: flex-start; gap: 14px; }
+.feat-row-icon {
+    width: 42px; height: 42px; border-radius: 13px; flex-shrink: 0;
+    background: linear-gradient(135deg, rgba(16,185,129,.12), rgba(52,211,153,.06));
+    border: 1px solid rgba(16,185,129,.15);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--brand); font-size: 16px;
+    transition: transform .2s, box-shadow .2s;
+}
+.feat-row:hover .feat-row-icon { transform: scale(1.1) rotate(-5deg); box-shadow: 0 6px 20px var(--brand-glow); }
+.feat-row-title { font-weight: 800; margin-bottom: 3px; font-size: 15px; }
+.feat-row-desc  { color: var(--muted); font-size: 13px; line-height: 1.5; }
+
+@media (max-width: 900px) {
+    .ss-layout { grid-template-columns: 1fr; gap: 0; }
+    .ss-preview-col { display: none; }
+    .ss-chapter { min-height: auto; border-left: none; padding-left: 0; border-bottom: 1px solid rgba(255,255,255,.06); padding-bottom: 32px; margin-bottom: 32px; opacity: 1; transform: none; }
+    .split-section { grid-template-columns: 1fr; gap: 44px; }
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<section class="section" style="padding-top:72px;">
-    <div class="container grid-2">
+
+<!-- ═══ HERO ═══ -->
+<section class="hero" id="home">
+    <div class="hero-orb hero-orb-1"></div>
+    <div class="hero-orb hero-orb-2"></div>
+    <div class="hero-orb hero-orb-3"></div>
+    <div class="container hero-inner">
         <div>
-            <div class="pill" style="margin-bottom:22px;">Yangi avlod firma boshqaruvi</div>
-            <h1 class="hero-title">Ombor, savdo va yetkazib berish endi bitta tizimda.</h1>
-            <p class="lead" style="margin:24px 0 30px; max-width:620px;">
-                StockFirm CRM ishlab chiqarish, zaxira, kuryerlar, mijozlar, nasiya, billing va real vaqt analitikasini bir joyga jamlaydi. Har bir firma o'z subdomaini bilan mustaqil ishlaydi.
+            <div class="hero-eyebrow"><i class="fas fa-bolt"></i> O'zbekiston uchun SaaS ERP</div>
+            <h1 class="hero-title">Firma ichidagi<br>tartibsizlikka<br><em>chek qo'ying.</em></h1>
+            <p class="hero-lead">Ombor, savdo, kuryer GPS, nasiya, analitika va billing — hammasi bitta tizimda. Excel daftarlar va og'zaki kelishuvlar o'rniga aniq raqamlar.</p>
+            <div class="hero-cta">
+                <a href="{% url 'register_company' %}" class="btn btn-shimmer" style="font-size:15px;padding:13px 26px;">
+                    <i class="fas fa-rocket"></i> Bepul boshlash
+                </a>
+                <a href="#demo" class="btn btn-outline" style="font-size:15px;padding:13px 26px;">
+                    Interaktiv demo <i class="fas fa-arrow-down" style="font-size:12px;"></i>
+                </a>
+            </div>
+            <div class="hero-trust">
+                <span class="trust-badge"><i class="fas fa-check-circle"></i> 30 kun bepul</span>
+                <span class="trust-badge"><i class="fas fa-shield-halved"></i> Ma'lumotlar himoyalangan</span>
+                <span class="trust-badge"><i class="fas fa-globe"></i> O'z subdomainingiz</span>
+            </div>
+        </div>
+        <div class="hero-mockup">
+            <div class="mockup-float-2"><i class="fas fa-bolt"></i> Savdo: +420,000 so'm</div>
+            <div class="mockup-wrap">
+                <div class="mockup-bar">
+                    <div class="mockup-dot"></div><div class="mockup-dot"></div><div class="mockup-dot"></div>
+                    <span style="color:rgba(255,255,255,.3);font-size:11px;margin-left:8px;">sizfirma.stockfirm.uz</span>
+                </div>
+                <div class="mockup-screen">
+                    <div class="mockup-header">
+                        <span class="mockup-title">Bugungi dashboard</span>
+                        <span class="live-dot">Live</span>
+                    </div>
+                    <div class="mockup-stats">
+                        <div class="m-card">
+                            <div class="lbl">Kunlik savdo</div>
+                            <div class="val">18.4M</div>
+                            <div style="font-size:11px;color:#4ade80;margin-top:4px;">↑ +12% kechadan</div>
+                        </div>
+                        <div class="m-card">
+                            <div class="lbl">Ochiq nasiya</div>
+                            <div class="val green">7</div>
+                            <div style="font-size:11px;color:rgba(255,255,255,.35);margin-top:4px;">3 muddati yaqin</div>
+                        </div>
+                    </div>
+                    <div class="mockup-bar2">
+                        <div class="top"><span>Yetkazuvchi: Aziz Karimov</span><b>● Online</b></div>
+                        <div class="progress-track"><div class="progress-fill" style="width:78%"></div></div>
+                        <div style="display:flex;justify-content:space-between;margin-top:6px;">
+                            <span style="font-size:10px;color:rgba(255,255,255,.35);">Maqsad: 78%</span>
+                            <span style="font-size:10px;color:#4ade80;">14/18 yetkazildi</span>
+                        </div>
+                    </div>
+                    <div class="mockup-grid3">
+                        <div class="m-mini"><b>124</b><span>mijoz</span></div>
+                        <div class="m-mini"><b>36</b><span>mahsulot</span></div>
+                        <div class="m-mini"><b>9</b><span>hodim</span></div>
+                    </div>
+                    <div class="mockup-notif">
+                        <span class="mockup-notif-icon"><i class="fas fa-bell"></i></span>
+                        <span class="mockup-notif-text">Yangi savdo: Supermarket "Bahor" — 420,000 so'm</span>
+                    </div>
+                </div>
+            </div>
+            <div class="mockup-float">
+                <i class="fas fa-location-dot"></i>
+                <div><div style="font-size:12px;font-weight:800;">GPS Tracking</div><div style="font-size:11px;color:#64748b;">3 ta kuryer online</div></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══ STATS ═══ -->
+<section class="section-sm">
+    <div class="container">
+        <div class="stats-bar reveal">
+            <div class="stat-item">
+                <strong><span data-count="1" data-suffix=" kun">1 kun</span></strong>
+                <span>ichida ishga tushirish</span>
+            </div>
+            <div class="stat-item"><strong>360°</strong><span>firma jarayonlari nazorati</span></div>
+            <div class="stat-item">
+                <strong><span data-count="9" data-suffix="+">9+</span></strong>
+                <span>xodim roli qo'llab-quvvatlanadi</span>
+            </div>
+            <div class="stat-item">
+                <strong><span data-count="0" data-suffix="">0</span></strong>
+                <span>qo'lda Excel chalkashligi</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══ FEATURES OVERVIEW ═══ -->
+<section class="section section-wash" id="features">
+    <div class="container">
+        <div class="eyebrow reveal">Barcha imkoniyatlar</div>
+        <h2 class="section-headline reveal">Bir tizim — barcha jarayonlar.</h2>
+        <p class="section-lead reveal">Firma kichik bo'lsin yoki katta, StockFirm har bir bo'limning ishini raqamlashtiradi.</p>
+        <div class="features-grid">
+            <div class="feat-card reveal reveal-d1"><div class="feat-icon"><i class="fas fa-warehouse"></i></div><h3>Ombor nazorati</h3><p>Mahsulot kirimi, chiqimi, minimal zaxira chegarasi va to'liq audit tarixi.</p><span class="feat-badge">Stock history · Min. zaxira signal</span></div>
+            <div class="feat-card reveal reveal-d2"><div class="feat-icon"><i class="fas fa-receipt"></i></div><h3>Savdo va QR chek</h3><p>Naqd, karta, nasiya savdolari. Har bir sotuvdan QR kodli chek va Excel export.</p><span class="feat-badge">QR chek · Excel export</span></div>
+            <div class="feat-card highlight reveal reveal-d3"><div class="feat-icon"><i class="fas fa-location-dot"></i></div><h3>Kuryer GPS + Offline</h3><p>Real vaqtda kuryer lokatsiyasi. Offline rejimda ham GPS ma'lumotlar saqlanadi va internet qaytganda avtomatik yuboriladi.</p><span class="feat-badge">PWA · Background Sync · Xarita</span></div>
+            <div class="feat-card reveal reveal-d4"><div class="feat-icon"><i class="fas fa-hand-holding-dollar"></i></div><h3>Nasiya boshqaruvi</h3><p>Qarzlar, qisman to'lovlar, muddatlar va Telegram orqali avtomatik eslatmalar.</p><span class="feat-badge">Telegram eslatma · Muddatlar</span></div>
+            <div class="feat-card reveal reveal-d5"><div class="feat-icon"><i class="fas fa-chart-line"></i></div><h3>Analitika va trend</h3><p>30 kunlik savdo trendi, top mahsulotlar, xarita ustida savdo zonalari va KPI.</p><span class="feat-badge">30-kun trend · KPI dashboard</span></div>
+            <div class="feat-card reveal reveal-d6"><div class="feat-icon"><i class="fas fa-bell"></i></div><h3>Real-time bildirishnomalar</h3><p>WebSocket orqali barcha rollarga jonli bildirishnomalar. Bell badge va animatsiyali toast.</p><span class="feat-badge">WebSocket · Barcha rollar</span></div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══ SCROLL SHOWCASE ═══ -->
+<section class="ss-section" id="demo">
+    <div class="ss-section-orb ss-section-orb-1"></div>
+    <div class="ss-section-orb ss-section-orb-2"></div>
+
+    <div class="container">
+        <div class="ss-header">
+            <div class="eyebrow" style="color:#4ade80;" id="ss-eyebrow">Interaktiv demo</div>
+            <h2 class="section-headline" style="color:#fff;max-width:560px;margin-top:12px;">
+                Har bir modul<br>bir hil aniq ishlaydi.
+            </h2>
+            <p style="color:rgba(255,255,255,.4);font-size:16px;margin-top:14px;max-width:500px;">
+                Aylantiring — har bir xususiyat qanday ko'rinishini ko'ring.
             </p>
-            <div style="display:flex; gap:12px; flex-wrap:wrap;">
-                <a href="{% url 'register_company' %}" class="btn btn-primary">30 kunlik sinovni boshlash</a>
-                <a href="{% url 'marketing_page' 'features' %}" class="btn btn-outline">Platformani ko'rish</a>
-            </div>
-            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:26px;">
-                <span class="pill">Subdomain SaaS</span>
-                <span class="pill">Nasiya nazorati</span>
-                <span class="pill">Kuryer GPS</span>
-                <span class="pill">Click billing</span>
-            </div>
         </div>
-        <div class="mockup">
-            <div class="mockup-screen">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <strong>Bugungi boshqaruv</strong>
-                    <span style="color:#86efac;">Live</span>
-                </div>
-                <div class="dash-row">
-                    <div class="dash-card">
-                        <span style="color:rgba(255,255,255,.62);">Kunlik savdo</span>
-                        <h2 style="font-size:42px; margin-top:10px;">18.4M so'm</h2>
-                    </div>
-                    <div class="dash-card">
-                        <span style="color:rgba(255,255,255,.62);">Past zaxira</span>
-                        <h2 style="font-size:42px; margin-top:10px; color:#86efac;">7</h2>
+
+        <div class="ss-layout">
+            <!-- LEFT: chapters -->
+            <div class="ss-chapters" id="ssChapters">
+
+                <div class="ss-chapter active" data-chapter="0">
+                    <div class="ss-chapter-num">01 / 05</div>
+                    <div class="ss-chapter-icon"><i class="fas fa-warehouse"></i></div>
+                    <h3>Ombor nazorati</h3>
+                    <p>Mahsulot kirimi, chiqimi, minimal zaxira chegarasi va to'liq audit tarixi. Kim qachon nima qilganini bilasiz.</p>
+                    <div class="ss-chapter-tags">
+                        <span class="ss-tag">Stock history</span>
+                        <span class="ss-tag">Min. zaxira signal</span>
+                        <span class="ss-tag">Excel export</span>
                     </div>
                 </div>
-                <div class="dash-card" style="margin-top:14px;">
-                    <div style="display:flex; justify-content:space-between;"><span>Yetkazuvchi: Aziz</span><b style="color:#86efac;">Online</b></div>
-                    <div style="height:10px; background:rgba(255,255,255,.09); border-radius:999px; margin-top:18px;"><div style="height:100%; width:72%; background:#10b981; border-radius:999px;"></div></div>
+
+                <div class="ss-chapter" data-chapter="1">
+                    <div class="ss-chapter-num">02 / 05</div>
+                    <div class="ss-chapter-icon"><i class="fas fa-receipt"></i></div>
+                    <h3>Savdo va QR chek</h3>
+                    <p>Naqd, karta yoki nasiya — har bir savdo qayd qilinadi. QR kodli chek chop etiladi, Excel ga export qilinadi.</p>
+                    <div class="ss-chapter-tags">
+                        <span class="ss-tag">QR chek</span>
+                        <span class="ss-tag">3 to'lov turi</span>
+                        <span class="ss-tag">Excel export</span>
+                    </div>
                 </div>
-                <div class="grid-3" style="margin-top:14px;">
-                    <div class="dash-card"><b>124</b><br><span style="color:rgba(255,255,255,.62);">mijoz</span></div>
-                    <div class="dash-card"><b>36</b><br><span style="color:rgba(255,255,255,.62);">mahsulot</span></div>
-                    <div class="dash-card"><b>9</b><br><span style="color:rgba(255,255,255,.62);">hodim</span></div>
+
+                <div class="ss-chapter" data-chapter="2">
+                    <div class="ss-chapter-num">03 / 05</div>
+                    <div class="ss-chapter-icon"><i class="fas fa-location-dot"></i></div>
+                    <h3>Kuryer GPS + Offline</h3>
+                    <p>Real vaqtda kuryer lokatsiyasi. Offline rejimda GPS ma'lumotlar IndexedDB da saqlanadi, internet qaytganda avtomatik yuboriladi.</p>
+                    <div class="ss-chapter-tags">
+                        <span class="ss-tag">PWA offline</span>
+                        <span class="ss-tag">Background Sync</span>
+                        <span class="ss-tag">Xarita tarixi</span>
+                    </div>
                 </div>
+
+                <div class="ss-chapter" data-chapter="3">
+                    <div class="ss-chapter-num">04 / 05</div>
+                    <div class="ss-chapter-icon"><i class="fas fa-hand-holding-dollar"></i></div>
+                    <h3>Nasiya boshqaruvi</h3>
+                    <p>Qarzlar, qisman to'lovlar, muddatlar. Muddati o'tgan nasiyalar uchun Telegram orqali avtomatik eslatmalar.</p>
+                    <div class="ss-chapter-tags">
+                        <span class="ss-tag">Telegram eslatma</span>
+                        <span class="ss-tag">Muddatlar</span>
+                        <span class="ss-tag">VIP / Doimiy</span>
+                    </div>
+                </div>
+
+                <div class="ss-chapter" data-chapter="4">
+                    <div class="ss-chapter-num">05 / 05</div>
+                    <div class="ss-chapter-icon"><i class="fas fa-chart-line"></i></div>
+                    <h3>Analitika va KPI</h3>
+                    <p>30 kunlik savdo trendi, top mahsulotlar, savdogar KPI maqsadlari va xarita ustida savdo zonalari.</p>
+                    <div class="ss-chapter-tags">
+                        <span class="ss-tag">30-kun trend</span>
+                        <span class="ss-tag">KPI maqsad</span>
+                        <span class="ss-tag">Top mahsulotlar</span>
+                    </div>
+                </div>
+
             </div>
-        </div>
+
+            <!-- RIGHT: sticky preview -->
+            <div class="ss-preview-col">
+                <div class="ss-preview-wrap" id="ssPreviewWrap">
+
+                    <!-- DOTS -->
+                    <div class="ss-dots" id="ssDots">
+                        <div class="ss-dot active" data-dot="0" onclick="ssGoTo(0)"></div>
+                        <div class="ss-dot"        data-dot="1" onclick="ssGoTo(1)"></div>
+                        <div class="ss-dot"        data-dot="2" onclick="ssGoTo(2)"></div>
+                        <div class="ss-dot"        data-dot="3" onclick="ssGoTo(3)"></div>
+                        <div class="ss-dot"        data-dot="4" onclick="ssGoTo(4)"></div>
+                    </div>
+
+                    <!-- Sizer (matches tallest panel height) -->
+                    <div class="ss-panel-sizer">
+                        <div style="height:420px;"></div>
+                    </div>
+
+                    <!-- Panel 0: Ombor -->
+                    <div class="ss-panel active" data-panel="0">
+                        <div class="sp-card">
+                            <div class="sp-card-top">
+                                <span class="sp-card-title"><i class="fas fa-warehouse"></i> Ombor nazorati</span>
+                                <span class="live-dot">Live</span>
+                            </div>
+                            <div class="sp-card-body">
+                                <!-- search bar -->
+                                <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:9px 14px;display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+                                    <i class="fas fa-search" style="color:rgba(255,255,255,.25);font-size:12px;"></i>
+                                    <span style="color:rgba(255,255,255,.2);font-size:12px;">Mahsulot qidirish…</span>
+                                </div>
+                                <div class="stock-row">
+                                    <div class="stock-dot ok"></div>
+                                    <span class="stock-name">Qand (Shakar)</span>
+                                    <span class="stock-qty ok">245 kg</span>
+                                    <span class="stock-badge ok">Yetarli</span>
+                                </div>
+                                <div class="stock-row">
+                                    <div class="stock-dot low"></div>
+                                    <span class="stock-name">Bug'doy uni</span>
+                                    <span class="stock-qty low">8 kg</span>
+                                    <span class="stock-badge low">⚠ Kam</span>
+                                </div>
+                                <div class="stock-row">
+                                    <div class="stock-dot ok"></div>
+                                    <span class="stock-name">Oshpichok yog'i</span>
+                                    <span class="stock-qty ok">180 kg</span>
+                                    <span class="stock-badge ok">Yetarli</span>
+                                </div>
+                                <div class="stock-row">
+                                    <div class="stock-dot out"></div>
+                                    <span class="stock-name">Tuz (yodlangan)</span>
+                                    <span class="stock-qty out">0 kg</span>
+                                    <span class="stock-badge out">Tugadi</span>
+                                </div>
+                                <div class="stock-row">
+                                    <div class="stock-dot ok"></div>
+                                    <span class="stock-name">Guruch (Devzira)</span>
+                                    <span class="stock-qty ok">420 kg</span>
+                                    <span class="stock-badge ok">Yetarli</span>
+                                </div>
+                                <button style="width:100%;margin-top:14px;padding:10px;border-radius:10px;background:linear-gradient(135deg,rgba(16,185,129,.2),rgba(52,211,153,.1));border:1px solid rgba(16,185,129,.25);color:#4ade80;font-size:13px;font-weight:700;cursor:pointer;transition:background .2s;">
+                                    <i class="fas fa-plus"></i> Kirim qo'shish
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Panel 1: Savdo -->
+                    <div class="ss-panel" data-panel="1">
+                        <div class="sp-card">
+                            <div class="sp-card-top">
+                                <span class="sp-card-title"><i class="fas fa-receipt"></i> Yangi savdo</span>
+                                <span style="font-size:11px;color:rgba(255,255,255,.3);">#SV-0284</span>
+                            </div>
+                            <div class="sp-card-body">
+                                <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.15);border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+                                    <i class="fas fa-store" style="color:var(--brand);font-size:13px;"></i>
+                                    <span style="color:#fff;font-size:13px;font-weight:700;">Supermarket "Bahor"</span>
+                                    <span style="margin-left:auto;font-size:10px;background:rgba(74,222,128,.15);color:#4ade80;padding:2px 8px;border-radius:999px;font-weight:700;">VIP</span>
+                                </div>
+                                <div class="receipt-line"><span class="receipt-name">Qand × 5 kg</span><span class="receipt-amount">125,000</span></div>
+                                <div class="receipt-line"><span class="receipt-name">Yog' × 2 kg</span><span class="receipt-amount">80,000</span></div>
+                                <div class="receipt-line"><span class="receipt-name">Guruch × 3 kg</span><span class="receipt-amount">45,000</span></div>
+                                <div class="receipt-line receipt-total"><span class="receipt-name" style="color:rgba(255,255,255,.5);">Jami</span><span class="receipt-amount">250,000 so'm</span></div>
+                                <div class="pay-btns">
+                                    <div class="pay-btn naqd"><i class="fas fa-money-bill-wave"></i><br>Naqd</div>
+                                    <div class="pay-btn karta"><i class="fas fa-credit-card"></i><br>Karta</div>
+                                    <div class="pay-btn nasiya"><i class="fas fa-calendar-check"></i><br>Nasiya</div>
+                                </div>
+                                <div style="margin-top:14px;padding-top:12px;border-top:1px dashed rgba(255,255,255,.06);display:flex;align-items:center;gap:10px;">
+                                    <div style="width:44px;height:44px;background:rgba(255,255,255,.06);border-radius:8px;display:flex;align-items:center;justify-content:center;">
+                                        <i class="fas fa-qrcode" style="color:rgba(255,255,255,.4);font-size:20px;"></i>
+                                    </div>
+                                    <div>
+                                        <div style="color:rgba(255,255,255,.6);font-size:12px;font-weight:700;">QR chek tayyor</div>
+                                        <div style="color:rgba(255,255,255,.3);font-size:11px;">Savdo tasdiqlangandan keyin</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Panel 2: GPS -->
+                    <div class="ss-panel" data-panel="2">
+                        <div class="sp-card">
+                            <div class="sp-card-top">
+                                <span class="sp-card-title"><i class="fas fa-location-dot"></i> GPS Tracking</span>
+                                <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:#4ade80;font-weight:700;"><span style="width:6px;height:6px;border-radius:50%;background:#4ade80;animation:pulse-dot 1.5s infinite;"></span> 3 online</span>
+                            </div>
+                            <div class="sp-card-body">
+                                <!-- Map visual -->
+                                <div class="gps-map">
+                                    <div class="map-grid"></div>
+                                    <svg style="position:absolute;inset:0;width:100%;height:100%;opacity:.25;" viewBox="0 0 300 160">
+                                        <path d="M 40 80 Q 100 40 160 90 Q 200 120 260 70" stroke="#10b981" stroke-width="2" fill="none" stroke-dasharray="6 3"/>
+                                        <path d="M 80 130 Q 130 100 180 110 Q 220 115 270 130" stroke="#34d399" stroke-width="1.5" fill="none" stroke-dasharray="4 4" opacity=".6"/>
+                                    </svg>
+                                    <div class="map-dot" style="left:30%;top:45%;"></div>
+                                    <div class="map-dot" style="left:58%;top:58%;background:#f59e0b;box-shadow:0 0 0 4px rgba(245,158,11,.3);animation-delay:.5s;"></div>
+                                    <div class="map-dot" style="left:80%;top:35%;background:#60a5fa;box-shadow:0 0 0 4px rgba(96,165,250,.3);animation-delay:1s;"></div>
+                                </div>
+                                <!-- Courier list -->
+                                <div class="gps-courier-row">
+                                    <div class="gps-courier-avatar">AK</div>
+                                    <div style="flex:1;">
+                                        <div style="color:#fff;font-size:13px;font-weight:700;">Aziz Karimov</div>
+                                        <div style="color:rgba(255,255,255,.35);font-size:11px;">47.2 km · 14/18 yetkazildi</div>
+                                    </div>
+                                    <span style="background:rgba(74,222,128,.12);color:#4ade80;font-size:10px;font-weight:700;padding:3px 10px;border-radius:999px;">● Online</span>
+                                </div>
+                                <div class="gps-courier-row">
+                                    <div class="gps-courier-avatar" style="background:linear-gradient(135deg,#f59e0b,#d97706);">JY</div>
+                                    <div style="flex:1;">
+                                        <div style="color:#fff;font-size:13px;font-weight:700;">Jasur Yusupov</div>
+                                        <div style="color:rgba(255,255,255,.35);font-size:11px;">23.5 km · 8/12 yetkazildi</div>
+                                    </div>
+                                    <span style="background:rgba(245,158,11,.12);color:#f59e0b;font-size:10px;font-weight:700;padding:3px 10px;border-radius:999px;">● Online</span>
+                                </div>
+                                <div class="gps-courier-row" style="opacity:.5;">
+                                    <div class="gps-courier-avatar" style="background:linear-gradient(135deg,#64748b,#475569);">SR</div>
+                                    <div style="flex:1;">
+                                        <div style="color:#fff;font-size:13px;font-weight:700;">Sardor Rashidov</div>
+                                        <div style="color:rgba(255,255,255,.35);font-size:11px;">Offline · Sync kutilmoqda</div>
+                                    </div>
+                                    <span style="background:rgba(255,255,255,.06);color:rgba(255,255,255,.3);font-size:10px;font-weight:700;padding:3px 10px;border-radius:999px;">Offline</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Panel 3: Nasiya -->
+                    <div class="ss-panel" data-panel="3">
+                        <div class="sp-card">
+                            <div class="sp-card-top">
+                                <span class="sp-card-title"><i class="fas fa-hand-holding-dollar"></i> Nasiya nazorati</span>
+                                <span style="background:rgba(248,113,113,.15);color:#f87171;font-size:10px;font-weight:700;padding:3px 10px;border-radius:999px;">2 muddati o'tgan</span>
+                            </div>
+                            <div class="sp-card-body">
+                                <!-- Total debt bar -->
+                                <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:14px;margin-bottom:14px;">
+                                    <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                                        <span style="color:rgba(255,255,255,.45);font-size:11px;font-weight:700;">Umumiy nasiya</span>
+                                        <span style="color:#fff;font-size:14px;font-weight:800;">1,460,000 so'm</span>
+                                    </div>
+                                    <div class="progress-track">
+                                        <div class="progress-fill" style="width:62%;background:linear-gradient(90deg,#f87171,#fb923c);animation:none;"></div>
+                                    </div>
+                                    <div style="display:flex;justify-content:space-between;margin-top:6px;">
+                                        <span style="font-size:10px;color:rgba(255,255,255,.3);">To'langan: 38%</span>
+                                        <span style="font-size:10px;color:#f87171;">Qolgan: 62%</span>
+                                    </div>
+                                </div>
+                                <div class="nasiya-row overdue">
+                                    <div style="width:32px;height:32px;border-radius:8px;background:rgba(248,113,113,.15);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#f87171;flex-shrink:0;">BO</div>
+                                    <div style="flex:1;"><div class="nasiya-name">Do'kon "Bahor Ozi"</div><div style="color:rgba(255,255,255,.3);font-size:11px;">5 kun kechikdi</div></div>
+                                    <span class="nasiya-amount">450,000</span>
+                                    <span class="nasiya-badge overdue">Muddati o'tdi</span>
+                                </div>
+                                <div class="nasiya-row soon">
+                                    <div style="width:32px;height:32px;border-radius:8px;background:rgba(245,158,11,.12);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#f59e0b;flex-shrink:0;">OM</div>
+                                    <div style="flex:1;"><div class="nasiya-name">Do'kon "Orzu Market"</div><div style="color:rgba(255,255,255,.3);font-size:11px;">3 kun qoldi</div></div>
+                                    <span class="nasiya-amount">120,000</span>
+                                    <span class="nasiya-badge soon">3 kun</span>
+                                </div>
+                                <div class="nasiya-row">
+                                    <div style="width:32px;height:32px;border-radius:8px;background:rgba(74,222,128,.1);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#4ade80;flex-shrink:0;">YD</div>
+                                    <div style="flex:1;"><div class="nasiya-name">Supermarket "Yangi Dunyo"</div><div style="color:rgba(255,255,255,.3);font-size:11px;">15 kun qoldi</div></div>
+                                    <span class="nasiya-amount">890,000</span>
+                                    <span class="nasiya-badge ok">15 kun</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Panel 4: Analitika -->
+                    <div class="ss-panel" data-panel="4">
+                        <div class="sp-card">
+                            <div class="sp-card-top">
+                                <span class="sp-card-title"><i class="fas fa-chart-line"></i> Analitika</span>
+                                <div style="display:flex;gap:6px;">
+                                    <span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:999px;background:rgba(16,185,129,.15);color:#4ade80;cursor:pointer;">7 kun</span>
+                                    <span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.4);cursor:pointer;">30 kun</span>
+                                </div>
+                            </div>
+                            <div class="sp-card-body">
+                                <div class="chart-wrap">
+                                    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:4px;">
+                                        <span style="color:rgba(255,255,255,.4);font-size:11px;font-weight:700;">Savdo summasi</span>
+                                        <span style="color:#4ade80;font-size:13px;font-weight:800;">↑ +18%</span>
+                                    </div>
+                                    <div class="chart-bars" id="analyticsBars">
+                                        <div class="chart-bar-an" style="height:55%"></div>
+                                        <div class="chart-bar-an" style="height:72%"></div>
+                                        <div class="chart-bar-an" style="height:48%"></div>
+                                        <div class="chart-bar-an" style="height:88%"></div>
+                                        <div class="chart-bar-an" style="height:65%"></div>
+                                        <div class="chart-bar-an" style="height:95%;opacity:1;"></div>
+                                        <div class="chart-bar-an" style="height:78%"></div>
+                                    </div>
+                                </div>
+                                <div class="kpi-row">
+                                    <span class="kpi-label"><i class="fas fa-user" style="color:var(--brand);margin-right:6px;font-size:11px;"></i>Aziz Karimov</span>
+                                    <div class="kpi-bar-wrap"><div class="kpi-bar-fill" style="width:88%"></div></div>
+                                    <span class="kpi-pct">88%</span>
+                                </div>
+                                <div class="kpi-row">
+                                    <span class="kpi-label"><i class="fas fa-user" style="color:#f59e0b;margin-right:6px;font-size:11px;"></i>Jasur Yusupov</span>
+                                    <div class="kpi-bar-wrap"><div class="kpi-bar-fill" style="width:64%;background:linear-gradient(90deg,#f59e0b,#fbbf24);animation:none;"></div></div>
+                                    <span class="kpi-pct" style="color:#f59e0b;">64%</span>
+                                </div>
+                                <div class="kpi-row">
+                                    <span class="kpi-label"><i class="fas fa-store" style="color:#60a5fa;margin-right:6px;font-size:11px;"></i>Top mahsulot: Qand</span>
+                                    <div class="kpi-bar-wrap"><div class="kpi-bar-fill" style="width:100%;background:linear-gradient(90deg,#60a5fa,#93c5fd);animation:none;"></div></div>
+                                    <span class="kpi-pct" style="color:#60a5fa;">1st</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>{# /ss-preview-wrap #}
+            </div>{# /ss-preview-col #}
+        </div>{# /ss-layout #}
     </div>
 </section>
 
-<section class="section">
-    <div class="container">
-        <div class="proof-bar">
-            <div class="proof-item"><strong>1 kun</strong><span>ichida ishga tushirish</span></div>
-            <div class="proof-item"><strong>360°</strong><span>firma jarayonlari nazorati</span></div>
-            <div class="proof-item"><strong>24/7</strong><span>subdomain orqali kirish</span></div>
-            <div class="proof-item"><strong>0</strong><span>qo'lda Excel chalkashligi</span></div>
-        </div>
-    </div>
-</section>
-
-<section class="section" id="features">
-    <div class="container">
-        <div style="max-width:760px; margin-bottom:34px;">
-            <div class="eyebrow">Nega StockFirm</div>
-            <h2 class="section-title" style="margin-top:12px;">Firma o'sganda ham tartib buzilmaydi.</h2>
-        </div>
-        <div class="grid-3">
-            <a class="card" href="{% url 'marketing_page' 'inventory' %}"><div class="feature-icon">01</div><h3>Ombor nazorati</h3><p>Mahsulot kirimi, chiqimi, minimal zaxira va audit tarixi aniq yuritiladi.</p></a>
-            <a class="card" href="{% url 'marketing_page' 'sales' %}"><div class="feature-icon">02</div><h3>Savdo oqimi</h3><p>Kuryer sotuvlari, to'lov turi, chek va mijoz tarixi bir joyda.</p></a>
-            <a class="card" href="{% url 'marketing_page' 'delivery' %}"><div class="feature-icon">03</div><h3>Yetkazib berish</h3><p>Har bir yetkazuvchining zaxirasi va lokatsiyasi alohida kuzatiladi.</p></a>
-            <a class="card" href="{% url 'marketing_page' 'nasiya' %}"><div class="feature-icon">04</div><h3>Nasiya boshqaruvi</h3><p>Qarzlar, qisman to'lovlar va muddati o'tgan nasiya savdolar nazoratda.</p></a>
-            <a class="card" href="{% url 'marketing_page' 'analytics' %}"><div class="feature-icon">05</div><h3>Analitika</h3><p>Qaysi mahsulot ko'p sotilmoqda, qaysi do'kon faol, qayerda zaxira xavfi bor.</p></a>
-            <a class="card" href="{% url 'marketing_page' 'billing' %}"><div class="feature-icon">06</div><h3>SaaS billing</h3><p>Tariflar, trial, Click to'lov va feature gating tizimli boshqariladi.</p></a>
-        </div>
-    </div>
-</section>
-
-<section class="section" style="background:var(--dark); color:white;">
-    <div class="container grid-2">
-        <div>
-            <div class="eyebrow" style="color:#86efac;">Marketing emas, operatsion foyda</div>
-            <h2 class="section-title" style="margin-top:12px;">Har kuni javob beradigan savollar.</h2>
-            <p class="lead" style="margin-top:18px; color:rgba(255,255,255,.68);">Qaysi hodim qancha sotdi? Qaysi mahsulot tugayapti? Qaysi mijoz qarzdor? Qaysi kuryer qayerda? StockFirm bu savollarga tez javob beradi.</p>
-        </div>
-        <div class="grid-2" style="gap:14px;">
-            <div class="dash-card"><b>Omborda nima qoldi?</b><p style="color:rgba(255,255,255,.62); margin-top:8px;">Minimal zaxira signal beradi.</p></div>
-            <div class="dash-card"><b>Kim javobgar?</b><p style="color:rgba(255,255,255,.62); margin-top:8px;">Harakatlar jurnalga tushadi.</p></div>
-            <div class="dash-card"><b>Pul qayerda?</b><p style="color:rgba(255,255,255,.62); margin-top:8px;">Naqd, karta, nasiya ajraladi.</p></div>
-            <div class="dash-card"><b>O'sish bormi?</b><p style="color:rgba(255,255,255,.62); margin-top:8px;">Hisobot va grafiklar ko'rsatadi.</p></div>
-        </div>
-    </div>
-</section>
-
-<section class="section">
+<!-- ═══ HOW IT WORKS ═══ -->
+<section class="section" id="how">
     <div class="container" style="text-align:center;">
-        <div class="eyebrow">Boshlash oson</div>
-        <h2 class="section-title" style="max-width:820px; margin:12px auto 18px;">Bugun ro'yxatdan o'ting, ertadan jarayonlarni tizimda ko'ring.</h2>
-        <p class="lead" style="max-width:720px; margin:0 auto 28px;">Yangi firma oching, subdomain tanlang, hodimlarni qo'shing va birinchi mahsulotlaringizni kiriting. Murakkab IT jamoa shart emas.</p>
-        <a href="{% url 'register_company' %}" class="btn btn-primary">Firmamni ochish</a>
-        <a href="{% url 'marketing_page' 'implementation' %}" class="btn btn-outline" style="margin-left:8px;">Joriy qilish rejasi</a>
+        <div class="eyebrow reveal" style="justify-content:center;">Boshlash oson</div>
+        <h2 class="section-headline reveal">3 qadamda ishga tushiring.</h2>
+        <p class="section-lead reveal" style="margin:14px auto 0;text-align:center;">Hech qanday dasturlash bilimi kerak emas.</p>
+        <div class="steps">
+            <div class="step reveal reveal-d1"><div class="step-num">1</div><h3>Firmani oching</h3><p>Subdomain tanlang, telefon raqamingizni kiriting. 2 daqiqada tayyor.</p></div>
+            <div class="step reveal reveal-d3"><div class="step-num">2</div><h3>Mahsulot va hodim qo'shing</h3><p>Mahsulotlarni kiriting, kuryer va pazandalarga hisob yarating.</p></div>
+            <div class="step reveal reveal-d5"><div class="step-num">3</div><h3>Ishlang va kuzating</h3><p>Savdo, yetkazib berish, ombor — barchasi dashboard da real vaqt.</p></div>
+        </div>
     </div>
 </section>
+
+<!-- ═══ ROLES ═══ -->
+<section class="section section-wash" id="roles">
+    <div class="container">
+        <div class="eyebrow reveal">Rollar tizimi</div>
+        <h2 class="section-headline reveal">Har bir xodim uchun<br>alohida panel.</h2>
+        <p class="section-lead reveal">Ega, kuryer, pazanda, omborchi, savdogar — har biri faqat o'ziga tegishli narsani ko'radi.</p>
+        <div class="roles-grid">
+            <div class="role-card reveal reveal-d1"><span class="role-icon">👤</span><h4>Ega</h4><p>Dashboard, hisobotlar, hodimlar, tariflar va to'liq nazorat.</p></div>
+            <div class="role-card reveal reveal-d2"><span class="role-icon">🚚</span><h4>Yetkazuvchi</h4><p>Zaxira, GPS, savdo, qaytarish va offline rejim.</p></div>
+            <div class="role-card reveal reveal-d3"><span class="role-icon">👨‍🍳</span><h4>Pazanda</h4><p>Tayyor mahsulot, xom ashyo so'rovi va ishlab chiqarish.</p></div>
+            <div class="role-card reveal reveal-d4"><span class="role-icon">📦</span><h4>Omborchi</h4><p>Kirim, chiqim, so'rovlar va ombor harakatlari tarixi.</p></div>
+            <div class="role-card reveal reveal-d5"><span class="role-icon">🤝</span><h4>Savdogar</h4><p>Shartnoma, mahsulotlar, nasiya va KPI maqsadlari.</p></div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══ GPS HIGHLIGHT ═══ -->
+<section class="section">
+    <div class="container">
+        <div class="split-section">
+            <div class="reveal-left">
+                <div class="eyebrow">Yangi imkoniyat</div>
+                <h2 class="section-headline">Internet bo'lmasa ham<br>to'xtamang.</h2>
+                <p class="section-lead">GPS nuqtalari qurilmada saqlanadi va internet qaytganda server ga avtomatik yuboriladi.</p>
+                <div class="feat-list">
+                    <div class="feat-row"><div class="feat-row-icon"><i class="fas fa-database"></i></div><div><div class="feat-row-title">IndexedDB saqlash</div><div class="feat-row-desc">Telefon xotirasida 2000+ GPS nuqtasiga qadar offline saqlanadi.</div></div></div>
+                    <div class="feat-row"><div class="feat-row-icon"><i class="fas fa-rotate"></i></div><div><div class="feat-row-title">Background Sync</div><div class="feat-row-desc">Ilova yopiq bo'lsa ham — internet qaytganda avtomatik yuboriladi.</div></div></div>
+                    <div class="feat-row"><div class="feat-row-icon"><i class="fas fa-mobile-screen"></i></div><div><div class="feat-row-title">PWA — Telefonga o'rnatish</div><div class="feat-row-desc">App store siz — brauzerdan bir tugma bilan.</div></div></div>
+                </div>
+            </div>
+            <div class="reveal-right">
+                <div class="gps-panel">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+                        <span style="color:rgba(255,255,255,.9);font-weight:700;font-size:14px;">GPS Sync holati</span>
+                        <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:#4ade80;font-weight:700;"><span style="width:7px;height:7px;border-radius:50%;background:#4ade80;animation:pulse-dot 1.5s infinite;"></span>Sinxronlashmoqda</span>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:10px;">
+                        <div class="gps-row"><div style="display:flex;align-items:center;gap:10px;"><i class="fas fa-map-marker-alt" style="color:#4ade80;width:16px;"></i><div><div style="color:#fff;font-size:13px;font-weight:700;">Queue: 0 ta</div><div style="color:rgba(255,255,255,.4);font-size:11px;">Barcha yuborildi</div></div></div><span class="gps-badge green">✓ Sync</span></div>
+                        <div class="gps-row"><div style="display:flex;align-items:center;gap:10px;"><i class="fas fa-route" style="color:#f59e0b;width:16px;"></i><div><div style="color:#fff;font-size:13px;font-weight:700;">Bugungi marshrut</div><div style="color:rgba(255,255,255,.4);font-size:11px;">47.2 km · 6 soat</div></div></div><span class="gps-badge amber">Xaritada</span></div>
+                        <div class="gps-row"><div style="display:flex;align-items:center;gap:10px;"><i class="fas fa-wifi-slash" style="color:rgba(255,255,255,.35);width:16px;"></i><div><div style="color:#fff;font-size:13px;font-weight:700;">Offline rejim</div><div style="color:rgba(255,255,255,.4);font-size:11px;">Avtomatik yoqiladi</div></div></div><span class="gps-badge muted">Tayyor</span></div>
+                    </div>
+                    <div style="margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,.06);">
+                        <div style="color:rgba(255,255,255,.4);font-size:11px;font-weight:700;margin-bottom:10px;">Haftalik faollik</div>
+                        <div style="display:flex;align-items:flex-end;gap:5px;height:40px;" id="gpsChartBars">
+                            {% for h in "1234567" %}<div class="chart-bar-an" data-h="{{ forloop.counter0 }}" style="height:0%;transition:height .6s cubic-bezier(.22,1,.36,1);transition-delay:{{ forloop.counter0|add:'0' }}s;"></div>{% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══ NOTIFICATIONS ═══ -->
+<section class="section section-wash">
+    <div class="container">
+        <div class="split-section">
+            <div class="reveal-left">
+                <div class="notif-panel-demo">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;"><span style="color:rgba(255,255,255,.9);font-weight:700;font-size:14px;">Bildirishnomalar</span><span style="background:rgba(239,68,68,.2);color:#f87171;font-size:10px;font-weight:800;padding:3px 10px;border-radius:999px;">3 yangi</span></div>
+                    <div class="notif-row success"><div class="notif-icon success"><i class="fas fa-check-circle"></i></div><div style="flex:1;"><div style="color:#fff;font-size:12px;font-weight:700;">Savdo tasdiqlandi</div><div style="color:rgba(255,255,255,.45);font-size:11px;">Supermarket "Bahor" · 420,000 so'm</div></div><div style="color:rgba(255,255,255,.25);font-size:10px;white-space:nowrap;">hozirgina</div></div>
+                    <div class="notif-row warning"><div class="notif-icon warning"><i class="fas fa-triangle-exclamation"></i></div><div style="flex:1;"><div style="color:#fff;font-size:12px;font-weight:700;">Nasiya muddati yaqin</div><div style="color:rgba(255,255,255,.45);font-size:11px;">Do'kon "Orzu" · 3 kun qoldi</div></div><div style="color:rgba(255,255,255,.25);font-size:10px;white-space:nowrap;">2 daq</div></div>
+                    <div class="notif-row neutral"><div class="notif-icon neutral"><i class="fas fa-box-open"></i></div><div style="flex:1;"><div style="color:#fff;font-size:12px;font-weight:700;">Zaxira kamaydi</div><div style="color:rgba(255,255,255,.45);font-size:11px;">Qand · 8 kg qoldi (min: 20)</div></div><div style="color:rgba(255,255,255,.25);font-size:10px;white-space:nowrap;">14 daq</div></div>
+                    <div class="notif-row neutral"><div class="notif-icon success"><i class="fas fa-location-dot"></i></div><div style="flex:1;"><div style="color:#fff;font-size:12px;font-weight:700;">Kuryer yetib keldi</div><div style="color:rgba(255,255,255,.45);font-size:11px;">Aziz Karimov · Nurafshon ko'ch.</div></div><div style="color:rgba(255,255,255,.25);font-size:10px;white-space:nowrap;">21 daq</div></div>
+                </div>
+            </div>
+            <div class="reveal-right">
+                <div class="eyebrow">Export va bildirishnomalar</div>
+                <h2 class="section-headline">Ma'lumot har doim<br>qo'lda bo'lsin.</h2>
+                <p class="section-lead">Real-time WebSocket bildirishnomalar barcha rollarga, Telegram eslatmalar va Excel export.</p>
+                <div class="chip-grid">
+                    <div class="chip-card"><i class="fas fa-file-excel" style="color:var(--brand);"></i><b>Excel export</b><span>Savdolar, nasiya, mahsulotlar, xodimlar</span></div>
+                    <div class="chip-card"><i class="fab fa-telegram" style="color:#2AABEE;"></i><b>Telegram bot</b><span>Nasiya eslatma, savdo tasdiqi</span></div>
+                    <div class="chip-card"><i class="fas fa-bell" style="color:var(--brand);"></i><b>Real-time notif</b><span>WebSocket — barcha rollar uchun</span></div>
+                    <div class="chip-card"><i class="fas fa-qrcode" style="color:var(--brand);"></i><b>QR chek</b><span>Har bir savdodan chop etiladigan chek</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══ CTA ═══ -->
+<section class="section">
+    <div class="container">
+        <div class="cta-wrap reveal">
+            <div class="cta-orb cta-orb-1"></div>
+            <div class="cta-orb cta-orb-2"></div>
+            <h2>Bugun ro'yxatdan o'ting,<br>ertadan tartib o'rnating.</h2>
+            <p>Yangi firma oching, subdomain tanlang, hodimlarni qo'shing.<br>30 kunlik bepul sinov — karta shart emas.</p>
+            <div class="cta-btns">
+                <a href="{% url 'register_company' %}" class="btn btn-dark" style="font-size:16px;padding:16px 32px;"><i class="fas fa-rocket"></i> Firmamni ochish</a>
+                <a href="{% url 'pricing' %}" class="btn btn-glass" style="font-size:16px;padding:16px 32px;">Tariflarni ko'rish <i class="fas fa-arrow-right" style="font-size:12px;"></i></a>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ═══════════════════════════════════════════
+   SCROLL SHOWCASE — sticky right panel
+   ════════════════════════════════════════ */
+(function() {
+    const chapters = document.querySelectorAll('.ss-chapter');
+    const panels   = document.querySelectorAll('.ss-panel');
+    const dots     = document.querySelectorAll('.ss-dot');
+    const sizer    = document.querySelector('.ss-panel-sizer');
+    if (!chapters.length) return;
+
+    let current = 0;
+
+    function activate(idx) {
+        if (idx === current && chapters[idx].classList.contains('active')) return;
+        current = idx;
+
+        chapters.forEach((c, i) => c.classList.toggle('active', i === idx));
+        panels.forEach((p, i)   => p.classList.toggle('active', i === idx));
+        dots.forEach((d, i)     => d.classList.toggle('active', i === idx));
+
+        /* Match sizer height to active panel so sticky col has correct height */
+        const activePanel = panels[idx];
+        if (sizer && activePanel) {
+            sizer.style.height = activePanel.offsetHeight + 'px';
+        }
+    }
+
+    /* Public: click on dots */
+    window.ssGoTo = function(idx) {
+        activate(idx);
+        /* Scroll to the matching chapter */
+        const chapter = chapters[idx];
+        if (chapter) {
+            const y = chapter.getBoundingClientRect().top + window.scrollY - window.innerHeight * 0.3;
+            window.scrollTo({ top: y, behavior: 'smooth' });
+        }
+    };
+
+    /* IntersectionObserver watches each chapter */
+    const io = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+            if (e.isIntersecting) {
+                activate(parseInt(e.target.dataset.chapter, 10));
+            }
+        });
+    }, {
+        threshold: 0,
+        rootMargin: '-35% 0px -55% 0px'   /* trigger when chapter is in middle 35% of viewport */
+    });
+    chapters.forEach(c => io.observe(c));
+
+    /* Initial sizing */
+    requestAnimationFrame(() => {
+        if (sizer && panels[0]) sizer.style.height = panels[0].offsetHeight + 'px';
+    });
+})();
+
+/* ═══════════════════════════════════════════
+   GPS chart bars animate on scroll
+   ════════════════════════════════════════ */
+(function() {
+    const heights = [55, 70, 45, 85, 65, 90, 78];
+    const bars = document.querySelectorAll('#gpsChartBars .chart-bar-an');
+    if (!bars.length) return;
+    bars.forEach((b, i) => {
+        b.style.height = '0%';
+        b.style.transition = 'height .6s cubic-bezier(.22,1,.36,1)';
+        b.style.transitionDelay = (i * 0.08) + 's';
+    });
+    const io = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+            if (e.isIntersecting) {
+                bars.forEach((b, i) => { b.style.height = heights[i] + '%'; });
+                io.disconnect();
+            }
+        });
+    }, { threshold: 0.4 });
+    if (bars[0]) io.observe(bars[0].closest('.gps-panel') || bars[0]);
+})();
+</script>
 {% endblock %}

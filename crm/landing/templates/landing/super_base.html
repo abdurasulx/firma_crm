@@ -6,36 +6,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}StockFirm Super Admin{% endblock %}</title>
     <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --bg-dark: #0a0c10;
-            --card-bg: rgba(23, 28, 36, 0.7);
-            --sidebar-bg: rgba(15, 18, 25, 0.95);
-            --primary: #3b82f6;
-            --primary-glow: rgba(59, 130, 246, 0.5);
-            --secondary: #8b5cf6;
+            --bg-dark: #f1f5f9;
+            --card-bg: #ffffff;
+            --sidebar-bg: #0f172a;
+            --primary: #10b981;
+            --primary-dark: #059669;
+            --primary-glow: rgba(16, 185, 129, 0.28);
+            --secondary: #047857;
             --accent: #10b981;
-            --text-main: #f3f4f6;
-            --text-dim: #9ca3af;
-            --border: rgba(255, 255, 255, 0.08);
+            --text-main: #1f2937;
+            --text-dim: #64748b;
+            --border: #e2e8f0;
             --sidebar-width: 280px;
             --danger-color: #ef4444;
-            --input-bg: rgba(255, 255, 255, 0.05);
-            --input-text: #ffffff;
-            --glass-border: rgba(255, 255, 255, 0.1);
+            --input-bg: #f8fafc;
+            --input-text: #1f2937;
+            --glass-border: #e2e8f0;
         }
 
         body.light-mode {
-            --bg-dark: #f8fafc;
+            --bg-dark: #f1f5f9;
             --card-bg: #ffffff;
-            --sidebar-bg: #1e293b;
-            --text-main: #1e293b;
+            --sidebar-bg: #0f172a;
+            --text-main: #1f2937;
             --text-dim: #64748b;
             --border: #e2e8f0;
-            --input-bg: #f1f5f9;
-            --input-text: #1e293b;
+            --input-bg: #f8fafc;
+            --input-text: #1f2937;
             --glass-border: #e2e8f0;
         }
 
@@ -46,7 +47,7 @@
         }
 
         body {
-            font-family: 'Outfit', sans-serif;
+            font-family: 'Inter', sans-serif;
             background-color: var(--bg-dark);
             color: var(--text-main);
             overflow-x: hidden;
@@ -54,7 +55,6 @@
             min-height: 100vh;
         }
 
-        /* Glassmorphism Background */
         .glass-bg {
             position: fixed;
             top: 0;
@@ -62,9 +62,7 @@
             width: 100%;
             height: 100%;
             z-index: -1;
-            background: 
-                radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 40%),
-                radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 40%);
+            background: #f1f5f9;
         }
 
         /* Sidebar */
@@ -90,7 +88,7 @@
         .logo-box {
             width: 45px;
             height: 45px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
             border-radius: 12px;
             display: flex;
             align-items: center;
@@ -106,9 +104,7 @@
         .brand-name {
             font-size: 22px;
             font-weight: 700;
-            background: linear-gradient(to right, #fff, #9ca3af);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            color: #ffffff;
         }
 
         .nav-menu {
@@ -135,14 +131,14 @@
 
         .nav-link:hover {
             color: white;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(16, 185, 129, 0.12);
         }
 
         .nav-link.active {
             color: white;
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2));
-            border: 1px solid rgba(59, 130, 246, 0.3);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            background: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.45);
+            box-shadow: 0 10px 24px rgba(16, 185, 129, 0.2);
         }
 
         .nav-link i {
@@ -193,6 +189,91 @@
             border: 2px solid var(--primary);
         }
 
+        .live-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            color: var(--text-dim);
+            font-size: 13px;
+            padding: 9px 14px;
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #f59e0b;
+            box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.12);
+        }
+
+        .live-pill.connected .live-dot {
+            background: var(--accent);
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.12);
+        }
+
+        .nav-badge {
+            margin-left: auto;
+            min-width: 22px;
+            height: 22px;
+            padding: 0 7px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--danger-color);
+            color: white;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .super-toast-container {
+            position: fixed;
+            right: 24px;
+            bottom: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 3000;
+            width: min(360px, calc(100vw - 32px));
+        }
+
+        .super-toast {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--primary);
+            border-radius: 12px;
+            padding: 14px 16px;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.28);
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            animation: superToastIn 0.22s ease-out;
+        }
+
+        .super-toast.success { border-left-color: var(--accent); }
+        .super-toast.warning { border-left-color: #f59e0b; }
+        .super-toast.danger { border-left-color: var(--danger-color); }
+
+        .super-toast-title {
+            font-weight: 800;
+            font-size: 14px;
+            margin-bottom: 3px;
+        }
+
+        .super-toast-message {
+            color: var(--text-dim);
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        @keyframes superToastIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         /* Glass Cards */
         .glass-card {
             background: var(--card-bg);
@@ -200,12 +281,12 @@
             border: 1px solid var(--border);
             border-radius: 20px;
             padding: 25px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 16px 38px rgba(15, 23, 42, 0.08);
         }
 
         /* Buttons */
         .btn-primary {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            background: var(--primary);
             color: white;
             border: none;
             padding: 12px 24px;
@@ -289,6 +370,7 @@
                 <a href="{% url 'plan_requests_list' %}" class="nav-link {% if 'plan-requests' in request.path %}active{% endif %}">
                     <i class="fa-solid fa-clock-rotate-left"></i>
                     <span>Tarif So'rovlari</span>
+                    <span class="nav-badge" data-super-stat="pending_plan_requests" {% if not pending_plan_requests %}style="display:none;"{% endif %}>{{ pending_plan_requests|default:0 }}</span>
                 </a>
             </li>
             <li class="nav-item">
@@ -321,6 +403,11 @@
             </div>
 
             <div style="display: flex; align-items: center; gap: 20px;">
+                <div id="superLiveStatus" class="live-pill">
+                    <span class="live-dot"></span>
+                    <span id="superLiveText">Ulanmoqda</span>
+                </div>
+
                 <button id="theme-toggle" class="glass-card" style="padding: 10px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 42px; height: 42px;">
                     <i class="fa-solid fa-moon"></i>
                 </button>
@@ -337,6 +424,8 @@
         {% endblock %}
         {% endblock %}
     </main>
+
+    <div id="superToastContainer" class="super-toast-container"></div>
 
     <script>
         const themeToggle = document.getElementById('theme-toggle');
@@ -361,6 +450,142 @@
                 icon.classList.replace('fa-sun', 'fa-moon');
             }
         });
+
+        (function() {
+            const status = document.getElementById('superLiveStatus');
+            const statusText = document.getElementById('superLiveText');
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const socketUrl = `${protocol}//${window.location.host}/ws/superadmin/`;
+            let socket = null;
+            let pingInterval = null;
+            let reconnectTimer = null;
+            let previousStats = null;
+            let reloadTimer = null;
+
+            function showSuperToast(title, message, type = 'info') {
+                const container = document.getElementById('superToastContainer');
+                if (!container) return;
+
+                const iconClass = type === 'success' ? 'fa-circle-check' : type === 'warning' ? 'fa-triangle-exclamation' : type === 'danger' ? 'fa-circle-xmark' : 'fa-bell';
+                const toast = document.createElement('div');
+                toast.className = `super-toast ${type}`;
+                toast.innerHTML = `
+                    <i class="fa-solid ${iconClass}" style="margin-top:2px;"></i>
+                    <div>
+                        <div class="super-toast-title">${escapeHtml(title)}</div>
+                        <div class="super-toast-message">${escapeHtml(message)}</div>
+                    </div>
+                `;
+                container.appendChild(toast);
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    toast.style.transform = 'translateY(8px)';
+                    toast.style.transition = 'all 0.18s ease';
+                    setTimeout(() => toast.remove(), 220);
+                }, 4200);
+            }
+
+            function escapeHtml(value) {
+                return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                }[char]));
+            }
+
+            function setStatText(key, value) {
+                document.querySelectorAll(`[data-super-stat="${key}"]`).forEach((el) => {
+                    el.textContent = value;
+                    if (key === 'pending_plan_requests') {
+                        el.style.display = Number(value) > 0 ? 'inline-flex' : 'none';
+                    }
+                });
+            }
+
+            function currentPageNeedsReload() {
+                const path = window.location.pathname;
+                return path.includes('/plan-requests') || path.includes('/billing') || path.includes('/companies');
+            }
+
+            function scheduleSoftReload() {
+                if (!currentPageNeedsReload()) return;
+                clearTimeout(reloadTimer);
+                reloadTimer = setTimeout(() => window.location.reload(), 1400);
+            }
+
+            function applyBaseSuperAdminUpdate(payload) {
+                if (!payload || payload.type !== 'superadmin_update') return;
+
+                const stats = payload.stats || {};
+                Object.entries(stats).forEach(([key, value]) => setStatText(key, value));
+
+                if (previousStats) {
+                    const oldPending = Number(previousStats.pending_plan_requests || 0);
+                    const newPending = Number(stats.pending_plan_requests || 0);
+                    if (newPending > oldPending) {
+                        showSuperToast("Yangi tarif so'rovi", `${newPending - oldPending} ta yangi so'rov keldi.`, 'warning');
+                        scheduleSoftReload();
+                    } else if (newPending !== oldPending) {
+                        showSuperToast("Tarif so'rovlari yangilandi", `Kutilayotgan so'rovlar: ${newPending} ta.`, 'success');
+                        scheduleSoftReload();
+                    }
+
+                    const watchedKeys = ['total_companies', 'active_companies', 'trial_companies', 'setup_companies', 'total_users'];
+                    if (watchedKeys.some((key) => Number(previousStats[key] || 0) !== Number(stats[key] || 0))) {
+                        showSuperToast("Superadmin ma'lumotlari yangilandi", "Statistika va ro'yxatlar yangilanyapti.", 'info');
+                        scheduleSoftReload();
+                    }
+                }
+
+                previousStats = {...stats};
+            }
+
+            function setLiveState(connected) {
+                status.classList.toggle('connected', connected);
+                statusText.textContent = connected ? 'Jonli' : 'Qayta ulanmoqda';
+            }
+
+            function connectSuperAdminSocket() {
+                clearTimeout(reconnectTimer);
+                socket = new WebSocket(socketUrl);
+
+                socket.onopen = () => {
+                    setLiveState(true);
+                    clearInterval(pingInterval);
+                    pingInterval = setInterval(() => {
+                        if (socket.readyState === WebSocket.OPEN) {
+                            socket.send(JSON.stringify({type: 'refresh'}));
+                        }
+                    }, 15000);
+                };
+
+                socket.onmessage = (event) => {
+                    try {
+                        const payload = JSON.parse(event.data);
+                        applyBaseSuperAdminUpdate(payload);
+                        if (typeof window.applySuperAdminUpdate === 'function') {
+                            window.applySuperAdminUpdate(payload);
+                        }
+                    } catch (error) {
+                        console.error('Superadmin websocket parse error:', error);
+                    }
+                };
+
+                socket.onclose = () => {
+                    setLiveState(false);
+                    clearInterval(pingInterval);
+                    reconnectTimer = setTimeout(connectSuperAdminSocket, 3000);
+                };
+
+                socket.onerror = () => {
+                    if (socket) socket.close();
+                };
+            }
+
+            connectSuperAdminSocket();
+        })();
     </script>
     {% block extra_js %}{% endblock %}
 </body>

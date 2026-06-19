@@ -1,9 +1,9 @@
 {% extends 'pzbase.html' %}
-{% load static %}
+{% load static l10n %}
 
-{% block title %}Ishlab chiqarish{% endblock %}
-{% block page_title %}Ishlab chiqarish{% endblock %}
-{% block page_subtitle %}Tayyor mahsulot kiriting yoki ishlab chiqarish uchun material so'rang{% endblock %}
+{% block title %}Miqdor Qo'shish{% endblock %}
+{% block page_title %}Miqdor Qo'shish{% endblock %}
+{% block page_subtitle %}Ombor zaxirasiga yangi mahsulot miqdori kiriting{% endblock %}
 {% block nav_miqdor %}active{% endblock %}
 
 {% block extra_head %}
@@ -12,14 +12,8 @@
         background: var(--bg-card);
         border-radius: var(--radius);
         box-shadow: var(--shadow);
+        max-width: 580px;
         overflow: hidden;
-    }
-
-    .production-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-        gap: 22px;
-        align-items: start;
     }
 
     .form-card-head {
@@ -73,8 +67,17 @@
 
     .form-control:focus {
         border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
     }
+
+    .field-hint {
+        display: block;
+        margin-top: 7px;
+        font-size: 12px;
+        color: var(--text-muted);
+        line-height: 1.35;
+    }
+
 
     /* Image upload area */
     .upload-area {
@@ -153,17 +156,28 @@
 
     .btn-submit:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(245, 158, 11, 0.35);
+        box-shadow: 0 8px 24px rgba(16, 185, 129, 0.28);
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 22px;
+        align-items: start;
+    }
+
+    .form-card {
+        max-width: none;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="production-grid">
+<div class="form-grid">
 <div class="form-card">
     <div class="form-card-head">
-        <h2><i class="fa-solid fa-box"></i> Tayyor mahsulot</h2>
-        <p>Ishlab chiqarilgan tayyor mahsulotni omborga kiriting</p>
+        <h2><i class="fa-solid fa-plus-circle"></i> Miqdor Qo'shish</h2>
+        <p>Ishlab chiqarilgan mahsulot miqdorini zaxiraga kiriting</p>
     </div>
     <div class="form-card-body">
         <form method="POST" enctype="multipart/form-data">
@@ -206,22 +220,29 @@
 </div>
 
 <div class="form-card">
-    <div class="form-card-head">
-        <h2><i class="fa-solid fa-clipboard-list"></i> Material so'rash</h2>
-        <p>Yarim tayyor mahsulotlar omboridan ishlab chiqarish uchun so'rov yuboring</p>
+    <div class="form-card-head" style="background:linear-gradient(135deg,#0f766e,#115e59);">
+        <h2><i class="fa-solid fa-boxes-stacked"></i> Ombordan Material So'rash</h2>
+        <p>Qaysi mahsulotni ishlab chiqarish uchun kerakligini belgilang</p>
     </div>
     <div class="form-card-body">
-        <form method="POST">
+        <form method="POST" id="materialRequestForm">
             {% csrf_token %}
-            <input type="hidden" name="request_material" value="1">
+            <input type="hidden" name="action" value="request_material">
 
             <div class="form-group">
-                <label for="material">Material</label>
+                <label for="target_product">Qaysi mahsulot uchun</label>
+                <select name="target_product" id="target_product" class="form-control" required>
+                    {% for m in mahsulotlar %}
+                    <option value="{{ m.id }}">{{ m.nomi }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="material">Kerakli ombor mahsuloti</label>
                 <select name="material" id="material" class="form-control" required>
                     {% for m in materials %}
-                    <option value="{{ m.id }}">{{ m.nomi }} - qoldiq: {{ m.miqdori }} {{ m.turi.nomi }}</option>
-                    {% empty %}
-                    <option value="">Yarim tayyor mahsulot topilmadi</option>
+                    <option value="{{ m.id }}" data-stock="{{ m.miqdori|unlocalize }}" data-unit="{{ m.turi.nomi }}">{{ m.nomi }} (qoldiq: {{ m.miqdori }} {{ m.turi.nomi }})</option>
                     {% endfor %}
                 </select>
             </div>
@@ -229,14 +250,15 @@
             <div class="form-group">
                 <label for="material_qty">So'raladigan miqdor</label>
                 <input type="number" name="material_qty" id="material_qty" class="form-control" required min="0.01" step="0.01" placeholder="0.00">
+                <span class="field-hint" id="materialQtyHint"></span>
             </div>
 
             <div class="form-group">
-                <label for="material_note">Izoh (ixtiyoriy)</label>
-                <textarea name="material_note" id="material_note" class="form-control" rows="4" placeholder="Masalan: bugungi partiya uchun"></textarea>
+                <label for="material_note">Izoh</label>
+                <textarea name="material_note" id="material_note" class="form-control" rows="3" placeholder="Masalan: bugungi non partiyasi uchun"></textarea>
             </div>
 
-            <button type="submit" class="btn-submit">
+            <button type="submit" class="btn-submit" style="background:linear-gradient(135deg,#0f766e,#115e59);">
                 <i class="fa-solid fa-paper-plane"></i>
                 So'rov yuborish
             </button>
@@ -256,5 +278,47 @@
         preview.src = URL.createObjectURL(file);
         wrap.style.display = 'block';
     }
+
+    const materialSelect = document.getElementById('material');
+    const materialQtyInput = document.getElementById('material_qty');
+    const materialQtyHint = document.getElementById('materialQtyHint');
+    const materialRequestForm = document.getElementById('materialRequestForm');
+
+    function formatStockQty(value) {
+        if (!Number.isFinite(value)) return '0';
+        return new Intl.NumberFormat('uz-UZ', { maximumFractionDigits: 2 }).format(value);
+    }
+
+    function updateMaterialQtyLimit() {
+        if (!materialSelect || !materialQtyInput || !materialQtyHint) return;
+        const option = materialSelect.selectedOptions[0];
+        const stock = Number.parseFloat(option?.dataset.stock || '0');
+        const unit = option?.dataset.unit || '';
+        materialQtyInput.max = Number.isFinite(stock) ? stock : 0;
+        materialQtyHint.textContent = `Maksimal so'rov: ${formatStockQty(stock)} ${unit}`;
+    }
+
+    function clampMaterialQty() {
+        if (!materialQtyInput || !materialQtyHint) return true;
+        const maxQty = Number.parseFloat(materialQtyInput.max || '0');
+        const requestedQty = Number.parseFloat(materialQtyInput.value || '0');
+
+        if (requestedQty > maxQty) {
+            materialQtyInput.value = Number.isFinite(maxQty) ? maxQty : '';
+        }
+
+        materialQtyInput.setCustomValidity('');
+        updateMaterialQtyLimit();
+        return true;
+    }
+
+    materialSelect?.addEventListener('change', () => {
+        updateMaterialQtyLimit();
+        clampMaterialQty();
+    });
+    materialQtyInput?.addEventListener('input', clampMaterialQty);
+    materialQtyInput?.addEventListener('change', clampMaterialQty);
+    materialRequestForm?.addEventListener('submit', clampMaterialQty);
+    updateMaterialQtyLimit();
 </script>
 {% endblock %}

@@ -2,42 +2,46 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.contrib import messages
-from .models import Savdo, NasiyaTolov, User, AmalLog
+from .models import Savdo, NasiyaTolov, User, AmalLog, YetkazibBeruvchi
+from .services.credit_service import calculate_current_payoff_total
+from django.db import models
 from django.db.models import Sum
 import datetime as dt
-from .credit_utils import credit_payment_summary
 
 
-def send_ws_notification(company_subdomain, title, message, type='info'):
-    try:
-        from channels.layers import get_channel_layer
-        from asgiref.sync import async_to_sync
-        channel_layer = get_channel_layer()
-        if channel_layer:
-            async_to_sync(channel_layer.group_send)(
-                f"notifications_{company_subdomain}",
-                {
-                    "type": "send_notification",
-                    "title": title,
-                    "message": message,
-                    "notification_type": type,
-                }
-            )
-    except Exception as exc:
-        print(f"WS Notification Error: {exc}")
+@login_required(login_url='login')
+def nasiya_savdolar_view(request):
+    """Nasiya savdolar sahifasi"""
 
+    if request.user.type != 'ega':
+        return redirect('main')
 
-def build_nasiya_context(request, nasiya_savdolar, base_template, page_title):
+    # Get all credit sales for this company
+    nasiya_savdolar = Savdo.objects.filter(company=request.company, st='nasiya').order_by('-vaqt_sana')
+
     # Filter options
     status_filter = request.GET.get('status', 'all')  # all, paid, unpaid, overdue
+    seller_id = request.GET.get('seller')
+    sale_role = request.GET.get('role', 'all')
+    selected_seller = None
+
+    if sale_role in ['savdogar', 'yetkazib_beruvchi']:
+        nasiya_savdolar = nasiya_savdolar.filter(yetkazib_beruvchi__user__type=sale_role)
+
+    if seller_id:
+        selected_seller = get_object_or_404(YetkazibBeruvchi, id=seller_id, company=request.company)
+        nasiya_savdolar = nasiya_savdolar.filter(yetkazib_beruvchi=selected_seller)
 
     if status_filter == 'paid':
         nasiya_savdolar = nasiya_savdolar.filter(tulandi=True)
     elif status_filter == 'unpaid':
         nasiya_savdolar = nasiya_savdolar.filter(tulandi=False)
     elif status_filter == 'overdue':
+        today = timezone.localdate()
         chegara = timezone.now() - dt.timedelta(days=7)
-        nasiya_savdolar = nasiya_savdolar.filter(tulandi=False, vaqt_sana__lte=chegara)
+        nasiya_savdolar = nasiya_savdolar.filter(tulandi=False).filter(
+            models.Q(credit_due_date__lt=today) | models.Q(credit_due_date__isnull=True, vaqt_sana__lte=chegara)
+        )
 
     # Calculate statistics for each sale
     nasiya_list = []
@@ -49,25 +53,43 @@ def build_nasiya_context(request, nasiya_savdolar, base_template, page_title):
     chegara = timezone.now() - dt.timedelta(days=7)
 
     for savdo in nasiya_savdolar:
-        summary = credit_payment_summary(savdo)
-        payments = summary['payments']
-        total_payments = summary['total_payments']
-        remaining = summary['remaining']
-        is_fully_paid = summary['is_fully_paid']
+        payments = NasiyaTolov.objects.filter(savdo=savdo).order_by('-tolov_sanasi')
+        total_payments = sum([p.tolov_summasi for p in payments])
+
+        if savdo.tulandi:
+            # Order already closed — use stored summa so the display doesn't drift as time passes
+            payoff_total = float(savdo.summa or 0)
+            payoff_markup = float(savdo.credit_markup_percent or 0)
+            payoff_months = savdo.credit_term_months
+            remaining = 0
+            is_fully_paid = True
+        else:
+            # Open order — calculate dynamically so "pay today" shows the correct bracket
+            payoff_total, payoff_markup, payoff_months = calculate_current_payoff_total(savdo)
+            remaining = max(payoff_total - total_payments, 0)
+            is_fully_paid = remaining <= 0
 
         # Overdue check
         days_ago = (timezone.now() - savdo.vaqt_sana).days
-        is_overdue = (summary['status_type'] == 'late') or ((not is_fully_paid) and (savdo.vaqt_sana <= chegara))
+        is_overdue = (not is_fully_paid) and (
+            (savdo.credit_due_date and savdo.credit_due_date < timezone.localdate())
+            or (not savdo.credit_due_date and savdo.vaqt_sana <= chegara)
+        )
+        due_soon = (not is_fully_paid) and savdo.credit_due_date and savdo.credit_due_date <= timezone.localdate() + dt.timedelta(days=7)
 
         nasiya_list.append({
             'savdo': savdo,
+            'customer_name': savdo.haridor_dukon.nomi if savdo.haridor_dukon else savdo.oluvchining_ismi,
             'payments': payments,
             'total_payments': total_payments,
+            'payoff_total': payoff_total,
+            'payoff_markup': payoff_markup,
+            'payoff_months': payoff_months,
             'remaining': remaining,
             'is_fully_paid': is_fully_paid,
             'is_overdue': is_overdue,
+            'due_soon': due_soon,
             'days_ago': days_ago,
-            'credit_summary': summary,
         })
 
         if remaining > 0:
@@ -83,10 +105,19 @@ def build_nasiya_context(request, nasiya_savdolar, base_template, page_title):
     total_nasiya_amount = sum([s.summa or 0 for s in nasiya_savdolar])
     paid_count = nasiya_savdolar.filter(tulandi=True).count()
     unpaid_count = nasiya_savdolar.filter(tulandi=False).count()
+    due_soon_count = sum(1 for item in nasiya_list if item['due_soon'])
+
+    sellers_qs = YetkazibBeruvchi.objects.filter(user__company=request.company).select_related('user').order_by('user__tuliq_ismi')
+    if sale_role in ['savdogar', 'yetkazib_beruvchi']:
+        sellers_qs = sellers_qs.filter(user__type=sale_role)
 
     context = {
         'nasiya_list': nasiya_list,
         'status_filter': status_filter,
+        'seller_id': seller_id,
+        'sale_role': sale_role,
+        'selected_seller': selected_seller,
+        'sellers': sellers_qs,
 
         # Statistics
         'total_nasiya_count': total_nasiya_count,
@@ -99,50 +130,9 @@ def build_nasiya_context(request, nasiya_savdolar, base_template, page_title):
         # Overdue
         'overdue_count': overdue_count,
         'overdue_total_debt': overdue_total_debt,
-        'base_template': base_template,
-        'page_title': page_title,
+        'due_soon_count': due_soon_count,
     }
 
-
-@login_required(login_url='login')
-def nasiya_savdolar_view(request):
-    """Nasiya savdolar sahifasi"""
-
-    if request.user.type not in ['ega', 'savdogar']:
-        return redirect('main')
-
-    nasiya_savdolar = Savdo.objects.filter(company=request.company, st='nasiya').order_by('-vaqt_sana')
-    if request.user.type == 'savdogar':
-        nasiya_savdolar = nasiya_savdolar.filter(savdogar=request.user)
-
-    context = build_nasiya_context(
-        request,
-        nasiya_savdolar,
-        'ytbase.html' if request.user.type == 'savdogar' else 'egabase.html',
-        "Nasiya Savdolar" if request.user.type == 'ega' else "Mening nasiya savdolarim",
-    )
-    return render(request, 'nasiya_savdolar.html', context)
-
-
-@login_required(login_url='login')
-def savdogar_nasiya_admin_view(request):
-    """Admin uchun faqat savdogarlar qilgan nasiya savdolar."""
-    if request.user.type != 'ega':
-        return redirect('main')
-
-    nasiya_savdolar = Savdo.objects.filter(
-        company=request.company,
-        st='nasiya',
-        savdogar__isnull=False,
-    ).select_related('savdogar', 'haridor_dukon').order_by('-vaqt_sana')
-
-    savdogar_id = request.GET.get('savdogar')
-    if savdogar_id:
-        nasiya_savdolar = nasiya_savdolar.filter(savdogar_id=savdogar_id)
-
-    context = build_nasiya_context(request, nasiya_savdolar, 'egabase.html', "Savdogar nasiya savdolari")
-    context['savdogarlar'] = User.objects.filter(company=request.company, type='savdogar').order_by('tuliq_ismi')
-    context['savdogar_filter'] = savdogar_id or ''
     return render(request, 'nasiya_savdolar.html', context)
 
 
@@ -150,7 +140,7 @@ def savdogar_nasiya_admin_view(request):
 def add_nasiya_payment(request, savdo_id):
     """Add payment for credit sale"""
     
-    if request.user.type not in ['ega', 'savdogar']:
+    if request.user.type != 'ega':
         return redirect('main')
     
     if request.method == 'POST':
@@ -158,9 +148,6 @@ def add_nasiya_payment(request, savdo_id):
             from django.db import transaction
             with transaction.atomic():
                 savdo = Savdo.objects.select_for_update().get(id=savdo_id, company=request.company)
-                if request.user.type == 'savdogar' and savdo.savdogar_id != request.user.id:
-                    messages.error(request, "Ushbu nasiya savdosi sizga tegishli emas.")
-                    return redirect('nasiya_savdolar')
                 payment_amount = float(request.POST.get('payment_amount', 0))
                 note = request.POST.get('note', '')
                 
@@ -169,11 +156,13 @@ def add_nasiya_payment(request, savdo_id):
                     return redirect('nasiya_savdolar')
                 
                 # Get current payments
-                summary = credit_payment_summary(savdo)
-                remaining = summary['remaining']
-                
-                if payment_amount > remaining:
-                    messages.error(request, f"To'lov summasi qoldiqdan ({remaining}) katta bo'lishi mumkin emas!")
+                payments = NasiyaTolov.objects.filter(savdo=savdo)
+                total_payments = sum([p.tolov_summasi for p in payments])
+                payoff_total, payoff_markup, payoff_months = calculate_current_payoff_total(savdo)
+                remaining = max(payoff_total - total_payments, 0)
+
+                if payment_amount > remaining + 0.01:
+                    messages.error(request, f"To'lov summasi qoldiqdan ({remaining:,.0f}) katta bo'lishi mumkin emas!")
                     return redirect('nasiya_savdolar')
                 
                 # Create payment
@@ -184,20 +173,19 @@ def add_nasiya_payment(request, savdo_id):
                     qabul_qilgan_user=request.user,
                     company=request.company
                 )
-                
-                # Update sale status if fully paid
-                new_total = summary['total_payments'] + payment_amount
-                if new_total >= (savdo.summa or 0) + summary['late_penalty']:
+
+                # Recalculate after saving to get accurate total
+                new_total = NasiyaTolov.objects.filter(savdo=savdo).aggregate(
+                    total=Sum('tolov_summasi')
+                )['total'] or 0
+                if new_total >= payoff_total:
+                    savdo.summa = payoff_total
+                    savdo.credit_markup_percent = payoff_markup
+                    savdo.credit_term_months = payoff_months
                     savdo.tulandi = True
                     savdo.save()
                 
                 messages.success(request, f"{payment_amount} so'm to'lov qabul qilindi!")
-                send_ws_notification(
-                    request.company.subdomain,
-                    "Nasiya to'lovi qabul qilindi",
-                    f"{savdo.haridor_dukon.nomi} bo'yicha {payment_amount:,.0f} so'm to'lov qabul qilindi.",
-                    'success'
-                )
             
         except Exception as e:
             messages.error(request, f"Xato: {str(e)}")

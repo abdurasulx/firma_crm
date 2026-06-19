@@ -33,7 +33,7 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background: radial-gradient(circle at 20% 50%, rgba(79, 70, 229, 0.2) 0%, transparent 70%);
+        background: radial-gradient(circle at 20% 50%, rgba(16, 185, 129, 0.18) 0%, transparent 70%);
         pointer-events: none;
     }
 
@@ -244,7 +244,7 @@
     }
 
     .badge-cash { background: rgba(16, 185, 129, 0.1); color: var(--success); }
-    .badge-card { background: rgba(79, 70, 229, 0.1); color: var(--primary); }
+    .badge-card { background: rgba(16, 185, 129, 0.12); color: var(--primary); }
     .badge-debt { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
     
     .badge-paid { background: #dcfce7; color: #15803d; }
@@ -354,14 +354,14 @@
             <span class="stat-label">Bugun savdo</span>
         </div>
         <div class="stat-card">
-            <div class="stat-icon" style="background: #eff6ff; color: #3b82f6;">
+            <div class="stat-icon" style="background: #ecfdf5; color: var(--primary);">
                 <i class="fas fa-calendar-check"></i>
             </div>
             <span class="stat-val">{{ oy_savdo|floatformat:0 }}</span>
             <span class="stat-label">Bu oy savdo</span>
         </div>
         <div class="stat-card">
-            <div class="stat-icon" style="background: #faf5ff; color: #a855f7;">
+            <div class="stat-icon" style="background: #ecfdf5; color: var(--primary-dark);">
                 <i class="fas fa-receipt"></i>
             </div>
             <span class="stat-val">{{ jami_savdo_soni }}</span>

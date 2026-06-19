@@ -1,4 +1,7 @@
 import csv
+import io
+import base64
+import qrcode
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect
@@ -73,18 +76,24 @@ def savdo_chek(request, savdo_id):
     """Savdo uchun chop etiladigan chek sahifasi."""
     savdo = get_object_or_404(Savdo, id=savdo_id, company=request.company)
 
-    # Only owner, the delivery person, or the seller who made the sale can view.
+    # Only ega and the delivery person who made the sale can view
     if request.user.type not in ('ega',):
-        if request.user.type == 'savdogar':
-            if savdo.savdogar_id != request.user.id:
-                return redirect('main')
-            return render(request, 'savdo_chek.html', {'savdo': savdo})
         try:
-            yb = YetkazibBeruvchi.objects.get(user=request.user)
+            yb = YetkazibBeruvchi.objects.get(user=request.user, company=request.company)
             if savdo.yetkazib_beruvchi != yb:
                 return redirect('main')
         except YetkazibBeruvchi.DoesNotExist:
             return redirect('main')
 
-    context = {'savdo': savdo}
+    # QR kod generatsiya
+    chek_url = request.build_absolute_uri()
+    qr = qrcode.QRCode(version=1, box_size=6, border=2)
+    qr.add_data(chek_url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    buf = io.BytesIO()
+    img.save(buf, format='PNG')
+    qr_b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+
+    context = {'savdo': savdo, 'qr_b64': qr_b64}
     return render(request, 'savdo_chek.html', context)

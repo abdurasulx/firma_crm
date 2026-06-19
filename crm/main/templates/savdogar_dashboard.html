@@ -1,77 +1,381 @@
-{% extends 'ytbase.html' %}
+{% extends 'sgbase.html' %}
 
-{% block title %}Savdogar Dashboard{% endblock %}
+{% block title %}Savdogar dashboard - StockFirm{% endblock %}
 
 {% block content %}
-<div style="max-width:1100px;margin:0 auto;">
-    <div style="background:linear-gradient(135deg,#052e2b,#059669); color:white; border-radius:28px; padding:34px; margin-bottom:24px; box-shadow:0 22px 50px rgba(5,150,105,.22);">
-        <div style="display:flex; justify-content:space-between; gap:20px; align-items:center; flex-wrap:wrap;">
-            <div>
-                <div style="font-size:13px; font-weight:900; letter-spacing:.12em; text-transform:uppercase; opacity:.75;">Savdogar paneli</div>
-                <h1 style="margin:8px 0 8px; font-size:34px; line-height:1.1;">{{ request.user.tuliq_ismi|default:request.user.username }}</h1>
-                <p style="margin:0; opacity:.82; font-size:16px;">Tayyor mahsulot omboridan savdo qiling, nasiya va hisobotlarni alohida kuzating.</p>
-            </div>
-            <a href="{% url 'savdogar_sotish' %}" style="background:white;color:#047857;text-decoration:none;padding:15px 20px;border-radius:16px;font-weight:900;box-shadow:0 12px 30px rgba(0,0,0,.12);">
-                <i class="fa-solid fa-cart-plus"></i> Yangi savdo
-            </a>
-        </div>
-    </div>
+<style>
+    .page-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+    }
+    .page-head h1 { font-size: 1.6rem; color: var(--slate-900); }
+    .page-head p { color: var(--slate-500); font-weight: 600; }
+    .primary-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: .55rem;
+        border: 0;
+        border-radius: .8rem;
+        background: var(--primary);
+        color: #fff;
+        padding: .85rem 1rem;
+        text-decoration: none;
+        font-weight: 800;
+        box-shadow: var(--shadow);
+    }
+    .secondary-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: .45rem;
+        border: 1px solid var(--slate-200);
+        border-radius: .7rem;
+        background: #fff;
+        color: var(--slate-700);
+        padding: .65rem .8rem;
+        text-decoration: none;
+        font-weight: 800;
+        font-size: .88rem;
+    }
+    .action-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        gap: .75rem;
+        margin-bottom: 1.25rem;
+    }
+    .action-card {
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+        padding: .95rem 1rem;
+        border: 1px solid var(--slate-200);
+        border-radius: .9rem;
+        background: #fff;
+        color: var(--slate-700);
+        text-decoration: none;
+        font-weight: 800;
+        box-shadow: var(--shadow-sm);
+    }
+    .action-card i {
+        width: 36px;
+        height: 36px;
+        border-radius: .75rem;
+        display: grid;
+        place-items: center;
+        background: #ecfdf5;
+        color: var(--primary);
+    }
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+    }
+    .stat-card, .section {
+        background: #fff;
+        border: 1px solid var(--slate-200);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-sm);
+    }
+    .stat-card {
+        display: block;
+        padding: 1.25rem;
+        text-decoration: none;
+        transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+    }
+    .stat-card:hover {
+        border-color: #a7f3d0;
+        box-shadow: var(--shadow);
+        transform: translateY(-1px);
+    }
+    .stat-card.danger .stat-value { color: var(--danger); }
+    .stat-card.warning .stat-value { color: var(--warning); }
+    .stat-label { color: var(--slate-500); font-size: .85rem; font-weight: 800; text-transform: uppercase; }
+    .stat-value { color: var(--slate-900); font-size: 1.8rem; font-weight: 800; margin-top: .35rem; }
+    .content-grid {
+        display: grid;
+        grid-template-columns: 1.15fr .85fr;
+        gap: 1rem;
+    }
+    .chart-grid {
+        display: grid;
+        grid-template-columns: 1.2fr .8fr;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+    }
+    .section { overflow: hidden; }
+    .section-head {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--slate-200);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .section-head h2 { font-size: 1rem; color: var(--slate-900); }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: .85rem 1.25rem; text-align: left; border-bottom: 1px solid var(--slate-100); font-size: .9rem; }
+    th { color: var(--slate-500); font-size: .75rem; text-transform: uppercase; }
+    td { color: var(--slate-700); font-weight: 600; }
+    .products {
+        padding: 1rem;
+        display: grid;
+        gap: .75rem;
+        max-height: 520px;
+        overflow: auto;
+    }
+    .product-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        border: 1px solid var(--slate-200);
+        border-radius: .85rem;
+        padding: .85rem;
+        background: var(--slate-50);
+    }
+    .product-row strong { color: var(--slate-900); }
+    .muted { color: var(--slate-500); font-weight: 600; }
+    .empty { padding: 2rem; text-align: center; color: var(--slate-500); font-weight: 700; }
+    .notice {
+        margin-bottom: 1rem;
+        padding: 1rem 1.15rem;
+        border-radius: .9rem;
+        border: 1px solid #fde68a;
+        background: #fffbeb;
+        color: #92400e;
+        font-weight: 800;
+    }
+    .notice.danger {
+        border-color: #fecaca;
+        background: #fff5f5;
+        color: #991b1b;
+    }
+    .notice-list {
+        display: grid;
+        gap: .45rem;
+        margin-top: .65rem;
+        font-weight: 700;
+    }
+    .notice-list a { color: inherit; text-decoration: none; }
+    .notice-action { display: inline-flex; margin-top: .75rem; color: inherit; font-weight: 900; }
+    @media (max-width: 900px) {
+        .content-grid, .chart-grid { grid-template-columns: 1fr; }
+        .page-head { align-items: stretch; flex-direction: column; }
+        .primary-btn { justify-content: center; }
+    }
+</style>
 
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:24px;">
-        <div style="background:white;border-radius:20px;padding:22px;border:1px solid #e2e8f0;box-shadow:0 12px 30px rgba(15,23,42,.06);">
-            <div style="color:#64748b;font-weight:800;">Bugungi savdolar</div>
-            <div style="font-size:30px;font-weight:900;color:#0f172a;margin-top:8px;">{{ today_sales_count }}</div>
-        </div>
-        <div style="background:white;border-radius:20px;padding:22px;border:1px solid #e2e8f0;box-shadow:0 12px 30px rgba(15,23,42,.06);">
-            <div style="color:#64748b;font-weight:800;">Bugungi summa</div>
-            <div style="font-size:30px;font-weight:900;color:#059669;margin-top:8px;">{{ today_sales_amount|floatformat:0 }}</div>
-        </div>
-        <div style="background:white;border-radius:20px;padding:22px;border:1px solid #e2e8f0;box-shadow:0 12px 30px rgba(15,23,42,.06);">
-            <div style="color:#64748b;font-weight:800;">Oylik summa</div>
-            <div style="font-size:30px;font-weight:900;color:#2563eb;margin-top:8px;">{{ month_sales_amount|floatformat:0 }}</div>
-        </div>
-        <div style="background:white;border-radius:20px;padding:22px;border:1px solid #e2e8f0;box-shadow:0 12px 30px rgba(15,23,42,.06);">
-            <div style="color:#64748b;font-weight:800;">Ochiq nasiya</div>
-            <div style="font-size:30px;font-weight:900;color:#dc2626;margin-top:8px;">{{ nasiya_count }}</div>
-        </div>
+<div class="page-head">
+    <div>
+        <h1>Savdogar dashboard</h1>
+        <p>{{ seller.tuliq_ismi }} uchun joyida sotuv paneli</p>
     </div>
-
-    <div style="display:grid;grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr);gap:22px;">
-        <div style="background:white;border-radius:22px;border:1px solid #e2e8f0;box-shadow:0 12px 30px rgba(15,23,42,.06);overflow:hidden;">
-            <div style="padding:20px 22px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;">
-                <h3 style="margin:0;color:#0f172a;">So'nggi savdolar</h3>
-                <a href="{% url 'savdogar_savdolar' %}" style="color:#059669;font-weight:900;text-decoration:none;">Barchasi</a>
-            </div>
-            <div style="padding:8px 22px 18px;">
-                {% for s in recent_sales %}
-                <div style="display:flex;justify-content:space-between;gap:14px;padding:14px 0;border-bottom:1px solid #edf2f7;">
-                    <div>
-                        <div style="font-weight:900;color:#0f172a;">{{ s.haridor_dukon.nomi }}</div>
-                        <div style="color:#64748b;font-size:13px;">{{ s.get_st_display }} - {{ s.vaqt_sana|date:"d.m.Y H:i" }}</div>
-                    </div>
-                    <div style="font-weight:900;color:#059669;">{{ s.summa|floatformat:0 }} so'm</div>
-                </div>
-                {% empty %}
-                <div style="padding:42px 0;text-align:center;color:#64748b;">Hali savdo yo'q.</div>
-                {% endfor %}
-            </div>
-        </div>
-
-        <div style="background:white;border-radius:22px;border:1px solid #e2e8f0;box-shadow:0 12px 30px rgba(15,23,42,.06);overflow:hidden;">
-            <div style="padding:20px 22px;border-bottom:1px solid #e2e8f0;">
-                <h3 style="margin:0;color:#0f172a;">Tayyor mahsulotlar</h3>
-            </div>
-            <div style="padding:8px 22px 18px;">
-                {% for p in products %}
-                <div style="display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #edf2f7;">
-                    <span style="font-weight:800;color:#0f172a;">{{ p.nomi }}</span>
-                    <span style="font-weight:900;color:#2563eb;">{{ p.miqdori }} {{ p.turi.nomi }}</span>
-                </div>
-                {% empty %}
-                <div style="padding:24px 0;color:#64748b;">Tayyor mahsulot yo'q.</div>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
+    <a href="{% url 'sotish' %}" class="primary-btn"><i class="fas fa-cart-plus"></i> Yangi sotuv</a>
 </div>
+
+<div class="action-grid">
+    <a href="{% url 'sotish' %}" class="action-card"><i class="fas fa-cart-plus"></i><span>Yangi sotuv</span></a>
+    <a href="{% url 'savdogar_my_sales' %}" class="action-card"><i class="fas fa-receipt"></i><span>Mening savdolarim</span></a>
+    <a href="{% url 'savdogar_my_credit' %}" class="action-card"><i class="fas fa-calendar-check"></i><span>Nasiya nazorati</span></a>
+    <a href="{% url 'savdogar_my_products' %}" class="action-card"><i class="fas fa-boxes-stacked"></i><span>Sotuv mahsulotlari</span></a>
+    <a href="{% url 'savdogar_analytics' %}" class="action-card"><i class="fas fa-chart-line"></i><span>Analitika</span></a>
+</div>
+
+{% if not savdogar_contract_ready %}
+<div class="notice">Savdogar shartnomasi hali shakllantirilmagan. Ega shartnomani kiritmaguncha sotuv ochilmaydi.</div>
+{% elif credit_overdue_count > 0 %}
+<div class="notice danger">
+    {{ credit_overdue_count }} ta nasiya to'lovi muddati o'tgan.
+    <div class="notice-list">
+        {% for row in credit_overdue_rows %}
+        <a href="{% url 'savdogar_my_credit' %}">
+            {% firstof row.sale.haridor_dukon.nomi row.sale.oluvchining_ismi %} - kechikkan: {{ row.overdue_amount|floatformat:0 }} so'm
+        </a>
+        {% endfor %}
+    </div>
+    <a href="{% url 'savdogar_my_credit' %}" class="notice-action">Nasiya sahifasiga o'tish</a>
+</div>
+{% elif credit_due_soon_count > 0 %}
+<div class="notice">
+    {{ credit_due_soon_count }} ta nasiya to'lovi 7 kun ichida keladi.
+    <div class="notice-list">
+        {% for row in credit_due_soon_rows %}
+        <a href="{% url 'savdogar_my_credit' %}">
+            {% firstof row.sale.haridor_dukon.nomi row.sale.oluvchining_ismi %} - navbatdagi to'lov{% if row.days_to_due == 0 %} bugun{% else %} {{ row.days_to_due }} kunda{% endif %}
+        </a>
+        {% endfor %}
+    </div>
+    <a href="{% url 'savdogar_my_credit' %}" class="notice-action">Nasiya sahifasiga o'tish</a>
+</div>
+{% endif %}
+
+<div class="stats-grid">
+    <a href="{% url 'savdogar_my_sales' %}" class="stat-card">
+        <div class="stat-label">Bugungi savdolar</div>
+        <div class="stat-value">{{ today_sales_count }}</div>
+    </a>
+    <a href="{% url 'savdogar_my_sales' %}" class="stat-card">
+        <div class="stat-label">Bugungi tushum</div>
+        <div class="stat-value">{{ today_sales_sum|floatformat:0 }} so'm</div>
+    </a>
+    <a href="{% url 'savdogar_my_credit' %}" class="stat-card">
+        <div class="stat-label">Ochiq nasiya</div>
+        <div class="stat-value">{{ nasiya_count }}</div>
+    </a>
+    <a href="{% url 'savdogar_my_credit' %}" class="stat-card">
+        <div class="stat-label">Nasiya qoldiq</div>
+        <div class="stat-value">{{ nasiya_debt|floatformat:0 }} so'm</div>
+    </a>
+    <a href="{% url 'savdogar_my_credit' %}" class="stat-card warning">
+        <div class="stat-label">Muddati yaqin nasiya</div>
+        <div class="stat-value">{{ credit_due_soon_count }}</div>
+    </a>
+    <a href="{% url 'savdogar_my_credit' %}" class="stat-card danger">
+        <div class="stat-label">Muddati o'tgan nasiya</div>
+        <div class="stat-value">{{ credit_overdue_count }}</div>
+    </a>
+</div>
+
+<div class="chart-grid">
+    <section class="section">
+        <div class="section-head">
+            <h2>7 kunlik savdo</h2>
+            <a href="{% url 'savdogar_analytics' %}" class="secondary-btn"><i class="fas fa-chart-line"></i> Batafsil</a>
+        </div>
+        <div style="padding:1rem;"><canvas id="dailyChart" height="190"></canvas></div>
+    </section>
+    <section class="section">
+        <div class="section-head">
+            <h2>To'lov turlari</h2>
+            <a href="{% url 'savdogar_analytics' %}" class="secondary-btn"><i class="fas fa-chart-line"></i> Batafsil</a>
+        </div>
+        <div style="padding:1rem;"><canvas id="paymentChart" height="190"></canvas></div>
+    </section>
+</div>
+
+<div class="content-grid">
+    <section class="section">
+        <div class="section-head">
+            <h2>Bugungi sotuvlar</h2>
+            <a href="{% url 'savdogar_my_sales' %}" class="secondary-btn"><i class="fas fa-arrow-right"></i> Barchasi</a>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Vaqt</th>
+                        <th>Mijoz</th>
+                        <th>To'lov</th>
+                        <th>Summa</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sale in today_sales %}
+                    <tr>
+                        <td>{{ sale.vaqt_sana|date:"H:i" }}</td>
+                        <td>{% firstof sale.haridor_dukon.nomi sale.oluvchining_ismi %}</td>
+                        <td>{{ sale.get_st_display }}</td>
+                        <td>{{ sale.summa|floatformat:0 }} so'm</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="empty">Bugun hali savdo yo'q</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="section-head">
+            <h2>Sotuv mahsulotlari</h2>
+            <a href="{% url 'savdogar_my_products' %}" class="secondary-btn"><i class="fas fa-boxes-stacked"></i> {{ lnmahs }} ta</a>
+        </div>
+        <div class="products">
+            {% for product in zaxira_mahsulotlar %}
+            <div class="product-row">
+                <div>
+                    <strong>{{ product.nomi }}</strong>
+                    <div class="muted">{{ product.miqdori }} {{ product.turi }}</div>
+                </div>
+                <strong>{{ product.narxi|floatformat:0 }} so'm</strong>
+            </div>
+            {% empty %}
+            <div class="empty">Omborda mahsulot yo'q</div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+<script>
+    const SG_ANALYTICS = {{ analytics_json|safe }};
+    function drawBarChart(canvasId, labels, values, color) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
+        const w = rect.width, h = rect.height, pad = 34;
+        const max = Math.max(...values, 1);
+        ctx.clearRect(0, 0, w, h);
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.beginPath();
+        ctx.moveTo(pad, 12);
+        ctx.lineTo(pad, h - pad);
+        ctx.lineTo(w - 10, h - pad);
+        ctx.stroke();
+        const gap = 12;
+        const barW = (w - pad - 20 - gap * (values.length - 1)) / Math.max(values.length, 1);
+        values.forEach((value, idx) => {
+            const barH = ((h - pad - 22) * value) / max;
+            const x = pad + idx * (barW + gap);
+            const y = h - pad - barH;
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, Math.max(barW, 5), barH);
+            ctx.fillStyle = '#64748b';
+            ctx.font = '11px Inter';
+            ctx.fillText(labels[idx], x, h - 10);
+        });
+    }
+    function drawDonutChart(canvasId, labels, values) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
+        const colors = ['#10b981', '#059669', '#d97706'];
+        const total = values.reduce((a, b) => a + b, 0) || 1;
+        const cx = rect.width / 2, cy = 86, r = 64;
+        let start = -Math.PI / 2;
+        values.forEach((value, idx) => {
+            const end = start + (Math.PI * 2 * value / total);
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.arc(cx, cy, r, start, end);
+            ctx.closePath();
+            ctx.fillStyle = colors[idx % colors.length];
+            ctx.fill();
+            start = end;
+        });
+        ctx.beginPath();
+        ctx.arc(cx, cy, 34, 0, Math.PI * 2);
+        ctx.fillStyle = '#fff';
+        ctx.fill();
+        labels.forEach((label, idx) => {
+            ctx.fillStyle = colors[idx % colors.length];
+            ctx.fillRect(18, 160 + idx * 18, 10, 10);
+            ctx.fillStyle = '#334155';
+            ctx.font = '12px Inter';
+            ctx.fillText(label + ': ' + Math.round(values[idx]).toLocaleString('uz-UZ'), 34, 170 + idx * 18);
+        });
+    }
+    drawBarChart('dailyChart', SG_ANALYTICS.day_labels, SG_ANALYTICS.daily_totals, '#10b981');
+    drawDonutChart('paymentChart', SG_ANALYTICS.payment_labels, SG_ANALYTICS.payment_totals);
+</script>
 {% endblock %}

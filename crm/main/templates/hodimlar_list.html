@@ -364,9 +364,9 @@
     }
 
     .action-btn.edit:hover {
-        background: #eff6ff;
-        color: #3b82f6;
-        border-color: #bfdbfe;
+        background: #ecfdf5;
+        color: #059669;
+        border-color: #a7f3d0;
     }
 
     .action-btn.delete:hover {
@@ -525,7 +525,6 @@
             <select name="role" class="filter-select" onchange="this.form.submit()">
                 <option value="">Barcha lavozimlar</option>
                 <option value="pazanda" {% if role_filter == 'pazanda' %}selected{% endif %}>Ishlab chiqaruvchi</option>
-                <option value="omborchi" {% if role_filter == 'omborchi' %}selected{% endif %}>Omborchi</option>
                 <option value="savdogar" {% if role_filter == 'savdogar' %}selected{% endif %}>Savdogar</option>
                 <option value="yetkazib_beruvchi" {% if role_filter == 'yetkazib_beruvchi' %}selected{% endif %}>Yetkazib
                     beruvchi</option>
@@ -584,10 +583,10 @@
                     </td>
                     <td>
                         <div class="action-btns" style="justify-content: flex-end;">
-                            {% if x.type  ==  'yetkazib_beruvchi' %}
+                            {% if x.type  ==  'yetkazib_beruvchi' or x.type == 'savdogar' %}
                             <a href="{% url 'yetkazuvchi_hisobot' x.username %}" class="action-btn"
                                 title="Hisobot ko'rish"
-                                style="background:#dbeafe; color:#1d4ed8; border:1px solid #bfdbfe;">
+                                style="background:#ecfdf5; color:#047857; border:1px solid #a7f3d0;">
                                 <i class="fa-solid fa-chart-line"></i>
                             </a>
                             {% endif %}
@@ -597,12 +596,6 @@
                                 style="background:#fef3c7; color:#d97706; border:1px solid #fde68a;">
                                 <i class="fa-solid fa-chart-line"></i>
                             </a>
-                            {% endif %}
-                            {% if x.type  ==  'savdogar' %}
-                            <span class="action-btn" title="Savdogar hisobotni o'z sahifasidan ko'radi"
-                                style="background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;">
-                                <i class="fa-solid fa-store"></i>
-                            </span>
                             {% endif %}
                             <a href="{% url 'edituser' x.username %}" class="action-btn edit" title="Tahrirlash">
                                 <i class="fa-solid fa-pen"></i>
@@ -706,7 +699,7 @@
 
         // ESC bilan yopish
         document.addEventListener('keydown', (e) => {
-            if (e.key  == = 'Escape' && topSearchContainer.classList.contains('active')) {
+            if (e.key === 'Escape' && topSearchContainer.classList.contains('active')) {
                 closeTopSearch();
             }
         });
@@ -715,7 +708,7 @@
         document.addEventListener('click', (e) => {
             if (!topSearchContainer.classList.contains('active')) return;
             const wrapper = topSearchContainer.querySelector('.top-search-wrapper');
-            if (wrapper && !wrapper.contains(e.target) && e.target ! ==  bottomSearchInput) {
+            if (wrapper && !wrapper.contains(e.target) && e.target !== bottomSearchInput) {
                 searchResultsDropdown.classList.remove('active');
             }
         });
@@ -764,7 +757,7 @@
                 renderResults(data.results || [], query);
 
             } catch (err) {
-                if (err.name  == = 'AbortError') return; // normal holat
+                if (err.name === 'AbortError') return; // normal holat
                 searchResultsDropdown.classList.add('active');
                 searchResultsDropdown.innerHTML =
                     `<div style="padding: 18px; color: #ef4444; font-size: 13px;">

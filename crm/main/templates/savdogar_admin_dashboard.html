@@ -1,0 +1,85 @@
+{% extends 'egabase.html' %}
+
+{% block title %}Savdogar boshqaruvi{% endblock %}
+
+{% block content %}
+<style>
+    .sg-page { display: grid; gap: 22px; }
+    .sg-head { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+    .sg-head h2 { margin: 0; color: #0f172a; font-size: 28px; font-weight: 900; }
+    .sg-head p { margin: 8px 0 0; color: #64748b; font-weight: 600; }
+    .sg-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .sg-btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 16px; border-radius: 12px; text-decoration: none; font-weight: 800; border: 1px solid #e2e8f0; background: #fff; color: #0f172a; }
+    .sg-btn.primary { background: #10b981; border-color: #10b981; color: #fff; }
+    .sg-alert { padding: 16px 18px; border-radius: 14px; border: 1px solid #fde68a; background: #fffbeb; color: #92400e; font-weight: 700; }
+    .sg-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; }
+    .sg-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 20px; box-shadow: 0 10px 30px rgba(15,23,42,.04); }
+    .sg-label { color: #64748b; font-size: 12px; font-weight: 900; text-transform: uppercase; }
+    .sg-value { color: #0f172a; font-size: 30px; font-weight: 900; margin-top: 8px; }
+    .sg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .sg-list { display: grid; gap: 10px; margin-top: 14px; }
+    .sg-row { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid #f1f5f9; color: #334155; font-weight: 700; }
+    .sg-muted { color: #64748b; font-weight: 600; }
+    @media (max-width: 900px) { .sg-grid { grid-template-columns: 1fr; } }
+</style>
+
+<div class="sg-page">
+    <div class="sg-head">
+        <div>
+            <h2>Savdogar boshqaruvi</h2>
+            <p>Shartnoma, savdogarlar, savdolar va hujjatlar nazorati.</p>
+        </div>
+        <div class="sg-actions">
+            <a class="sg-btn primary" href="{% url 'savdogar_contract' %}"><i class="fa-solid fa-file-signature"></i> Shartnoma</a>
+            <a class="sg-btn" href="{% url 'savdogar_sales' %}"><i class="fa-solid fa-receipt"></i> Savdolar</a>
+            <a class="sg-btn" href="{% url 'savdogar_admin_credit' %}"><i class="fa-solid fa-hand-holding-dollar"></i> Nasiya</a>
+            <a class="sg-btn" href="{% url 'savdogar_admin_products' %}"><i class="fa-solid fa-boxes-stacked"></i> Mahsulotlar</a>
+            <a class="sg-btn" href="{% url 'savdogar_admin_analytics' %}"><i class="fa-solid fa-chart-line"></i> Analitika</a>
+            <a class="sg-btn" href="{% url 'crtuser' %}"><i class="fa-solid fa-user-plus"></i> Savdogar qo'shish</a>
+        </div>
+    </div>
+
+    {% if not has_savdogar_sales %}
+    <div class="sg-alert">Savdogar moduli tarifda yoqilmagan. Tariflar sahifasida $10 Savdogar savdo modulini yoqing.</div>
+    {% elif not contract_ready %}
+    <div class="sg-alert">Savdogar shartnomasi hali shakllantirilmagan. Savdogar savdo qila olishi uchun shartnomani saqlang.</div>
+    {% endif %}
+
+    <div class="sg-stats">
+        <div class="sg-card"><div class="sg-label">Savdogarlar</div><div class="sg-value">{{ sellers|length }}</div></div>
+        <div class="sg-card"><div class="sg-label">Savdogar savdolari</div><div class="sg-value">{{ sales_count }}</div></div>
+        <div class="sg-card"><div class="sg-label">Savdo summasi</div><div class="sg-value">{{ sales_total|floatformat:0 }}</div></div>
+        <div class="sg-card"><div class="sg-label">Ochiq nasiya</div><div class="sg-value">{{ unpaid_nasiya_count }}</div></div>
+        <div class="sg-card"><div class="sg-label">Hujjati to'liq emas</div><div class="sg-value">{{ missing_docs_count }}</div></div>
+    </div>
+
+    <div class="sg-grid">
+        <div class="sg-card">
+            <div class="sg-label">Savdogarlar</div>
+            <div class="sg-list">
+                {% for seller in sellers %}
+                <div class="sg-row">
+                    <span>{{ seller.tuliq_ismi|default:seller.username }}</span>
+                    <a class="sg-muted" href="{% url 'profile' seller.username %}">Profil</a>
+                </div>
+                {% empty %}
+                <div class="sg-muted" style="margin-top:14px;">Hali savdogar xodim yo'q.</div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="sg-card">
+            <div class="sg-label">So'nggi savdolar</div>
+            <div class="sg-list">
+                {% for sale in recent_sales %}
+                <div class="sg-row">
+                    <span>{% firstof sale.haridor_dukon.nomi sale.oluvchining_ismi %} <span class="sg-muted">({{ sale.get_st_display }})</span></span>
+                    <span>{{ sale.summa|floatformat:0 }} so'm</span>
+                </div>
+                {% empty %}
+                <div class="sg-muted" style="margin-top:14px;">Hali savdo yo'q.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

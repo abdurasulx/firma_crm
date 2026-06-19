@@ -10,7 +10,7 @@
 <style>
     /* ─── HERO CARD ─── */
     .hero-card {
-        background: linear-gradient(135deg, #f59e0b 0%, #d97706 60%, #b45309 100%);
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
         border-radius: var(--radius);
         padding: 32px 36px;
         color: #fff;
@@ -18,13 +18,13 @@
         justify-content: space-between;
         align-items: center;
         margin-bottom: 28px;
-        box-shadow: 0 12px 40px rgba(245, 158, 11, 0.35);
+        box-shadow: 0 12px 40px rgba(16, 185, 129, 0.28);
         overflow: hidden;
         position: relative;
     }
 
     .hero-card::after {
-        content: '';
+        content: '🍳';
         position: absolute;
         right: 32px;
         top: 50%;
@@ -67,7 +67,7 @@
 
     .btn-hero.primary {
         background: #fff;
-        color: #d97706;
+        color: var(--primary-dark);
     }
 
     .btn-hero.secondary {
@@ -115,7 +115,7 @@
     }
 
     .stat-icon.amber {
-        background: #fef3c7;
+        background: var(--primary-light);
     }
 
     .stat-icon.green {
@@ -123,7 +123,7 @@
     }
 
     .stat-icon.blue {
-        background: #dbeafe;
+        background: #ecfdf5;
     }
 
     .stat-text .value {
@@ -239,7 +239,7 @@
     }
 
     .act-dot.send {
-        background: #dbeafe;
+        background: #ecfdf5;
     }
 
     .act-info .act-title {
@@ -299,15 +299,15 @@
     }
 
     .qa-btn.amber {
-        border-color: #f59e0b;
-        color: #d97706;
-        background: #fffbeb;
+        border-color: var(--primary);
+        color: var(--primary-dark);
+        background: var(--primary-light);
     }
 
     .qa-btn.blue {
-        border-color: #3b82f6;
-        color: #1d4ed8;
-        background: #eff6ff;
+        border-color: var(--primary);
+        color: var(--primary-dark);
+        background: #ecfdf5;
     }
 
     .qa-btn:hover {
@@ -348,13 +348,16 @@
 <div class="hero-card">
     <div>
         <h1>Assalomu alaykum, {{ request.user.tuliq_ismi }}!</h1>
-        <p>Bugun ham ishlab chiqarish va ombor so'rovlari tayyor.</p>
+        <p>Bugun ham mahsulotlarni boshqarish tayyor.</p>
         <div class="hero-actions">
             <a href="{% url 'add_miqdor' %}" class="btn-hero primary">
-                <i class="fa-solid fa-plus"></i> Ishlab chiqarish
+                <i class="fa-solid fa-plus"></i> Miqdor Qo'shish
             </a>
             <a href="{% url 'add_yuklama' %}" class="btn-hero secondary">
                 <i class="fa-solid fa-truck-fast"></i> Yuklama Yaratish
+            </a>
+            <a href="{% url 'add_miqdor' %}" class="btn-hero secondary">
+                <i class="fa-solid fa-boxes-stacked"></i> Material So'rash
             </a>
         </div>
     </div>
@@ -366,21 +369,21 @@
         <div class="stat-icon amber">📦</div>
         <div class="stat-text">
             <div class="value">{{ zaxira_mahsulotlar|length }}</div>
-            <div class="label">Tayyor mahsulot turi</div>
+            <div class="label">Mahsulot turi</div>
         </div>
     </div>
     <div class="stat-box">
         <div class="stat-icon green">✅</div>
         <div class="stat-text">
             <div class="value">{{ qms|default:"0" }}</div>
-            <div class="label">Bugungi ishlab chiqarish</div>
+            <div class="label">Bugungi qo'shimlar</div>
         </div>
     </div>
     <div class="stat-box">
         <div class="stat-icon blue">🚚</div>
         <div class="stat-text">
             <div class="value">{{ sorovlar|length|default:"0" }}</div>
-            <div class="label">Yuklama so'rovlari</div>
+            <div class="label">Yuborilgan so'rovlar</div>
         </div>
     </div>
 </div>
@@ -424,11 +427,15 @@
             <div class="quick-actions">
                 <a href="{% url 'add_miqdor' %}" class="qa-btn amber">
                     <i class="fa-solid fa-plus-circle"></i>
-                    Ishlab chiqarish
+                    Miqdor Qo'shish
                 </a>
                 <a href="{% url 'add_yuklama' %}" class="qa-btn blue">
                     <i class="fa-solid fa-truck-fast"></i>
                     Yuklama Yaratish
+                </a>
+                <a href="{% url 'add_miqdor' %}" class="qa-btn blue">
+                    <i class="fa-solid fa-boxes-stacked"></i>
+                    Material So'rash
                 </a>
             </div>
         </div>
@@ -467,8 +474,8 @@
 {% if sorovlar %}
 <div class="content-card" style="margin-top:20px;">
     <div class="card-head">
-        <h3><i class="fa-solid fa-paper-plane" style="color:#3b82f6;margin-right:8px;"></i>Bugungi So'rovlar</h3>
-        <span class="card-badge" style="background:#dbeafe;color:#1d4ed8;">{{ sorovlar|length }}</span>
+        <h3><i class="fa-solid fa-paper-plane" style="color:var(--primary);margin-right:8px;"></i>Bugungi So'rovlar</h3>
+        <span class="card-badge" style="background:#ecfdf5;color:var(--primary-dark);">{{ sorovlar|length }}</span>
     </div>
     <div class="card-body">
         {% for sorov in sorovlar %}
@@ -494,27 +501,28 @@
 </div>
 {% endif %}
 
-{% if material_sorovlar %}
+{% if material_requests %}
 <div class="content-card" style="margin-top:20px;">
     <div class="card-head">
-        <h3><i class="fa-solid fa-clipboard-list" style="color:#16a34a;margin-right:8px;"></i>Material so'rovlari</h3>
-        <span class="card-badge" style="background:#dcfce7;color:#15803d;">{{ material_sorovlar|length }}</span>
+        <h3><i class="fa-solid fa-boxes-stacked" style="color:#0f766e;margin-right:8px;"></i>Ombor material so'rovlari</h3>
+        <span class="card-badge" style="background:#ccfbf1;color:#0f766e;">{{ material_requests|length }}</span>
     </div>
     <div class="card-body">
-        {% for sorov in material_sorovlar %}
+        {% for req in material_requests %}
         <div class="act-item">
-            <div class="act-dot send"><i class="fa-solid fa-boxes-stacked"></i></div>
+            <div class="act-dot send"><i class="fa-solid fa-warehouse"></i></div>
             <div class="act-info">
-                <div class="act-title">{{ sorov.material.nomi }} - {{ sorov.qty }} {{ sorov.material.turi.nomi }}</div>
+                <div class="act-title">{{ req.target_product.nomi|default:"Mahsulot" }} uchun {{ req.material.nomi }}</div>
                 <div class="act-sub">
-                    {% if sorov.status == 'approved' %}
+                    {{ req.qty }} {{ req.material.turi.nomi }}
+                    &nbsp;·&nbsp;
+                    {% if req.status == 'approved' %}
                     <span style="color:#16a34a;font-weight:600;">Tasdiqlandi</span>
-                    {% elif sorov.status == 'rejected' %}
+                    {% elif req.status == 'rejected' %}
                     <span style="color:#dc2626;font-weight:600;">Rad etildi</span>
                     {% else %}
                     <span style="color:#d97706;font-weight:600;">Kutilmoqda</span>
                     {% endif %}
-                    {% if sorov.note %} - {{ sorov.note }}{% endif %}
                 </div>
             </div>
         </div>

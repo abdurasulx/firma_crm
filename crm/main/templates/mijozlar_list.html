@@ -227,6 +227,11 @@
 
             <div class="customer-name">
                 {{ item.mijoz.nomi }}
+                {% if item.mijoz.mijoz_turi == 'vip' %}
+                    <span class="badge" style="background:#fef3c7;color:#92400e;">VIP</span>
+                {% elif item.mijoz.mijoz_turi == 'doimiy' %}
+                    <span class="badge" style="background:#dbeafe;color:#1e40af;">Doimiy</span>
+                {% endif %}
                 {% if item.has_debt %}
                     <span class="badge danger">Qarz bor</span>
                 {% else %}

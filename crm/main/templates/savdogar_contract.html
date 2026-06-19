@@ -1,0 +1,216 @@
+{% extends 'egabase.html' %}
+
+{% block title %}Savdogar shartnomasi{% endblock %}
+
+{% block content %}
+<style>
+    .contract-wrap { display: grid; gap: 18px; max-width: 1080px; }
+    .contract-head { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
+    .contract-head h2 { margin: 0; color: #0f172a; font-size: 28px; font-weight: 900; }
+    .contract-head p { margin: 8px 0 0; color: #64748b; font-weight: 600; max-width: 680px; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; border: 0; border-radius: 12px; padding: 12px 16px; font-weight: 900; cursor: pointer; text-decoration: none; }
+    .btn.primary { background: #10b981; color: #fff; }
+    .btn.light { background: #f1f5f9; color: #0f172a; }
+    .btn.ghost { background: #fff; color: #059669; border: 1px solid #a7f3d0; }
+    .blocked { padding: 16px; border-radius: 14px; background: #fef2f2; color: #991b1b; font-weight: 800; }
+    .editor-card, .system-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 22px; box-shadow: 0 10px 30px rgba(15,23,42,.04); }
+    .editor-toolbar { display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+    .toolbar-title { color: #0f172a; font-weight: 900; }
+    .toolbar-sub { color: #64748b; font-size: 13px; margin-top: 4px; font-weight: 600; }
+    .sections { display: grid; gap: 14px; }
+    .section-box { border: 1px solid #e2e8f0; border-radius: 16px; background: #f8fafc; padding: 14px; }
+    .section-head { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; margin-bottom: 12px; }
+    .section-title { width: 100%; min-height: 52px; border: 1px solid #cbd5e1; border-radius: 12px; background: #fff; padding: 12px 13px; color: #0f172a; font: inherit; font-weight: 900; line-height: 1.45; resize: vertical; overflow: hidden; }
+    .icon-btn { width: 42px; height: 42px; border: 0; border-radius: 12px; background: #fee2e2; color: #991b1b; cursor: pointer; }
+    .clauses { display: grid; gap: 10px; }
+    .clause-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: start; }
+    .clause-text { width: 100%; min-height: 74px; border: 1px solid #cbd5e1; border-radius: 12px; background: #fff; padding: 12px 13px; color: #334155; font: inherit; line-height: 1.55; resize: vertical; }
+    .small-action { margin-top: 12px; border: 1px dashed #6ee7b7; color: #047857; background: #ecfdf5; border-radius: 12px; padding: 10px 12px; font-weight: 900; cursor: pointer; }
+    .system-title { display: flex; align-items: center; gap: 8px; color: #0f172a; font-weight: 900; margin-bottom: 10px; }
+    .system-text { color: #475569; line-height: 1.7; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px; user-select: none; }
+    .doc-note { padding: 14px; border-radius: 14px; background: #ecfdf5; color: #166534; font-weight: 700; line-height: 1.65; }
+    .contract-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+    @media (max-width: 720px) {
+        .section-head, .clause-row { grid-template-columns: 1fr; }
+        .icon-btn { width: 100%; }
+    }
+</style>
+
+<div class="contract-wrap">
+    <div class="contract-head">
+        <div>
+            <h2>Savdogar shartnomasi</h2>
+            <p>Admin bo'lim va bandlarni alohida tahrirlaydi. PDF shartnoma savdo vaqtida yuklanadi, imzolangandan keyin skanerlangan nusxa qayta biriktiriladi.</p>
+        </div>
+        <a href="{% url 'savdogar_admin_dashboard' %}" class="btn light"><i class="fa-solid fa-arrow-left"></i> Savdogar boshqaruvi</a>
+    </div>
+
+    {% if not has_savdogar_sales %}
+    <div class="blocked">Savdogar moduli tarifda yoqilmagan. Shartnomani draft sifatida tayyorlash mumkin, lekin savdogar savdo qilishi uchun modul tarifda faol bo'lishi kerak.</div>
+    {% endif %}
+
+    <div class="doc-note">
+        Hujjat aylanishi: savdogar savdo vaqtida tayyor elektron PDF shartnomani yuklaydi. Xaridor qo'l qo'ygach, imzolangan shartnoma skaneri va ID karta yoki pasport rasmi savdoga biriktiriladi.
+    </div>
+
+    <form method="post" action="{% url 'save_savdogar_contract' %}" id="contractForm">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{% url 'savdogar_contract' %}">
+        <textarea name="savdogar_contract_text" id="compiledContract" hidden>{{ savdogar_contract_text }}</textarea>
+
+        <div class="editor-card">
+            <div class="editor-toolbar">
+                <div>
+                    <div class="toolbar-title">Professional shartnoma andozasi</div>
+                    <div class="toolbar-sub">Bo'lim qo'shing, band qo'shing, tartibni matn sifatida saqlang. Texnik tizim qismi tahrirlanmaydi.</div>
+                </div>
+                <button type="button" class="btn ghost" onclick="addSection()"><i class="fa-solid fa-plus"></i> Bo'lim qo'shish</button>
+            </div>
+
+            <div class="sections" id="sections"></div>
+
+            <div class="contract-actions">
+                <button type="submit" class="btn primary"><i class="fa-solid fa-floppy-disk"></i> Saqlash</button>
+                <a href="{% url 'savdogar_sales' %}" class="btn light"><i class="fa-solid fa-receipt"></i> Savdolarni ko'rish</a>
+            </div>
+        </div>
+    </form>
+
+    <div class="system-card">
+        <div class="system-title"><i class="fa-solid fa-lock"></i> Tizim ishlash qismi. Bu qism o'zgartirilmaydi.</div>
+        <div class="system-text">{{ credit_rules_note }}<br><br>{{ system_credit_rules }}</div>
+    </div>
+</div>
+
+{{ savdogar_contract_text|json_script:"initial-contract-text" }}
+
+<script>
+    const defaultSections = [
+        {
+            title: "Tomonlar va rozilik",
+            clauses: [
+                "Firma nomidan vakolatli savdogar xaridorga mahsulotlarni nasiya savdo tartibida topshiradi.",
+                "Xaridor mahsulotlarni qabul qilganini, shartnoma shartlari bilan tanishganini va to'lov majburiyatini olganini tasdiqlaydi."
+            ]
+        },
+        {
+            title: "Savdo predmeti",
+            clauses: [
+                "Shartnoma doirasida xaridorga topshirilgan mahsulotlar, ularning soni, narxi va yakuniy qiymati elektron shartnoma ilovasida hamda savdo hujjatlarida ko'rsatiladi."
+            ]
+        },
+        {
+            title: "To'lov majburiyati",
+            clauses: [
+                "Xaridor nasiya savdo bo'yicha belgilangan to'lovlarni kelishilgan muddatlarda amalga oshiradi.",
+                "To'lovlar kechiktirilganda yoki muddatidan oldin yopilganda yakuniy hisob-kitob tizim qoidalari asosida qayta ko'rib chiqiladi."
+            ]
+        },
+        {
+            title: "Hujjatlar va tasdiqlash",
+            clauses: [
+                "Savdo rasmiylashtirilganda elektron PDF shartnoma saqlanadi.",
+                "Xaridor shartnomani imzolaganidan so'ng imzolangan nusxa skanerlanib tizimga biriktiriladi.",
+                "Xaridorning ID karta yoki pasport nusxasi ham shartnoma hujjatlariga qo'shiladi."
+            ]
+        },
+        {
+            title: "Firma qo'shimcha shartlari",
+            clauses: [
+                "Firma ushbu bo'limda kafolat, qaytarish, aloqa, jarima, yetkazish, xizmat ko'rsatish yoki ichki tartib bo'yicha qo'shimcha shartlarni belgilashi mumkin."
+            ]
+        }
+    ];
+
+    function parseSavedText(text) {
+        const trimmed = (text || '').trim();
+        if (!trimmed) return defaultSections;
+
+        const blocks = trimmed.split(/\n\s*\n/).map(x => x.trim()).filter(Boolean);
+        if (blocks.length < 2) return defaultSections;
+
+        const title = blocks[0].toUpperCase().includes('SHARTNOMA') ? blocks.shift() : null;
+        const sections = [];
+        for (let i = 0; i < blocks.length; i += 2) {
+            const sectionTitle = blocks[i];
+            const body = blocks[i + 1] || '';
+            if (!sectionTitle || !body) continue;
+            sections.push({
+                title: sectionTitle,
+                clauses: body.split(/\n+/).map(line => line.replace(/^[-•]\s*/, '').trim()).filter(Boolean)
+            });
+        }
+        return sections.length ? sections : defaultSections;
+    }
+
+    function addSection(title = "Yangi bo'lim", clauses = ["Yangi band matni"]) {
+        const wrapper = document.getElementById('sections');
+        const box = document.createElement('div');
+        box.className = 'section-box';
+        box.innerHTML = `
+            <div class="section-head">
+                <textarea class="section-title"></textarea>
+                <button type="button" class="icon-btn" title="Bo'limni o'chirish" onclick="this.closest('.section-box').remove(); compileContract();"><i class="fa-solid fa-trash"></i></button>
+            </div>
+            <div class="clauses"></div>
+            <button type="button" class="small-action" onclick="addClause(this)"><i class="fa-solid fa-plus"></i> Band qo'shish</button>
+        `;
+        wrapper.appendChild(box);
+        const titleInput = box.querySelector('.section-title');
+        titleInput.value = title;
+        autoGrow(titleInput);
+        clauses.forEach(clause => addClause(box.querySelector('.small-action'), clause));
+        box.querySelectorAll('textarea').forEach(el => {
+            el.addEventListener('input', () => {
+                autoGrow(el);
+                compileContract();
+            });
+        });
+        compileContract();
+    }
+
+    function addClause(button, value = "") {
+        const clauses = button.closest('.section-box').querySelector('.clauses');
+        const row = document.createElement('div');
+        row.className = 'clause-row';
+        row.innerHTML = `
+            <textarea class="clause-text"></textarea>
+            <button type="button" class="icon-btn" title="Bandni o'chirish" onclick="this.closest('.clause-row').remove(); compileContract();"><i class="fa-solid fa-xmark"></i></button>
+        `;
+        clauses.appendChild(row);
+        const textarea = row.querySelector('textarea');
+        textarea.value = value || "Yangi band matni";
+        autoGrow(textarea);
+        textarea.addEventListener('input', () => {
+            autoGrow(textarea);
+            compileContract();
+        });
+        compileContract();
+    }
+
+    function autoGrow(element) {
+        element.style.height = 'auto';
+        element.style.height = `${element.scrollHeight + 2}px`;
+    }
+
+    function compileContract() {
+        const parts = ["SAVDOGAR NASIYA SAVDO SHARTNOMASI"];
+        document.querySelectorAll('.section-box').forEach(section => {
+            const title = section.querySelector('.section-title').value.trim();
+            const clauses = Array.from(section.querySelectorAll('.clause-text'))
+                .map(el => el.value.trim())
+                .filter(Boolean);
+            if (!title || !clauses.length) return;
+            parts.push(title);
+            parts.push(clauses.map(clause => `- ${clause}`).join('\n'));
+        });
+        document.getElementById('compiledContract').value = parts.join('\n\n');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const savedText = JSON.parse(document.getElementById('initial-contract-text').textContent || '""');
+        parseSavedText(savedText).forEach(section => addSection(section.title, section.clauses));
+        document.getElementById('contractForm').addEventListener('submit', compileContract);
+    });
+</script>
+{% endblock %}

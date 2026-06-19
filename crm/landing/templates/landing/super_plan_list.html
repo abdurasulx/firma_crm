@@ -22,16 +22,26 @@
             <tbody>
                 {% for plan in plans %}
                 <tr style="border-bottom: 1px solid var(--glass-border); transition: background 0.3s;">
-                    <td style="padding: 1rem; font-weight: 600;">{{ plan.name }}</td>
+                    <td style="padding: 1rem; font-weight: 600;">
+                        {{ plan.name }}
+                        {% if plan.meta.hidden %}
+                            <span style="display:inline-block; margin-left:6px; padding:2px 8px; border-radius:999px; background:#fff7ed; color:#c2410c; font-size:11px; font-weight:600;" title="Firma egalari bu tarifni ko'ra olmaydi. Faqat superadmin biriktiradi.">🔒 Aloqa orqali</span>
+                        {% endif %}
+                        {% if plan.meta.lock_changes %}
+                            <span style="display:inline-block; margin-left:6px; padding:2px 8px; border-radius:999px; background:#ecfdf5; color:#047857; font-size:11px; font-weight:600;" title="Muddat tugamaguncha tarif o'zgartirishni bloklaydi">🔐 O'zgarishni bloklash</span>
+                        {% endif %}
+                    </td>
                     <td style="padding: 1rem;">${{ plan.price }}</td>
                     <td style="padding: 1rem;">{% if plan.max_users == 0 %}Cheksiz{% else %}{{ plan.max_users }}{% endif %}</td>
                     <td style="padding: 1rem;">
                         {% if plan.has_analytics %}<span style="color: #10b981; margin-right: 5px;">✓ Analytics</span>{% endif %}
                         {% if plan.has_telegram_bot %}<span style="color: #10b981; margin-right: 5px;">✓ Bot</span>{% endif %}
                         {% if plan.has_map %}<span style="color: #10b981;">✓ Map</span>{% endif %}
-                        
+                        {% if plan.meta.savdogar %}<span style="color: #10b981; margin-left: 5px;">Savdogar</span>{% endif %}
+                        <br><span style="color: var(--text-muted); font-size: 0.85rem;">Muddat: {{ plan.meta.months }} oy</span>
+
                         {% if plan.backup_type and plan.backup_type != 'none' %}
-                            <br><span style="color: #3b82f6; font-size: 0.85rem; display: inline-block; margin-top: 4px;"><i class="fa-solid fa-cloud" style="margin-right: 4px;"></i> Zaxira: <strong>{{ plan.get_backup_type_display }}</strong></span>
+                            <br><span style="color: var(--primary-dark); font-size: 0.85rem; display: inline-block; margin-top: 4px;"><i class="fa-solid fa-cloud" style="margin-right: 4px;"></i> Zaxira: <strong>{{ plan.get_backup_type_display }}</strong></span>
                         {% endif %}
                     </td>
                     <td style="padding: 1rem;">{{ plan.created_at|date:"d.m.Y" }}</td>

@@ -1,0 +1,77 @@
+{% extends 'sgbase.html' %}
+
+{% block title %}Mening savdolarim - StockFirm{% endblock %}
+
+{% block content %}
+<style>
+    .page-head{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;margin-bottom:1rem}
+    .page-head h1{font-size:1.5rem;color:var(--slate-900)}
+    .page-head p{color:var(--slate-500);font-weight:700}
+    .panel{background:#fff;border:1px solid var(--slate-200);border-radius:var(--radius);box-shadow:var(--shadow-sm);overflow:hidden}
+    .filter{display:flex;gap:.75rem;flex-wrap:wrap;padding:1rem;border-bottom:1px solid var(--slate-200)}
+    .input,.select{border:1px solid var(--slate-200);border-radius:.75rem;padding:.75rem .9rem;background:var(--slate-50);font:inherit;font-weight:700}
+    .btn{border:0;border-radius:.75rem;background:var(--primary);color:#fff;padding:.75rem 1rem;font-weight:800;cursor:pointer;text-decoration:none}
+    .summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:1rem;margin-bottom:1rem}
+    .stat{background:#fff;border:1px solid var(--slate-200);border-radius:var(--radius);padding:1rem}
+    .stat span{display:block;color:var(--slate-500);font-size:.78rem;font-weight:800;text-transform:uppercase}
+    .stat strong{display:block;color:var(--slate-900);font-size:1.45rem;margin-top:.25rem}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:.85rem 1rem;border-bottom:1px solid var(--slate-100);text-align:left;font-size:.9rem}
+    th{color:var(--slate-500);font-size:.74rem;text-transform:uppercase}
+    td{font-weight:700;color:var(--slate-700)}
+    .badge{display:inline-flex;border-radius:999px;padding:.25rem .55rem;font-size:.75rem;font-weight:900;background:#ecfdf5;color:#047857}
+    .badge.nasiya{background:#fffbeb;color:#b45309}.badge.naqd{background:#ecfdf5;color:#047857}.badge.karta{background:#f1f5f9;color:#334155}
+    .empty{text-align:center;color:var(--slate-500);padding:2rem;font-weight:800}
+    @media(max-width:760px){.page-head{display:block}.table-wrap{overflow:auto}}
+</style>
+
+<div class="page-head">
+    <div>
+        <h1>Mening savdolarim</h1>
+        <p>Savdogar tomonidan rasmiylashtirilgan savdolar tarixi</p>
+    </div>
+    <a href="{% url 'sotish' %}" class="btn"><i class="fas fa-plus"></i> Yangi sotuv</a>
+</div>
+
+<div class="summary">
+    <div class="stat"><span>Savdolar</span><strong>{{ sales_count }}</strong></div>
+    <div class="stat"><span>Jami summa</span><strong>{{ total_amount|floatformat:0 }} so'm</strong></div>
+</div>
+
+<section class="panel">
+    <form class="filter" method="get">
+        <input class="input" name="q" value="{{ query }}" placeholder="Mijoz yoki mahsulot qidirish">
+        <select class="select" name="payment">
+            <option value="">Barcha to'lovlar</option>
+            <option value="naqd" {% if payment_type == 'naqd' %}selected{% endif %}>Naqd</option>
+            <option value="karta" {% if payment_type == 'karta' %}selected{% endif %}>Karta</option>
+            <option value="nasiya" {% if payment_type == 'nasiya' %}selected{% endif %}>Nasiya</option>
+        </select>
+        <button class="btn" type="submit">Filter</button>
+    </form>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>N</th><th>Sana</th><th>Mijoz</th><th>Mahsulotlar</th><th>To'lov</th><th>Summa</th><th>Hujjat</th></tr>
+            </thead>
+            <tbody>
+                {% for sale in page_obj %}
+                <tr>
+                    <td>{% if sale.contract_number %}{{ sale.contract_number }}{% else %}-{% endif %}</td>
+                    <td>{{ sale.vaqt_sana|date:"d.m.Y H:i" }}</td>
+                    <td>{% firstof sale.haridor_dukon.nomi sale.oluvchining_ismi %}</td>
+                    <td>{{ sale.smm|default:"-" }}</td>
+                    <td><span class="badge {{ sale.st }}">{{ sale.get_st_display }}</span></td>
+                    <td>{{ sale.summa|floatformat:0 }} so'm</td>
+                    <td>
+                        {% if sale.contract_pdf %}<a href="{{ sale.contract_pdf.url }}" target="_blank">PDF</a>{% else %}-{% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="empty">Savdolar topilmadi</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

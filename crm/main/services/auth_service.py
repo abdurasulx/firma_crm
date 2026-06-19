@@ -19,13 +19,13 @@ def create_user_service(username, password, fullname, user_type, phone=None, pro
         type=user_type,
     )
 
-    if user_type == 'yetkazib_beruvchi':
+    if user_type in ['yetkazib_beruvchi', 'savdogar']:
         YetkazibBeruvchi.objects.create(
             user=user, 
             tuliq_ismi=fullname, 
             rasmi=profile_photo, 
             bmr=car_photo, 
-            bmh=car_info,
+            bmh=car_info or '',
             company=company
         )
     elif user_type in ['pazanda', 'ishlab_chiqaruvchi']:
@@ -49,16 +49,19 @@ def update_user_service(user, username, fullname, phone, password=None, profile_
     
     if is_active is not None:
         user.is_active = is_active
+
+    if profile_photo and user.type not in ['yetkazib_beruvchi', 'savdogar', 'pazanda', 'ishlab_chiqaruvchi']:
+        user.rasm = profile_photo
         
     if password:
         user.set_password(password)
     
     user.save()
 
-    if user.type == 'yetkazib_beruvchi':
+    if user.type in ['yetkazib_beruvchi', 'savdogar']:
         yb = YetkazibBeruvchi.objects.get(user=user)
         yb.tuliq_ismi = fullname
-        yb.bmh = car_info
+        yb.bmh = car_info or ''
         if car_photo:
             yb.bmr = car_photo
         if profile_photo:

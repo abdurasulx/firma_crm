@@ -1,0 +1,55 @@
+{% extends 'egabase.html' %}
+
+{% block title %}Ombor tarixi{% endblock %}
+{% block page_title %}Ombor tarixi{% endblock %}
+
+{% block content %}
+{% include 'warehouse_styles.html' %}
+<div class="warehouse-page">
+<div class="card" style="padding:18px 20px; margin-bottom:18px;">
+    <form method="get" style="display:flex; gap:10px; flex-wrap:wrap;">
+        <input class="field" style="max-width:320px;" type="search" name="q" value="{{ query }}" placeholder="Mahsulot nomi">
+        <select class="field" style="max-width:280px;" name="event_type">
+            <option value="">Barcha harakatlar</option>
+            {% for code, label in event_choices %}
+            <option value="{{ code }}" {% if event_type == code %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <button class="btn" type="submit"><i class="fa-solid fa-filter"></i> Filter</button>
+    </form>
+</div>
+
+<div class="card">
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Sana</th>
+                    <th>Mahsulot</th>
+                    <th>Harakat</th>
+                    <th>Oldingi</th>
+                    <th>O'zgarish</th>
+                    <th>Yangi</th>
+                    <th>Kim</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in history_page %}
+                <tr>
+                    <td>{{ item.created_at|date:"d.m.Y H:i" }}</td>
+                    <td>{{ item.mahsulot.nomi }}</td>
+                    <td>{{ item.get_event_type_display }}</td>
+                    <td>{{ item.old_qty|floatformat:2 }}</td>
+                    <td><span class="badge {% if item.delta < 0 %}red{% else %}green{% endif %}">{{ item.delta|floatformat:2 }}</span></td>
+                    <td>{{ item.new_qty|floatformat:2 }}</td>
+                    <td>{{ item.actor_user.tuliq_ismi|default:item.actor_user.username|default:"-" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" style="text-align:center; padding:42px; color:var(--muted);">Tarix topilmadi.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+</div>
+{% endblock %}

@@ -165,8 +165,8 @@
         }
 
         .status-karta {
-            background: #dbeafe;
-            color: #1d4ed8;
+            background: #ecfdf5;
+            color: #047857;
         }
 
         .status-nasiya {
@@ -235,23 +235,15 @@
             </div>
             <div class="chek-row">
                 <span class="lbl">Mijoz (do'kon)</span>
-                <span class="val">{{ savdo.haridor_dukon.nomi }}</span>
+                <span class="val">{% firstof savdo.haridor_dukon.nomi savdo.oluvchining_ismi %}</span>
             </div>
             <div class="chek-row">
                 <span class="lbl">Qabul qiluvchi</span>
                 <span class="val">{{ savdo.oluvchining_ismi }}</span>
             </div>
             <div class="chek-row">
-                <span class="lbl">Sotuvchi</span>
-                <span class="val">
-                    {% if savdo.yetkazib_beruvchi %}
-                    {{ savdo.yetkazib_beruvchi.tuliq_ismi }}
-                    {% elif savdo.savdogar %}
-                    {{ savdo.savdogar.tuliq_ismi|default:savdo.savdogar.username }}
-                    {% else %}
-                    -
-                    {% endif %}
-                </span>
+                <span class="lbl">Yetkazib beruvchi</span>
+                <span class="val">{{ savdo.yetkazib_beruvchi.tuliq_ismi }}</span>
             </div>
 
             <hr class="divider">
@@ -286,6 +278,14 @@
                 <span class="total-val">{{ savdo.summa|default:0|floatformat:0 }} so'm</span>
             </div>
         </div>
+
+        <!-- QR kod -->
+        {% if qr_b64 %}
+        <div style="text-align:center; padding: 16px 0 8px; border-top: 1px dashed #e5e7eb; margin-top: 8px;">
+            <img src="data:image/png;base64,{{ qr_b64 }}" alt="QR" style="width:90px;height:90px;">
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">Chekni skanerlang</div>
+        </div>
+        {% endif %}
 
         <!-- Footer -->
         <div class="receipt-footer">

@@ -165,7 +165,7 @@
                     });
                     Object.keys(routeLayers).forEach(id => {
                         if (!currentIds.includes(id) || !showRoutes || !showDeliverers) {
-                            map.removeLayer(routeLayers[id]);
+                            routeLayers[id].forEach(layer => map.removeLayer(layer));
                             delete routeLayers[id];
                         }
                     });
@@ -205,17 +205,18 @@
                             }
 
                             // Route
-                            if (showRoutes && d.path && d.path.length > 1) {
+                            if (showRoutes && d.path_segments && d.path_segments.length > 0) {
                                 if (routeLayers[d.id]) {
-                                    routeLayers[d.id].setLatLngs(d.path);
+                                    routeLayers[d.id].forEach(layer => map.removeLayer(layer));
                                 } else {
-                                    routeLayers[d.id] = L.polyline(d.path, {
+                                    routeLayers[d.id] = [];
+                                }
+                                routeLayers[d.id] = d.path_segments.map(segment => L.polyline(segment, {
                                         color: d.color,
                                         weight: 3,
                                         opacity: 0.5,
                                         dashArray: '5, 5'
-                                    }).addTo(map);
-                                }
+                                    }).addTo(map));
                             }
                         });
                     }

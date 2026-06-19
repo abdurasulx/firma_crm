@@ -2,7 +2,7 @@ from django.contrib import admin
 from .models import (
     Company, User, HaridorDukon, Pazanda, YetkazibBeruvchi,
     MahsulotTuri, Mahsulot, MiqdorQoshish, Savdo, YuklamaSorov, NasiyaTolov,
-    ProductionMaterialRequest, BillingPaymentLink, ClickTransaction
+    ProductionMaterialRequest
 )
 
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
@@ -35,42 +35,6 @@ class UserAdmin(BaseUserAdmin):
 class CompanyAdmin(admin.ModelAdmin):
     list_display = ('name', 'subdomain', 'created_at')
     search_fields = ('name', 'subdomain')
-    fieldsets = (
-        (None, {'fields': ('name', 'subdomain', 'plan', 'is_active', 'created_at')}),
-        ('Custom tarif', {
-            'fields': (
-                'is_custom_plan',
-                'custom_max_users',
-                'custom_has_telegram_bot',
-                'custom_has_analytics',
-                'custom_has_map',
-                'custom_backup_type',
-                'custom_price',
-                'last_backup_at',
-            )
-        }),
-        ('Billing va lifecycle', {
-            'fields': (
-                'payment_status',
-                'next_payment_date',
-                'setup_mode',
-                'setup_expires_at',
-                'is_on_trial',
-                'trial_expires_at',
-                'has_used_trial',
-            )
-        }),
-        ('Nasiya savdo sozlamalari', {
-            'fields': (
-                'credit_sales_enabled',
-                'credit_contract_template',
-                'credit_early_discount_percent',
-                'credit_late_penalty_percent',
-                'credit_rules_note',
-            )
-        }),
-    )
-    readonly_fields = ('created_at',)
 
 # --- Haridor Dukon ---
 @admin.register(HaridorDukon)
@@ -105,8 +69,8 @@ class MahsulotTuriAdmin(admin.ModelAdmin):
 # --- Mahsulot ---
 @admin.register(Mahsulot)
 class MahsulotAdmin(admin.ModelAdmin):
-    list_display = ('nomi', 'company', 'warehouse_type', 'narxi', 'turi', 'miqdori')
-    list_filter = ('company', 'warehouse_type', 'turi')
+    list_display = ('nomi', 'company', 'warehouse_type', 'is_savdogar_product', 'narxi', 'turi', 'miqdori')
+    list_filter = ('company', 'warehouse_type', 'is_savdogar_product', 'turi')
     search_fields = ('nomi',)
 
 
@@ -139,22 +103,6 @@ class NasiyaTolovAdmin(admin.ModelAdmin):
 
 @admin.register(ProductionMaterialRequest)
 class ProductionMaterialRequestAdmin(admin.ModelAdmin):
-    list_display = ('company', 'producer', 'material', 'qty', 'status', 'created_at', 'reviewed_by')
+    list_display = ('producer', 'material', 'target_product', 'qty', 'status', 'created_at', 'reviewed_by')
     list_filter = ('company', 'status', 'created_at')
-    search_fields = ('producer__tuliq_ismi', 'material__nomi')
-
-
-@admin.register(BillingPaymentLink)
-class BillingPaymentLinkAdmin(admin.ModelAdmin):
-    list_display = ('id', 'company', 'reason', 'amount_uzs', 'status', 'opened_at', 'paid_at', 'created_at')
-    list_filter = ('status', 'created_at')
-    search_fields = ('company__name', 'reason', 'token')
-    readonly_fields = ('token', 'click_url', 'opened_at', 'paid_at', 'created_at')
-
-
-@admin.register(ClickTransaction)
-class ClickTransactionAdmin(admin.ModelAdmin):
-    list_display = ('id', 'click_trans_id', 'click_paydoc_id', 'merchant_trans_id', 'company', 'amount', 'status', 'create_time', 'perform_time')
-    list_filter = ('status', 'create_time', 'perform_time')
-    search_fields = ('click_trans_id', 'click_paydoc_id', 'merchant_trans_id', 'company__name')
-    readonly_fields = ('create_time', 'perform_time', 'cancel_time')
+    search_fields = ('producer__tuliq_ismi', 'material__nomi', 'target_product__nomi')

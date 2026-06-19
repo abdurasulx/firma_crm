@@ -106,9 +106,13 @@
         <div class="form-group">
             <label for="turi">Xodim turi</label>
             <select id="turi" name="turi" required onchange="toggleMashinaFields()">
-                <option value="pazanda" {% if turi == 'pazanda' %}selected{% endif %}>Ishlab chiqaruvchi</option>
+                <option value="ishlab_chiqaruvchi" {% if turi == 'ishlab_chiqaruvchi' or turi == 'pazanda' %}selected{% endif %}>Ishlab chiqaruvchi</option>
                 <option value="omborchi" {% if turi == 'omborchi' %}selected{% endif %}>Omborchi</option>
+                {% if request.company.custom_has_savdogar_sales or request.company.is_on_trial %}
                 <option value="savdogar" {% if turi == 'savdogar' %}selected{% endif %}>Savdogar</option>
+                {% else %}
+                <option value="savdogar" disabled>Savdogar ($10 modul kerak)</option>
+                {% endif %}
                 <option value="yetkazib_beruvchi" {% if turi == 'yetkazib_beruvchi' %}selected{% endif %}>Yetkazib beruvchi</option>
             </select>
         </div>

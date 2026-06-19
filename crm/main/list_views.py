@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.contrib.auth.decorators import login_required
 from .models import User, Mahsulot
 from django.core.paginator import Paginator
@@ -98,10 +98,6 @@ def mahsulotlar_list(request):
     tur_filter = request.GET.get('tur', '')
     if tur_filter:
         mahsulotlar = mahsulotlar.filter(turi__id=tur_filter)
-
-    warehouse_filter = request.GET.get('warehouse_type', '')
-    if warehouse_filter:
-        mahsulotlar = mahsulotlar.filter(warehouse_type=warehouse_filter)
     
     # Sorting
     sort_order = request.GET.get('sort', 'name')
@@ -145,8 +141,6 @@ def mahsulotlar_list(request):
         'total': mahsulotlar.count(),
         'search_query': search_query,
         'tur_filter': tur_filter,
-        'warehouse_filter': warehouse_filter,
-        'warehouse_types': Mahsulot.WAREHOUSE_TYPES,
         'sort_order': sort_order,
         'mahsulot_turlari': mahsulot_turlari
     }

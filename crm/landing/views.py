@@ -2,21 +2,51 @@ import json
 from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from main.models import Company, User, Plan, PlanRequest
+from main.models import BillingPaymentLink, Company, User, Plan, PlanRequest
 from django.db import models, transaction
 from django.db.models import Count, Q, Sum
 from django.contrib.auth.decorators import user_passes_test
 from django.utils import timezone
 from datetime import timedelta
+from dateutil.relativedelta import relativedelta
 from main.services.auth_service import create_user_service
 from main.services.billing_service import (
     apply_plan_request,
+    get_billing_period_start,
+    get_prorated_billing,
     get_company_login_url,
     mark_company_paid,
     mark_company_unpaid,
     reject_plan_request as reject_plan_request_service,
     sync_company_lifecycle,
 )
+from main.plan_utils import (
+    build_plan_description,
+    get_plan_duration_months,
+    is_tariff_change_locked,
+    parse_plan_metadata,
+)
+from .realtime import broadcast_superadmin_update, get_superadmin_context
+
+def send_company_notification(company, title, message, type='info', refresh=False):
+    try:
+        from asgiref.sync import async_to_sync
+        from channels.layers import get_channel_layer
+
+        channel_layer = get_channel_layer()
+        if channel_layer and company and company.subdomain:
+            async_to_sync(channel_layer.group_send)(
+                f"notifications_{company.subdomain}",
+                {
+                    "type": "send_notification",
+                    "title": title,
+                    "message": message,
+                    "notification_type": type,
+                    "refresh": refresh,
+                },
+            )
+    except Exception as e:
+        print(f"WS Notification Error: {e}")
 
 def landing_home(request):
     if not getattr(request, "is_landing", False):
@@ -160,6 +190,9 @@ def marketing_page(request, slug):
 def pricing_view(request):
     return render(request, "landing/pricing.html")
 
+def offer_view(request):
+    return render(request, "landing/offer.html")
+
 def register_company(request):
     if request.method == 'POST':
         company_name = request.POST.get('company_name')
@@ -168,6 +201,10 @@ def register_company(request):
         username = request.POST.get('username')
         password = request.POST.get('password')
         phone = request.POST.get('phone')
+
+        if request.POST.get('accept_offer') != 'on':
+            messages.error(request, "Ro'yxatdan o'tish uchun ommaviy ofertani qabul qilish kerak.")
+            return render(request, "landing/register.html", {'post_data': request.POST})
 
         if Company.objects.filter(subdomain=subdomain).exists():
             messages.error(request, "Bu subdomain allaqachon band!")
@@ -205,6 +242,7 @@ def register_company(request):
                     raise ValueError(message)
                 
                 messages.success(request, f"Tabriklaymiz! {company_name} muvaffaqiyatli ro'yxatdan o'tdi. 5 kunlik sozlash rejimi yoqildi.")
+                transaction.on_commit(broadcast_superadmin_update)
                 return redirect(get_company_login_url(company, request.get_host()))
                 
         except Exception as e:
@@ -221,49 +259,40 @@ def is_superuser(user):
 
 @user_passes_test(is_superuser)
 def super_dashboard(request):
-    # Overall counts
-    total_companies = Company.objects.count()
-    active_companies = Company.objects.filter(is_active=True).count()
-    trial_companies = Company.objects.filter(is_on_trial=True).count()
-    setup_companies = Company.objects.filter(setup_mode=True).count()
-    total_users = User.objects.count()
-    
-    # Registrations in the last 24 hours
-    now = timezone.now()
-    yesterday = now - timezone.timedelta(days=1)
-    today_registrations = Company.objects.filter(created_at__gte=yesterday).count()
-    
-    # Stats for charts (last 7 days)
-    chart_data = []
-    labels = []
-    for i in range(6, -1, -1):
-        day = now.date() - timezone.timedelta(days=i)
-        count = Company.objects.filter(created_at__date=day).count()
-        labels.append(day.strftime('%d-%b'))
-        chart_data.append(count)
-    
-    recent_companies = Company.objects.all().order_by('-created_at')[:5]
-    
-    context = {
-        'total_companies': total_companies,
-        'active_companies': active_companies,
-        'trial_companies': trial_companies,
-        'setup_companies': setup_companies,
-        'total_users': total_users,
-        'today_registrations': today_registrations,
-        'recent_companies': recent_companies,
-        'chart_labels': json.dumps(labels),
-        'chart_data': json.dumps(chart_data),
-    }
-    return render(request, "landing/super_dashboard.html", context)
+    return render(request, "landing/super_dashboard.html", get_superadmin_context())
 
 @user_passes_test(is_superuser)
 def super_companies(request):
-    companies = Company.objects.annotate(
+    from django.core.paginator import Paginator
+
+    q = request.GET.get('q', '').strip()
+    status_filter = request.GET.get('status', '')
+
+    companies_qs = Company.objects.annotate(
         total_users=Count('user'),
         staff_count=Count('user', filter=~models.Q(user__type='ega'))
     ).order_by('-created_at')
-    return render(request, "landing/super_companies.html", {'companies': companies})
+
+    if q:
+        companies_qs = companies_qs.filter(
+            Q(name__icontains=q) | Q(subdomain__icontains=q)
+        )
+    if status_filter == 'active':
+        companies_qs = companies_qs.filter(is_active=True)
+    elif status_filter == 'inactive':
+        companies_qs = companies_qs.filter(is_active=False)
+    elif status_filter == 'trial':
+        companies_qs = companies_qs.filter(is_on_trial=True)
+
+    paginator = Paginator(companies_qs, 15)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+
+    return render(request, "landing/super_companies.html", {
+        'companies': page_obj,
+        'page_obj': page_obj,
+        'q': q,
+        'status_filter': status_filter,
+    })
 
 @user_passes_test(is_superuser)
 def super_company_create(request):
@@ -284,6 +313,7 @@ def super_company_create(request):
                 plan_id = request.POST.get('plan')
                 is_active = 'is_active' in request.POST
                 plan = Plan.objects.get(pk=plan_id) if plan_id else None
+                plan_months = int(request.POST.get('plan_months') or (get_plan_duration_months(plan) if plan else 1))
                 
                 now = timezone.now()
                 setup_mode = request.POST.get('setup_mode') == 'on'
@@ -300,7 +330,9 @@ def super_company_create(request):
                     setup_mode=setup_mode,
                     setup_expires_at=setup_expires,
                     is_on_trial=is_on_trial,
-                    trial_expires_at=trial_expires
+                    trial_expires_at=trial_expires,
+                    payment_status='paid' if plan and plan_months > 0 else 'unpaid',
+                    next_payment_date=now + relativedelta(months=plan_months) if plan and plan_months > 0 else None
                 )
                 user, message = create_user_service(
                     username=username,
@@ -313,6 +345,7 @@ def super_company_create(request):
                 if not user:
                     raise ValueError(message)
                 messages.success(request, f"{name} firmasi muvaffaqiyatli qo'shildi.")
+                transaction.on_commit(broadcast_superadmin_update)
                 return redirect('super_companies')
         except Exception as e:
             messages.error(request, f"Xatolik: {str(e)}")
@@ -327,6 +360,7 @@ def super_company_edit(request, pk):
         company.name = request.POST.get('name')
         new_subdomain = request.POST.get('subdomain').lower()
         plan_id = request.POST.get('plan')
+        plan_months = int(request.POST.get('plan_months') or 0)
         company.is_active = 'is_active' in request.POST
         
         prev_setup_mode = company.setup_mode
@@ -349,16 +383,22 @@ def super_company_edit(request, pk):
             company.subdomain = new_subdomain
             if plan_id:
                 company.plan = Plan.objects.get(pk=plan_id)
+                if plan_months > 0:
+                    company.payment_status = 'paid'
+                    company.next_payment_date = timezone.now() + relativedelta(months=plan_months)
             else:
                 company.plan = None
             company.save()
             messages.success(request, "Firma ma'lumotlari yangilandi.")
+            broadcast_superadmin_update()
             return redirect('super_companies')
             
     plans = Plan.objects.all()
     return render(request, "landing/super_company_form.html", {
         'company': company,
         'plans': plans,
+        'current_plan_months': get_plan_duration_months(company.plan) if company.plan else 1,
+        'tariff_change_locked': is_tariff_change_locked(company),
         'action': 'Tahrirlash'
     })
 
@@ -369,11 +409,14 @@ def super_company_delete(request, pk):
         name = company.name
         company.delete()
         messages.success(request, f"{name} firmasi o'chirildi.")
+        broadcast_superadmin_update()
     return redirect('super_companies')
 
 @user_passes_test(is_superuser)
 def super_plan_list(request):
     plans = Plan.objects.all().order_by('-created_at')
+    for plan in plans:
+        plan.meta = parse_plan_metadata(plan)
     return render(request, "landing/super_plan_list.html", {'plans': plans})
 
 @user_passes_test(is_superuser)
@@ -388,10 +431,14 @@ def super_plan_create(request):
             has_analytics = request.POST.get('has_analytics') == 'on'
             has_map = request.POST.get('has_map') == 'on'
             backup_type = request.POST.get('backup_type', 'none')
+            is_hidden = request.POST.get('is_hidden') == 'on'
+            lock_changes = request.POST.get('lock_changes') == 'on'
+            has_savdogar_sales = request.POST.get('has_savdogar_sales') == 'on'
+            duration_months = request.POST.get('duration_months') or 1
             
             Plan.objects.create(
                 name=name,
-                description=description,
+                description=build_plan_description(description, is_hidden, lock_changes, duration_months, has_savdogar_sales),
                 price=price,
                 max_users=max_users,
                 has_telegram_bot=has_telegram_bot,
@@ -400,6 +447,7 @@ def super_plan_create(request):
                 backup_type=backup_type
             )
             messages.success(request, "Tarif muvaffaqiyatli qo'shildi.")
+            broadcast_superadmin_update()
             return redirect('super_plan_list')
         except Exception as e:
             messages.error(request, f"Xatolik: {str(e)}")
@@ -412,7 +460,11 @@ def super_plan_edit(request, pk):
     if request.method == 'POST':
         try:
             plan.name = request.POST.get('name')
-            plan.description = request.POST.get('description')
+            is_hidden = request.POST.get('is_hidden') == 'on'
+            lock_changes = request.POST.get('lock_changes') == 'on'
+            has_savdogar_sales = request.POST.get('has_savdogar_sales') == 'on'
+            duration_months = request.POST.get('duration_months') or 1
+            plan.description = build_plan_description(request.POST.get('description'), is_hidden, lock_changes, duration_months, has_savdogar_sales)
             plan.price = request.POST.get('price')
             plan.max_users = request.POST.get('max_users')
             plan.has_telegram_bot = request.POST.get('has_telegram_bot') == 'on'
@@ -421,12 +473,14 @@ def super_plan_edit(request, pk):
             plan.backup_type = request.POST.get('backup_type', 'none')
             plan.save()
             messages.success(request, "Tarif ma'lumotlari yangilandi.")
+            broadcast_superadmin_update()
             return redirect('super_plan_list')
         except Exception as e:
             messages.error(request, f"Xatolik: {str(e)}")
             
     return render(request, "landing/super_plan_form.html", {
         'plan': plan,
+        'plan_meta': parse_plan_metadata(plan),
         'action': 'Tahrirlash'
     })
 
@@ -437,6 +491,7 @@ def super_plan_delete(request, pk):
         name = plan.name
         plan.delete()
         messages.success(request, f"{name} tarifi o'chirildi.")
+        broadcast_superadmin_update()
     return redirect('super_plan_list')
 
 def custom_404(request, exception=None):
@@ -453,7 +508,15 @@ def approve_plan_request(request, request_id):
     """Tarif so'rovini tasdiqlash"""
     plan_request = get_object_or_404(PlanRequest, id=request_id)
     company = apply_plan_request(plan_request)
+    send_company_notification(
+        company,
+        "Tarif tasdiqlandi",
+        "Tarif so'rovingiz admin tomonidan tasdiqlandi.",
+        "success",
+        refresh=True,
+    )
     messages.success(request, f"{company.name} uchun tarif muvaffaqiyatli o'zgartirildi.")
+    broadcast_superadmin_update()
     return redirect('plan_requests_list')
 
 
@@ -462,33 +525,78 @@ def reject_plan_request(request, request_id):
     """Tarif so'rovini rad etish"""
     plan_request = get_object_or_404(PlanRequest, id=request_id)
     reject_plan_request_service(plan_request)
+    send_company_notification(
+        plan_request.company,
+        "Tarif rad etildi",
+        "Tarif so'rovingiz admin tomonidan rad etildi.",
+        "warning",
+        refresh=True,
+    )
     
     messages.warning(request, f"{plan_request.company.name} so'rovi rad etildi.")
+    broadcast_superadmin_update()
     return redirect('plan_requests_list')
 
 @user_passes_test(lambda u: u.is_superuser)
 def super_billing_report(request):
     """Barcha firmalar bo'yicha to'lovlar hisoboti"""
-    companies = Company.objects.all().order_by('-created_at')
-    
-    # Calculate some summary stats for the dashboard header
-    total_companies = companies.count()
-    paid_companies = companies.filter(payment_status='paid').count()
-    unpaid_companies = companies.filter(payment_status='unpaid').count()
-    inactive_companies = companies.filter(is_active=False).count()
-    
+    from django.core.paginator import Paginator
+
+    companies_qs = Company.objects.all().order_by('-created_at')
+
+    # Search
+    q = request.GET.get('q', '').strip()
+    if q:
+        companies_qs = companies_qs.filter(
+            Q(name__icontains=q) | Q(subdomain__icontains=q)
+        )
+
+    # Status filter
+    status_filter = request.GET.get('status', '')
+    if status_filter == 'paid':
+        companies_qs = companies_qs.filter(payment_status='paid')
+    elif status_filter == 'unpaid':
+        companies_qs = companies_qs.filter(payment_status='unpaid')
+    elif status_filter == 'inactive':
+        companies_qs = companies_qs.filter(is_active=False)
+
+    total_companies = Company.objects.count()
+    paid_companies = Company.objects.filter(payment_status='paid').count()
+    unpaid_companies = Company.objects.filter(payment_status='unpaid').count()
+    inactive_companies = Company.objects.filter(is_active=False).count()
+
+    # Pagination
+    paginator = Paginator(companies_qs, 15)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    companies = list(page_obj)
+
+    partial_payment_count = 0
+    for company in companies:
+        sync_company_lifecycle(company)
+        prorated_billing = get_prorated_billing(company)
+        company.prorated_amount_usd = prorated_billing['amount']
+        company.prorated_reason = prorated_billing['reason']
+        company.has_prorated_due = prorated_billing['amount'] > 0
+        company.latest_prorated_link = company.billing_payment_links.filter(
+            reason__startswith='Tarif farqi:',
+            status__in=['created', 'opened'],
+        ).order_by('-created_at').first()
+        if company.has_prorated_due:
+            partial_payment_count += 1
+
     context = {
         'companies': companies,
+        'page_obj': page_obj,
         'total_companies': total_companies,
         'paid_companies': paid_companies,
         'unpaid_companies': unpaid_companies,
         'inactive_companies': inactive_companies,
+        'partial_payment_count': partial_payment_count,
         'debug_mode': settings.DEBUG,
+        'q': q,
+        'status_filter': status_filter,
     }
-
-    # Admin billing sahifasiga kirganida barcha firmalar lifecycle tekshiruvi
-    for company in companies:
-        sync_company_lifecycle(company)
 
     return render(request, 'landing/super_billing.html', context)
 
@@ -504,16 +612,45 @@ def update_billing_status(request, company_id):
             status_text = "faollashtirildi" if company.is_active else "to'xtatildi"
             messages.success(request, f"🏢 {company.name} tizimi {status_text}.")
             company.save(update_fields=['is_active'])
+            broadcast_superadmin_update()
             
         elif action == 'mark_paid':
-            if not settings.DEBUG:
-                return redirect('super_billing_report')
             company = mark_company_paid(company)
             messages.success(request, f"💵 {company.name} to'lovi qabul qilindi. Keyingi to'lov: {company.next_payment_date.strftime('%d.%m.%Y')}")
-            
+            broadcast_superadmin_update()
+
+        elif action == 'mark_prorated_paid':
+            prorated_billing = get_prorated_billing(company)
+            if prorated_billing['amount'] <= 0:
+                messages.info(request, f"{company.name} uchun chala to'lov topilmadi.")
+                return redirect('super_billing_report')
+
+            payment_link = company.billing_payment_links.filter(
+                reason__startswith='Tarif farqi:',
+                status__in=['created', 'opened'],
+            ).order_by('-created_at').first()
+            if not payment_link:
+                payment_link = BillingPaymentLink.objects.create(
+                    company=company,
+                    reason=prorated_billing['reason'],
+                    billing_period_start=get_billing_period_start(company),
+                    amount_usd=prorated_billing['amount'],
+                    amount_uzs=0,
+                    click_url='admin-marked',
+                    status='created',
+                )
+
+            payment_link.status = 'paid'
+            payment_link.paid_at = timezone.now()
+            payment_link.save(update_fields=['status', 'paid_at'])
+            mark_company_paid(company, payment_link=payment_link)
+            messages.success(request, f"{company.name} tarif farqi (${prorated_billing['amount']}) to'landi deb belgilandi.")
+            broadcast_superadmin_update()
+
         elif action == 'mark_unpaid':
             mark_company_unpaid(company)
             messages.warning(request, f"⚠️ {company.name} to'lovi 'to'lanmagan' deb belgilandi.")
+            broadcast_superadmin_update()
         
     return redirect('super_billing_report')
 

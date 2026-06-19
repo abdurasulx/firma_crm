@@ -1,79 +1,536 @@
 {% extends 'landing/base.html' %}
 
-{% block title %}StockFirm CRM tariflari - oddiy va shaffof narxlar{% endblock %}
+{% block title %}StockFirm CRM tariflari — oddiy va shaffof narxlar{% endblock %}
 {% block meta_description %}StockFirm CRM tariflari: kichik firma, o'sayotgan biznes va individual joriy qilish uchun mos SaaS rejalar.{% endblock %}
 
+{% block extra_head %}
+<style>
+/* ── PRICING HERO ── */
+.pricing-hero {
+    padding: 100px 0 72px;
+    position: relative; overflow: hidden;
+    background:
+        radial-gradient(ellipse 80% 60% at 50% -10%, rgba(16,185,129,.12), transparent 65%),
+        linear-gradient(180deg, #f0faf5 0%, #fff 100%);
+}
+.pricing-hero-orb {
+    position: absolute; border-radius: 50%; filter: blur(90px); pointer-events: none;
+}
+.pricing-hero-orb-1 {
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(16,185,129,.14) 0%, transparent 70%);
+    top: -180px; right: -100px;
+    animation: float-y-slow 10s ease-in-out infinite;
+}
+.pricing-hero-orb-2 {
+    width: 320px; height: 320px;
+    background: radial-gradient(circle, rgba(52,211,153,.09) 0%, transparent 70%);
+    bottom: -80px; left: -60px;
+    animation: float-y-slow 13s ease-in-out infinite reverse;
+}
+
+/* ── TOGGLE ── */
+.billing-toggle {
+    display: inline-flex; align-items: center;
+    background: rgba(16,185,129,.07);
+    border: 1px solid rgba(16,185,129,.18);
+    border-radius: 999px; padding: 5px;
+    gap: 4px; margin: 28px 0 0;
+}
+.billing-toggle button {
+    background: none; border: none; cursor: pointer;
+    padding: 8px 20px; border-radius: 999px;
+    font-size: 13px; font-weight: 700; color: var(--muted);
+    transition: all .2s;
+}
+.billing-toggle button.active {
+    background: var(--brand);
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(16,185,129,.35);
+}
+.save-badge {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    color: #fff; font-size: 10px; font-weight: 800;
+    padding: 3px 10px; border-radius: 999px;
+    margin-left: 6px; vertical-align: middle;
+}
+
+/* ── PRICING GRID ── */
+.pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    align-items: start;
+    margin-top: 64px;
+}
+
+.plan-card {
+    background: rgba(255,255,255,.75);
+    backdrop-filter: blur(24px) saturate(1.8);
+    border: 1px solid rgba(224,235,230,.8);
+    border-radius: 28px;
+    padding: 32px 28px 28px;
+    position: relative; overflow: hidden;
+    transition: box-shadow .3s cubic-bezier(.22,1,.36,1), transform .3s cubic-bezier(.22,1,.36,1), border-color .3s;
+}
+.plan-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(16,185,129,.25), transparent);
+    opacity: 0; transition: opacity .3s;
+}
+.plan-card:hover { box-shadow: 0 24px 64px rgba(6,14,11,.1); transform: translateY(-4px); border-color: rgba(16,185,129,.2); }
+.plan-card:hover::before { opacity: 1; }
+
+/* Featured / middle card */
+.plan-card.featured {
+    background: linear-gradient(145deg, rgba(6,14,11,.92), rgba(12,26,20,.96));
+    backdrop-filter: blur(32px);
+    border: 1px solid rgba(16,185,129,.25);
+    box-shadow: 0 32px 80px rgba(6,14,11,.3), 0 0 0 1px rgba(16,185,129,.1), inset 0 1px 0 rgba(255,255,255,.06);
+    transform: translateY(-8px);
+}
+.plan-card.featured:hover { transform: translateY(-14px); box-shadow: 0 40px 100px rgba(6,14,11,.4), 0 0 0 1px rgba(16,185,129,.25), 0 0 60px rgba(16,185,129,.1); }
+.plan-card.featured::before { opacity: 1; background: linear-gradient(90deg, transparent, rgba(16,185,129,.5), transparent); }
+
+.plan-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em;
+    padding: 5px 12px; border-radius: 999px; margin-bottom: 22px;
+}
+.plan-badge.default {
+    background: rgba(16,185,129,.08); border: 1px solid rgba(16,185,129,.15);
+    color: var(--brand-dark);
+}
+.plan-badge.featured-badge {
+    background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+    color: #fff; box-shadow: 0 4px 16px rgba(16,185,129,.35);
+}
+.plan-badge.custom {
+    background: rgba(96,165,250,.1); border: 1px solid rgba(96,165,250,.2);
+    color: #60a5fa;
+}
+/* "ENG MOS" absolute chip */
+.plan-chip {
+    position: absolute; top: -1px; right: 24px;
+    background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+    color: #fff; font-size: 10px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase;
+    padding: 5px 14px; border-radius: 0 0 12px 12px;
+    box-shadow: 0 6px 20px rgba(16,185,129,.4);
+}
+
+.plan-name {
+    font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800;
+    letter-spacing: -0.03em; margin-bottom: 10px;
+    color: var(--ink);
+}
+.plan-card.featured .plan-name { color: #fff; }
+
+.plan-price {
+    display: flex; align-items: flex-end; gap: 4px; margin-bottom: 6px;
+}
+.plan-price-amount {
+    font-family: 'Syne', sans-serif; font-size: 52px; font-weight: 800;
+    letter-spacing: -0.04em; line-height: 1;
+    background: linear-gradient(135deg, var(--brand), var(--brand-light));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.plan-card.featured .plan-price-amount {
+    background: linear-gradient(135deg, #4ade80, #34d399);
+    -webkit-background-clip: text; background-clip: text;
+}
+.plan-price-amount.free {
+    background: linear-gradient(135deg, var(--ink), var(--muted));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.plan-price-amount.contact {
+    font-size: 38px;
+    background: linear-gradient(135deg, #60a5fa, #93c5fd);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.plan-price-period { font-size: 14px; font-weight: 700; color: var(--muted); margin-bottom: 10px; }
+.plan-card.featured .plan-price-period { color: rgba(255,255,255,.4); }
+
+.plan-desc { font-size: 14px; line-height: 1.6; color: var(--muted); margin-bottom: 24px; }
+.plan-card.featured .plan-desc { color: rgba(255,255,255,.45); }
+
+/* Divider */
+.plan-divider {
+    height: 1px; background: rgba(224,235,230,.8);
+    margin: 20px 0;
+}
+.plan-card.featured .plan-divider { background: rgba(255,255,255,.08); }
+
+/* Feature list */
+.plan-features { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
+.plan-features li {
+    display: flex; align-items: flex-start; gap: 10px;
+    font-size: 14px; color: var(--muted);
+}
+.plan-card.featured .plan-features li { color: rgba(255,255,255,.6); }
+.plan-features li .check {
+    width: 20px; height: 20px; border-radius: 6px; flex-shrink: 0; margin-top: 1px;
+    background: rgba(16,185,129,.12); border: 1px solid rgba(16,185,129,.2);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--brand); font-size: 10px;
+}
+.plan-card.featured .plan-features li .check {
+    background: rgba(74,222,128,.15); border-color: rgba(74,222,128,.25); color: #4ade80;
+}
+
+/* Plan CTA button */
+.plan-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; padding: 14px 20px; border-radius: 14px;
+    font-size: 15px; font-weight: 700; border: none; cursor: pointer;
+    transition: all .2s cubic-bezier(.22,1,.36,1);
+    text-decoration: none;
+}
+.plan-btn.outline {
+    background: rgba(255,255,255,.7);
+    backdrop-filter: blur(12px);
+    border: 1.5px solid rgba(224,235,230,.9);
+    color: var(--ink);
+}
+.plan-btn.outline:hover { border-color: var(--brand); color: var(--brand); transform: translateY(-2px); }
+.plan-btn.primary-btn {
+    background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+    color: #fff;
+    box-shadow: 0 8px 28px rgba(16,185,129,.4);
+    background-size: 200% auto;
+    animation: gradient-shift 4s ease infinite;
+}
+.plan-btn.primary-btn:hover { transform: translateY(-3px); box-shadow: 0 14px 40px rgba(16,185,129,.5); }
+.plan-btn.enterprise {
+    background: rgba(96,165,250,.1);
+    border: 1.5px solid rgba(96,165,250,.25); color: #60a5fa;
+}
+.plan-btn.enterprise:hover { background: rgba(96,165,250,.18); transform: translateY(-2px); }
+
+/* ── COMPARISON TABLE ── */
+.compare-section { margin-top: 100px; }
+.compare-header { text-align: center; margin-bottom: 52px; }
+.compare-table {
+    background: rgba(255,255,255,.7);
+    backdrop-filter: blur(24px) saturate(1.8);
+    border: 1px solid rgba(224,235,230,.8);
+    border-radius: 24px; overflow: hidden;
+    box-shadow: 0 8px 40px rgba(6,14,11,.06);
+}
+.ct-row {
+    display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
+    border-bottom: 1px solid rgba(224,235,230,.6);
+}
+.ct-row:last-child { border-bottom: none; }
+.ct-row.header { background: rgba(16,185,129,.04); }
+.ct-cell {
+    padding: 16px 20px; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    border-right: 1px solid rgba(224,235,230,.6);
+}
+.ct-cell:first-child { justify-content: flex-start; }
+.ct-cell:last-child { border-right: none; }
+.ct-cell.header-cell { font-size: 13px; font-weight: 800; color: var(--ink); }
+.ct-cell.feature-name { color: var(--muted); font-weight: 500; }
+.ct-check { color: var(--brand); font-size: 16px; }
+.ct-cross { color: rgba(0,0,0,.2); font-size: 14px; }
+.ct-partial { font-size: 12px; font-weight: 700; color: var(--muted-2); }
+
+/* ── FAQ / VALUE SECTION ── */
+.value-section {
+    background: var(--dark);
+    border-radius: 36px;
+    padding: 72px 56px;
+    position: relative; overflow: hidden;
+    margin-top: 80px;
+    box-shadow: 0 32px 80px rgba(6,14,11,.2);
+}
+.value-orb {
+    position: absolute; border-radius: 50%; filter: blur(80px); pointer-events: none;
+}
+.value-orb-1 { width: 400px; height: 400px; background: radial-gradient(circle, rgba(16,185,129,.12) 0%, transparent 70%); top: -150px; right: -100px; animation: float-y-slow 9s ease-in-out infinite; }
+.value-orb-2 { width: 280px; height: 280px; background: radial-gradient(circle, rgba(52,211,153,.08) 0%, transparent 70%); bottom: -80px; left: -60px; animation: float-y-slow 12s ease-in-out infinite reverse; }
+.value-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; position: relative; z-index: 1; }
+.value-stat {
+    display: flex; flex-direction: column; gap: 20px;
+}
+.value-stat-item {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 18px;
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.07);
+    border-radius: 16px;
+    transition: background .2s, border-color .2s;
+}
+.value-stat-item:hover { background: rgba(255,255,255,.07); border-color: rgba(16,185,129,.2); }
+.value-stat-icon {
+    width: 44px; height: 44px; border-radius: 13px;
+    background: linear-gradient(135deg, rgba(16,185,129,.18), rgba(52,211,153,.08));
+    border: 1px solid rgba(16,185,129,.2);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--brand); font-size: 18px; flex-shrink: 0;
+}
+.value-stat-text strong { display: block; color: #fff; font-size: 15px; font-weight: 800; margin-bottom: 4px; }
+.value-stat-text span { color: rgba(255,255,255,.45); font-size: 13px; line-height: 1.5; }
+
+/* ── CTA ── */
+.pricing-cta {
+    background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 60%, #065f46 100%);
+    background-size: 200% 200%; animation: gradient-shift 8s ease infinite;
+    border-radius: 28px; padding: 64px 48px; text-align: center;
+    position: relative; overflow: hidden; margin-top: 80px;
+    box-shadow: 0 24px 64px rgba(16,185,129,.3);
+}
+.pricing-cta::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 70% 80% at 50% 120%, rgba(255,255,255,.15), transparent); }
+.pricing-cta h2 { font-family: 'Syne', sans-serif; font-size: clamp(24px,3.5vw,40px); color: #fff; letter-spacing: -0.04em; line-height: 1.15; margin-bottom: 14px; position: relative; }
+.pricing-cta p { color: rgba(255,255,255,.75); font-size: 16px; margin-bottom: 28px; position: relative; }
+.pricing-cta-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; position: relative; }
+
+@media (max-width: 900px) {
+    .pricing-grid { grid-template-columns: 1fr; }
+    .plan-card.featured { transform: none; }
+    .ct-row { grid-template-columns: 1.5fr 1fr 1fr 1fr; }
+    .ct-cell { padding: 12px 10px; font-size: 12px; }
+    .value-grid { grid-template-columns: 1fr; gap: 40px; }
+    .value-section { padding: 48px 28px; }
+    .pricing-cta { padding: 48px 28px; }
+}
+@media (max-width: 640px) {
+    .ct-row { grid-template-columns: 1.2fr repeat(3, 1fr); }
+    .ct-cell { padding: 10px 6px; font-size: 11px; }
+    .compare-table { display: none; }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<section class="section" style="padding-top:72px;">
-    <div class="container" style="text-align:center;">
-        <div class="eyebrow">Tariflar</div>
-        <h1 class="hero-title" style="max-width:900px; margin:14px auto 18px;">Firma hajmiga mos, tushunarli narxlar.</h1>
-        <p class="lead" style="max-width:720px; margin:0 auto 34px;">
-            Avval tizimni sinab ko'ring, keyin jamoangiz va jarayonlaringizga mos tarifni tanlang. Har bir tarif ombor, savdo va nasiya nazoratini tartibga solish uchun tuzilgan.
+
+<!-- ═══ HERO ═══ -->
+<section class="pricing-hero">
+    <div class="pricing-hero-orb pricing-hero-orb-1"></div>
+    <div class="pricing-hero-orb pricing-hero-orb-2"></div>
+    <div class="container" style="text-align:center;position:relative;z-index:1;">
+        <div class="eyebrow" style="justify-content:center;">Tariflar</div>
+        <h1 class="section-headline" style="max-width:620px;margin:14px auto 16px;font-size:clamp(36px,5vw,60px);">
+            Firma hajmiga mos,<br><em style="font-style:normal;background:linear-gradient(135deg,var(--brand),#6ee7b7,var(--brand-dark));background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:gradient-shift 4s ease infinite;">tushunarli narxlar.</em>
+        </h1>
+        <p class="section-lead" style="margin:0 auto 0;max-width:560px;text-align:center;">
+            Avval tizimni sinab ko'ring, keyin jamoangizga mos tarifni tanlang. Hech qanday yashirin to'lovlar yo'q.
         </p>
+        <!-- Billing toggle -->
+        <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:28px;">
+            <div class="billing-toggle">
+                <button class="active" id="btnMonthly" onclick="setBilling('monthly')">Oylik</button>
+                <button id="btnYearly" onclick="setBilling('yearly')">Yillik</button>
+            </div>
+            <span class="save-badge" id="saveBadge" style="opacity:0;transition:opacity .3s;">20% tejash</span>
+        </div>
     </div>
 </section>
 
-<section class="section" style="padding-top:20px;">
+<!-- ═══ PRICING CARDS ═══ -->
+<section class="section" style="padding-top:0;">
     <div class="container">
-        <div class="grid-3">
-            <div class="glass-card">
-                <div class="pill">Boshlash uchun</div>
-                <h3 style="font-size:28px; margin:22px 0 8px;">Startap</h3>
-                <div style="font-size:42px; font-weight:900; font-family:'Space Grotesk'; margin-bottom:10px;">Bepul</div>
-                <p style="color:var(--muted); margin-bottom:24px;">Kichik firma CRM jarayonini sinab ko'rishi uchun.</p>
-                <ul style="list-style:none; display:grid; gap:12px; margin-bottom:28px; color:var(--muted);">
-                    <li>&#10003; 1 ta firma</li>
-                    <li>&#10003; 5 tagacha xodim</li>
-                    <li>&#10003; Ombor va mahsulotlar</li>
-                    <li>&#10003; Asosiy savdo hisobotlari</li>
+        <div class="pricing-grid">
+
+            <!-- Startap -->
+            <div class="plan-card reveal reveal-d1">
+                <div class="plan-badge default"><i class="fas fa-seedling"></i> Boshlash uchun</div>
+                <div class="plan-name">Startap</div>
+                <div class="plan-price">
+                    <span class="plan-price-amount free">Bepul</span>
+                </div>
+                <div class="plan-desc">Kichik firma CRM jarayonini sinab ko'rishi uchun. 30 kun — hech qanday cheklov yo'q.</div>
+                <div class="plan-divider"></div>
+                <ul class="plan-features">
+                    <li><span class="check"><i class="fas fa-check"></i></span><span>1 ta firma va subdomain</span></li>
+                    <li><span class="check"><i class="fas fa-check"></i></span><span>5 tagacha xodim</span></li>
+                    <li><span class="check"><i class="fas fa-check"></i></span><span>Ombor va mahsulotlar</span></li>
+                    <li><span class="check"><i class="fas fa-check"></i></span><span>Asosiy savdo va chek</span></li>
+                    <li><span class="check"><i class="fas fa-check"></i></span><span>Real-time bildirishnomalar</span></li>
                 </ul>
-                <a href="{% url 'register_company' %}" class="btn btn-outline" style="width:100%;">Bepul boshlash</a>
+                <a href="{% url 'register_company' %}" class="plan-btn outline">
+                    <i class="fas fa-arrow-right"></i> Bepul boshlash
+                </a>
             </div>
 
-            <div class="glass-card" style="border-color:var(--green); transform:translateY(-12px); box-shadow:0 28px 80px rgba(5,150,105,.16);">
-                <div style="position:absolute; top:-15px; right:24px; background:var(--green); color:white; padding:7px 13px; border-radius:999px; font-size:12px; font-weight:900;">ENG MOS</div>
-                <div class="pill">O'sayotgan firma</div>
-                <h3 style="font-size:28px; margin:22px 0 8px;">Biznes</h3>
-                <div style="font-size:42px; font-weight:900; font-family:'Space Grotesk'; margin-bottom:10px;">$29<span style="font-size:16px; color:var(--muted);">/oy</span></div>
-                <p style="color:var(--muted); margin-bottom:24px;">Savdo, yetkazib berish va rahbar nazorati bir joyda.</p>
-                <ul style="list-style:none; display:grid; gap:12px; margin-bottom:28px; color:var(--muted);">
-                    <li>&#10003; Xodimlar va rollar</li>
-                    <li>&#10003; Nasiya va qisman to'lovlar</li>
-                    <li>&#10003; Analitika dashboard</li>
-                    <li>&#10003; Click billing va tarif nazorati</li>
+            <!-- Biznes (featured) -->
+            <div class="plan-card featured reveal">
+                <div class="plan-chip">⭐ ENG MOS</div>
+                <div class="plan-badge featured-badge"><i class="fas fa-rocket"></i> O'sayotgan firma</div>
+                <div class="plan-name">Biznes</div>
+                <div class="plan-price">
+                    <span class="plan-price-amount" id="biznesPrice">$29</span>
+                    <span class="plan-price-period" id="biznesPeriod">/oy</span>
+                </div>
+                <div class="plan-desc" id="biznesDesc">Savdo, yetkazib berish va rahbar nazorati bir joyda.</div>
+                <div class="plan-divider"></div>
+                <ul class="plan-features">
+                    <li><span class="check"><i class="fas fa-check"></i></span><span>Cheksiz xodimlar va rollar</span></li>
+                    <li><span class="check"><i class="fas fa-check"></i></span><span>Nasiya va qisman to'lovlar</span></li>
+                    <li><span class="check"><i class="fas fa-check"></i></span><span>Kuryer GPS + PWA offline</span></li>
+                    <li><span class="check"><i class="fas fa-check"></i></span><span>Analitika va 30-kun trend</span></li>
+                    <li><span class="check"><i class="fas fa-check"></i></span><span>Excel export (barcha modullar)</span></li>
+                    <li><span class="check"><i class="fas fa-check"></i></span><span>Telegram eslatmalar</span></li>
+                    <li><span class="check"><i class="fas fa-check"></i></span><span>Mijoz segmentatsiyasi (VIP)</span></li>
+                    <li><span class="check"><i class="fas fa-check"></i></span><span>Click billing va tarif nazorati</span></li>
                 </ul>
-                <a href="{% url 'register_company' %}" class="btn btn-primary" style="width:100%;">Tarifni tanlash</a>
+                <a href="{% url 'register_company' %}" class="plan-btn primary-btn">
+                    <i class="fas fa-rocket"></i> Tarifni tanlash
+                </a>
             </div>
 
-            <div class="glass-card">
-                <div class="pill">Moslashtirilgan</div>
-                <h3 style="font-size:28px; margin:22px 0 8px;">Enterprise</h3>
-                <div style="font-size:42px; font-weight:900; font-family:'Space Grotesk'; margin-bottom:10px;">Aloqa</div>
-                <p style="color:var(--muted); margin-bottom:24px;">Katta jamoa, maxsus limitlar va individual joriy qilish uchun.</p>
-                <ul style="list-style:none; display:grid; gap:12px; margin-bottom:28px; color:var(--muted);">
-                    <li>&#10003; Custom tarif va limitlar</li>
-                    <li>&#10003; Maxsus integratsiyalar</li>
-                    <li>&#10003; Migratsiya yordami</li>
-                    <li>&#10003; Ustuvor qo'llab-quvvatlash</li>
+            <!-- Enterprise -->
+            <div class="plan-card reveal reveal-d2">
+                <div class="plan-badge custom"><i class="fas fa-building"></i> Moslashtirilgan</div>
+                <div class="plan-name">Enterprise</div>
+                <div class="plan-price">
+                    <span class="plan-price-amount contact">Aloqa</span>
+                </div>
+                <div class="plan-desc">Katta jamoa, maxsus limitlar va individual joriy qilish uchun.</div>
+                <div class="plan-divider"></div>
+                <ul class="plan-features">
+                    <li><span class="check" style="background:rgba(96,165,250,.1);border-color:rgba(96,165,250,.2);color:#60a5fa;"><i class="fas fa-check"></i></span><span>Barcha Biznes imkoniyatlar</span></li>
+                    <li><span class="check" style="background:rgba(96,165,250,.1);border-color:rgba(96,165,250,.2);color:#60a5fa;"><i class="fas fa-check"></i></span><span>Custom tarif va limitlar</span></li>
+                    <li><span class="check" style="background:rgba(96,165,250,.1);border-color:rgba(96,165,250,.2);color:#60a5fa;"><i class="fas fa-check"></i></span><span>Maxsus integratsiyalar</span></li>
+                    <li><span class="check" style="background:rgba(96,165,250,.1);border-color:rgba(96,165,250,.2);color:#60a5fa;"><i class="fas fa-check"></i></span><span>Migratsiya va onboarding yordami</span></li>
+                    <li><span class="check" style="background:rgba(96,165,250,.1);border-color:rgba(96,165,250,.2);color:#60a5fa;"><i class="fas fa-check"></i></span><span>Ustuvor 24/7 qo'llab-quvvatlash</span></li>
                 </ul>
-                <a href="{% url 'marketing_page' 'contact' %}" class="btn btn-outline" style="width:100%;">Bog'lanish</a>
+                <a href="{% url 'marketing_page' 'contact' %}" class="plan-btn enterprise">
+                    <i class="fas fa-envelope"></i> Bog'lanish
+                </a>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<!-- ═══ COMPARISON TABLE ═══ -->
+<section class="section" style="padding-top:48px;" id="compare">
+    <div class="container">
+        <div class="compare-header reveal">
+            <div class="eyebrow" style="justify-content:center;">Batafsil taqqoslash</div>
+            <h2 class="section-headline" style="margin-top:12px;">Qaysi tarifda nima bor?</h2>
+        </div>
+
+        <div class="compare-table reveal">
+            <div class="ct-row header">
+                <div class="ct-cell header-cell" style="justify-content:flex-start;">Imkoniyat</div>
+                <div class="ct-cell header-cell">Startap</div>
+                <div class="ct-cell header-cell" style="color:var(--brand);">Biznes</div>
+                <div class="ct-cell header-cell" style="color:#60a5fa;">Enterprise</div>
+            </div>
+            {% for row in compare_rows %}
+            {% empty %}
+            <!-- Static rows -->
+            <div class="ct-row"><div class="ct-cell feature-name">Ombor nazorati</div><div class="ct-cell"><i class="fas fa-check ct-check"></i></div><div class="ct-cell"><i class="fas fa-check ct-check"></i></div><div class="ct-cell"><i class="fas fa-check ct-check"></i></div></div>
+            <div class="ct-row"><div class="ct-cell feature-name">Savdo va QR chek</div><div class="ct-cell"><i class="fas fa-check ct-check"></i></div><div class="ct-cell"><i class="fas fa-check ct-check"></i></div><div class="ct-cell"><i class="fas fa-check ct-check"></i></div></div>
+            <div class="ct-row"><div class="ct-cell feature-name">Xodimlar soni</div><div class="ct-cell"><span class="ct-partial">5 ta</span></div><div class="ct-cell"><span class="ct-partial" style="color:var(--brand);font-weight:800;">Cheksiz</span></div><div class="ct-cell"><span class="ct-partial" style="color:#60a5fa;font-weight:800;">Cheksiz</span></div></div>
+            <div class="ct-row"><div class="ct-cell feature-name">Nasiya boshqaruvi</div><div class="ct-cell"><i class="fas fa-minus ct-cross"></i></div><div class="ct-cell"><i class="fas fa-check ct-check"></i></div><div class="ct-cell"><i class="fas fa-check ct-check"></i></div></div>
+            <div class="ct-row"><div class="ct-cell feature-name">Kuryer GPS + PWA</div><div class="ct-cell"><i class="fas fa-minus ct-cross"></i></div><div class="ct-cell"><i class="fas fa-check ct-check"></i></div><div class="ct-cell"><i class="fas fa-check ct-check"></i></div></div>
+            <div class="ct-row"><div class="ct-cell feature-name">Analitika va trend</div><div class="ct-cell"><i class="fas fa-minus ct-cross"></i></div><div class="ct-cell"><i class="fas fa-check ct-check"></i></div><div class="ct-cell"><i class="fas fa-check ct-check"></i></div></div>
+            <div class="ct-row"><div class="ct-cell feature-name">Excel export</div><div class="ct-cell"><i class="fas fa-minus ct-cross"></i></div><div class="ct-cell"><i class="fas fa-check ct-check"></i></div><div class="ct-cell"><i class="fas fa-check ct-check"></i></div></div>
+            <div class="ct-row"><div class="ct-cell feature-name">Telegram eslatmalar</div><div class="ct-cell"><i class="fas fa-minus ct-cross"></i></div><div class="ct-cell"><i class="fas fa-check ct-check"></i></div><div class="ct-cell"><i class="fas fa-check ct-check"></i></div></div>
+            <div class="ct-row"><div class="ct-cell feature-name">Savdogar moduli</div><div class="ct-cell"><i class="fas fa-minus ct-cross"></i></div><div class="ct-cell"><i class="fas fa-check ct-check"></i></div><div class="ct-cell"><i class="fas fa-check ct-check"></i></div></div>
+            <div class="ct-row"><div class="ct-cell feature-name">Mijoz segmentatsiyasi</div><div class="ct-cell"><i class="fas fa-minus ct-cross"></i></div><div class="ct-cell"><i class="fas fa-check ct-check"></i></div><div class="ct-cell"><i class="fas fa-check ct-check"></i></div></div>
+            <div class="ct-row"><div class="ct-cell feature-name">Custom integratsiyalar</div><div class="ct-cell"><i class="fas fa-minus ct-cross"></i></div><div class="ct-cell"><i class="fas fa-minus ct-cross"></i></div><div class="ct-cell"><i class="fas fa-check ct-check" style="color:#60a5fa;"></i></div></div>
+            <div class="ct-row"><div class="ct-cell feature-name">Ustuvor qo'llab-quvvatlash</div><div class="ct-cell"><i class="fas fa-minus ct-cross"></i></div><div class="ct-cell"><i class="fas fa-minus ct-cross"></i></div><div class="ct-cell"><i class="fas fa-check ct-check" style="color:#60a5fa;"></i></div></div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- ═══ VALUE SECTION ═══ -->
+<section class="section" style="padding-top:24px;">
+    <div class="container">
+        <div class="value-section">
+            <div class="value-orb value-orb-1"></div>
+            <div class="value-orb value-orb-2"></div>
+            <div class="value-grid">
+                <div>
+                    <div class="eyebrow" style="color:#4ade80;">Narxdan ko'ra muhimroq narsa</div>
+                    <h2 class="section-headline" style="color:#fff;margin-top:14px;max-width:400px;">
+                        Tizim o'zini oqlashi kerak.
+                    </h2>
+                    <p style="color:rgba(255,255,255,.45);font-size:15px;line-height:1.7;margin-top:14px;max-width:380px;">
+                        StockFirm CRM rahbarga Excel fayllarni yig'ish, xodimlardan og'zaki hisobot so'rash va qarzlarni qo'lda tekshirish vaqtini kamaytiradi.
+                    </p>
+                    <a href="{% url 'register_company' %}" class="btn btn-shimmer" style="margin-top:28px;padding:13px 26px;">
+                        <i class="fas fa-rocket"></i> Bepul sinab ko'rish
+                    </a>
+                </div>
+                <div class="value-stat reveal-right">
+                    <div class="value-stat-item">
+                        <div class="value-stat-icon"><i class="fas fa-clock"></i></div>
+                        <div class="value-stat-text">
+                            <strong>Kunlik 2–3 soat tejash</strong>
+                            <span>Excel hisobotlar, og'zaki so'rovlar va qo'lda tekshirishlarni avtomatlashtirish orqali.</span>
+                        </div>
+                    </div>
+                    <div class="value-stat-item">
+                        <div class="value-stat-icon"><i class="fas fa-chart-line"></i></div>
+                        <div class="value-stat-text">
+                            <strong>Qarz yo'qotishlar kamayadi</strong>
+                            <span>Nasiya muddatlari avtomatik kuzatiladi, Telegram orqali mijozga eslatma yuboriladi.</span>
+                        </div>
+                    </div>
+                    <div class="value-stat-item">
+                        <div class="value-stat-icon"><i class="fas fa-shield-halved"></i></div>
+                        <div class="value-stat-text">
+                            <strong>Xatoliklar minimallashadi</strong>
+                            <span>Kim qachon nima qilgani audit jurnalida — hisob-kitob xatoliklari yo'qoladi.</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </section>
 
-<section class="section" style="padding-top:20px;">
-    <div class="container card" style="background:var(--dark); color:white;">
-        <div class="grid-2">
-            <div>
-                <div class="eyebrow" style="color:#86efac;">Narxdan ko'ra muhimroq narsa</div>
-                <h2 class="section-title" style="margin-top:12px;">Tizim o'zini tartib va vaqt tejalishi bilan oqlashi kerak.</h2>
+<!-- ═══ CTA ═══ -->
+<section class="section">
+    <div class="container">
+        <div class="pricing-cta reveal">
+            <h2>30 kun bepul — karta shart emas.</h2>
+            <p>Bugun firmangizni oching, ertadan aniq raqamlar bilan ishlang.</p>
+            <div class="pricing-cta-btns">
+                <a href="{% url 'register_company' %}" class="btn btn-dark" style="font-size:15px;padding:14px 28px;">
+                    <i class="fas fa-rocket"></i> Firmamni ochish
+                </a>
+                <a href="#compare" class="btn btn-glass" style="font-size:15px;padding:14px 28px;">
+                    Taqqoslash ko'rish <i class="fas fa-arrow-down" style="font-size:11px;"></i>
+                </a>
             </div>
-            <p class="lead" style="color:rgba(255,255,255,.68);">
-                StockFirm CRM rahbarga Excel fayllarni yig'ish, xodimlardan og'zaki hisobot so'rash va qarzlarni qo'lda tekshirish vaqtini kamaytiradi. Asosiy foyda: nazorat, tezlik va xatoliklar kamayishi.
-            </p>
         </div>
     </div>
 </section>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ── Billing toggle ── */
+function setBilling(type) {
+    const monthly  = document.getElementById('btnMonthly');
+    const yearly   = document.getElementById('btnYearly');
+    const price    = document.getElementById('biznesPrice');
+    const period   = document.getElementById('biznesPeriod');
+    const desc     = document.getElementById('biznesDesc');
+    const badge    = document.getElementById('saveBadge');
+
+    monthly.classList.toggle('active', type === 'monthly');
+    yearly.classList.toggle('active',  type === 'yearly');
+
+    if (type === 'yearly') {
+        price.textContent  = '$278';
+        period.textContent = '/yil';
+        desc.textContent   = 'Yillik to\'lov — oyiga $23.2. 2 oy bepul!';
+        badge.style.opacity = '1';
+    } else {
+        price.textContent  = '$29';
+        period.textContent = '/oy';
+        desc.textContent   = 'Savdo, yetkazib berish va rahbar nazorati bir joyda.';
+        badge.style.opacity = '0';
+    }
+}
+</script>
 {% endblock %}

@@ -1,80 +1,114 @@
 {% extends 'egabase.html' %}
 {% load static %}
 
-{% block title %}Profilim{% endblock %}
+{% block title %}Ega profili{% endblock %}
 
 {% block content %}
 <style>
-    .profile-container {
-        max-width: 600px;
-        margin: auto;
-        background-color: #fff;
-        padding: 25px;
-        border-radius: 10px;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        text-align: center;
-    }
-
-    .profile-image {
-        width: 120px;
-        height: 120px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 3px solid #6f42c1;
-        margin-bottom: 15px;
-    }
-
-    .profile-info h2 {
-        margin: 10px 0 5px;
-        color: #333;
-    }
-
-    .profile-info p {
-        margin: 5px 0;
-        color: #666;
-        font-size: 15px;
-    }
-
-    .edit-button {
-        display: inline-block;
-        margin-top: 20px;
-        padding: 10px 20px;
-        background-color: #6f42c1;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        text-decoration: none;
-        font-weight: 600;
-        transition: background-color 0.3s;
-    }
-
-    .edit-button:hover {
-        background-color: #5a34a3;
-    }
-
-    @media screen and (max-width: 600px) {
-        .profile-container {
-            padding: 20px 15px;
-        }
-
-        .profile-image {
-            width: 90px;
-            height: 90px;
-        }
+    .owner-page { display: grid; gap: 22px; }
+    .owner-hero { background: #fff; border: 1px solid #e2e8f0; border-radius: 22px; padding: 28px; display: grid; grid-template-columns: auto 1fr auto; gap: 22px; align-items: center; box-shadow: 0 12px 34px rgba(15,23,42,.05); }
+    .owner-avatar { width: 96px; height: 96px; border-radius: 24px; object-fit: cover; border: 1px solid #e2e8f0; background: #f8fafc; }
+    .owner-title h2 { margin: 0; color: #0f172a; font-size: 30px; font-weight: 900; }
+    .owner-title p { margin: 8px 0 0; color: #64748b; font-weight: 700; }
+    .owner-badge { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 999px; background: #ecfdf5; color: #166534; font-weight: 900; }
+    .owner-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 20px; box-shadow: 0 10px 30px rgba(15,23,42,.04); }
+    .owner-label { color: #64748b; font-size: 12px; font-weight: 900; text-transform: uppercase; }
+    .owner-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .info-row { display: flex; justify-content: space-between; gap: 14px; padding: 13px 0; border-top: 1px solid #f1f5f9; color: #334155; font-weight: 700; }
+    .muted { color: #64748b; font-weight: 700; }
+    .actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 14px; }
+    .action { display: flex; align-items: center; gap: 10px; padding: 14px; border-radius: 14px; background: #f8fafc; color: #0f172a; text-decoration: none; font-weight: 900; border: 1px solid #e2e8f0; }
+    .profile-form { display: grid; gap: 14px; margin-top: 14px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-field label { display: block; margin-bottom: 6px; color: #64748b; font-size: 12px; font-weight: 900; text-transform: uppercase; }
+    .form-field input { width: 100%; padding: 12px 13px; border: 1px solid #cbd5e1; border-radius: 12px; background: #f8fafc; font: inherit; font-weight: 700; color: #0f172a; }
+    .form-field input:focus { outline: 0; border-color: #10b981; background: #fff; box-shadow: 0 0 0 4px rgba(16,185,129,.12); }
+    .save-btn { display: inline-flex; justify-content: center; align-items: center; gap: 8px; padding: 13px 16px; border: 0; border-radius: 12px; background: #10b981; color: #fff; font-weight: 900; cursor: pointer; }
+    .status-ok { color: #059669; }
+    .status-warn { color: #d97706; }
+    @media (max-width: 900px) {
+        .owner-hero { grid-template-columns: 1fr; }
+        .owner-layout { grid-template-columns: 1fr; }
+        .form-row { grid-template-columns: 1fr; }
     }
 </style>
 
-<div class="profile-container">
-    <img src="{% if user.rasmi %}{{ user.rasmi }}{% else %}{% static 'images/default_avatar.jpg' %}{% endif %}" alt="Avatar" class="profile-image">
-    
-    <div class="profile-info">
-        <h2>{{ user.tuliq_ismi }} </h2>
-        <p><strong>Foydalanuvchi nomi:</strong> {{ user.username }}</p>
-        <p><strong>Email:</strong> {% if user.email %}{{ user.email }}{% else %}Ko‘rsatilmagan{% endif %} </p>
-        <p><strong>Telefon:</strong> {{ user.telefon|default:"Ko‘rsatilmagan" }}</p>
-        <p><strong>Rol:</strong> {{ user.type }}</p>
-    </div>
+<div class="owner-page">
+    <section class="owner-hero">
+        <img src="{% if user.rasmi %}{{ user.rasmi }}{% else %}{% static 'images/default_avatar.jpg' %}{% endif %}" alt="Avatar" class="owner-avatar">
+        <div class="owner-title">
+            <h2>{{ user.tuliq_ismi|default:user.username }}</h2>
+            <p>{{ request.company.name }} - {{ user.get_type_display }} profili.</p>
+        </div>
+        <div class="owner-badge"><i class="fa-solid fa-shield-halved"></i> {{ user.get_type_display }}</div>
+    </section>
 
-    
+    <section class="owner-layout">
+        <div class="owner-card">
+            <div class="owner-label">Profilni tahrirlash</div>
+            <form class="profile-form" method="post">
+                {% csrf_token %}
+                <div class="form-row">
+                    {% if user.type == 'ega' %}
+                    <div class="form-field">
+                        <label>Login</label>
+                        <input type="text" name="username" value="{{ user.username }}" required>
+                    </div>
+                    <div class="form-field">
+                        <label>To'liq ism</label>
+                        <input type="text" name="tuliq_ismi" value="{{ user.tuliq_ismi }}" required>
+                    </div>
+                    {% else %}
+                    <div class="form-field">
+                        <label>Login</label>
+                        <input type="text" value="{{ user.username }}" disabled>
+                    </div>
+                    <div class="form-field">
+                        <label>To'liq ism</label>
+                        <input type="text" value="{{ user.tuliq_ismi }}" disabled>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="form-row">
+                    <div class="form-field">
+                        <label>Telefon</label>
+                        <input type="tel" name="telefon" value="{{ user.tel_raqami|default:'' }}">
+                    </div>
+                    <div class="form-field">
+                        <label>Email</label>
+                        <input type="email" name="email" value="{{ user.email|default:'' }}">
+                    </div>
+                </div>
+                <div class="form-field">
+                    <label>Yangi parol</label>
+                    <input type="password" name="password" placeholder="O'zgartirmasangiz bo'sh qoldiring">
+                </div>
+                <button class="save-btn" type="submit"><i class="fa-solid fa-floppy-disk"></i> Saqlash</button>
+            </form>
+            {% if user.type == 'ega' %}
+            <div class="info-row"><span class="muted">Firma</span><span>{{ request.company.name }}</span></div>
+            <div class="info-row"><span class="muted">Subdomain</span><span>{{ request.company.subdomain }}</span></div>
+            {% else %}
+            <div class="info-row"><span class="muted">Lavozim</span><span>{{ user.get_type_display }}</span></div>
+            <div class="info-row"><span class="muted">Status</span><span class="{% if user.is_active %}status-ok{% else %}status-warn{% endif %}">{% if user.is_active %}Active{% else %}Inactive{% endif %}</span></div>
+            {% endif %}
+        </div>
+
+        {% if user.type == 'ega' %}
+        <div class="owner-card">
+            <div class="owner-label">Imkoniyatlar</div>
+            <div class="info-row"><span class="muted">To'lov holati</span><span class="{% if request.company.payment_status == 'paid' %}status-ok{% else %}status-warn{% endif %}">{{ request.company.get_payment_status_display }}</span></div>
+            {% if profile_stats %}
+            <div class="info-row"><span class="muted">Savdogar moduli</span><span class="{% if profile_stats.has_savdogar_sales %}status-ok{% else %}status-warn{% endif %}">{% if profile_stats.has_savdogar_sales %}Faol{% else %}Yoqilmagan{% endif %}</span></div>
+            <div class="info-row"><span class="muted">Savdogar shartnomasi</span><span class="{% if profile_stats.savdogar_contract_ready %}status-ok{% else %}status-warn{% endif %}">{% if profile_stats.savdogar_contract_ready %}Tayyor{% else %}Kerak{% endif %}</span></div>
+            {% endif %}
+            <div class="actions">
+                <a class="action" href="{% url 'billing_page' %}"><i class="fa-solid fa-wallet"></i> Billing</a>
+                <a class="action" href="{% url 'savdogar_admin_dashboard' %}"><i class="fa-solid fa-file-signature"></i> Savdogar</a>
+                <a class="action" href="{% url 'select_plan_page' %}"><i class="fa-solid fa-star"></i> Tariflar</a>
+            </div>
+        </div>
+        {% endif %}
+    </section>
 </div>
 {% endblock %}

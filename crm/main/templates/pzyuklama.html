@@ -17,7 +17,7 @@
     }
 
     .form-card-head {
-        background: linear-gradient(135deg, #f59e0b, #d97706);
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
         padding: 24px 28px;
         color: white;
     }
@@ -67,7 +67,7 @@
 
     .form-control:focus {
         border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
     }
 
     .stock-badge {
@@ -87,7 +87,7 @@
     .btn-submit {
         width: 100%;
         padding: 14px;
-        background: linear-gradient(135deg, #f59e0b, #d97706);
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
         color: white;
         border: none;
         border-radius: 10px;
@@ -104,7 +104,7 @@
 
     .btn-submit:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(245, 158, 11, 0.35);
+        box-shadow: 0 8px 24px rgba(16, 185, 129, 0.28);
     }
 </style>
 {% endblock %}

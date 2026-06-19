@@ -1,7 +1,7 @@
-{% extends base_template|default:'egabase.html' %}
+{% extends 'egabase.html' %}
 {% load static %}
 
-{% block title %}{{ page_title|default:"Nasiya Savdolar" }}{% endblock %}
+{% block title %}💳 Nasiya Savdolar{% endblock %}
 
 {% block content %}
 <style>
@@ -107,7 +107,7 @@
     }
 
     .stat-card.info {
-        border-left-color: #3b82f6;
+        border-left-color: #10b981;
     }
 
     .stat-label {
@@ -544,8 +544,8 @@
 </style>
 
 <div class="page-header">
-    <h1>{{ page_title|default:"Nasiya Savdolar Boshqaruvi" }}</h1>
-    <p>To'langan va to'lanmagan nasiya savdolarni kuzatish</p>
+    <h1>💳 Nasiya Savdolar Boshqaruvi</h1>
+    <p>{% if selected_seller %}{{ selected_seller.tuliq_ismi }} nasiya savdolari holati{% else %}To'langan va to'lanmagan nasiya savdolarni kuzatish{% endif %}</p>
 </div>
 
 <!-- Overdue Alert Banner -->
@@ -555,37 +555,32 @@
         <div class="ob-text">🔴 {{ overdue_count }} ta nasiya muddati o'tib ketdi!</div>
         <div class="ob-sub">Jami qarz: {{ overdue_total_debt|floatformat:0 }} so'm — 7+ kundan buyon to'lanmagan</div>
     </div>
-    <a href="?status=overdue" class="ob-btn">Ko'rish →</a>
+    <a href="?status=overdue&role={{ sale_role }}{% if seller_id %}&seller={{ seller_id }}{% endif %}" class="ob-btn">Ko'rish →</a>
 </div>
-{% endif %}
-
-{% if savdogarlar %}
-<form method="get" class="filter-tabs">
-    <select name="savdogar" class="filter-tab" onchange="this.form.submit()">
-        <option value="">Barcha savdogarlar</option>
-        {% for seller in savdogarlar %}
-        <option value="{{ seller.id }}" {% if savdogar_filter == seller.id|stringformat:"s" %}selected{% endif %}>
-            {{ seller.tuliq_ismi|default:seller.username }}
-        </option>
-        {% endfor %}
-    </select>
-    {% if status_filter != 'all' %}
-    <input type="hidden" name="status" value="{{ status_filter }}">
-    {% endif %}
-</form>
 {% endif %}
 
 <!-- Filter Tabs -->
 <div class="filter-tabs">
-    <a href="?status=all" class="filter-tab {% if status_filter == 'all' %}active{% endif %}">📊 Barchasi</a>
-    <a href="?status=unpaid" class="filter-tab {% if status_filter == 'unpaid' %}active{% endif %}">❌ To'lanmaganlar</a>
-    <a href="?status=paid" class="filter-tab {% if status_filter == 'paid' %}active{% endif %}">✅ To'langanlar</a>
+    <a href="?status=all&role={{ sale_role }}{% if seller_id %}&seller={{ seller_id }}{% endif %}" class="filter-tab {% if status_filter == 'all' %}active{% endif %}">📊 Barchasi</a>
+    <a href="?status=unpaid&role={{ sale_role }}{% if seller_id %}&seller={{ seller_id }}{% endif %}" class="filter-tab {% if status_filter == 'unpaid' %}active{% endif %}">❌ To'lanmaganlar</a>
+    <a href="?status=paid&role={{ sale_role }}{% if seller_id %}&seller={{ seller_id }}{% endif %}" class="filter-tab {% if status_filter == 'paid' %}active{% endif %}">✅ To'langanlar</a>
     {% if overdue_count > 0 %}
-    <a href="?status=overdue" class="filter-tab {% if status_filter == 'overdue' %}active{% endif %}"
+    <a href="?status=overdue&role={{ sale_role }}{% if seller_id %}&seller={{ seller_id }}{% endif %}" class="filter-tab {% if status_filter == 'overdue' %}active{% endif %}"
         style="border-color:#dc2626; color:#dc2626;">
         🔴 Muddati o'tganlar ({{ overdue_count }})
     </a>
     {% endif %}
+</div>
+
+<div class="filter-tabs">
+    <a href="?status={{ status_filter }}" class="filter-tab {% if sale_role == 'all' and not seller_id %}active{% endif %}">👥 Barcha nasiya savdolar</a>
+    <a href="?status={{ status_filter }}&role=yetkazib_beruvchi" class="filter-tab {% if sale_role == 'yetkazib_beruvchi' and not seller_id %}active{% endif %}">🚚 Yetkazib beruvchi nasiyalari</a>
+    <a href="?status={{ status_filter }}&role=savdogar" class="filter-tab {% if sale_role == 'savdogar' and not seller_id %}active{% endif %}">🧾 Savdogar nasiyalari</a>
+    {% for seller in sellers %}
+    <a href="?status={{ status_filter }}&role={{ sale_role }}&seller={{ seller.id }}" class="filter-tab {% if seller_id == seller.id|stringformat:'s' %}active{% endif %}">
+        🧾 {{ seller.tuliq_ismi }}
+    </a>
+    {% endfor %}
 </div>
 
 <!-- Statistics -->
@@ -616,7 +611,7 @@
 <div class="credit-card {% if item.is_fully_paid %}paid{% elif item.is_overdue %}overdue{% else %}unpaid{% endif %}">
     <div class="credit-header">
         <div>
-            <div class="credit-client">{{ item.savdo.haridor_dukon.nomi }}</div>
+            <div class="credit-client">{{ item.customer_name }}</div>
             <div class="credit-date">{{ item.savdo.vaqt_sana|date:"d F Y, H:i" }} — {{ item.days_ago }} kun oldin</div>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -631,26 +626,17 @@
     </div>
 
     <div class="credit-info">
+        {% if item.savdo.base_summa %}
         <div class="info-item">
-            <span class="info-label">Jami Summa</span>
-            <span class="info-value">{{ item.savdo.summa|floatformat:0 }} so'm</span>
-        </div>
-        {% if item.savdo.credit_term_months %}
-        <div class="info-item">
-            <span class="info-label">Muddat / Ustama</span>
-            <span class="info-value">{{ item.savdo.credit_term_months }} oy / {{ item.savdo.credit_markup_percent|floatformat:0 }}%</span>
-        </div>
-        <div class="info-item">
-            <span class="info-label">Yopilish sanasi</span>
-            <span class="info-value">{{ item.credit_summary.final_due_date|date:"d.m.Y" }}</span>
-        </div>
-        <div class="info-item">
-            <span class="info-label">Grafik holati</span>
-            <span class="info-value {% if item.credit_summary.status_type == 'late' %}debt{% elif item.credit_summary.status_type == 'early' or item.credit_summary.status_type == 'paid' %}paid{% endif %}">
-                {{ item.credit_summary.status_label }}
-            </span>
+            <span class="info-label">Asl narx</span>
+            <span class="info-value">{{ item.savdo.base_summa|floatformat:0 }} so'm</span>
         </div>
         {% endif %}
+        <div class="info-item">
+            <span class="info-label">Yopish summasi</span>
+            <span class="info-value">{{ item.payoff_total|floatformat:0 }} so'm</span>
+            {% if item.payoff_markup %}<span style="font-size:12px;color:var(--text-light);font-weight:800;">{{ item.payoff_months }} oy / +{{ item.payoff_markup|floatformat:0 }}%</span>{% endif %}
+        </div>
         <div class="info-item">
             <span class="info-label">To'langan</span>
             <span class="info-value paid">{{ item.total_payments|floatformat:0 }} so'm</span>
@@ -660,39 +646,22 @@
             <span class="info-value debt">{{ item.remaining|floatformat:0 }} so'm</span>
         </div>
         <div class="info-item">
-            <span class="info-label">Sotuvchi</span>
-            <span class="info-value">
-                {% if item.savdo.yetkazib_beruvchi %}
-                {{ item.savdo.yetkazib_beruvchi.tuliq_ismi }}
-                {% elif item.savdo.savdogar %}
-                {{ item.savdo.savdogar.tuliq_ismi|default:item.savdo.savdogar.username }}
-                {% else %}
-                -
-                {% endif %}
-            </span>
+            <span class="info-label">{% if item.savdo.yetkazib_beruvchi.user.type == 'savdogar' %}Savdogar{% else %}Yetkazuvchi{% endif %}</span>
+            <span class="info-value">{{ item.savdo.yetkazib_beruvchi.tuliq_ismi }}</span>
         </div>
+        {% if item.savdo.credit_due_date %}
+        <div class="info-item">
+            <span class="info-label">Yopish muddati</span>
+            <span class="info-value {% if item.is_overdue %}debt{% endif %}">{{ item.savdo.credit_due_date|date:"d.m.Y" }}</span>
+        </div>
+        {% endif %}
     </div>
 
-    {% if item.savdo.credit_term_months %}
-    <div style="padding:12px 14px; border-radius:14px; background:#f8fafc; border:1px solid #e2e8f0; margin-bottom:14px;">
-        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; font-size:13px;">
-            <div><strong>Hozirgacha to'lanishi kerak:</strong> {{ item.credit_summary.expected_paid|floatformat:0 }} so'm</div>
-            {% if item.credit_summary.overdue_amount > 0 %}
-            <div style="color:#dc2626;"><strong>Kechikkan qism:</strong> {{ item.credit_summary.overdue_amount|floatformat:0 }} so'm</div>
-            {% endif %}
-            {% if item.credit_summary.late_penalty > 0 %}
-            <div style="color:#dc2626;"><strong>Kechikish ustamasi:</strong> {{ item.credit_summary.late_penalty|floatformat:0 }} so'm</div>
-            {% endif %}
-            {% if item.credit_summary.early_discount_hint > 0 and item.credit_summary.status_type == 'early' %}
-            <div style="color:#059669;"><strong>Oldindan to'lash chegirma izohi:</strong> {{ item.credit_summary.early_discount_hint|floatformat:0 }} so'mgacha</div>
-            {% endif %}
-        </div>
-        {% if item.savdo.credit_contract_text %}
-        <details style="margin-top:10px;">
-            <summary style="cursor:pointer;font-weight:900;color:#0f172a;">Shartnoma matni</summary>
-            <div style="margin-top:8px;color:#475569;white-space:pre-wrap;">{{ item.savdo.credit_contract_text }}</div>
-        </details>
-        {% endif %}
+    {% if item.savdo.contract_pdf or item.savdo.signed_contract_scan or item.savdo.customer_passport_image %}
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+        {% if item.savdo.contract_pdf %}<a class="btn-toggle-history" href="{{ item.savdo.contract_pdf.url }}" target="_blank">PDF shartnoma</a>{% endif %}
+        {% if item.savdo.signed_contract_scan %}<a class="btn-toggle-history" href="{{ item.savdo.signed_contract_scan.url }}" target="_blank">Imzolangan skan</a>{% endif %}
+        {% if item.savdo.customer_passport_image %}<a class="btn-toggle-history" href="{{ item.savdo.customer_passport_image.url }}" target="_blank">ID/Pasport</a>{% endif %}
     </div>
     {% endif %}
 
@@ -724,7 +693,7 @@
 
     {% if not item.is_fully_paid %}
     <button class="btn-add-payment"
-        onclick="openPaymentModal({{ item.savdo.id }}, '{{ item.savdo.haridor_dukon.nomi }}', {{ item.remaining }})">
+        onclick="openPaymentModal({{ item.savdo.id }}, '{{ item.customer_name|escapejs }}', {{ item.remaining }})">
         ➕ To'lov Qo'shish
     </button>
     {% endif %}

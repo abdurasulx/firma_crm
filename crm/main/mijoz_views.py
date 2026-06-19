@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from .models import HaridorDukon, Savdo, NasiyaTolov
 from django.db.models import Sum, Count, Q
 
@@ -132,3 +133,16 @@ def mijoz_detail(request, mijoz_id):
     }
     
     return render(request, 'mijoz_detail.html', context)
+
+
+@login_required(login_url='login')
+@require_POST
+def set_mijoz_turi(request, mijoz_id):
+    if request.user.type != 'ega':
+        return redirect('main')
+    mijoz = get_object_or_404(HaridorDukon, id=mijoz_id, company=request.company)
+    turi = request.POST.get('mijoz_turi', 'oddiy')
+    if turi in ('oddiy', 'doimiy', 'vip'):
+        mijoz.mijoz_turi = turi
+        mijoz.save(update_fields=['mijoz_turi'])
+    return redirect('mijoz_detail', mijoz_id=mijoz.id)

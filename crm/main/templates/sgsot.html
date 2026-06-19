@@ -1,0 +1,389 @@
+{% extends 'sgbase.html' %}
+
+{% block title %}Savdogar sotuvi - StockFirm{% endblock %}
+
+{% block content %}
+<style>
+    .sales-container { max-width: 720px; margin: 0 auto; padding-bottom: 110px; }
+    .page-title { margin-bottom: 1.25rem; }
+    .page-title h1 { color: var(--slate-900); font-size: 1.5rem; }
+    .page-title p { color: var(--slate-500); font-weight: 600; }
+    .form-card {
+        background: #fff;
+        border: 1px solid var(--slate-200);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-sm);
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+    }
+    .form-group { margin-bottom: 1rem; }
+    .form-label {
+        display: block;
+        margin-bottom: .45rem;
+        color: var(--slate-700);
+        font-size: .8rem;
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+    .form-select, .form-input {
+        width: 100%;
+        border: 1.5px solid var(--slate-200);
+        border-radius: .8rem;
+        background: var(--slate-50);
+        padding: .85rem 1rem;
+        font: inherit;
+    }
+    .form-select:focus, .form-input:focus {
+        outline: 0;
+        border-color: var(--primary);
+        background: #fff;
+    }
+    .products-list { display: grid; gap: .75rem; }
+    .product-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1rem;
+        border: 1.5px solid var(--slate-200);
+        border-radius: .9rem;
+        background: #fff;
+    }
+    .product-item.selected { border-color: var(--primary); background: #ecfdf5; }
+    .p-info { min-width: 0; }
+    .p-name { display: block; color: var(--slate-900); font-weight: 800; overflow-wrap: anywhere; }
+    .p-stock { display: block; color: var(--slate-500); font-size: .85rem; font-weight: 600; }
+    .p-price { display: block; color: var(--success); font-size: .9rem; font-weight: 800; }
+    .stepper { display: flex; align-items: center; gap: .55rem; background: var(--slate-100); padding: .25rem; border-radius: .75rem; }
+    .step-btn {
+        width: 34px;
+        height: 34px;
+        border: 0;
+        border-radius: .6rem;
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        font-weight: 800;
+    }
+    .step-minus { background: #fff; color: var(--slate-600); }
+    .step-plus { background: var(--primary); color: #fff; }
+    .step-val { width: 38px; text-align: center; color: var(--slate-900); font-weight: 800; }
+    .payment-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; }
+    .credit-panel { display: none; }
+    .credit-panel.active { display: block; }
+    .terms-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .65rem; }
+    .term-option {
+        border: 1.5px solid var(--slate-200);
+        border-radius: .8rem;
+        padding: .75rem .5rem;
+        display: grid;
+        gap: .25rem;
+        cursor: pointer;
+        color: var(--slate-700);
+        font-weight: 800;
+        text-align: center;
+        background: #fff;
+    }
+    .term-option.active { border-color: var(--success); color: var(--success); background: #ecfdf5; }
+    .term-option small { color: var(--slate-500); font-weight: 700; }
+    .pay-option {
+        border: 1.5px solid var(--slate-200);
+        border-radius: .85rem;
+        padding: .9rem .5rem;
+        display: grid;
+        place-items: center;
+        gap: .35rem;
+        cursor: pointer;
+        color: var(--slate-500);
+        font-weight: 800;
+        text-align: center;
+    }
+    .pay-option.active { border-color: var(--primary); color: var(--primary); background: #ecfdf5; }
+    .upload-area {
+        display: grid;
+        place-items: center;
+        gap: .5rem;
+        border: 2px dashed var(--slate-200);
+        border-radius: .9rem;
+        padding: 1.5rem;
+        cursor: pointer;
+        color: var(--slate-500);
+        text-align: center;
+    }
+    .upload-area.has-file { border-color: var(--success); color: var(--success); background: #ecfdf5; }
+    .sticky-bar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1000;
+        background: rgba(255,255,255,.92);
+        border-top: 1px solid var(--slate-200);
+        backdrop-filter: blur(12px);
+        padding: .9rem 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+    }
+    .sticky-inner {
+        width: min(720px, 100%);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+    .total-label { display: block; color: var(--slate-500); font-size: .75rem; font-weight: 800; text-transform: uppercase; }
+    .total-value { color: var(--slate-900); font-size: 1.4rem; font-weight: 800; }
+    .confirm-btn {
+        border: 0;
+        border-radius: .85rem;
+        background: var(--primary);
+        color: #fff;
+        padding: .9rem 1.25rem;
+        font-weight: 800;
+        cursor: pointer;
+    }
+    .confirm-btn:disabled { opacity: .45; cursor: not-allowed; }
+    .empty { padding: 2rem; text-align: center; color: var(--slate-500); font-weight: 700; }
+    .contract-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: .75rem;
+        padding: .85rem 1rem;
+        border: 1px solid var(--slate-200);
+        border-radius: .85rem;
+        background: var(--slate-50);
+        color: var(--slate-600);
+        font-weight: 700;
+    }
+    .contract-btn {
+        border: 0;
+        border-radius: .75rem;
+        background: var(--primary);
+        color: #fff;
+        padding: .75rem 1rem;
+        text-decoration: none;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+    .contract-btn.disabled {
+        opacity: .45;
+        pointer-events: none;
+    }
+    @media (max-width: 640px) {
+        .product-item { align-items: stretch; flex-direction: column; }
+        .terms-grid { grid-template-columns: repeat(2, 1fr); }
+        .stepper { justify-content: space-between; }
+        .sticky-inner { align-items: stretch; flex-direction: column; }
+        .confirm-btn { width: 100%; }
+    }
+</style>
+
+<div class="sales-container">
+    <div class="page-title">
+        <h1>Yangi sotuv</h1>
+        <p>Savdogar ombordagi mahsulotlarni joyida sotadi</p>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" id="sotish-form">
+        {% csrf_token %}
+        <input type="hidden" name="contract_number_preview" id="contract-number-preview" value="{{ next_contract_number }}">
+        <div class="form-card">
+            <div class="form-group">
+                <label class="form-label">Mijoz ism-familyasi</label>
+                <input type="text" name="oluvchi" id="customer-name" class="form-input" placeholder="Masalan: Ali Valiyev" required>
+            </div>
+            <div class="contract-actions">
+                <span>Mijoz, mahsulotlar va to'lov turi kiritilgach elektron PDF tayyor bo'ladi.</span>
+                <a href="#" id="contract-download" class="contract-btn disabled">
+                    <i class="fas fa-file-arrow-down"></i> Shartnomani yuklab olish
+                </a>
+            </div>
+        </div>
+
+        <div class="form-card">
+            <label class="form-label">Mahsulotlar</label>
+            <div class="products-list">
+                {% for m in mahsulotlar %}
+                <div class="product-item" id="prow{{ forloop.counter }}">
+                    <div class="p-info">
+                        <span class="p-name">{{ m.nom }}</span>
+                        <span class="p-stock">Mavjud: {{ m.miqdor }} {{ m.turi }}</span>
+                        <span class="p-price">{{ m.narx|floatformat:0 }} so'm</span>
+                    </div>
+                    <div class="stepper">
+                        <button type="button" class="step-btn step-minus" onclick="stepBy({{ forloop.counter }}, -1)"><i class="fas fa-minus"></i></button>
+                        <div class="step-val" id="pval{{ forloop.counter }}">0</div>
+                        <button type="button" class="step-btn step-plus" onclick="stepBy({{ forloop.counter }}, 1)"><i class="fas fa-plus"></i></button>
+                    </div>
+                    <input type="hidden" name="miqdor_{{ m.nom }}" id="pinp{{ forloop.counter }}" value="0">
+                </div>
+                {% empty %}
+                <div class="empty">Savdogar uchun alohida mahsulot biriktirilmagan</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="form-card">
+            <label class="form-label">To'lov turi</label>
+            <div class="payment-grid">
+                <div class="pay-option active" onclick="setPay(this,'naqd')"><i class="fas fa-money-bill-wave"></i><span>Naqd</span></div>
+                <div class="pay-option" onclick="setPay(this,'karta')"><i class="fas fa-credit-card"></i><span>Karta</span></div>
+                <div class="pay-option" onclick="setPay(this,'nasiya')"><i class="fas fa-hand-holding-dollar"></i><span>Nasiya</span></div>
+            </div>
+            <input type="hidden" name="st" id="pay-input" value="naqd">
+        </div>
+
+        <div class="form-card credit-panel" id="credit-panel">
+            <label class="form-label">Nasiya muddati</label>
+            <div class="terms-grid">
+                {% for months, markup in credit_terms %}
+                <div class="term-option {% if forloop.first %}active{% endif %}" onclick="setTerm(this, {{ months }}, {{ markup }})">
+                    <span>{{ months }} oy</span>
+                    <small>+{{ markup }}%</small>
+                </div>
+                {% endfor %}
+            </div>
+            <input type="hidden" name="credit_term_months" id="credit-term-input" value="3">
+            <p style="margin-top:.75rem; color:var(--slate-500); font-size:.85rem; font-weight:700;">
+                Yakuniy summa yopilish vaqtiga qarab qayta hisoblanadi.
+            </p>
+            <div class="form-group" style="margin-top:1rem; margin-bottom:0;">
+                <label class="form-label">Boshlang'ich to'lov</label>
+                <input type="number" name="credit_down_payment" id="credit-down-payment" class="form-input" min="0" step="1000" value="0" placeholder="0">
+            </div>
+        </div>
+
+        <div class="form-card">
+            <label class="form-label">Shartnoma va shaxs hujjatlari</label>
+            <div class="form-group">
+                <label class="form-label" for="contract_pdf">Elektron PDF shartnoma</label>
+                <input type="file" name="contract_pdf" id="contract_pdf" class="form-input" accept="application/pdf" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="signed_contract_scan">Qo'l qo'yilgan shartnoma skani</label>
+                <input type="file" name="signed_contract_scan" id="signed_contract_scan" class="form-input" accept="image/*,application/pdf" required>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label" for="customer_passport_image">ID karta yoki pasport rasmi</label>
+                <input type="file" name="customer_passport_image" id="customer_passport_image" class="form-input" accept="image/*" required>
+            </div>
+        </div>
+
+        <div class="form-card">
+            <label class="form-label">Chek rasmi</label>
+            <label for="id_rasm" class="upload-area" id="upload-label">
+                <i class="fas fa-camera"></i>
+                <strong id="file-status">Rasm tanlang yoki rasmga oling</strong>
+                <input type="file" name="rasm" id="id_rasm" accept="image/*" capture="environment" required style="display:none" onchange="onFileChange(this)">
+            </label>
+        </div>
+
+        <div class="sticky-bar">
+            <div class="sticky-inner">
+                <div>
+                    <span class="total-label">Umumiy summa</span>
+                    <span class="total-value" id="total-display">0 so'm</span>
+                </div>
+                <button type="submit" class="confirm-btn" id="submit-btn" disabled>Tasdiqlash <i class="fas fa-check-circle"></i></button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    const PRODUCT_DATA = [
+        {% for m in mahsulotlar %}
+        {"idx": {{ forloop.counter }}, "name": "{{ m.nom|escapejs }}", "unit": "{{ m.turi|escapejs }}", "max": {{ m.miqdor|default:0|stringformat:"f" }}, "narx": {{ m.narx|default:0|stringformat:"f" }}}{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    const CONTRACT_DOWNLOAD_URL = "{% url 'savdogar_contract_download' %}";
+    const BY_IDX = {};
+    const totals = {};
+    let creditMarkup = 0;
+    PRODUCT_DATA.forEach(p => BY_IDX[p.idx] = p);
+
+    function stepBy(idx, delta) {
+        const p = BY_IDX[idx];
+        const cur = totals[idx] || 0;
+        const nxt = Math.max(0, Math.min(p.max, cur + delta));
+        totals[idx] = nxt;
+        document.getElementById('pval' + idx).textContent = nxt;
+        document.getElementById('pinp' + idx).value = nxt;
+        document.getElementById('prow' + idx).classList.toggle('selected', nxt > 0);
+        recalc();
+    }
+    function recalc() {
+        let baseTotal = 0;
+        Object.keys(totals).forEach(idx => baseTotal += (totals[idx] || 0) * BY_IDX[idx].narx);
+        const total = Math.round(baseTotal * (1 + creditMarkup / 100));
+        document.getElementById('total-display').textContent = total.toLocaleString('uz-UZ') + " so'm";
+        document.getElementById('submit-btn').disabled = !Object.values(totals).some(v => v > 0);
+        updateContractLink();
+    }
+    function setPay(el, val) {
+        document.querySelectorAll('.pay-option').forEach(item => item.classList.remove('active'));
+        el.classList.add('active');
+        document.getElementById('pay-input').value = val;
+        document.getElementById('credit-panel').classList.toggle('active', val === 'nasiya');
+        if (val !== 'nasiya') creditMarkup = 0;
+        if (val === 'nasiya') {
+            const activeTerm = document.querySelector('.term-option.active');
+            creditMarkup = Number(activeTerm ? activeTerm.querySelector('small').textContent.replace('+', '').replace('%', '') : 10);
+        }
+        recalc();
+    }
+    function setTerm(el, months, markup) {
+        document.querySelectorAll('.term-option').forEach(item => item.classList.remove('active'));
+        el.classList.add('active');
+        document.getElementById('credit-term-input').value = months;
+        creditMarkup = markup;
+        recalc();
+    }
+    function updateContractLink() {
+        const input = document.getElementById('customer-name');
+        const link = document.getElementById('contract-download');
+        const customer = (input.value || '').trim();
+        const selectedItems = Object.keys(totals)
+            .filter(idx => (totals[idx] || 0) > 0)
+            .map(idx => ({
+                name: BY_IDX[idx].name,
+                unit: BY_IDX[idx].unit,
+                qty: totals[idx],
+                price: BY_IDX[idx].narx
+            }));
+        if (!customer || selectedItems.length === 0) {
+            link.href = '#';
+            link.classList.add('disabled');
+            return;
+        }
+        const paymentType = document.getElementById('pay-input').value;
+        const params = new URLSearchParams({
+            customer: customer,
+            contract_number: document.getElementById('contract-number-preview').value || '',
+            payment_type: paymentType,
+            items: JSON.stringify(selectedItems),
+            term: document.getElementById('credit-term-input').value || '3',
+            down_payment: document.getElementById('credit-down-payment').value || '0'
+        });
+        link.href = CONTRACT_DOWNLOAD_URL + '?' + params.toString();
+        link.classList.remove('disabled');
+    }
+    function onFileChange(input) {
+        const label = document.getElementById('upload-label');
+        const status = document.getElementById('file-status');
+        if (input.files && input.files[0]) {
+            status.textContent = input.files[0].name;
+            label.classList.add('has-file');
+        } else {
+            status.textContent = 'Rasm tanlang yoki rasmga oling';
+            label.classList.remove('has-file');
+        }
+    }
+    document.getElementById('customer-name').addEventListener('input', updateContractLink);
+    document.getElementById('credit-down-payment').addEventListener('input', updateContractLink);
+    updateContractLink();
+</script>
+{% endblock %}

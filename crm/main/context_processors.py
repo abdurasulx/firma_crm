@@ -1,4 +1,4 @@
-from main.models import Company
+from main.models import Company, PlanRequest
 from main.services.billing_service import get_billing_dashboard_data
 from django.db.utils import OperationalError, ProgrammingError
 
@@ -6,6 +6,7 @@ def plan_context(request):
     """
     Kompaniya tarifiga ko'ra funksiyalarni template-ga uzatish.
     """
+    superadmin_context = _safe_superadmin_context(request)
     company = getattr(request, 'company', None)
     if company:
         is_trial = company.is_on_trial
@@ -61,6 +62,7 @@ def plan_context(request):
             'backup_type': backup_type,
             'is_backup_available': is_backup_available,
             'billing_data': _safe_billing_data(company),
+            **superadmin_context,
         }
     
     # Default values if no company or plan
@@ -76,11 +78,15 @@ def plan_context(request):
         'billing_data': {
             'is_current': False,
             'monthly_price_usd': 0,
+            'payment_due_usd': 0,
+            'pending_amount_usd': 0,
+            'is_prorated_due': False,
             'latest_link': None,
             'payment_links': [],
             'next_payment_date': None,
             'billing_reason': '',
         },
+        **superadmin_context,
     }
 
 
@@ -91,8 +97,23 @@ def _safe_billing_data(company):
         return {
             'is_current': False,
             'monthly_price_usd': 0,
+            'payment_due_usd': 0,
+            'pending_amount_usd': 0,
+            'is_prorated_due': False,
             'latest_link': None,
             'payment_links': [],
             'next_payment_date': None,
             'billing_reason': '',
         }
+
+
+def _safe_superadmin_context(request):
+    try:
+        user = getattr(request, 'user', None)
+        if user and user.is_authenticated and user.is_superuser:
+            return {
+                'pending_plan_requests': PlanRequest.objects.filter(status='pending').count(),
+            }
+    except (OperationalError, ProgrammingError):
+        pass
+    return {}

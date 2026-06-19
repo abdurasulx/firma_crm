@@ -151,6 +151,14 @@
                         </option>
                         {% endfor %}
                     </select>
+                    {% if tariff_change_locked %}
+                    <div style="margin-top:8px; color:#c2410c; font-size:13px; font-weight:700;">Bu firma tarif muddati tugaguncha tarifni o'zgartira olmaydi.</div>
+                    {% endif %}
+                </div>
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>Tarif muddati (oy) - superadmin belgilashi uchun</label>
+                    <input type="number" name="plan_months" min="0" class="form-control" value="{{ current_plan_months|default:'1' }}" placeholder="Masalan: 12">
+                    <div style="font-size:12px; color:var(--text-dim); margin-top:6px;">0 bo'lsa muddat o'zgarmaydi. 12 tanlansa keyingi to'lov sanasi 12 oyga qo'yiladi.</div>
                 </div>
                 <div class="form-group" style="grid-column: span 2; display: flex; flex-direction: column; gap: 15px; background: rgba(255,255,255,0.02); padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
                     <div style="display: flex; align-items: center; gap: 10px;">

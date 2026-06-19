@@ -3,14 +3,14 @@
 
 {% block title %}{{ pz.user.tuliq_ismi }} - Hisoboti{% endblock %}
 
-{% block page_title %}Pazanda Hisoboti{% endblock %}
+{% block page_title %}Ishlab chiqaruvchi Hisoboti{% endblock %}
 
 {% block content %}
 <style>
     :root {
-        --primary: #f59e0b;
-        --primary-dark: #d97706;
-        --primary-light: #fef3c7;
+        --primary: #10b981;
+        --primary-dark: #059669;
+        --primary-light: #d1fae5;
         --bg-card: #ffffff;
         --text-dark: #0f172a;
         --text-muted: #64748b;
@@ -187,7 +187,7 @@
     .badge { padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; }
     .badge-amber { background: #fffbeb; color: #d97706; }
     .badge-green { background: #f0fdf4; color: #16a34a; }
-    .badge-blue  { background: #eff6ff; color: #2563eb; }
+    .badge-blue  { background: #ecfdf5; color: var(--primary-dark); }
 
     .view-btn {
         padding: 6px 12px;
@@ -269,7 +269,7 @@
 <div class="hero-card">
     <div class="hero-info">
         <h2>{{ pz.user.tuliq_ismi }}</h2>
-        <p><i class="fa-solid fa-mortar-pestle"></i> Pazanda • Ishlab chiqarish va yuklamalar hisoboti</p>
+        <p><i class="fa-solid fa-mortar-pestle"></i> Ishlab chiqaruvchi • Ishlab chiqarish va yuklamalar hisoboti</p>
     </div>
     <div class="hero-action">
         <img src="{% if pz.rasmi %}{{ pz.rasmi.url }}{% else %}{% static 'images/default_avatar.jpg' %}{% endif %}" 
@@ -372,7 +372,7 @@
 <!-- Yuklama so'rovlari -->
 <div class="section-card">
     <div class="section-head">
-        <h3><i class="fa-solid fa-truck-fast" style="color:#2563eb;"></i> Yuklama so'rovlari</h3>
+        <h3><i class="fa-solid fa-truck-fast" style="color:var(--primary);"></i> Yuklama so'rovlari</h3>
         <span class="badge badge-blue">{{ yuklamalar|length }} ta</span>
     </div>
     <div class="table-wrap">

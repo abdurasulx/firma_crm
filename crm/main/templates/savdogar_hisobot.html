@@ -24,8 +24,8 @@
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;margin-bottom:22px;">
         <div style="background:white;border:1px solid #e2e8f0;border-radius:18px;padding:20px;"><div style="color:#64748b;font-weight:800;">Savdo soni</div><div style="font-size:28px;font-weight:900;color:#0f172a;">{{ total_sales }}</div></div>
         <div style="background:white;border:1px solid #e2e8f0;border-radius:18px;padding:20px;"><div style="color:#64748b;font-weight:800;">Jami</div><div style="font-size:28px;font-weight:900;color:#059669;">{{ total_amount|floatformat:0 }}</div></div>
-        <div style="background:white;border:1px solid #e2e8f0;border-radius:18px;padding:20px;"><div style="color:#64748b;font-weight:800;">Naqd</div><div style="font-size:28px;font-weight:900;color:#2563eb;">{{ naqd_amount|floatformat:0 }}</div></div>
-        <div style="background:white;border:1px solid #e2e8f0;border-radius:18px;padding:20px;"><div style="color:#64748b;font-weight:800;">Karta</div><div style="font-size:28px;font-weight:900;color:#7c3aed;">{{ karta_amount|floatformat:0 }}</div></div>
+        <div style="background:white;border:1px solid #e2e8f0;border-radius:18px;padding:20px;"><div style="color:#64748b;font-weight:800;">Naqd</div><div style="font-size:28px;font-weight:900;color:#059669;">{{ naqd_amount|floatformat:0 }}</div></div>
+        <div style="background:white;border:1px solid #e2e8f0;border-radius:18px;padding:20px;"><div style="color:#64748b;font-weight:800;">Karta</div><div style="font-size:28px;font-weight:900;color:#047857;">{{ karta_amount|floatformat:0 }}</div></div>
         <div style="background:white;border:1px solid #e2e8f0;border-radius:18px;padding:20px;"><div style="color:#64748b;font-weight:800;">Nasiya</div><div style="font-size:28px;font-weight:900;color:#dc2626;">{{ nasiya_amount|floatformat:0 }}</div></div>
     </div>
 
@@ -33,7 +33,7 @@
         {% for s in sales %}
         <div style="display:flex;justify-content:space-between;gap:14px;padding:16px 20px;border-bottom:1px solid #edf2f7;">
             <div>
-                <div style="font-weight:900;color:#0f172a;">{{ s.haridor_dukon.nomi }}</div>
+                <div style="font-weight:900;color:#0f172a;">{% firstof s.haridor_dukon.nomi s.oluvchining_ismi %}</div>
                 <div style="color:#64748b;font-size:13px;">{{ s.vaqt_sana|date:"d.m.Y H:i" }} - {{ s.get_st_display }}</div>
             </div>
             <div style="font-weight:900;color:#059669;">{{ s.summa|floatformat:0 }} so'm</div>

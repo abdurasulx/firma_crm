@@ -1,16 +1,65 @@
-.venv
-venv
-ENV
-env
-.env
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-.DS_Store
-*.sqlite3
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+vwin/
+ENV/
+env/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Django
 db.sqlite3
+*.sqlite3
 media/
 staticfiles/
+crm/crm.zip
+
+# Logs
+*.log
+logs/
+
+# IDE
 .vscode/
 .idea/
-*.log
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Word / Excel vaqtinchalik fayllar
+~$*.docx
+~$*.xlsx
+~$*.xls
+
+# Loyiha hujjatlari (shaxsiy)
+*.docx
+_append_formal_sections_work/
+_docx_identity_fix_work/
+_docx_identity_headers_work/
+_docx_identity_work/
+_expanded_check.txt
+_expanded_final.txt
+_expanded_final2.txt
+_final_export.txt
+_individual_hujjat_export.txt
+_source_export.txt
+_template_*.docx
+_template_export.txt
+
+# Simulyatsiya va test natijalari (prod ga kerak emas)
+simulate_nasiya.py
+nasiya_excel.py
+nasiya_tolik.py
+nasiya_hisobot.xlsx
+nasiya_tolik_tolov.xlsx

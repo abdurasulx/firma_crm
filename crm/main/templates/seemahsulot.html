@@ -294,6 +294,23 @@
         width: 100%;
         margin-bottom: 10px;
     }
+
+    .check-row {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        padding: 14px 16px;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        background: #f9fafb;
+        color: var(--text-dark);
+        font-weight: 800;
+    }
+
+    .check-row input {
+        width: 18px;
+        height: 18px;
+    }
 </style>
 
 <div class="main-container">
@@ -401,19 +418,16 @@
                                 </select>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="form-group">
-                            <label class="form-label">Ombor turi</label>
-                            <div class="input-wrapper">
-                                <i class="fa-solid fa-warehouse"></i>
-                                <select id="warehouse_type" name="warehouse_type" class="form-control" required>
-                                    {% for value, label in warehouse_types %}
-                                    <option value="{{ value }}" {% if mahsulot.warehouse_type == value %}selected{% endif %}>
-                                        {{ label }}
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
+                    <div class="form-group">
+                        <label class="form-label">Ombor bo'limi</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-warehouse"></i>
+                            <select id="warehouse_type" name="warehouse_type" class="form-control" required>
+                                <option value="finished" {% if mahsulot.warehouse_type == 'finished' %}selected{% endif %}>Tayyor mahsulotlar ombori</option>
+                                <option value="semi_finished" {% if mahsulot.warehouse_type == 'semi_finished' %}selected{% endif %}>Ombor mahsulotlari</option>
+                            </select>
                         </div>
                     </div>
 
@@ -435,6 +449,13 @@
                                 <span class="stock-badge stock-high">Yetarli ({{ mahsulot.miqdori|floatformat:0 }})</span>
                             {% endif %}
                         </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="check-row">
+                            <input type="checkbox" name="is_savdogar_product" value="1" {% if mahsulot.is_savdogar_product %}checked{% endif %}>
+                            <span>Savdogar sotadigan mahsulotlar ro'yxatiga qo'shish</span>
+                        </label>
                     </div>
 
                     <button type="submit" class="btn primary" style="width:100%; justify-content:center;">

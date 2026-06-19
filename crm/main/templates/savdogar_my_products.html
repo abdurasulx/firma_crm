@@ -1,0 +1,44 @@
+{% extends 'sgbase.html' %}
+
+{% block title %}Savdogar mahsulotlari - StockFirm{% endblock %}
+
+{% block content %}
+<style>
+    .head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:1rem}.head h1{font-size:1.5rem;color:var(--slate-900)}.head p{color:var(--slate-500);font-weight:700}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem}
+    .card{background:#fff;border:1px solid var(--slate-200);border-radius:var(--radius);box-shadow:var(--shadow-sm);overflow:hidden;display:grid;grid-template-rows:auto 1fr}
+    .pic{height:170px;background:var(--slate-100);display:grid;place-items:center;color:var(--slate-400);font-size:2rem;border-bottom:1px solid var(--slate-200)}
+    .pic img{width:100%;height:100%;object-fit:contain;padding:.75rem;background:#fff}
+    .body{padding:1rem;display:grid;gap:.75rem}.name{font-weight:900;color:var(--slate-900);font-size:1.05rem;line-height:1.25}.meta{color:var(--slate-500);font-weight:800}
+    .row{display:grid;grid-template-columns:1fr auto;align-items:end;gap:.75rem;font-weight:900}.price{color:var(--success);white-space:nowrap}.stock{color:var(--slate-900);background:var(--slate-100);border-radius:999px;padding:.35rem .6rem;white-space:nowrap}.stock.low{color:var(--danger);background:#fef2f2}
+    @media(max-width:520px){.grid{grid-template-columns:1fr}.row{grid-template-columns:1fr}.stock{justify-self:start}}
+    .empty{background:#fff;border:1px solid var(--slate-200);border-radius:var(--radius);padding:2rem;text-align:center;color:var(--slate-500);font-weight:800}
+</style>
+
+<div class="head">
+    <div>
+        <h1>Sotiladigan mahsulotlar</h1>
+        <p>Savdogarga biriktirilgan alohida mahsulotlar ro'yxati</p>
+    </div>
+</div>
+
+<div class="grid">
+    {% for product in products %}
+    <article class="card">
+        <div class="pic">
+            {% if product.rasmi %}<img src="{{ product.rasmi.url }}" alt="{{ product.nomi }}">{% else %}<i class="fas fa-box"></i>{% endif %}
+        </div>
+        <div class="body">
+            <div class="name">{{ product.nomi }}</div>
+            <div class="meta">{{ product.turi.nomi }}</div>
+            <div class="row">
+                <span class="price">{{ product.narxi|floatformat:0 }} so'm</span>
+                <span class="stock {% if product.miqdori < product.min_miqdori %}low{% endif %}">{{ product.miqdori|floatformat:0 }} {{ product.turi.nomi }}</span>
+            </div>
+        </div>
+    </article>
+    {% empty %}
+    <div class="empty">Savdogar uchun mahsulot biriktirilmagan</div>
+    {% endfor %}
+</div>
+{% endblock %}

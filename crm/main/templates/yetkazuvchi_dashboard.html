@@ -27,7 +27,7 @@
         right: 0;
         width: 300px;
         height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(79, 70, 229, 0.03));
+        background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.04));
         pointer-events: none;
     }
 
@@ -97,10 +97,10 @@
         color: var(--slate-600);
     }
 
-    .stat-card.primary .stat-icon { background: rgba(79, 70, 229, 0.1); color: var(--primary); }
+    .stat-card.primary .stat-icon { background: rgba(16, 185, 129, 0.12); color: var(--primary); }
     .stat-card.success .stat-icon { background: rgba(16, 185, 129, 0.1); color: var(--success); }
     .stat-card.warning .stat-icon { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
-    .stat-card.info .stat-icon { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+    .stat-card.info .stat-icon { background: rgba(16, 185, 129, 0.10); color: var(--primary-dark); }
 
     .stat-body {
         display: flex;
@@ -316,7 +316,7 @@
     }
 
     .badge-cash { background: #d1fae5; color: #065f46; }
-    .badge-card { background: #dbeafe; color: #1e40af; }
+    .badge-card { background: #ecfdf5; color: #047857; }
     .badge-debt { background: #fef3c7; color: #92400e; }
 
     /* Empty States */
@@ -358,7 +358,7 @@
     .btn-main:hover {
         background: var(--primary-dark);
         transform: translateY(-2px);
-        box-shadow: 0 12px 20px -5px rgba(79, 70, 229, 0.4);
+        box-shadow: 0 12px 20px -5px rgba(16, 185, 129, 0.32);
     }
 
     @media (max-width: 768px) {
@@ -580,47 +580,8 @@
         content.classList.toggle('show');
     }
 
-    // New Delivery Browser Notifications
-    (function() {
-        let notificationEnabled = false;
-        let checkInterval = null;
-
-        window.addEventListener('load', function () {
-            if ('Notification' in window) {
-                if (Notification.permission === 'granted') {
-                    notificationEnabled = true;
-                    startCheck();
-                } else if (Notification.permission !== 'denied') {
-                    Notification.requestPermission().then(p => {
-                        if (p === 'granted') {
-                            notificationEnabled = true;
-                            startCheck();
-                        }
-                    });
-                }
-            }
-        });
-
-        function startCheck() {
-            check();
-            checkInterval = setInterval(check, 30000);
-        }
-
-        function check() {
-            fetch('{% url "api_check_deliveries" %}', {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success && data.count > 0) {
-                    if (window.showNotification) {
-                        window.showNotification('Yangi yuklama!', `${data.count} ta yangi yuklama keldi.`, 'success');
-                    }
-                    setTimeout(() => location.reload(), 2500);
-                }
-            });
-        }
-    })();
+    // Yangi yuklamalar WebSocket orqali keladi.
+    // Polling olib tashlandi: add_yuklama view refresh=True bilan notification yuboradi.
 </script>
 
 

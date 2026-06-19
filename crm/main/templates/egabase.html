@@ -244,6 +244,57 @@
             width: 0;
         }
 
+        .submenu-toggle {
+            width: 100%;
+            border: 0;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        .submenu-caret {
+            margin-left: auto;
+            transition: transform 0.2s ease;
+            font-size: 12px;
+        }
+
+        .submenu.open .submenu-caret {
+            transform: rotate(180deg);
+        }
+
+        .submenu-list {
+            display: none;
+            list-style: none;
+            margin: 4px 0 8px 46px;
+            padding: 0;
+        }
+
+        .submenu.open .submenu-list {
+            display: grid;
+            gap: 3px;
+        }
+
+        .submenu-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 12px;
+            color: rgba(255,255,255,.55);
+            text-decoration: none;
+            border-radius: 9px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .submenu-link:hover,
+        .submenu-link.active {
+            background: var(--sidebar-hover);
+            color: #fff;
+        }
+
+        .sidebar.collapsed .submenu-list {
+            display: none !important;
+        }
+
         .sidebar.collapsed .sidebar-section-label {
             display: none;
         }
@@ -915,6 +966,7 @@
                             <span class="menu-text">Dashboard</span>
                         </a>
                     </li>
+                    {% if request.user.type != 'omborchi' %}
                     <li class="menu-item">
                         <a href="{% url 'hodimlar_list' %}"
                             class="menu-link {% if request.resolver_match.url_name == 'hodimlar_list' or request.resolver_match.url_name == 'edituser' or request.resolver_match.url_name == 'crtuser' %}active{% endif %}"
@@ -931,6 +983,50 @@
                             <span class="menu-text">Mahsulotlar</span>
                         </a>
                     </li>
+                    {% endif %}
+                    {% if request.user.type == 'omborchi' %}
+                    <li class="menu-item">
+                        <a href="{% url 'warehouse_products' %}" class="menu-link {% if request.resolver_match.url_name == 'warehouse_products' or request.resolver_match.url_name == 'warehouse_product_create' or request.resolver_match.url_name == 'warehouse_product_edit' %}active{% endif %}" data-title="Mahsulotlar">
+                            <span class="menu-icon"><i class="fa-solid fa-boxes-stacked"></i></span>
+                            <span class="menu-text">Mahsulotlar</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{% url 'warehouse_movements' %}" class="menu-link {% if request.resolver_match.url_name == 'warehouse_movements' %}active{% endif %}" data-title="Kirim-chiqim">
+                            <span class="menu-icon"><i class="fa-solid fa-right-left"></i></span>
+                            <span class="menu-text">Kirim-chiqim</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{% url 'warehouse_requests' %}" class="menu-link {% if request.resolver_match.url_name == 'warehouse_requests' %}active{% endif %}" data-title="So'rovlar">
+                            <span class="menu-icon"><i class="fa-solid fa-clipboard-list"></i></span>
+                            <span class="menu-text">So'rovlar</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{% url 'warehouse_history' %}" class="menu-link {% if request.resolver_match.url_name == 'warehouse_history' %}active{% endif %}" data-title="Tarix">
+                            <span class="menu-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
+                            <span class="menu-text">Tarix</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="menu-item submenu {% if request.resolver_match.url_name == 'warehouse_products' or request.resolver_match.url_name == 'warehouse_product_create' or request.resolver_match.url_name == 'warehouse_product_edit' or request.resolver_match.url_name == 'warehouse_movements' or request.resolver_match.url_name == 'warehouse_requests' or request.resolver_match.url_name == 'warehouse_history' %}open{% endif %}" id="omborSubmenu">
+                        <button type="button"
+                            class="menu-link submenu-toggle {% if request.resolver_match.url_name == 'warehouse_products' or request.resolver_match.url_name == 'warehouse_product_create' or request.resolver_match.url_name == 'warehouse_product_edit' or request.resolver_match.url_name == 'warehouse_movements' or request.resolver_match.url_name == 'warehouse_requests' or request.resolver_match.url_name == 'warehouse_history' %}active{% endif %}"
+                            data-title="Ombor" onclick="toggleOmborSubmenu(event)">
+                            <span class="menu-icon"><i class="fa-solid fa-warehouse"></i></span>
+                            <span class="menu-text">Ombor</span>
+                            <span class="menu-text submenu-caret"><i class="fa-solid fa-chevron-down"></i></span>
+                        </button>
+                        <ul class="submenu-list">
+                            <li><a class="submenu-link {% if request.resolver_match.url_name == 'warehouse_products' or request.resolver_match.url_name == 'warehouse_product_create' or request.resolver_match.url_name == 'warehouse_product_edit' %}active{% endif %}" href="{% url 'warehouse_products' %}"><i class="fa-solid fa-boxes-stacked"></i> Mahsulotlar</a></li>
+                            <li><a class="submenu-link {% if request.resolver_match.url_name == 'warehouse_movements' %}active{% endif %}" href="{% url 'warehouse_movements' %}"><i class="fa-solid fa-right-left"></i> Kirim-chiqim</a></li>
+                            <li><a class="submenu-link {% if request.resolver_match.url_name == 'warehouse_requests' %}active{% endif %}" href="{% url 'warehouse_requests' %}"><i class="fa-solid fa-clipboard-list"></i> So'rovlar</a></li>
+                            <li><a class="submenu-link {% if request.resolver_match.url_name == 'warehouse_history' %}active{% endif %}" href="{% url 'warehouse_history' %}"><i class="fa-solid fa-clock-rotate-left"></i> Tarix</a></li>
+                        </ul>
+                    </li>
+                    {% endif %}
+                    {% if request.user.type != 'omborchi' %}
                     <li class="menu-item">
                         <a href="{% url 'mijozlar_list' %}"
                             class="menu-link {% if request.resolver_match.url_name == 'mijozlar_list' or request.resolver_match.url_name == 'mijoz_detail' %}active{% endif %}"
@@ -939,7 +1035,9 @@
                             <span class="menu-text">Mijozlar</span>
                         </a>
                     </li>
+                    {% endif %}
                 </ul>
+                {% if request.user.type != 'omborchi' %}
                 <div class="sidebar-section-label">Boshqaruv</div>
                 <ul class="sidebar-menu">
                     <li class="menu-item">
@@ -969,6 +1067,14 @@
                             <span class="menu-text">Xarita</span>
                         </a>
                     </li>
+                    <li class="menu-item">
+                        <a href="{% url 'route_history' %}"
+                            class="menu-link {% if request.resolver_match.url_name == 'route_history' %}active{% endif %}"
+                            data-title="Marshrut tarixi">
+                            <span class="menu-icon"><i class="fa-solid fa-route"></i></span>
+                            <span class="menu-text">Marshrut tarixi</span>
+                        </a>
+                    </li>
                     {% endif %}
                     <li class="menu-item">
                         <a href="{% url 'amallog' %}"
@@ -994,29 +1100,22 @@
                             <span class="menu-text">Nasiya Savdolar</span>
                         </a>
                     </li>
-                    <li class="menu-item">
-                        <a href="{% url 'savdogar_nasiya_admin' %}"
-                            class="menu-link {% if request.resolver_match.url_name == 'savdogar_nasiya_admin' %}active{% endif %}"
-                            data-title="Savdogar Nasiya">
-                            <span class="menu-icon"><i class="fa-solid fa-hand-holding-dollar"></i></span>
-                            <span class="menu-text">Savdogar Nasiya</span>
-                        </a>
-                    </li>
-                    <li class="menu-item">
-                        <a href="{% url 'admin_savdogar_hisobot' %}"
-                            class="menu-link {% if request.resolver_match.url_name == 'admin_savdogar_hisobot' %}active{% endif %}"
-                            data-title="Savdogar Hisobot">
-                            <span class="menu-icon"><i class="fa-solid fa-store"></i></span>
-                            <span class="menu-text">Savdogar Hisobot</span>
-                        </a>
-                    </li>
-                    <li class="menu-item">
-                        <a href="{% url 'credit_settings' %}"
-                            class="menu-link {% if request.resolver_match.url_name == 'credit_settings' %}active{% endif %}"
-                            data-title="Nasiya Sozlamalari">
-                            <span class="menu-icon"><i class="fa-solid fa-file-contract"></i></span>
-                            <span class="menu-text">Nasiya Sozlamalari</span>
-                        </a>
+                    <li class="menu-item submenu {% if request.resolver_match.url_name == 'savdogar_admin_dashboard' or request.resolver_match.url_name == 'savdogar_contract' or request.resolver_match.url_name == 'savdogar_sales' or request.resolver_match.url_name == 'savdogar_admin_credit' or request.resolver_match.url_name == 'savdogar_admin_products' or request.resolver_match.url_name == 'savdogar_admin_analytics' %}open{% endif %}" id="savdogarSubmenu">
+                        <button type="button"
+                            class="menu-link submenu-toggle {% if request.resolver_match.url_name == 'savdogar_admin_dashboard' or request.resolver_match.url_name == 'savdogar_contract' or request.resolver_match.url_name == 'savdogar_sales' or request.resolver_match.url_name == 'savdogar_admin_credit' or request.resolver_match.url_name == 'savdogar_admin_products' or request.resolver_match.url_name == 'savdogar_admin_analytics' %}active{% endif %}"
+                            data-title="Savdogar" onclick="toggleSavdogarSubmenu(event)">
+                            <span class="menu-icon"><i class="fa-solid fa-file-signature"></i></span>
+                            <span class="menu-text">Savdogar</span>
+                            <span class="menu-text submenu-caret"><i class="fa-solid fa-chevron-down"></i></span>
+                        </button>
+                        <ul class="submenu-list">
+                            <li><a class="submenu-link {% if request.resolver_match.url_name == 'savdogar_admin_dashboard' %}active{% endif %}" href="{% url 'savdogar_admin_dashboard' %}"><i class="fa-solid fa-gauge-high"></i> Boshqaruv</a></li>
+                            <li><a class="submenu-link {% if request.resolver_match.url_name == 'savdogar_contract' %}active{% endif %}" href="{% url 'savdogar_contract' %}"><i class="fa-solid fa-file-signature"></i> Shartnoma</a></li>
+                            <li><a class="submenu-link {% if request.resolver_match.url_name == 'savdogar_sales' %}active{% endif %}" href="{% url 'savdogar_sales' %}"><i class="fa-solid fa-receipt"></i> Savdolar</a></li>
+                            <li><a class="submenu-link {% if request.resolver_match.url_name == 'savdogar_admin_credit' %}active{% endif %}" href="{% url 'savdogar_admin_credit' %}"><i class="fa-solid fa-hand-holding-dollar"></i> Nasiya</a></li>
+                            <li><a class="submenu-link {% if request.resolver_match.url_name == 'savdogar_admin_products' %}active{% endif %}" href="{% url 'savdogar_admin_products' %}"><i class="fa-solid fa-boxes-stacked"></i> Mahsulotlar</a></li>
+                            <li><a class="submenu-link {% if request.resolver_match.url_name == 'savdogar_admin_analytics' %}active{% endif %}" href="{% url 'savdogar_admin_analytics' %}"><i class="fa-solid fa-chart-line"></i> Analitika</a></li>
+                        </ul>
                     </li>
                     <li class="menu-item">
                         <a href="{% url 'billing_page' %}"
@@ -1045,13 +1144,16 @@
                     </li>
                     {% endif %}
                 </ul>
+                {% endif %}
             </div>
+                {% if has_map and request.user.type != 'omborchi' %}
                 <div id="online-deliverers-section">
                     <div class="sidebar-section-label">Online Kuryerlar</div>
                     <div id="online-deliverers-list">
                         <!-- Dynamic items -->
                     </div>
                 </div>
+                {% endif %}
 
                 <div class="sidebar-toggle" onclick="toggleSidebar()">
                     <i class="fa-solid fa-angles-left"></i>
@@ -1108,11 +1210,11 @@
                 </div>
 
                 <div class="user-profile" id="userProfile" onclick="toggleUserDropdown()">
-                    <img src="{% if request.user.rasmi %}{{ request.user.rasmi.url }}{% else %}{% static 'images/default_avatar.jpg' %}{% endif %}"
+                    <img src="{% if request.user.rasmi %}{{ request.user.rasmi }}{% else %}{% static 'images/default_avatar.jpg' %}{% endif %}"
                         alt="Avatar" class="user-avatar">
                     <div class="user-info">
                         <span class="user-name">{{ request.user.tuliq_ismi }}</span>
-                        <span class="user-role">Ega</span>
+                        <span class="user-role">{{ request.user.get_type_display }}</span>
                     </div>
                     <span class="dropdown-toggle"><i class="fa-solid fa-chevron-down"></i></span>
                     <div class="user-dropdown">
@@ -1211,6 +1313,28 @@
             }
         };
 
+        window.toggleSavdogarSubmenu = function(event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            const submenu = document.getElementById('savdogarSubmenu');
+            if (!submenu) return;
+            submenu.classList.toggle('open');
+            localStorage.setItem('savdogarSubmenuOpen', submenu.classList.contains('open') ? '1' : '0');
+        };
+
+        window.toggleOmborSubmenu = function(event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            const submenu = document.getElementById('omborSubmenu');
+            if (!submenu) return;
+            submenu.classList.toggle('open');
+            localStorage.setItem('omborSubmenuOpen', submenu.classList.contains('open') ? '1' : '0');
+        };
+
         // Load sidebar state & set dynamic page title
         document.addEventListener('DOMContentLoaded', function () {
             // Restore sidebar state
@@ -1220,6 +1344,16 @@
                 sidebar.classList.add('collapsed');
                 const icon = sidebar.querySelector('.sidebar-toggle i');
                 if (icon) icon.className = 'fa-solid fa-angles-right';
+            }
+
+            const savdogarSubmenu = document.getElementById('savdogarSubmenu');
+            if (savdogarSubmenu && localStorage.getItem('savdogarSubmenuOpen') === '1') {
+                savdogarSubmenu.classList.add('open');
+            }
+
+            const omborSubmenu = document.getElementById('omborSubmenu');
+            if (omborSubmenu && localStorage.getItem('omborSubmenuOpen') === '1') {
+                omborSubmenu.classList.add('open');
             }
 
             // Set page title from active sidebar link
@@ -1392,43 +1526,18 @@
             const DURATION = 4000;
 
             let heartbeatInterval = null;
+            let reconnectAttempts = 0;
+            const MAX_RECONNECT_ATTEMPTS = 3;
 
             function connect() {
-                console.log("Connecting to notifications WebSocket...");
                 notificationSocket = new WebSocket(socketUrl);
 
                 notificationSocket.onopen = function() {
-                    console.log("Notification socket connected.");
-                    // Start heartbeat
+                    reconnectAttempts = 0;
+                    // Start lightweight heartbeat. Location is sent only from delivery UI.
                     heartbeatInterval = setInterval(() => {
                         if (notificationSocket.readyState === WebSocket.OPEN) {
-{% if request.has_map %}
-                            // Try to get location
-                            if (navigator.geolocation) {
-                                navigator.geolocation.getCurrentPosition(
-                                    (pos) => {
-                                        notificationSocket.send(JSON.stringify({
-                                            type: 'ping',
-                                            lat: pos.coords.latitude,
-                                            lng: pos.coords.longitude
-                                        }));
-                                    },
-                                    (err) => {
-                                        if (err.code === 1 && !window.gpsWarned) { 
-                                            showNotification("Lokatsiya", "Iltimos, kuryer xaritada ko'rinishi uchun GPSga ruxsat bering.", "warning");
-                                            window.gpsWarned = true;
-                                        }
-                                        notificationSocket.send(JSON.stringify({type: 'ping'}));
-                                    },
-                                    { enableHighAccuracy: false, timeout: 5000 }
-                                );
-                            } else {
-                                notificationSocket.send(JSON.stringify({type: 'ping'}));
-                            }
-{% else %}
-                            // Just basic ping if map feature is disabled
                             notificationSocket.send(JSON.stringify({type: 'ping'}));
-{% endif %}
                         }
                     }, 30000); // 30 seconds
                 };
@@ -1440,19 +1549,22 @@
                         const notifType = data.type || 'info';
                         showNotification(data.title, data.message, notifType);
                         addToNotifPanel(data.title, data.message, notifType);
+                        if (data.refresh) {
+                            setTimeout(() => window.location.reload(), 1200);
+                        }
                     } catch (err) {
-                        console.error("Notification WS Error:", err);
                     }
                 };
 
                 notificationSocket.onclose = function(e) {
-                    console.log('Notification socket closed. Reconnecting in 5s...', e.reason);
                     if (heartbeatInterval) clearInterval(heartbeatInterval);
-                    setTimeout(connect, 5000);
+                    if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                        reconnectAttempts += 1;
+                        setTimeout(connect, 3000 * reconnectAttempts);
+                    }
                 };
 
                 notificationSocket.onerror = function(err) {
-                    console.error('Notification socket error:', err);
                     notificationSocket.close();
                 };
             }
@@ -1517,18 +1629,22 @@
                 switch(type) {
                     case 'success': return '#22c55e';
                     case 'warning': return '#f59e0b';
-                    case 'info': return '#3b82f6';
-                    default: return '#3b82f6';
+                    case 'info': return '#10b981';
+                    default: return '#10b981';
                 }
             }
 
             // Start connection
             if (window.location.pathname !== '/login/' && window.location.pathname !== '/register/') {
                 connect();
-                
+
                 // Also poll for online deliverers
-                updateOnlineDeliverers();
-                setInterval(updateOnlineDeliverers, 5000); // Every 5 seconds
+{% if request.has_map %}
+                if (document.getElementById('online-deliverers-list')) {
+                    updateOnlineDeliverers();
+                    setInterval(updateOnlineDeliverers, 5000); // Every 5 seconds
+                }
+{% endif %}
             }
 
             async function updateOnlineDeliverers() {

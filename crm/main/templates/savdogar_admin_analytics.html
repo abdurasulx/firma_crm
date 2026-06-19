@@ -1,0 +1,112 @@
+{% extends 'egabase.html' %}
+
+{% block title %}Savdogar analitikasi - StockFirm{% endblock %}
+
+{% block content %}
+<style>
+    :root{--slate-200:#e2e8f0;--slate-500:#64748b;--slate-900:#0f172a;--radius:16px;--shadow-sm:0 1px 2px rgba(15,23,42,.06)}
+    .head{margin-bottom:1rem}.head h1{font-size:1.5rem;color:var(--slate-900)}.head p{color:var(--slate-500);font-weight:700}
+    .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:1rem}
+    .stat,.chart{background:#fff;border:1px solid var(--slate-200);border-radius:var(--radius);box-shadow:var(--shadow-sm)}
+    .stat{padding:1rem}.stat span{display:block;color:var(--slate-500);font-size:.78rem;font-weight:900;text-transform:uppercase}.stat strong{font-size:1.45rem;color:var(--slate-900)}
+    .charts{display:grid;grid-template-columns:1.15fr .85fr;gap:1rem;margin-bottom:1rem}.chart{overflow:hidden}.chart-head{padding:1rem;border-bottom:1px solid var(--slate-200);display:flex;justify-content:space-between;gap:1rem}.chart-head h2{font-size:1rem;color:var(--slate-900)}
+    .chart-body{padding:1rem}.wide{grid-column:1/-1}
+    @media(max-width:900px){.charts{grid-template-columns:1fr}}
+</style>
+
+<div class="head">
+    <h1>Savdogar analitikasi</h1>
+    <p>Barcha savdogar savdolari, to'lovlar, top mahsulotlar va mijozlar bo'yicha ko'rsatkichlar</p>
+</div>
+
+<div class="stats">
+    <div class="stat"><span>Savdolar</span><strong>{{ sales_count }}</strong></div>
+    <div class="stat"><span>Jami summa</span><strong>{{ total_amount|floatformat:0 }} so'm</strong></div>
+    <div class="stat"><span>O'rtacha chek</span><strong>{{ avg_sale|floatformat:0 }} so'm</strong></div>
+    <div class="stat"><span>Nasiya soni</span><strong>{{ nasiya_count }}</strong></div>
+</div>
+
+<div class="charts">
+    <section class="chart">
+        <div class="chart-head"><h2>Kunlik savdo summasi</h2><span>7 kun</span></div>
+        <div class="chart-body"><canvas id="dailyChart" height="230"></canvas></div>
+    </section>
+    <section class="chart">
+        <div class="chart-head"><h2>To'lov turi ulushi</h2><span>summa</span></div>
+        <div class="chart-body"><canvas id="paymentChart" height="230"></canvas></div>
+    </section>
+    <section class="chart wide">
+        <div class="chart-head"><h2>Top mahsulotlar</h2><span>summa</span></div>
+        <div class="chart-body"><canvas id="productChart" height="260"></canvas></div>
+    </section>
+    <section class="chart wide">
+        <div class="chart-head"><h2>Top mijozlar</h2><span>summa</span></div>
+        <div class="chart-body"><canvas id="customerChart" height="260"></canvas></div>
+    </section>
+</div>
+
+<script>
+    const DATA = {{ analytics_json|safe }};
+    function setupCanvas(id) {
+        const canvas = document.getElementById(id);
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
+        return {canvas, ctx, w: rect.width, h: rect.height};
+    }
+    function drawBars(id, labels, values, color, horizontal=false) {
+        const {ctx, w, h} = setupCanvas(id);
+        const pad = 40;
+        const max = Math.max(...values, 1);
+        ctx.clearRect(0,0,w,h);
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.beginPath();
+        ctx.moveTo(pad, 12); ctx.lineTo(pad, h - pad); ctx.lineTo(w - 10, h - pad); ctx.stroke();
+        ctx.font = '12px Inter';
+        if (horizontal) {
+            const rowH = (h - pad - 16) / Math.max(labels.length, 1);
+            labels.forEach((label, i) => {
+                const barW = ((w - pad - 130) * values[i]) / max;
+                const y = 20 + i * rowH;
+                ctx.fillStyle = color; ctx.fillRect(130, y, barW, Math.max(rowH - 12, 8));
+                ctx.fillStyle = '#334155'; ctx.fillText(label.slice(0, 22), 8, y + 13);
+                ctx.fillStyle = '#64748b'; ctx.fillText(Math.round(values[i]).toLocaleString('uz-UZ'), 136 + barW, y + 13);
+            });
+            return;
+        }
+        const gap = 12;
+        const barW = (w - pad - 20 - gap * (values.length - 1)) / Math.max(values.length, 1);
+        values.forEach((value, i) => {
+            const barH = ((h - pad - 22) * value) / max;
+            const x = pad + i * (barW + gap), y = h - pad - barH;
+            ctx.fillStyle = color; ctx.fillRect(x, y, Math.max(barW, 5), barH);
+            ctx.fillStyle = '#64748b'; ctx.fillText(labels[i], x, h - 12);
+        });
+    }
+    function drawDonut(id, labels, values) {
+        const {ctx, w} = setupCanvas(id);
+        const colors = ['#10b981','#059669','#d97706'];
+        const total = values.reduce((a,b)=>a+b,0) || 1;
+        const cx = w / 2, cy = 92, r = 70;
+        let start = -Math.PI / 2;
+        values.forEach((value, i) => {
+            const end = start + Math.PI * 2 * value / total;
+            ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, r, start, end); ctx.closePath();
+            ctx.fillStyle = colors[i % colors.length]; ctx.fill(); start = end;
+        });
+        ctx.beginPath(); ctx.arc(cx, cy, 38, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill();
+        ctx.font = '12px Inter';
+        labels.forEach((label, i) => {
+            ctx.fillStyle = colors[i % colors.length]; ctx.fillRect(18, 178 + i * 18, 10, 10);
+            ctx.fillStyle = '#334155'; ctx.fillText(label + ': ' + Math.round(values[i]).toLocaleString('uz-UZ'), 34, 188 + i * 18);
+        });
+    }
+    drawBars('dailyChart', DATA.day_labels, DATA.daily_totals, '#10b981');
+    drawDonut('paymentChart', DATA.payment_labels, DATA.payment_totals);
+    drawBars('productChart', DATA.product_labels, DATA.product_totals, '#059669', true);
+    drawBars('customerChart', DATA.customer_labels, DATA.customer_totals, '#d97706', true);
+</script>
+{% endblock %}
