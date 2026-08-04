@@ -1,7 +1,7 @@
 {
-  "name": "StockFirm CRM",
+  "name": "StockFirm ERP",
   "short_name": "StockFirm",
-  "description": "Yetkazib beruvchi uchun mobil CRM ilovasi",
+  "description": "Yetkazib beruvchi uchun mobil ERP ilovasi",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",

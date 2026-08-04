@@ -1,6 +1,7 @@
 import json
 from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
+from django.http import JsonResponse
 from django.contrib import messages
 from main.models import BillingPaymentLink, Company, User, Plan, PlanRequest
 from django.db import models, transaction
@@ -57,7 +58,7 @@ def landing_home(request):
 MARKETING_PAGES = {
     "features": {
         "eyebrow": "Platforma",
-        "title": "StockFirm CRM nimalarni hal qiladi?",
+        "title": "StockFirm ERP nimalarni hal qiladi?",
         "lead": "Firma ichidagi tarqoq Excel, Telegram xabarlar, qo'lda yozilgan daftar va og'zaki kelishuvlarni bitta tartibli tizimga almashtiring.",
         "items": [
             ("Ombor", "Mahsulot kirimi, chiqimi, minimal qoldiq va audit tarixi."),
@@ -158,7 +159,7 @@ MARKETING_PAGES = {
     },
     "implementation": {
         "eyebrow": "Joriy qilish",
-        "title": "StockFirm CRM'ni ishga tushirish murakkab emas.",
+        "title": "StockFirm ERP'ni ishga tushirish murakkab emas.",
         "lead": "Firma ochiladi, subdomain tanlanadi, mahsulot va hodimlar kiritiladi, keyin jarayonlar tizimga o'tkaziladi.",
         "items": [
             ("1-qadam", "Firma va ega akkaunti yaratiladi."),
@@ -170,7 +171,7 @@ MARKETING_PAGES = {
     "contact": {
         "eyebrow": "Aloqa",
         "title": "Tizimni biznesingizga moslab ko'rishni xohlaysizmi?",
-        "lead": "Demo, pilot firma yoki individual tarif bo'yicha bog'laning. Sizning jarayoningizni CRM oqimiga moslab beramiz.",
+        "lead": "Demo, pilot firma yoki individual tarif bo'yicha bog'laning. Sizning jarayoningizni ERP oqimiga moslab beramiz.",
         "items": [
             ("Demo", "Tizim imkoniyatlarini jonli ko'rish."),
             ("Pilot", "Bitta firma bilan sinov ishga tushirish."),
@@ -499,24 +500,135 @@ def custom_404(request, exception=None):
 
 
 def product_scan_view(request, kod):
-    """Public QR-skan sahifasi: stockfirm.uz/p/<kod>/"""
-    from main.services.qr_service import register_scan
+    """Public QR-skan sahifasi: stockfirm.uz/p/<kod>/
 
-    serial = register_scan(kod)
-    if serial is None:
+    Mahsulot ma'lumoti server tomonida DARHOL berilmaydi — sahifa faqat
+    "qobiq" (kod bilan), ma'lumotning o'zi mijoz brauzerida joylashuvga
+    ruxsat berilgandan keyin `product_scan_status_api`dan JS orqali
+    olinadi (pastga qarang: o'g'irlik nazorati shu joylashuv asosida).
+    Bu yerda faqat kod haqiqatan mavjudligi tekshiriladi (topilmasa 404),
+    scan_soni oshirilmaydi — buni endi status API o'zi qiladi (joylashuv
+    bilan birga, bir marta)."""
+    from main.models import Serial
+
+    if not Serial.objects.filter(kod=kod).exists():
         return render(request, '404.html', status=404)
 
-    yaroqlilik_sanasi = None
+    return render(request, 'landing/product_scan.html', {'kod': kod})
+
+
+# Ombordan necha metr uzoqlashguncha "hali ombor hududida" deb hisoblanadi —
+# shundan uzoqda, hali SOTILMAGAN (holati != 'sotilgan') mahsulot
+# skanerlansa, tizim tekshiruvidan o'tmasdan chiqarilgan (o'g'irlangan
+# bo'lishi mumkin) deb belgilanadi.
+THEFT_CHECK_RADIUS_METERS = 50
+
+
+def _haversine_meters(lat1, lng1, lat2, lng2):
+    from math import asin, cos, radians, sin, sqrt
+    dlat = radians(lat2 - lat1)
+    dlng = radians(lng2 - lng1)
+    a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlng / 2) ** 2
+    return 6371000 * 2 * asin(sqrt(a))
+
+
+def product_scan_status_api(request, kod):
+    """`product_scan_view` sahifasi joylashuvga ruxsat berilgandan keyin
+    shu API'ni chaqiradi. **Hech qachon tannarx yoki boshqa moliyaviy
+    maydon qaytarilmaydi** — faqat mahsulot nomi, ishlab chiqarilgan sana,
+    yaroqlilik va holat.
+
+    O'g'irlik tekshiruvi: agar seriya hali 'omborda' holatida bo'lsa
+    (ya'ni tizim orqali hech qanday tasdiqlangan yo'l bilan — yuklama,
+    sotuv — chiqarilmagan), lekin firmaning barcha omborlaridan
+    `THEFT_CHECK_RADIUS_METERS`dan uzoqda skanerlansa — bu mahsulot
+    tizim tekshiruvidan o'tmasdan ombordan chiqarilgan (o'g'irlangan
+    bo'lishi mumkin) deb belgilanadi: skanerlovchiga ogohlantirish matni
+    ko'rsatiladi va firma egasiga (WS + doimiy `SerialHarakat` yozuvi
+    orqali) darhol xabar boradi. 'chiqarilgan' holat TEKSHIRILMAYDI —
+    u allaqachon Desktop Agent orqali tasdiqlangan legal yetkazib
+    berish jarayoni (yetkazib beruvchi mijozga olib ketmoqda bo'lishi
+    tabiiy) — buni ham tekshirish har bir oddiy yetkazib berishda soxta
+    ogohlantirish yuborardi."""
+    from main.models import Serial, SerialHarakat
+
+    lat = request.GET.get('lat')
+    lng = request.GET.get('lng')
+    try:
+        lat = float(lat)
+        lng = float(lng)
+    except (TypeError, ValueError):
+        return JsonResponse({'detail': "Joylashuv (lat/lng) kerak."}, status=400)
+
+    serial = Serial.objects.select_related('mahsulot', 'batch', 'batch__pazanda__user', 'company').filter(kod=kod).first()
+    if not serial:
+        return JsonResponse({'detail': "Mahsulot topilmadi."}, status=404)
+
+    Serial.objects.filter(pk=serial.pk).update(scan_soni=models.F('scan_soni') + 1)
+
     mahsulot = serial.mahsulot
+    yaroqlilik_sanasi = None
     if serial.batch and mahsulot.yaroqlilik_kun_soni:
-        from datetime import timedelta
         yaroqlilik_sanasi = serial.batch.vaqt_sana + timedelta(days=mahsulot.yaroqlilik_kun_soni)
 
-    return render(request, 'landing/product_scan.html', {
-        'serial': serial,
-        'mahsulot': mahsulot,
-        'yaroqlilik_sanasi': yaroqlilik_sanasi,
-    })
+    data = {
+        'mahsulot': mahsulot.nomi,
+        'rasmi': request.build_absolute_uri(mahsulot.rasmi.url) if mahsulot.rasmi else None,
+        'tavsif': mahsulot.qr_tavsif or '',
+        'partiya_id': serial.batch_id,
+        'ishlab_chiqarilgan_sana': serial.batch.vaqt_sana.strftime('%d.%m.%Y') if serial.batch else None,
+        'yaroqlilik_sanasi': yaroqlilik_sanasi.strftime('%d.%m.%Y') if yaroqlilik_sanasi else None,
+        'unit_index': serial.unit_index,
+        'holati': serial.holati,
+        # Ichki admin ko'rinishida "Sotilgan" — lekin public sahifada bu
+        # noaniq (xaridorga "sizga tegishli emas" degandek tuyulishi mumkin);
+        # shuning uchun bu yerda alohida, mijozga tushunarli matn bilan.
+        'holati_display': "Sotuvga chiqarilgan" if serial.holati == 'sotilgan' else serial.get_holati_display(),
+        'ogohlantirish': None,
+    }
+
+    # DIQQAT: faqat 'omborda' holati tekshiriladi, 'chiqarilgan' EMAS —
+    # 'chiqarilgan' allaqachon tizim orqali (Desktop Agent'da xodim badge/
+    # Serial-QR skanerlab, `YuklamaSorov` tasdiqlanib) LEGAL ravishda
+    # ombordan chiqarilgan holat (yetkazib beruvchi mijozga olib
+    # ketayotgan bo'lishi mumkin — bu me'yor). Agar bu ham tekshirilsa,
+    # HAR BIR oddiy yetkazib berishda ombordan uzoqlashgani uchun egaga
+    # soxta "o'g'irlangan bo'lishi mumkin" ogohlantirishi ketardi — vaqt
+    # o'tib bunday soxta signal haqiqiy o'g'irlikni ham e'tiborsiz
+    # qoldirishga olib kelishi mumkin. Faqat 'omborda' (hech qanday
+    # tizim tasdig'isiz) holat chinakam shubhali.
+    if serial.holati == 'omborda':
+        omborlar = list(
+            serial.company.omborlar.filter(latitude__isnull=False, longitude__isnull=False)
+            .values_list('latitude', 'longitude')
+        ) if serial.company else []
+        if omborlar:
+            min_dist = min(_haversine_meters(lat, lng, olat, olng) for olat, olng in omborlar)
+            if min_dist > THEFT_CHECK_RADIUS_METERS:
+                data['ogohlantirish'] = (
+                    "Bu mahsulot o'g'irlangan bo'lishi mumkin — tizim tekshiruvidan o'tmasdan "
+                    "ombordan tashqarida qayd etildi. Ehtiyot bo'ling yoki bu haqda xabar bering."
+                )
+                already_alerted = SerialHarakat.objects.filter(
+                    serial=serial, event='shubhali', vaqt__gte=timezone.now() - timedelta(hours=24),
+                ).exists()
+                izoh = f"lat={lat:.5f},lng={lng:.5f},masofa={min_dist:.0f}m"
+                SerialHarakat.objects.create(
+                    company=serial.company, serial=serial, event='shubhali', izoh=izoh,
+                )
+                if not already_alerted:
+                    producer = serial.batch.pazanda.user.tuliq_ismi if serial.batch and serial.batch.pazanda and serial.batch.pazanda.user else "Noma'lum"
+                    send_company_notification(
+                        serial.company,
+                        "⚠ Shubhali holat — mahsulot ombordan tashqarida",
+                        f"{producer} ishlab chiqargan \"{mahsulot.nomi}\" mahsuloti tizim tekshiruvidan "
+                        f"o'tmasdan ombordan tashqarida (https://maps.google.com/?q={lat},{lng}) topildi. "
+                        "O'g'irlangan bo'lishi mumkin.",
+                        'error',
+                        refresh=False,
+                    )
+
+    return JsonResponse(data)
 
 
 def qr_image_view(request, kod):

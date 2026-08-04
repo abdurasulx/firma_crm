@@ -1,66 +1,209 @@
 {% extends 'landing/base.html' %}
 
-{% block title %}{{ mahsulot.nomi }} — Original mahsulot tekshiruvi{% endblock %}
-{% block meta_description %}StockFirm CRM orqali ishlab chiqarilgan mahsulotning originalligini tekshiring.{% endblock %}
+{% block title %}Mahsulot tekshiruvi{% endblock %}
+{% block meta_description %}StockFirm ERP orqali ishlab chiqarilgan mahsulotning originalligini tekshiring.{% endblock %}
+
+{# Bu sahifa faqat mahsulot ma'lumotini ko'rsatishi kerak — tizim
+   reklamasi/navigatsiyasi (header/footer) chalg'itmasligi uchun olib
+   tashlangan. #}
+{% block header %}{% endblock %}
+{% block footer %}{% endblock %}
 
 {% block content %}
+<style>
+    @keyframes scanAlarmPulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.45); }
+        50% { box-shadow: 0 0 0 16px rgba(220, 38, 38, 0); }
+    }
+    #scanResultCard.is-alarm {
+        border-color: #dc2626 !important;
+        background: #fff1f1 !important;
+        animation: scanAlarmPulse 1.4s ease-out infinite;
+    }
+    #scanResultIcon.is-alarm {
+        animation: scanAlarmPulse 1.4s ease-out infinite;
+    }
+</style>
 <section class="container" style="padding: 48px 0 60px;">
     <div style="max-width: 520px; margin: 0 auto; font-family: 'Inter', sans-serif; color: #1e293b;">
-        <div style="border: 1px solid #e2e8f0; border-radius: 20px; padding: 32px; background: #fff; text-align: center;">
-            <div style="width: 64px; height: 64px; border-radius: 50%; background: #ecfdf5; color: #10b981; display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; font-size: 28px;">
-                <i class="fa-solid fa-circle-check"></i>
-            </div>
-            <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 6px;">Original mahsulot</h1>
-            <p style="color: #64748b; font-size: 14px; margin-bottom: 22px;">Ushbu mahsulot StockFirm CRM tizimida ro'yxatga olingan.</p>
+        <div id="scanResultCard" style="border: 1px solid #e2e8f0; border-radius: 20px; padding: 32px; background: #fff; text-align: center; transition: background .3s, border-color .3s;">
 
-            {% if mahsulot.rasmi %}
-            <img src="{{ mahsulot.rasmi.url }}" alt="{{ mahsulot.nomi }}" style="width: 100%; max-height: 260px; object-fit: cover; border-radius: 14px; margin-bottom: 22px;">
-            {% endif %}
-
-            <div style="text-align: left; border-top: 1px solid #e2e8f0; padding-top: 20px; display: flex; flex-direction: column; gap: 12px;">
-                <div style="display: flex; justify-content: space-between;">
-                    <span style="color: #64748b; font-size: 13px;">Mahsulot</span>
-                    <strong>{{ mahsulot.nomi }}</strong>
+            <!-- Joylashuvga ruxsat so'rash bosqichi — ma'lumot shu bosqichdan
+                 keyingina (API orqali) keladi. Bu — mahsulot omborsiz joyda
+                 sotilgan-sotilmagan holatini tekshirish uchun MAJBURIY. -->
+            <div id="scanPermissionStep">
+                <div style="width: 64px; height: 64px; border-radius: 50%; background: #eff6ff; color: #3b82f6; display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; font-size: 28px;">
+                    <i class="fa-solid fa-location-dot"></i>
                 </div>
-                {% if serial.batch %}
-                <div style="display: flex; justify-content: space-between;">
-                    <span style="color: #64748b; font-size: 13px;">Ishlab chiqarilgan sana</span>
-                    <strong>{{ serial.batch.vaqt_sana|date:"d.m.Y" }}</strong>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span style="color: #64748b; font-size: 13px;">Partiya</span>
-                    <strong>#{{ serial.batch.id }}</strong>
-                </div>
-                {% endif %}
-                {% if yaroqlilik_sanasi %}
-                <div style="display: flex; justify-content: space-between;">
-                    <span style="color: #64748b; font-size: 13px;">Yaroqlilik muddati</span>
-                    <strong>{{ yaroqlilik_sanasi|date:"d.m.Y" }}</strong>
-                </div>
-                {% endif %}
-                {% if serial.unit_index %}
-                <div style="display: flex; justify-content: space-between;">
-                    <span style="color: #64748b; font-size: 13px;">Birlik raqami</span>
-                    <strong>{{ serial.unit_index }}</strong>
-                </div>
-                {% endif %}
-                {% if serial.holati == 'sotilgan' %}
-                <div style="display: flex; justify-content: space-between;">
-                    <span style="color: #64748b; font-size: 13px;">Holati</span>
-                    <strong style="color:#16a34a;">Sotilgan</strong>
-                </div>
-                {% endif %}
+                <h1 style="font-size: 22px; font-weight: 800; margin-bottom: 8px;">Joylashuvga ruxsat kerak</h1>
+                <p style="color: #64748b; font-size: 14px; margin-bottom: 22px;">
+                    Mahsulot ma'lumotlarini ko'rsatishdan oldin joylashuvingizni tasdiqlashingiz kerak —
+                    bu mahsulotning asl va tizim orqali qonuniy sotilganini tekshirish uchun ishlatiladi.
+                </p>
+                <button type="button" id="grantLocationBtn" style="background:#10b981; color:#fff; border:none; border-radius:12px; padding:14px 24px; font-size:15px; font-weight:700; cursor:pointer;">
+                    <i class="fa-solid fa-location-arrow"></i> Joylashuvga ruxsat berish
+                </button>
+                <p id="scanPermissionError" style="color:#b91c1c; font-size:13px; margin-top:14px; display:none;"></p>
             </div>
 
-            {% if mahsulot.qr_tavsif %}
-            <div style="text-align: left; border-top: 1px solid #e2e8f0; margin-top: 20px; padding-top: 20px;">
-                <div style="color: #64748b; font-size: 13px; margin-bottom: 8px; font-weight: 700;">Mahsulot haqida</div>
-                <p style="font-size: 14px; line-height: 1.6; white-space: pre-line;">{{ mahsulot.qr_tavsif }}</p>
+            <!-- Yuklanmoqda -->
+            <div id="scanLoadingStep" style="display:none;">
+                <div style="width: 64px; height: 64px; border-radius: 50%; background: #f1f5f9; color: #64748b; display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; font-size: 24px;">
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                </div>
+                <p style="color:#64748b; font-size:14px;">Tekshirilmoqda...</p>
             </div>
-            {% endif %}
 
-            <p style="margin-top: 26px; color: #94a3b8; font-size: 12px;">Serial: {{ serial.kod }}</p>
+            <!-- Natija -->
+            <div id="scanResultStep" style="display:none;">
+                <div id="scanResultIcon" style="width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; font-size: 28px;"></div>
+                <h1 id="scanResultTitle" style="font-size: 24px; font-weight: 800; margin-bottom: 6px;"></h1>
+                <p id="scanResultSubtitle" style="color: #64748b; font-size: 14px; margin-bottom: 22px;"></p>
+
+                <div id="scanWarningBox" style="display:none; text-align:left; background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; border-radius:12px; padding:14px; font-size:13px; font-weight:600; margin-bottom:22px;"></div>
+
+                <img id="scanProductImage" style="display:none; width: 100%; max-height: 260px; object-fit: cover; border-radius: 14px; margin-bottom: 22px;">
+
+                <div id="scanDetailsBox" style="text-align: left; border-top: 1px solid #e2e8f0; padding-top: 20px; display: flex; flex-direction: column; gap: 12px;"></div>
+
+                <div id="scanDescBox" style="display:none; text-align: left; border-top: 1px solid #e2e8f0; margin-top: 20px; padding-top: 20px;">
+                    <div style="color: #64748b; font-size: 13px; margin-bottom: 8px; font-weight: 700;">Mahsulot haqida</div>
+                    <p id="scanDescText" style="font-size: 14px; line-height: 1.6; white-space: pre-line;"></p>
+                </div>
+            </div>
+
         </div>
     </div>
 </section>
+
+<script>
+(function () {
+    const STATUS_URL = "{% url 'product_scan_status_api' kod=kod %}";
+
+    const permissionStep = document.getElementById('scanPermissionStep');
+    const loadingStep = document.getElementById('scanLoadingStep');
+    const resultStep = document.getElementById('scanResultStep');
+    const permissionError = document.getElementById('scanPermissionError');
+
+    function showStep(step) {
+        permissionStep.style.display = step === 'permission' ? '' : 'none';
+        loadingStep.style.display = step === 'loading' ? '' : 'none';
+        resultStep.style.display = step === 'result' ? '' : 'none';
+    }
+
+    function row(label, value) {
+        return '<div style="display:flex; justify-content:space-between;">' +
+            '<span style="color:#64748b; font-size:13px;">' + label + '</span>' +
+            '<strong>' + value + '</strong></div>';
+    }
+
+    function renderResult(data) {
+        const icon = document.getElementById('scanResultIcon');
+        const title = document.getElementById('scanResultTitle');
+        const subtitle = document.getElementById('scanResultSubtitle');
+        const warningBox = document.getElementById('scanWarningBox');
+        const img = document.getElementById('scanProductImage');
+        const details = document.getElementById('scanDetailsBox');
+        const descBox = document.getElementById('scanDescBox');
+
+        const card = document.getElementById('scanResultCard');
+        if (data.ogohlantirish) {
+            card.classList.add('is-alarm');
+            icon.classList.add('is-alarm');
+            icon.style.background = '#dc2626';
+            icon.style.color = '#fff';
+            icon.style.width = '80px';
+            icon.style.height = '80px';
+            icon.style.fontSize = '36px';
+            icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+            title.textContent = '⚠ OGOHLANTIRISH';
+            title.style.color = '#dc2626';
+            subtitle.textContent = 'Bu mahsulot o\'g\'irlangan bo\'lishi mumkin.';
+            warningBox.style.display = '';
+            warningBox.style.background = '#dc2626';
+            warningBox.style.color = '#fff';
+            warningBox.style.border = 'none';
+            warningBox.style.fontWeight = '800';
+            warningBox.style.fontSize = '14px';
+            warningBox.textContent = data.ogohlantirish;
+        } else {
+            card.classList.remove('is-alarm');
+            icon.classList.remove('is-alarm');
+            icon.style.background = '#ecfdf5';
+            icon.style.color = '#10b981';
+            icon.style.width = '64px';
+            icon.style.height = '64px';
+            icon.style.fontSize = '28px';
+            icon.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+            title.textContent = 'Original mahsulot';
+            title.style.color = '#1e293b';
+            subtitle.textContent = 'Ushbu mahsulot StockFirm ERP tizimida ro\'yxatga olingan.';
+            warningBox.style.display = 'none';
+        }
+
+        if (data.rasmi) {
+            img.src = data.rasmi;
+            img.style.display = '';
+        } else {
+            img.style.display = 'none';
+        }
+
+        let html = row('Mahsulot', data.mahsulot);
+        if (data.ishlab_chiqarilgan_sana) html += row('Ishlab chiqarilgan sana', data.ishlab_chiqarilgan_sana);
+        if (data.partiya_id) html += row('Partiya', '#' + data.partiya_id);
+        if (data.yaroqlilik_sanasi) html += row('Yaroqlilik muddati', data.yaroqlilik_sanasi);
+        if (data.unit_index) html += row('Birlik raqami', data.unit_index);
+        html += row('Holati', data.holati_display);
+        details.innerHTML = html;
+
+        if (data.tavsif) {
+            document.getElementById('scanDescText').textContent = data.tavsif;
+            descBox.style.display = '';
+        } else {
+            descBox.style.display = 'none';
+        }
+
+        showStep('result');
+    }
+
+    function fetchStatus(lat, lng) {
+        showStep('loading');
+        const params = new URLSearchParams({ lat: lat, lng: lng });
+        fetch(STATUS_URL + '?' + params.toString())
+            .then(function (resp) {
+                if (!resp.ok) throw new Error('http_' + resp.status);
+                return resp.json();
+            })
+            .then(renderResult)
+            .catch(function () {
+                showStep('permission');
+                permissionError.style.display = '';
+                permissionError.textContent = 'Ma\'lumotni olishda xato yuz berdi. Qayta urinib ko\'ring.';
+            });
+    }
+
+    function requestLocation() {
+        permissionError.style.display = 'none';
+        if (!navigator.geolocation) {
+            permissionError.style.display = '';
+            permissionError.textContent = 'Brauzeringiz joylashuvni qo\'llab-quvvatlamaydi.';
+            return;
+        }
+        showStep('loading');
+        navigator.geolocation.getCurrentPosition(
+            function (pos) {
+                fetchStatus(pos.coords.latitude, pos.coords.longitude);
+            },
+            function () {
+                showStep('permission');
+                permissionError.style.display = '';
+                permissionError.textContent = 'Joylashuvga ruxsat berilmadi — ma\'lumotni ko\'rish uchun ruxsat zarur.';
+            },
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+        );
+    }
+
+    document.getElementById('grantLocationBtn').addEventListener('click', requestLocation);
+})();
+</script>
 {% endblock %}

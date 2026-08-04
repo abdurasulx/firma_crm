@@ -184,6 +184,7 @@ class EmployeeScanWidget(QWidget):
         # — skanerlashda limit shu yerdan tekshiriladi (so'ralganidan ortiq
         # dona savatga qo'shilmaydi).
         self._delivery_requested: dict = {}
+        self._delivery_finalizing = False
         self._resolve_worker: _ApiCallWorker | None = None
         self._requests_worker: _ApiCallWorker | None = None
         self._weigh_worker: _ApiCallWorker | None = None
@@ -832,6 +833,18 @@ class EmployeeScanWidget(QWidget):
             lines.append(f"• {r['mahsulot']} — {scanned:g}/{target:g} {birlik}".rstrip() + mark)
         self.delivery_requests_label.setText("Olishingiz kerak:\n" + "\n".join(lines))
 
+    def _all_delivery_requests_fulfilled(self) -> bool:
+        """Dashboardda so'ralgan har bir mahsulot to'liq skanerlanganmi —
+        shunda "Yuklamani yakunlash" tugmasi kutilmasdan avtomatik
+        yakunlanadi (xodim mishka/klaviaturasiz kiosk stansiyada)."""
+        if not self._delivery_requested:
+            return False
+        for mid, r in self._delivery_requested.items():
+            scanned = (self._delivery_cart.get(mid) or {}).get("count", 0)
+            if scanned < r["miqdor"]:
+                return False
+        return True
+
     def _handle_delivery_scan(self, kod: str):
         server_url = db.get_setting("server_url", "")
         token = db.get_setting("agent_token", "")
@@ -877,6 +890,16 @@ class EmployeeScanWidget(QWidget):
         self.delivery_feedback_label.setStyleSheet("font-size:13px; font-weight:700; color:#166534;")
         self.delivery_feedback_label.setText(f"✓ {info['mahsulot']} qo'shildi ({entry['count']})")
 
+        if self._all_delivery_requests_fulfilled():
+            # Barcha so'ralgan mahsulotlar to'liq skanerlandi — tugma
+            # bosilishini kutmasdan darhol yakunlanadi va yetkazib
+            # beruvchining o'z zaxirasiga (`DeliveryStock`) o'tadi, u
+            # yerdan endi telefonida (QR skanerlab) sotadi.
+            self.delivery_feedback_label.setText(
+                f"✓ {info['mahsulot']} qo'shildi ({entry['count']}) — barcha mahsulotlar yig'ildi, yakunlanmoqda..."
+            )
+            QTimer.singleShot(600, self._submit_finalize_delivery)
+
     def _on_delivery_scan_failed(self, message: str):
         self._extend_session()
         self.delivery_feedback_label.setStyleSheet("font-size:13px; font-weight:700; color:#b91c1c;")
@@ -890,8 +913,11 @@ class EmployeeScanWidget(QWidget):
         self.delivery_cart_label.setText("\n".join(lines))
 
     def _submit_finalize_delivery(self):
-        if self._session is None or not self._delivery_cart:
+        if self._session is None or not self._delivery_cart or self._delivery_finalizing:
+            # Avtomatik yakunlash allaqachon boshlangan (yoki sessiya
+            # tugagan) bo'lsa — qayta yuborilmaydi.
             return
+        self._delivery_finalizing = True
         server_url = db.get_setting("server_url", "")
         token = db.get_setting("agent_token", "")
         items = [
@@ -917,6 +943,7 @@ class EmployeeScanWidget(QWidget):
     def _on_delivery_finalized(self, result: dict):
         self.delivery_finish_btn.setEnabled(True)
         self._delivery_cart = {}
+        self._delivery_requested = {}
         self._delivery_mode_active = False
         if self._session:
             self._rec_stop(f"delivery-{self._session['session_token']}")
@@ -926,6 +953,7 @@ class EmployeeScanWidget(QWidget):
 
     def _on_delivery_finalize_failed(self, message: str):
         self._extend_session()
+        self._delivery_finalizing = False
         self.delivery_finish_btn.setEnabled(True)
         self.delivery_feedback_label.setStyleSheet("font-size:13px; font-weight:700; color:#b91c1c;")
         self.delivery_feedback_label.setText(message)
@@ -1021,7 +1049,7 @@ class EmployeeScanWidget(QWidget):
 
     def _print_pending_batch_via_printer(self, batch, printer_name):
         serials = batch["serials"]
-        labels = [{"qr_data": s["url"], "line1": batch["mahsulot"]} for s in serials]
+        labels = [{"qr_data": s["url"]} for s in serials]
         width = float(db.get_setting("label_width_mm", "40") or "40")
         height = float(db.get_setting("label_height_mm", "30") or "30")
         gap = float(db.get_setting("label_gap_mm", "2") or "2")
@@ -1443,7 +1471,7 @@ class EmployeeScanWidget(QWidget):
             # XPrinter (yoki boshqa TSPL printer) sozlangan bo'lsa — agentning
             # o'zi to'g'ridan-to'g'ri, brauzer/PDF oralig'isiz chop etadi.
             self.miqdor_feedback_label.setText(f"Tasdiqlandi ✓ — {len(serials)} ta QR chop etilmoqda...")
-            self._print_serial_labels(result.get("mahsulot", ""), serials, printer_name)
+            self._print_serial_labels(serials, printer_name)
         elif result.get("print_url"):
             # Printer hali sozlanmagan bo'lsa — eski (brauzer/PDF) yo'l saqlanadi.
             self.miqdor_feedback_label.setText(f"Tasdiqlandi ✓ — {result.get('serial_soni', 0)} ta QR chop etilmoqda...")
@@ -1455,7 +1483,7 @@ class EmployeeScanWidget(QWidget):
             self._rec_stop(f"miqdor-{req['id']}")
         QTimer.singleShot(1500, self._show_next_miqdor_request)
 
-    def _print_serial_labels(self, mahsulot_nomi: str, serials: list, printer_name: str, feedback_label=None):
+    def _print_serial_labels(self, serials: list, printer_name: str, feedback_label=None):
         """`feedback_label` — natija qaysi label'da ko'rsatilishi kerak
         (miqdor-tasdiqlash yoki vazifa-tortish kartochkasi) — ikkalasi
         ham xuddi shu chop etish yo'lini ishlatadi (106-qadam, "Vazifalar
@@ -1464,10 +1492,7 @@ class EmployeeScanWidget(QWidget):
         width = float(db.get_setting("label_width_mm", "40") or "40")
         height = float(db.get_setting("label_height_mm", "30") or "30")
         gap = float(db.get_setting("label_gap_mm", "2") or "2")
-        labels = [
-            {"qr_data": s["url"], "line1": mahsulot_nomi}
-            for s in serials
-        ]
+        labels = [{"qr_data": s["url"]} for s in serials]
         worker = LabelPrintWorker(printer_name, labels, width, height, gap)
         # Ko'p dona (masalan 23 ta) yorliqni ketma-ket chop etish bir necha
         # o'nlab soniya olishi mumkin — har bir bosqichda sessiyani
@@ -1554,6 +1579,7 @@ class EmployeeScanWidget(QWidget):
         self._delivery_mode_active = False
         self._delivery_cart = {}
         self._delivery_requested = {}
+        self._delivery_finalizing = False
         self._scale_last_value = None
         self._scale_stable_since = 0.0
         self._auto_submit_pending = False

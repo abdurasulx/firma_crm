@@ -1564,6 +1564,10 @@ def _payroll_context(user, company, can_edit):
         'payroll_maosh_obj': XodimMaosh.objects.filter(user=user, company=company).first(),
         'payroll_summary': payroll_service.get_month_summary(user, company),
         'payroll_history': payroll_service.get_payment_history(user, company),
+        # O'tgan oylardan yopilmagan va musbat qoldig'i bor oylar — "qolib
+        # ketgan oylik" (masalan ega "Oyni yopish"ni bosishni unutgan
+        # oylar). Har biriga alohida "Shu oyni yopish" tugmasi chiqadi.
+        'payroll_outstanding_months': payroll_service.get_user_outstanding_months(user, company),
         'payroll_is_per_unit_pazanda': (
             company.ish_haqi_turi == 'per_unit'
             and Pazanda.objects.filter(user=user, company=company).exists()
@@ -1702,6 +1706,37 @@ def profile_view(request, username):
                         request,
                         f"Oy yopildi. Yakuniy to'lov: {snapshot.tolangan_yakuniy_summa:,.0f} so'm",
                     )
+                except ValueError as e:
+                    messages.error(request, str(e))
+                return redirect('profile', username=user.username)
+
+            if request.POST.get('action') == 'pay_outstanding_oy' and user.type != 'ega':
+                # Qolib ketgan (o'tgan) oy uchun to'lov — to'liq shart
+                # emas, qisman ham bo'lishi mumkin; chek rasmi majburiy.
+                try:
+                    pay_yil = int(request.POST.get('oy_yil'))
+                    pay_oy = int(request.POST.get('oy_oy'))
+                    summa = Decimal(request.POST.get('summa') or '0')
+                except (TypeError, ValueError, InvalidOperation):
+                    messages.error(request, "Oy yoki summa noto'g'ri kiritildi.")
+                    return redirect('profile', username=user.username)
+                rasm = request.FILES.get('rasm')
+                if not rasm:
+                    messages.error(request, "To'lov cheki rasmini biriktirish majburiy.")
+                    return redirect('profile', username=user.username)
+                izoh = (request.POST.get('izoh') or '').strip()
+                try:
+                    result = payroll_service.pay_outstanding_month(
+                        user, request.company, pay_yil, pay_oy, summa, rasm, request.user, izoh=izoh,
+                    )
+                    oy_label = f"{pay_yil}-{pay_oy:02d}"
+                    if result['yopildi']:
+                        messages.success(request, f"{oy_label} oyi to'liq to'landi va yopildi.")
+                    else:
+                        messages.success(
+                            request,
+                            f"{oy_label} oyiga {summa:,.0f} so'm to'landi. Qolgan qarz: {result['qolgan_qarz']:,.0f} so'm.",
+                        )
                 except ValueError as e:
                     messages.error(request, str(e))
                 return redirect('profile', username=user.username)
@@ -2559,6 +2594,12 @@ def sotish(request):
                         company=request.company, mahsulot=mahsulot_for_check,
                         kod__in=kodlar, holati=expected_serial_holati, savdo__isnull=True,
                     )
+                    if request.user.type == 'yetkazib_beruvchi':
+                        # Faqat shu yetkazib beruvchi o'zi yuklamada olib
+                        # chiqqan donalarni sotishi mumkin — boshqa
+                        # yetkazuvchiga tegishli (yoki hali umuman
+                        # chiqarilmagan) QR kod kiritilsa qabul qilinmaydi.
+                        serials_qs = serials_qs.filter(yetkazib_beruvchi=yt)
                     found_kodlar = set(serials_qs.values_list('kod', flat=True))
                     missing = [k for k in kodlar if k not in found_kodlar]
                     if missing:
@@ -2590,6 +2631,7 @@ def sotish(request):
                             m.miqdor -= miqdor_float
                         sotilganlar.append((nom, miqdor))  # Logging uchun
 
+                svd = None
                 if len(sotilganlar) > 0:
                     txt=''
                     summa=0
@@ -2736,7 +2778,15 @@ def sotish(request):
                             lat=float(lat),
                             lng=float(lng)
                         )
-                
+
+                # Landing sahifada va'da qilingan "har bir sotuvdan QR kodli
+                # chek" haqiqatan ko'rinadigan bo'lishi uchun — savdo
+                # muvaffaqiyatli yaratilgan bo'lsa, darhol shu savdoning QR
+                # chekiga yo'naltiriladi (avval buni hech kim ko'rmasdi,
+                # to'g'ridan-to'g'ri dashboardga qaytarilardi).
+                if svd is not None:
+                    messages.success(request, "Savdo saqlandi — QR kodli chek tayyor.")
+                    return redirect('savdo_chek', savdo_id=svd.id)
                 return redirect('main')
             except ValueError as e:
                 if str(e) != 'invalid_down_payment':
@@ -2751,6 +2801,18 @@ def sotish(request):
     unit_serial_products = list(
         Mahsulot.objects.filter(company=request.company, serial_granularity='unit').values_list('nomi', flat=True)
     )
+    # QR-skanerda serverga qaysi mahsulotga tekshirilayotgani ma'lum
+    # bo'lishi uchun har bir qatorga mahsulot id'si biriktiriladi
+    # (`check_sale_serial`, sahifada JS shu id bilan chaqiradi).
+    id_by_nom = dict(
+        Mahsulot.objects.filter(company=request.company).values_list('nomi', 'id')
+    )
+    for m in mahsulotlar:
+        nom = m['nom'] if isinstance(m, dict) else m.nom
+        if isinstance(m, dict):
+            m['id'] = id_by_nom.get(nom)
+        else:
+            m.id = id_by_nom.get(nom)
     return render(request, template_name, {
         'mahsulotlar': mahsulotlar,
         'haridorlar': xaridorlar,
@@ -2765,6 +2827,62 @@ def sotish(request):
 # ============================================
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
+
+
+def _extract_serial_kod(raw: str) -> str:
+    """QR ichidagi matn to'liq public URL (`/p/<kod>/`) yoki xom kod
+    bo'lishi mumkin — ikkalasini ham bir xilda qabul qilish uchun."""
+    raw = (raw or '').strip()
+    if '/' in raw:
+        parts = [p for p in raw.split('/') if p]
+        if parts:
+            return parts[-1]
+    return raw
+
+
+@login_required(login_url='login')
+@require_http_methods(["GET"])
+def check_sale_serial(request):
+    """Sotuv sahifasida (`ytsot.html`/`sgsot.html`) telefon kamerasi bilan
+    QR skanerlanganda, kod ro'yxatga (yashirin maydonga) qo'shilishidan
+    OLDIN chaqiriladi — begona/mos kelmaydigan QR kodlar sukut bo'yicha
+    qabul qilinib, faqat "Tasdiqlash"da rad etilishi (yomon UX — foydalanuvchi
+    nima xato ekanini darhol bilmaydi) o'rniga, shu yerda darhol tekshiriladi:
+    kod mavjudmi, aynan shu mahsulotga tegishlimi va — yetkazib beruvchi
+    bo'lsa — aynan shu xodim o'z yuklamasida olib chiqqan donami."""
+    kod = _extract_serial_kod(request.GET.get('kod', ''))
+    mahsulot_id = request.GET.get('mahsulot_id')
+    if not kod or not mahsulot_id:
+        return JsonResponse({'valid': False, 'detail': "Parametrlar yetishmayapti."}, status=400)
+
+    try:
+        mahsulot = Mahsulot.objects.get(id=mahsulot_id, company=request.company)
+    except (Mahsulot.DoesNotExist, ValueError):
+        return JsonResponse({'valid': False, 'detail': "Mahsulot topilmadi."}, status=404)
+
+    expected_holati = 'chiqarilgan' if request.user.type == 'yetkazib_beruvchi' else 'omborda'
+    serial = Serial.objects.filter(
+        company=request.company, kod=kod, holati=expected_holati, savdo__isnull=True,
+    ).select_related('mahsulot').first()
+    if not serial:
+        return JsonResponse({'valid': False, 'detail': "Bu QR kod topilmadi yoki allaqachon ishlatilgan."})
+
+    if serial.mahsulot_id != mahsulot.id:
+        return JsonResponse({
+            'valid': False,
+            'detail': f"Bu QR kod \"{serial.mahsulot.nomi}\"ga tegishli, \"{mahsulot.nomi}\"ga emas.",
+        })
+
+    if request.user.type == 'yetkazib_beruvchi':
+        yt = YetkazibBeruvchi.objects.filter(user=request.user, company=request.company).first()
+        if not yt or serial.yetkazib_beruvchi_id != yt.id:
+            return JsonResponse({
+                'valid': False,
+                'detail': "Bu dona sizning yuklamangizda emas — boshqa yetkazuvchiga tegishli.",
+            })
+
+    return JsonResponse({'valid': True, 'kod': kod, 'mahsulot': serial.mahsulot.nomi})
+
 
 @login_required(login_url='login')
 @require_http_methods(["GET"])

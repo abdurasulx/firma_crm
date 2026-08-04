@@ -513,7 +513,7 @@ class SettingsPage(QWidget):
         self.printer_status_label.setStyleSheet("color:#666;")
         self.printer_status_label.setText("Sinov etiketkasi chop etilmoqda...")
 
-        label = {"qr_data": "https://stockfirm.uz/p/test/", "line1": "Sinov etiketkasi", "line2": "StockFirm Agent"}
+        label = {"qr_data": "https://stockfirm.uz/p/test/"}
         self._print_worker = LabelPrintWorker(printer_name, [label], width, height, gap)
         self._print_worker.succeeded.connect(self._on_test_print_succeeded)
         self._print_worker.failed.connect(self._on_test_print_failed)

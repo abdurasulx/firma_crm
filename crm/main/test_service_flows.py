@@ -335,7 +335,7 @@ class PWAStaticFileTests(TestCase):
         self.assertTrue(os.path.exists(manifest_path), "static/manifest.json topilmadi")
         with open(manifest_path) as f:
             data = json.load(f)
-        self.assertEqual(data["name"], "StockFirm CRM")
+        self.assertEqual(data["name"], "StockFirm ERP")
         self.assertIn("icons", data)
         self.assertGreaterEqual(len(data["icons"]), 2)
         self.assertEqual(data["display"], "standalone")

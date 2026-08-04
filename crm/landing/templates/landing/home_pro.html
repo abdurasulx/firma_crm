@@ -1,7 +1,7 @@
 {% extends 'landing/base.html' %}
 {% load static %}
 
-{% block title %}StockFirm CRM — ombor, savdo va kuryer nazorati{% endblock %}
+{% block title %}StockFirm ERP — ombor, savdo va kuryer nazorati{% endblock %}
 
 {% block header %}
 <header class="nav at-top" id="mainNav">
@@ -13,6 +13,7 @@
         <ul class="nav-links" id="homeNavLinks">
             <li><a href="#features"   data-spy="features">Imkoniyatlar</a></li>
             <li><a href="#demo"       data-spy="demo">Demo</a></li>
+            <li><a href="#factory"    data-spy="factory">Ishlab chiqarish</a></li>
             <li><a href="#roles"      data-spy="roles">Rollar</a></li>
             <li><a href="{% url 'pricing' %}">Tariflar</a></li>
             <li><a href="{% url 'marketing_page' 'contact' %}">Aloqa</a></li>
@@ -32,6 +33,7 @@
     </button>
     <a href="#features">Imkoniyatlar</a>
     <a href="#demo">Demo</a>
+    <a href="#factory">Ishlab chiqarish</a>
     <a href="#roles">Rollar</a>
     <a href="{% url 'pricing' %}">Tariflar</a>
     <a href="{% url 'marketing_page' 'contact' %}">Aloqa</a>
@@ -41,7 +43,126 @@
 {% endblock %}
 
 {% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
+/* ═══════════════════════════════════════════
+   ISHLAB CHIQARISH / SMART FACTORY / ANTI-O'G'IRLIK
+   Qasddan boshqa uslub: deyarli qora fon, amber+qizil
+   xavfsizlik ranglari, JetBrains Mono — "ishlab chiqarish
+   sexi nazorat paneli" hissi berish uchun, boshqa
+   bo'limlarning yumshoq zumrad-shisha uslubidan farqli.
+   ═══════════════════════════════════════════ */
+.factory-section {
+    background: #08090b;
+    position: relative; overflow: hidden;
+    padding: 110px 0;
+}
+.factory-grid-bg {
+    position: absolute; inset: 0;
+    background-image:
+        linear-gradient(rgba(245,158,11,.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(245,158,11,.05) 1px, transparent 1px);
+    background-size: 34px 34px;
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 30%, transparent 75%);
+            mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 30%, transparent 75%);
+}
+.factory-hazard {
+    position: absolute; top: 0; left: 0; right: 0; height: 5px;
+    background: repeating-linear-gradient(-45deg, #f59e0b 0 14px, #0a0a0c 14px 28px);
+    opacity: .85;
+}
+.factory-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+.factory-eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase;
+    color: #f59e0b; background: rgba(245,158,11,.08);
+    border: 1px solid rgba(245,158,11,.25); border-radius: 6px;
+    padding: 6px 12px;
+}
+.factory-eyebrow::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #f59e0b; box-shadow: 0 0 8px #f59e0b; animation: pulse-dot 1.6s infinite; }
+.factory-headline {
+    font-family: 'Syne', sans-serif; font-weight: 800; letter-spacing: -.02em;
+    font-size: clamp(30px, 4vw, 46px); line-height: 1.1; color: #fff;
+    margin-top: 18px; max-width: 620px;
+}
+.factory-headline em { font-style: normal; color: #f59e0b; }
+.factory-lead { color: rgba(255,255,255,.45); font-size: 16px; line-height: 1.7; margin-top: 16px; max-width: 560px; }
+
+.factory-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 52px; }
+.factory-card {
+    background: linear-gradient(160deg, rgba(255,255,255,.035), rgba(255,255,255,.01));
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 16px; padding: 26px 22px;
+    position: relative; overflow: hidden;
+    transition: border-color .25s, transform .25s;
+}
+.factory-card::before {
+    content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--fc, #f59e0b), transparent);
+}
+.factory-card:hover { transform: translateY(-4px); border-color: rgba(245,158,11,.3); }
+.factory-card-icon {
+    width: 46px; height: 46px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 19px; margin-bottom: 18px;
+    color: var(--fc, #f59e0b);
+}
+.factory-card h4 { color: #fff; font-size: 16px; font-weight: 800; margin-bottom: 8px; }
+.factory-card p { color: rgba(255,255,255,.45); font-size: 13.5px; line-height: 1.6; margin-bottom: 16px; }
+.factory-card-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.factory-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px; font-weight: 700; color: rgba(255,255,255,.55);
+    background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08);
+    border-radius: 4px; padding: 3px 8px;
+}
+
+/* ── Anti-theft alert mockup ── */
+.factory-alert-wrap { margin-top: 56px; }
+.factory-alert-shell {
+    background: #0d0e11; border: 1px solid rgba(239,68,68,.25);
+    border-radius: 18px; overflow: hidden;
+    box-shadow: 0 30px 70px rgba(0,0,0,.5);
+}
+.factory-alert-top {
+    background: rgba(239,68,68,.08); border-bottom: 1px solid rgba(239,68,68,.2);
+    padding: 12px 20px; display: flex; align-items: center; justify-content: space-between;
+}
+.factory-alert-top span:first-child { color: #fca5a5; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; letter-spacing: .04em; }
+.factory-alert-body { display: grid; grid-template-columns: 1fr 1.3fr; }
+.factory-alert-badge {
+    padding: 26px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; border-right: 1px solid rgba(255,255,255,.06);
+    background: radial-gradient(ellipse at center, rgba(239,68,68,.1), transparent 70%);
+}
+.factory-alert-badge-icon {
+    width: 60px; height: 60px; border-radius: 50%;
+    background: #dc2626; color: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 26px; margin-bottom: 14px;
+    animation: scanAlarmPulseHome 1.4s ease-out infinite;
+}
+@keyframes scanAlarmPulseHome {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,.5); }
+    50% { box-shadow: 0 0 0 14px rgba(220,38,38,0); }
+}
+.factory-alert-badge b { color: #fff; font-size: 15px; font-weight: 800; }
+.factory-alert-log { padding: 22px 26px; }
+.factory-alert-log-title { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: rgba(255,255,255,.35); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 12px; }
+.factory-log-row { display: flex; align-items: baseline; gap: 10px; padding: 7px 0; border-bottom: 1px dashed rgba(255,255,255,.06); font-family: 'JetBrains Mono', monospace; font-size: 12.5px; }
+.factory-log-row:last-child { border: none; }
+.factory-log-key { color: rgba(255,255,255,.35); min-width: 118px; flex-shrink: 0; }
+.factory-log-val { color: #fff; font-weight: 600; }
+.factory-log-val.danger { color: #f87171; }
+.factory-log-val.ok { color: #4ade80; }
+
+@media (max-width: 900px) {
+    .factory-grid { grid-template-columns: 1fr; }
+    .factory-alert-body { grid-template-columns: 1fr; }
+    .factory-alert-badge { border-right: none; border-bottom: 1px solid rgba(255,255,255,.06); }
+}
+
 /* ═══ HERO ═══ */
 .hero {
     background:
@@ -847,6 +968,79 @@
                 </div>{# /ss-preview-wrap #}
             </div>{# /ss-preview-col #}
         </div>{# /ss-layout #}
+    </div>
+</section>
+
+<!-- ═══ ISHLAB CHIQARISH / SMART FACTORY / ANTI-O'G'IRLIK ═══ -->
+<section class="factory-section" id="factory">
+    <div class="factory-hazard"></div>
+    <div class="factory-grid-bg"></div>
+    <div class="container" style="position:relative;z-index:2;">
+        <span class="factory-eyebrow">Yangi · Smart Factory</span>
+        <h2 class="factory-headline">Ishlab chiqarishdan xaridorning<br>qo'liga qadar <em>to'liq iz.</em></h2>
+        <p class="factory-lead">
+            Retsept (BOM) bo'yicha ishlab chiqarish, har bir donaga alohida Serial/QR, Desktop Agent orqali
+            xodim badge va tarozi bilan fizik tasdiqlash — va sotilmagan mahsulot ombordan tashqarida
+            topilsa, joylashuv asosida darhol ogohlantirish.
+        </p>
+
+        <div class="factory-grid">
+            <div class="factory-card" style="--fc:#f59e0b;">
+                <div class="factory-card-icon" style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);"><i class="fas fa-industry"></i></div>
+                <h4>Ishlab chiqarish vazifalari</h4>
+                <p>Retsept (BOM) asosida xom ashyo hisob-kitobi, vazifa navbati, xodim badge'ini skanerlab ish boshlash/tugatish, tarozi orqali xom ashyoni fizik tekshirish.</p>
+                <div class="factory-card-tags">
+                    <span class="factory-tag">BOM / retsept</span>
+                    <span class="factory-tag">Tarozi integratsiyasi</span>
+                    <span class="factory-tag">Ish haqi avtomatik</span>
+                </div>
+            </div>
+            <div class="factory-card" style="--fc:#38bdf8;">
+                <div class="factory-card-icon" style="background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.3);"><i class="fas fa-qrcode"></i></div>
+                <h4>Har bir donaga Serial/QR</h4>
+                <p>Desktop Agent (XPrinter) orqali har bir mahsulot donasiga alohida QR-yorliq chop etiladi. Yaratildi → chiqarildi → sotildi — to'liq harakat tarixi saqlanadi.</p>
+                <div class="factory-card-tags">
+                    <span class="factory-tag">XPrinter chop etish</span>
+                    <span class="factory-tag">Dona-dona kuzatuv</span>
+                    <span class="factory-tag">Public tekshiruv sahifasi</span>
+                </div>
+            </div>
+            <div class="factory-card" style="--fc:#ef4444;">
+                <div class="factory-card-icon" style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);"><i class="fas fa-shield-halved"></i></div>
+                <h4>GPS asosida o'g'irlikka qarshi</h4>
+                <p>Xaridor QR skanerlaganda joylashuv tekshiriladi. Hali sotilmagan mahsulot ombordan tashqarida topilsa — firma egasiga zudlik bilan xabar boradi.</p>
+                <div class="factory-card-tags">
+                    <span class="factory-tag">Real vaqt xabari</span>
+                    <span class="factory-tag">Joylashuv tekshiruvi</span>
+                    <span class="factory-tag">Audit tarixi</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Anti-theft live alert mockup -->
+        <div class="factory-alert-wrap reveal">
+            <div class="factory-alert-shell">
+                <div class="factory-alert-top">
+                    <span><i class="fas fa-triangle-exclamation" style="margin-right:6px;"></i> STOCKFIRM · XAVFSIZLIK JURNALI</span>
+                    <span class="factory-mono" style="color:rgba(255,255,255,.3);font-size:11px;">live</span>
+                </div>
+                <div class="factory-alert-body">
+                    <div class="factory-alert-badge">
+                        <div class="factory-alert-badge-icon"><i class="fas fa-triangle-exclamation"></i></div>
+                        <b>OGOHLANTIRISH</b>
+                        <span style="color:rgba(255,255,255,.4);font-size:12px;margin-top:6px;">Ombordan tashqarida, tasdiqlanmagan holatda topildi</span>
+                    </div>
+                    <div class="factory-alert-log">
+                        <div class="factory-alert-log-title">Hodisa tafsiloti</div>
+                        <div class="factory-log-row"><span class="factory-log-key">mahsulot</span><span class="factory-log-val">Burger — Partiya #65</span></div>
+                        <div class="factory-log-row"><span class="factory-log-key">ishlab_chiqardi</span><span class="factory-log-val">Xaydarov Rafiq</span></div>
+                        <div class="factory-log-row"><span class="factory-log-key">holati</span><span class="factory-log-val danger">omborda (tizimda chiqarilmagan)</span></div>
+                        <div class="factory-log-row"><span class="factory-log-key">skan_masofasi</span><span class="factory-log-val danger">ombordan 50m+ uzoqda</span></div>
+                        <div class="factory-log-row"><span class="factory-log-key">bildirishnoma</span><span class="factory-log-val ok">✓ Egaga yuborildi</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </section>
 

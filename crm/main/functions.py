@@ -167,6 +167,7 @@ def sotishm(mahs,yt):
     yt.save()
 class sotuv_new_form:
     def __init__(self,mahsulot,savdo):
+        self.id=savdo.id
         self.nomi=mahsulot[0]
         self.miqdori=mahsulot[1]
         self.narxi=mahsulot[2]

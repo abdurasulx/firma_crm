@@ -1,6 +1,11 @@
 import datetime as dt
 from decimal import Decimal
 
+OY_NOMLARI = [
+    '', 'Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun',
+    'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr',
+]
+
 from django.db import transaction, IntegrityError
 from django.db.models import Sum
 from django.utils import timezone
@@ -131,6 +136,89 @@ def get_month_summary(user, company, yil=None, oy=None):
 
 def get_payment_history(user, company, limit=50):
     return XodimTolov.objects.filter(user=user, company=company).order_by('-sana', '-created_at')[:limit]
+
+
+def pay_outstanding_month(user, company, yil, oy, summa, rasm, paid_by, izoh=''):
+    """O'tgan (qolib ketgan) oy uchun to'lov — **to'liq shart emas, qisman
+    ham bo'lishi mumkin**. Chek/kvitansiya rasmi majburiy (bu funksiyaga
+    kirguncha view'da tekshiriladi, lekin xavfsizlik uchun shu yerda ham
+    qat'iy talab qilinadi).
+
+    To'lov shu oyning ICHIDAGI sana bilan (oy oxiri) yoziladi — shunda
+    keyingi hisob-kitoblarda (`get_month_summary`/`get_user_outstanding_months`)
+    aynan shu oyning avansi sifatida hisobga olinadi, joriy oyga emas.
+
+    Agar shu to'lovdan keyin qoldiq 0 yoki undan kam qolsa — oy avtomatik
+    yopiladi (`close_month`), aks holda oy "ochiq" holida qoladi va
+    keyinroq yana qisman to'lov qilish mumkin."""
+    if not rasm:
+        raise ValueError("To'lov cheki rasmi majburiy.")
+    summa = Decimal(str(summa))
+    if summa <= 0:
+        raise ValueError("Summa 0 dan katta bo'lishi kerak.")
+
+    with transaction.atomic():
+        User.objects.select_for_update().get(pk=user.pk)
+        if is_month_closed(user, yil, oy):
+            raise ValueError("Bu oy allaqachon yopilgan.")
+
+        earned = compute_oylik_ish_haqi(user, company, yil=yil, oy=oy)['summa']
+        avans_sum = XodimTolov.objects.filter(
+            user=user, company=company, turi='avans', sana__year=yil, sana__month=oy,
+        ).aggregate(t=Sum('summa'))['t'] or Decimal('0')
+        owed = earned - avans_sum
+        if summa > owed:
+            raise ValueError(
+                f"To'lov summasi qolgan qarzdan ({owed:,.0f} so'm) katta bo'lishi mumkin emas.",
+            )
+
+        _, oy_end = get_month_bounds(yil, oy)
+        tolov_sanasi = (oy_end - dt.timedelta(days=1)).date()
+
+        tolov = XodimTolov.objects.create(
+            user=user, company=company, turi='avans', summa=summa, sana=tolov_sanasi,
+            rasm=rasm, berdi=paid_by, izoh=izoh,
+        )
+
+        yangi_qoldiq = owed - summa
+        yopildi = False
+        if yangi_qoldiq <= 0:
+            close_month(user, company, paid_by, yil=yil, oy=oy)
+            yopildi = True
+
+        return {'tolov': tolov, 'yopildi': yopildi, 'qolgan_qarz': max(yangi_qoldiq, Decimal('0'))}
+
+
+def get_user_outstanding_months(user, company, lookback_months=12):
+    """`get_outstanding_previous_months`ning bitta xodim uchun tor varianti
+    — xodim profilida ("qolib ketgan oylik") ko'rsatish uchun, butun
+    firma bo'yicha aylanish shart emas."""
+    now = timezone.localtime()
+    months = []
+    yil, oy = now.year, now.month
+    for _ in range(lookback_months):
+        oy -= 1
+        if oy == 0:
+            oy = 12
+            yil -= 1
+        months.append((yil, oy))
+
+    results = []
+    for (m_yil, m_oy) in months:
+        if is_month_closed(user, m_yil, m_oy):
+            continue
+        earned = compute_oylik_ish_haqi(user, company, yil=m_yil, oy=m_oy)['summa']
+        avans_sum = XodimTolov.objects.filter(
+            user=user, company=company, turi='avans', sana__year=m_yil, sana__month=m_oy,
+        ).aggregate(t=Sum('summa'))['t'] or Decimal('0')
+        owed = earned - avans_sum
+        if owed > 0:
+            results.append({
+                'yil': m_yil, 'oy': m_oy, 'owed': owed,
+                'label': f"{OY_NOMLARI[m_oy]} {m_yil}",
+            })
+    results.sort(key=lambda r: (r['yil'], r['oy']))
+    return results
 
 
 def get_outstanding_previous_months(company, lookback_months=12):

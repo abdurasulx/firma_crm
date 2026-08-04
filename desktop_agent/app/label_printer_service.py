@@ -37,19 +37,22 @@ def _mm_to_dots(mm: float, dpi: int = DEFAULT_DPI) -> int:
 
 
 def build_tspl_label(
-    qr_data: str, line1: str = "", line2: str = "",
+    qr_data: str,
     width_mm: float = 40.0, height_mm: float = 30.0, gap_mm: float = 2.0,
     dpi: int = DEFAULT_DPI,
 ) -> bytes:
-    """Bitta etiketka uchun TSPL buyruqlar ketma-ketligini quradi.
+    """Bitta etiketka uchun TSPL buyruqlar ketma-ketligini quradi —
+    faqat QR kod, hech qanday matn (avval mahsulot nomi TEXT sifatida
+    QR ostiga chop etilardi, lekin katta QR kontentida u QR chegarasi
+    bilan ustma-ust tushib, "QR ortida yozuv" ko'rinishini berardi —
+    shuning uchun butunlay olib tashlandi).
 
     `SIZE`/`GAP` buyruqlari mm birligini to'g'ridan-to'g'ri qabul qiladi
-    (masalan "SIZE 40 mm,30 mm") — lekin `QRCODE`/`TEXT` kabi joylashuv
+    (masalan "SIZE 40 mm,30 mm") — lekin `QRCODE` kabi joylashuv
     buyruqlari har doim NUQTA (dot) birligida, shuning uchun ular DPI
     asosida mm'dan hisoblanadi."""
     margin_dots = _mm_to_dots(2, dpi)
     qr_cell_size = 6  # QRCODE hujayra o'lchami (1-10) — 6 o'rtacha o'qish masofasiga mos
-    text_y = margin_dots + _mm_to_dots(min(width_mm, height_mm) * 0.6, dpi)
 
     lines = [
         f"SIZE {width_mm:g} mm,{height_mm:g} mm",
@@ -57,12 +60,8 @@ def build_tspl_label(
         "DIRECTION 0",
         "CLS",
         f'QRCODE {margin_dots},{margin_dots},L,{qr_cell_size},A,0,"{_escape(qr_data)}"',
+        "PRINT 1,1",
     ]
-    if line1:
-        lines.append(f'TEXT {margin_dots},{text_y},"2",0,1,1,"{_escape(line1)}"')
-    if line2:
-        lines.append(f'TEXT {margin_dots},{text_y + _mm_to_dots(4, dpi)},"1",0,1,1,"{_escape(line2)}"')
-    lines.append("PRINT 1,1")
 
     body = "\r\n".join(lines) + "\r\n"
     return body.encode("gbk", errors="replace")  # TSPL firmware'lari odatda GBK/lotin kodlashni kutadi, UTF-8 emas
@@ -103,7 +102,7 @@ class LabelPrintWorker(QThread):
     failed = pyqtSignal(str)
 
     def __init__(self, printer_name: str, labels: list[dict], width_mm: float, height_mm: float, gap_mm: float):
-        """`labels` — [{"qr_data": str, "line1": str, "line2": str}, ...]"""
+        """`labels` — [{"qr_data": str}, ...]"""
         super().__init__()
         self._printer_name = printer_name
         self._labels = labels
@@ -116,8 +115,7 @@ class LabelPrintWorker(QThread):
         try:
             for i, label in enumerate(self._labels):
                 data = build_tspl_label(
-                    label["qr_data"], label.get("line1", ""), label.get("line2", ""),
-                    self._width_mm, self._height_mm, self._gap_mm,
+                    label["qr_data"], self._width_mm, self._height_mm, self._gap_mm,
                 )
                 print_raw(self._printer_name, data)
                 self.progress.emit(i + 1, len(self._labels))

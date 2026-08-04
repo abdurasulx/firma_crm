@@ -14,6 +14,7 @@ from .views import (
     approve_plan_request,
     reject_plan_request,
     product_scan_view,
+    product_scan_status_api,
     qr_image_view,
 )
 from main.views import login
@@ -80,6 +81,7 @@ urlpatterns = [
 
     # QR/Serial — public
     path('p/<str:kod>/', product_scan_view, name='product_scan'),
+    path('api/p/<str:kod>/status/', product_scan_status_api, name='product_scan_status_api'),
     path('api/qr/image/<str:kod>/', qr_image_view, name='qr_image'),
 
     # Desktop Agent REST API (token orqali autentifikatsiya, subdomain'ga bog'liq emas)

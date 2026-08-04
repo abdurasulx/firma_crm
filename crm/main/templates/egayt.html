@@ -137,6 +137,21 @@
         </form>
         {% endif %}
 
+        {% if payroll_outstanding_months %}
+        <h3 style="margin-top:20px; color:#b91c1c;"><i class="fa-solid fa-triangle-exclamation"></i> Qolib ketgan oyliklar</h3>
+        {% for m in payroll_outstanding_months %}
+        <div class="profile-info" style="text-align:left; border-top:1px dashed #fecaca; padding-top:8px; margin-top:8px;">
+            <span class="profile-label">{{ m.label }}:</span> <b style="color:#b91c1c;">{{ m.owed|floatformat:0 }} so'm</b>
+        </div>
+        {% if can_edit_payroll %}
+        <button type="button" style="margin-top:6px; padding: 8px 16px; background: #b91c1c; color: #fff; border: none; border-radius: 4px; cursor: pointer;"
+                onclick="openOutstandingPayModal('{{ m.yil }}', '{{ m.oy }}', '{{ m.label|escapejs }}', '{{ m.owed|floatformat:0 }}')">
+            {{ m.label }} uchun to'lov qayd etish
+        </button>
+        {% endif %}
+        {% endfor %}
+        {% endif %}
+
         <h3 style="margin-top:20px;">To'lovlar tarixi</h3>
         <table style="width:100%; border-collapse:collapse;">
             <thead>
@@ -199,4 +214,64 @@
     </div>
     {% endif %}
 </div>
+
+{% if payroll_outstanding_months and can_edit_payroll %}
+<div id="outstandingPayModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,.6); z-index:9999; align-items:center; justify-content:center; padding:16px;">
+    <div style="background:#fff; border-radius:18px; padding:26px; width:min(94vw, 440px); max-height:90vh; overflow-y:auto;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <strong id="opmTitle" style="font-size:16px;">To'lov qayd etish</strong>
+            <button type="button" onclick="closeOutstandingPayModal()" style="border:none; background:none; font-size:22px; cursor:pointer; color:#94a3b8;">&times;</button>
+        </div>
+        <p style="font-size:13px; color:#64748b; margin-bottom:18px;">
+            Jami qarz: <b id="opmOwed" style="color:#b91c1c;"></b> so'm — to'liq yoki qisman summa kiriting.
+        </p>
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="pay_outstanding_oy">
+            <input type="hidden" name="oy_yil" id="opmYil">
+            <input type="hidden" name="oy_oy" id="opmOy">
+
+            <label style="font-size:12px; font-weight:700; color:#475569;">To'lov summasi</label>
+            <input type="number" step="0.01" min="0.01" name="summa" id="opmSumma" autocomplete="off" required
+                   style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; margin-top:6px; margin-bottom:14px;">
+
+            <label style="font-size:12px; font-weight:700; color:#475569;">To'lov cheki rasmi <span style="color:#b91c1c;">*</span></label>
+            <input type="file" name="rasm" accept="image/*" capture="environment" required
+                   style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; margin-top:6px; margin-bottom:14px;">
+
+            <label style="font-size:12px; font-weight:700; color:#475569;">Izoh (ixtiyoriy)</label>
+            <textarea name="izoh" rows="2" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; margin-top:6px; margin-bottom:18px; resize:vertical;"></textarea>
+
+            <button type="submit" style="width:100%; padding: 10px 16px; background: #b91c1c; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight:700;">
+                To'lovni saqlash
+            </button>
+        </form>
+    </div>
+</div>
+<script>
+    function openOutstandingPayModal(yil, oy, label, owed) {
+        var modal = document.getElementById('outstandingPayModal');
+        var form = modal.querySelector('form');
+        form.reset();
+        document.getElementById('opmYil').value = yil;
+        document.getElementById('opmOy').value = oy;
+        document.getElementById('opmTitle').textContent = label + ' uchun to\'lov';
+        document.getElementById('opmOwed').textContent = owed;
+        var summaInput = document.getElementById('opmSumma');
+        summaInput.max = owed;
+        summaInput.value = owed;
+        summaInput.oninput = function () {
+            var maxVal = parseFloat(summaInput.max);
+            var curVal = parseFloat(summaInput.value);
+            if (!isNaN(maxVal) && !isNaN(curVal) && curVal > maxVal) {
+                summaInput.value = summaInput.max;
+            }
+        };
+        modal.style.display = 'flex';
+    }
+    function closeOutstandingPayModal() {
+        document.getElementById('outstandingPayModal').style.display = 'none';
+    }
+</script>
+{% endif %}
 {% endblock %}

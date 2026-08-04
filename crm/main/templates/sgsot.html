@@ -213,19 +213,26 @@
                         <span class="p-stock">Mavjud: {{ m.miqdor }} {{ m.turi }}</span>
                         <span class="p-price">{{ m.narx|floatformat:0 }} so'm</span>
                     </div>
+                    {% if m.nom not in unit_serial_products %}
                     <div class="stepper">
                         <button type="button" class="step-btn step-minus" onclick="stepBy({{ forloop.counter }}, -1)"><i class="fas fa-minus"></i></button>
                         <div class="step-val" id="pval{{ forloop.counter }}">0</div>
                         <button type="button" class="step-btn step-plus" onclick="stepBy({{ forloop.counter }}, 1)"><i class="fas fa-plus"></i></button>
                     </div>
+                    {% else %}
+                    <div class="stepper" style="justify-content:flex-end;">
+                        <div class="step-val" id="pval{{ forloop.counter }}" style="min-width:auto; padding:0 8px;">0 dona</div>
+                    </div>
+                    {% endif %}
                     <input type="hidden" name="miqdor_{{ m.nom }}" id="pinp{{ forloop.counter }}" value="0">
                     {% if m.nom in unit_serial_products %}
-                    <div class="serial-scan-block" style="margin-top:10px; grid-column:1/-1;">
+                    <div class="serial-scan-block" style="margin-top:10px; grid-column:1/-1;" data-idx="{{ forloop.counter }}" data-mahsulot-id="{{ m.id|default:'' }}">
                         <div style="font-size:12px; font-weight:700; color:var(--slate-500,#64748b); margin-bottom:6px;">
-                            Serial (QR) kodlari — har qatorda bittadan, sotilayotgan miqdorga teng
+                            Serial (QR) kodlari — miqdor skanerlangan donalar soniga teng
                         </div>
-                        <textarea class="serial-kodlari-input" name="serial_kodlari_{{ m.nom }}" rows="2" style="width:100%; border-radius:10px; border:1px solid #e2e8f0; padding:8px;" placeholder="Skanerlang yoki qo'lda kiriting"></textarea>
-                        <button type="button" class="btn-scan-qr" data-target="serial_kodlari_{{ m.nom }}" style="margin-top:6px;"><i class="fas fa-qrcode"></i> Kamera bilan skanerlash</button>
+                        <textarea class="serial-kodlari-input" name="serial_kodlari_{{ m.nom }}" readonly style="display:none;"></textarea>
+                        <div class="scanned-serial-list" id="scannedList{{ forloop.counter }}" style="display:flex; flex-direction:column; gap:4px; margin-bottom:6px;"></div>
+                        <button type="button" class="btn-scan-qr" data-target="serial_kodlari_{{ m.nom }}" data-idx="{{ forloop.counter }}" data-mahsulot-id="{{ m.id|default:'' }}"><i class="fas fa-qrcode"></i> Kamera bilan skanerlash</button>
                     </div>
                     {% endif %}
                 </div>
@@ -284,7 +291,8 @@
         <div class="form-card">
             <label class="form-label">Chek rasmi</label>
             <label for="id_rasm" class="upload-area" id="upload-label">
-                <i class="fas fa-camera"></i>
+                <i class="fas fa-camera" id="upload-icon"></i>
+                <img id="upload-preview" style="display:none; max-width:100%; max-height:180px; border-radius:0.75rem; object-fit:cover;">
                 <strong id="file-status">Rasm tanlang yoki rasmga oling</strong>
                 <input type="file" name="rasm" id="id_rasm" accept="image/*" capture="environment" required style="display:none" onchange="onFileChange(this)">
             </label>
@@ -383,12 +391,29 @@
     function onFileChange(input) {
         const label = document.getElementById('upload-label');
         const status = document.getElementById('file-status');
+        const icon = document.getElementById('upload-icon');
+        const preview = document.getElementById('upload-preview');
         if (input.files && input.files[0]) {
-            status.textContent = input.files[0].name;
+            const file = input.files[0];
+            status.textContent = file.name;
             label.classList.add('has-file');
+            if (preview) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    preview.src = e.target.result;
+                    preview.style.display = '';
+                    if (icon) icon.style.display = 'none';
+                };
+                reader.readAsDataURL(file);
+            }
         } else {
             status.textContent = 'Rasm tanlang yoki rasmga oling';
             label.classList.remove('has-file');
+            if (preview) {
+                preview.style.display = 'none';
+                preview.src = '';
+            }
+            if (icon) icon.style.display = '';
         }
     }
     document.getElementById('customer-name').addEventListener('input', updateContractLink);

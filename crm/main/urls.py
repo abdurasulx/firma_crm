@@ -3,7 +3,7 @@ from django.views.static import serve
 from .views import (
     login, main, end_setup, add_haridor, profile_view, crtuser, editusr,
     sotish, seemahsulot, createmahsulot, deleteprdct, addmiqdor,
-    add_yuklama, logout_view, check_new_deliveries, pz_sorov_tarixi,
+    add_yuklama, logout_view, check_new_deliveries, check_sale_serial, pz_sorov_tarixi,
     yetkazuvchi_hisobot, pazanda_hisobot,
     select_plan, select_custom_plan, select_plan_page, yt_navigation,
     billing_page, create_billing_link, open_billing_link,
@@ -70,6 +70,7 @@ urlpatterns = [
     path('add/yuklama', add_yuklama, name='add_yuklama'),
     path('sotish/' , sotish, name='sotish'),
     path('api/check-new-deliveries/', check_new_deliveries, name='api_check_deliveries'),
+    path('api/check-sale-serial/', check_sale_serial, name='check_sale_serial'),
     path('pazanda/sorovlar/', pz_sorov_tarixi, name='pz_sorov_tarixi'),
     path('hisobot/yetkazuvchi/<str:username>/', yetkazuvchi_hisobot, name='yetkazuvchi_hisobot'),
     path('hisobot/pazanda/<str:username>/', pazanda_hisobot, name='pazanda_hisobot'),

@@ -510,6 +510,7 @@ class SerialHarakat(models.Model):
         ('chiqarildi', "Omboradan chiqarildi (yuklama)"),
         ('sotildi', "Sotildi"),
         ('qaytarildi', "Qaytarildi"),
+        ('shubhali', "Shubhali — sotilmagan holda ombordan tashqarida skanerlandi"),
     )
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='serial_harakatlari')
     serial = models.ForeignKey(Serial, on_delete=models.CASCADE, related_name='harakatlar')
@@ -1076,6 +1077,10 @@ class XodimTolov(models.Model):
     summa = models.DecimalField(max_digits=12, decimal_places=2)
     sana = models.DateField(default=timezone.now)
     izoh = models.TextField(blank=True, null=True)
+    rasm = models.ImageField(
+        upload_to='xodim_tolovlar/', blank=True, null=True,
+        help_text="To'lov cheki/kvitansiyasi rasmi — qolib ketgan oylikni to'lashda majburiy.",
+    )
     berdi = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True, related_name='berilgan_tolovlar')
     oy_yopish = models.ForeignKey(
         'XodimOyYopish', on_delete=models.SET_NULL, null=True, blank=True, related_name='tolovlar',

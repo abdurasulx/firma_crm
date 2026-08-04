@@ -177,7 +177,7 @@ def agent_station_login(request):
 @api_view(['POST'])
 def agent_login_by_qr(request):
     """Desktop Agent stansiyasini **shifrlangan QR kod** orqali kiritadi —
-    qo'lda login/parol o'rniga standart usul (145-qadam). Veb CRM'da
+    qo'lda login/parol o'rniga standart usul (145-qadam). Veb ERP'da
     (`agent_login_qr_image`, faqat `ega` ko'radi) ko'rsatilgan QR
     kodning matni `AGENTQR|<subdomain>|<shifrlangan_qism>` shaklida —
     klient birinchi ikki qismdan qaysi serverga ulanishni biladi,

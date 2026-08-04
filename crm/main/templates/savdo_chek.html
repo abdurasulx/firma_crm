@@ -223,7 +223,7 @@
         <!-- Header -->
         <div class="receipt-header">
             <div class="logo">🧾</div>
-            <h1>StockFirm</h1>
+            <h1>{% firstof savdo.company.name "StockFirm" %}</h1>
             <div class="sub">Savdo Cheki &nbsp;·&nbsp; #{{ savdo.id }}</div>
         </div>
 
@@ -289,7 +289,7 @@
 
         <!-- Footer -->
         <div class="receipt-footer">
-            Ushbu chek StockFirm CRM tizimi orqali chiqarildi.<br>
+            Ushbu chek StockFirm ERP tizimi orqali chiqarildi.<br>
             {{ savdo.vaqt_sana|date:"d.m.Y H:i:s" }}
         </div>
     </div>

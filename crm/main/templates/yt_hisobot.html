@@ -441,14 +441,15 @@
                             <span class="badge badge-pending"><i class="fas fa-clock"></i> Kutilmoqda</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td style="display:flex; gap:6px; flex-wrap:wrap;">
                             {% if s.smr %}
                             <button class="btn-view" onclick="openImageModal('{{ s.smr.url }}')">
                                 <i class="fas fa-image"></i> Ko'rish
                             </button>
-                            {% else %}
-                            <span style="color:var(--slate-400); font-style: italic; font-size: 0.75rem;">Yo'q</span>
                             {% endif %}
+                            <a href="{% url 'savdo_chek' s.id %}" class="btn-view" style="text-decoration:none;">
+                                <i class="fas fa-qrcode"></i> QR chek
+                            </a>
                         </td>
                     </tr>
                     {% empty %}
