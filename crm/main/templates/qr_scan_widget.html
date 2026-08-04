@@ -1,0 +1,70 @@
+<!-- Umumiy QR-skaner vidjeti: sotish shablonlariga (ytsot.html, sgsot.html) include qilinadi.
+     Faqat frontend qatlam — kamera ishlamasa ham, matn maydoniga qo'lda yozish orqali savdo yopilaveradi. -->
+<div id="qrScanModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,.75); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:16px; padding:18px; width:min(92vw, 420px);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <strong>QR kodni skanerlang</strong>
+            <button type="button" onclick="closeQrScanModal()" style="border:none; background:none; font-size:20px; cursor:pointer;">&times;</button>
+        </div>
+        <div id="qrScanReaderBox" style="width:100%;"></div>
+        <p style="font-size:12px; color:#64748b; margin-top:8px;">Kamera ochilmasa, kodni qo'lda kiritishingiz mumkin.</p>
+    </div>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+(function () {
+    let qrScanTargetId = null;
+    let html5QrCode = null;
+
+    function extractKod(decodedText) {
+        try {
+            const url = new URL(decodedText);
+            const parts = url.pathname.split('/').filter(Boolean);
+            return parts[parts.length - 1] || decodedText;
+        } catch (e) {
+            return decodedText.trim();
+        }
+    }
+
+    window.closeQrScanModal = function () {
+        const modal = document.getElementById('qrScanModal');
+        modal.style.display = 'none';
+        if (html5QrCode) {
+            html5QrCode.stop().catch(() => {});
+        }
+    };
+
+    function openQrScanModal(targetId) {
+        qrScanTargetId = targetId;
+        const modal = document.getElementById('qrScanModal');
+        modal.style.display = 'flex';
+        if (typeof Html5Qrcode === 'undefined') {
+            return;
+        }
+        html5QrCode = new Html5Qrcode('qrScanReaderBox');
+        html5QrCode.start(
+            { facingMode: 'environment' },
+            { fps: 10, qrbox: 220 },
+            (decodedText) => {
+                const kod = extractKod(decodedText);
+                const textarea = document.getElementsByName(qrScanTargetId)[0];
+                if (textarea) {
+                    const existing = textarea.value.split('\n').map(s => s.trim()).filter(Boolean);
+                    if (!existing.includes(kod)) {
+                        existing.push(kod);
+                        textarea.value = existing.join('\n');
+                    }
+                }
+            },
+            () => {}
+        ).catch(() => {});
+    }
+
+    document.querySelectorAll('.btn-scan-qr').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            openQrScanModal(btn.dataset.target);
+        });
+    });
+})();
+</script>

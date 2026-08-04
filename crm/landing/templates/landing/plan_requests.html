@@ -55,10 +55,12 @@
                         <div style="font-size: 13px; color: #475569;">
                             {% if req.is_custom %}
                                 <b>Hodimlar:</b> {% if req.custom_max_users == 0 %}Cheksiz{% else %}{{ req.custom_max_users }}{% endif %}<br>
-                                <b>Modullar:</b> 
+                                <b>Modullar:</b>
                                 {% if req.custom_has_map %}Map, {% endif %}
                                 {% if req.custom_has_telegram_bot %}Bot, {% endif %}
-                                {% if req.custom_has_analytics %}AI{% endif %}
+                                {% if req.custom_has_analytics %}AI, {% endif %}
+                                {% if req.custom_has_savdogar_sales %}Savdogar{% endif %}
+                                {% if req.custom_desktop_agent_stations %}<br><b>Desktop Agent:</b> {{ req.custom_desktop_agent_stations }} ta stansiya{% endif %}
                                 <br>
                                 <b>Zaxira:</b> {{ req.get_custom_backup_type_display }}
                                 <br>

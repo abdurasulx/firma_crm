@@ -1,0 +1,161 @@
+{% extends 'egabase.html' %}
+
+{% block title %}Omborlar{% endblock %}
+{% block page_title %}Omborlar{% endblock %}
+
+{% block content %}
+{% include 'warehouse_styles.html' %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<div class="warehouse-page">
+
+<div class="card" style="padding:24px; margin-bottom:22px;">
+    <h3 style="margin-bottom:10px;"><i class="fa-solid fa-desktop"></i> Desktop Agent token</h3>
+    <p style="color:var(--muted); font-size:13px; margin-bottom:14px;">
+        Desktop Agent dasturidagi "Sozlamalar" bo'limiga shu tokenni kiritib,
+        omborlar ro'yxatini shu yerdan sinxronlashtirish mumkin.
+    </p>
+    {% if agent_token %}
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <input class="field" type="text" value="{{ agent_token }}" readonly style="flex:1; min-width:260px; font-family:monospace;" id="agentTokenInput">
+        <button type="button" class="btn" onclick="navigator.clipboard.writeText(document.getElementById('agentTokenInput').value)">
+            <i class="fa-solid fa-copy"></i> Nusxalash
+        </button>
+        <form method="post" style="display:inline;" onsubmit="return confirm('Yangi token yaratilsa, eski token endi ishlamay qoladi. Davom etasizmi?');">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="generate_agent_token">
+            <button class="btn" type="submit"><i class="fa-solid fa-rotate"></i> Qayta yaratish</button>
+        </form>
+    </div>
+    {% else %}
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="generate_agent_token">
+        <button class="btn primary" type="submit"><i class="fa-solid fa-key"></i> Token yaratish</button>
+    </form>
+    {% endif %}
+</div>
+
+<div style="display:grid; grid-template-columns:minmax(280px, 380px) 1fr; gap:22px;">
+    <form method="post" class="card" style="padding:24px;">
+        {% csrf_token %}
+        <h3 style="margin-bottom:18px;">Yangi ombor</h3>
+        <label style="display:block; margin-bottom:14px;">
+            <div style="font-weight:800; margin-bottom:8px;">Nomi</div>
+            <input class="field" type="text" name="nomi" placeholder="Masalan: 1-ombor" required>
+        </label>
+        <label style="display:block; margin-bottom:14px;">
+            <div style="font-weight:800; margin-bottom:8px;">Manzil</div>
+            <input class="field" type="text" name="manzil" placeholder="Ixtiyoriy">
+        </label>
+        <label style="display:block; margin-bottom:8px;">
+            <div style="font-weight:800; margin-bottom:8px;">Lokatsiya</div>
+            <div style="font-size:12px; color:var(--muted); margin-bottom:8px;">Xaritada ombor joylashgan nuqtani bosing yoki joriy lokatsiyangizni oling.</div>
+        </label>
+        <button type="button" class="btn" id="omborUseCurrentLocationBtn" style="margin-bottom:10px;">
+            <i class="fa-solid fa-location-crosshairs"></i> Joriy lokatsiyani olish
+        </button>
+        <div id="omborLocationPicker" style="height:220px; border-radius:10px; overflow:hidden; margin-bottom:10px; border:1px solid var(--border);"></div>
+        <div id="omborLocationText" style="font-size:12px; color:var(--muted); margin-bottom:14px;">Lokatsiya tanlanmagan.</div>
+        <input type="hidden" name="latitude" id="omborLatitude">
+        <input type="hidden" name="longitude" id="omborLongitude">
+        <button class="btn primary" type="submit"><i class="fa-solid fa-check"></i> Qo'shish</button>
+    </form>
+
+    <div style="display:flex; flex-direction:column; gap:18px;">
+        {% for ombor in omborlar %}
+        <div class="card">
+            <div style="padding:18px 20px; border-bottom:1px solid var(--border);">
+                <h3 style="margin:0;">{{ ombor.nomi }}</h3>
+                {% if ombor.manzil %}<div style="color:var(--muted); font-size:13px; margin-top:4px;">{{ ombor.manzil }}</div>{% endif %}
+                {% if ombor.latitude and ombor.longitude %}
+                <div style="color:#166534; font-size:12px; margin-top:6px;"><i class="fa-solid fa-location-dot"></i> Lokatsiya saqlangan — <a href="{% url 'map_dashboard' %}">xaritada ko'rish</a></div>
+                {% else %}
+                <div style="color:#b45309; font-size:12px; margin-top:6px;"><i class="fa-solid fa-triangle-exclamation"></i> Lokatsiya kiritilmagan</div>
+                {% endif %}
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>Mahsulot</th><th>Miqdor</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for z in ombor.zaxiralar.all %}
+                        <tr>
+                            <td>{{ z.mahsulot.nomi }}</td>
+                            <td>{{ z.miqdor|floatformat:2 }} {{ z.mahsulot.turi.nomi }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="2" style="text-align:center; padding:20px; color:var(--muted);">Zaxira yo'q.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% empty %}
+        <div class="card" style="padding:34px; text-align:center; color:var(--muted);">Ombor yo'q. Chapdagi forma orqali qo'shing.</div>
+        {% endfor %}
+    </div>
+</div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var defaultCenter = [41.311, 69.240];
+        var pickerMap = L.map('omborLocationPicker').setView(defaultCenter, 12);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+            subdomains: 'abcd',
+            maxZoom: 20
+        }).addTo(pickerMap);
+
+        var marker = null;
+        var latInput = document.getElementById('omborLatitude');
+        var lngInput = document.getElementById('omborLongitude');
+        var locationText = document.getElementById('omborLocationText');
+        var useCurrentBtn = document.getElementById('omborUseCurrentLocationBtn');
+
+        function setLocation(lat, lng, zoom) {
+            latInput.value = lat.toFixed(6);
+            lngInput.value = lng.toFixed(6);
+            locationText.textContent = 'Tanlangan lokatsiya: ' + lat.toFixed(5) + ', ' + lng.toFixed(5);
+            locationText.style.color = '#166534';
+            if (marker) {
+                marker.setLatLng([lat, lng]);
+            } else {
+                marker = L.marker([lat, lng]).addTo(pickerMap);
+            }
+            pickerMap.setView([lat, lng], zoom || pickerMap.getZoom());
+        }
+
+        pickerMap.on('click', function (e) {
+            setLocation(e.latlng.lat, e.latlng.lng);
+        });
+
+        useCurrentBtn.addEventListener('click', function () {
+            if (!navigator.geolocation) {
+                locationText.textContent = 'Brauzeringiz joylashuvni aniqlay olmaydi.';
+                locationText.style.color = '#b91c1c';
+                return;
+            }
+            useCurrentBtn.disabled = true;
+            var originalHtml = useCurrentBtn.innerHTML;
+            useCurrentBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Aniqlanmoqda...';
+            navigator.geolocation.getCurrentPosition(
+                function (pos) {
+                    setLocation(pos.coords.latitude, pos.coords.longitude, 16);
+                    useCurrentBtn.disabled = false;
+                    useCurrentBtn.innerHTML = originalHtml;
+                },
+                function (err) {
+                    locationText.textContent = 'Lokatsiyani aniqlab bo\'lmadi: ' + err.message;
+                    locationText.style.color = '#b91c1c';
+                    useCurrentBtn.disabled = false;
+                    useCurrentBtn.innerHTML = originalHtml;
+                },
+                {timeout: 10000, enableHighAccuracy: true}
+            );
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,115 @@
+{% extends 'egabase.html' %}
+
+{% block title %}Vazifalar{% endblock %}
+{% block page_title %}Vazifalar{% endblock %}
+
+{% block content %}
+{% include 'warehouse_styles.html' %}
+<div class="warehouse-page">
+
+<div style="display:grid; grid-template-columns:minmax(280px, 360px) 1fr; gap:22px;">
+    <form method="post" class="card" style="padding:24px;">
+        {% csrf_token %}
+        <h3 style="margin-bottom:18px;">Yangi vazifa</h3>
+        <label style="display:block; margin-bottom:14px;">
+            <div style="font-weight:800; margin-bottom:8px;">Mahsulot</div>
+            <select class="field" name="mahsulot" id="taskMahsulotSelect" required>
+                <option value="">— tanlang —</option>
+                {% for m in mahsulotlar %}
+                <option value="{{ m.id }}" data-granularity="{{ m.serial_granularity }}">{{ m.nomi }}</option>
+                {% endfor %}
+            </select>
+            {% if not mahsulotlar %}
+            <div style="font-size:12px; color:#b45309; margin-top:8px;">
+                Retsept (BOM) kiritilgan mahsulot yo'q — avval "Mahsulotlar" bo'limida mahsulotga retsept qo'shing.
+            </div>
+            {% endif %}
+        </label>
+        <label style="display:block; margin-bottom:14px;">
+            <div style="font-weight:800; margin-bottom:8px;">Rejalashtirilgan miqdor</div>
+            <input class="field" type="number" name="rejalashtirilgan_miqdor" min="0.01" step="0.01" placeholder="Masalan: 100" required>
+        </label>
+        <label id="taskQadoqHajmiRow" style="display:none; margin-bottom:14px;">
+            <div style="font-weight:800; margin-bottom:8px;">Necha donadan bitta qadoq?</div>
+            <input class="field" type="number" name="qadoq_hajmi" min="1" step="1" placeholder="Masalan: 3">
+            <div style="font-size:12px; color:var(--muted); margin-top:6px;">
+                Bu mahsulot "partiya" turida — har bir QR kod shuncha donadan iborat qadoqni anglatadi.
+                Reja miqdoriga bo'linmasa, qoldiq alohida-alohida 1 donalik QR kodlar bilan chiqariladi.
+            </div>
+        </label>
+        <label id="taskForceUnevenRow" style="display:none; margin-bottom:14px; font-size:13px;">
+            <input type="checkbox" name="force_uneven_qadoq" value="1"> Bo'linmasa ham baribir davom et
+        </label>
+        <label style="display:block; margin-bottom:14px;">
+            <div style="font-weight:800; margin-bottom:8px;">Sana</div>
+            <input class="field" type="date" name="sana" value="{{ today|date:'Y-m-d' }}">
+        </label>
+        <button class="btn primary" type="submit"><i class="fa-solid fa-plus"></i> Vazifa yaratish</button>
+        <p style="font-size:12px; color:var(--muted); margin-top:14px;">
+            Vazifa yaratilgach, uning QR kodini chop etib taxtaga yopishtiring —
+            istalgan ishlab chiqaruvchi Desktop Agent'da o'z badge'ini va shu QR'ni
+            skanerlab, vazifani o'ziga oladi.
+        </p>
+    </form>
+
+    <div class="card">
+        <div style="padding:18px 20px; border-bottom:1px solid var(--border);">
+            <h3 style="margin:0;">Vazifalar ro'yxati</h3>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr><th>Mahsulot</th><th>Miqdor</th><th>Sana</th><th>Holat</th><th></th></tr>
+                </thead>
+                <tbody>
+                    {% for task in tasks %}
+                    <tr>
+                        <td>{{ task.mahsulot.nomi }}</td>
+                        <td>{{ task.rejalashtirilgan_miqdor|floatformat:0 }}</td>
+                        <td>{{ task.sana|date:"d.m.Y" }}</td>
+                        <td>
+                            {% if task.status == 'open' %}
+                            <span style="color:#0369a1; font-weight:700;">Ochiq</span>
+                            {% elif task.status == 'claimed' %}
+                            <span style="color:#b45309; font-weight:700;">Band — {{ task.pazanda.tuliq_ismi }}</span>
+                            {% elif task.status == 'done' %}
+                            <span style="color:#16a34a; font-weight:700;">✓ Bajarildi</span>
+                            {% else %}
+                            <span style="color:#64748b; font-weight:700;">Bekor qilindi</span>
+                            {% endif %}
+                        </td>
+                        <td style="text-align:right;">
+                            {% if task.status == 'open' or task.status == 'claimed' %}
+                            <a class="btn" href="{% url 'vazifa_qr_image' task.kod %}" download="vazifa_{{ task.id }}.png">
+                                <i class="fa-solid fa-qrcode"></i> QR
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" style="text-align:center; padding:24px; color:var(--muted);">Hali vazifa yo'q.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</div>
+
+<script>
+    (function () {
+        var select = document.getElementById('taskMahsulotSelect');
+        var qadoqRow = document.getElementById('taskQadoqHajmiRow');
+        var forceRow = document.getElementById('taskForceUnevenRow');
+        if (!select) return;
+        function toggle() {
+            var opt = select.options[select.selectedIndex];
+            var isBatch = opt && opt.getAttribute('data-granularity') === 'batch';
+            qadoqRow.style.display = isBatch ? 'block' : 'none';
+            forceRow.style.display = isBatch ? 'block' : 'none';
+        }
+        select.addEventListener('change', toggle);
+        toggle();
+    })();
+</script>
+{% endblock %}

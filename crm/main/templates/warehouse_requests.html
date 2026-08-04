@@ -28,6 +28,7 @@
                     <th>Material</th>
                     <th>Maqsad</th>
                     <th>Holat</th>
+                    <th>QR</th>
                     <th></th>
                 </tr>
             </thead>
@@ -46,10 +47,23 @@
                         {% elif req.status == 'approved' %}<span class="badge green">Tasdiqlangan</span>
                         {% else %}<span class="badge red">Rad etilgan</span>{% endif %}
                     </td>
+                    <td>
+                        <a href="{% url 'material_request_qr_image' req.kod %}" target="_blank" title="QR kodni yuklab olish/chop etish">
+                            <img src="{% url 'material_request_qr_image' req.kod %}" alt="QR" style="width:44px; height:44px; border:1px solid var(--border, #e2e8f0); border-radius:6px;">
+                        </a>
+                    </td>
                     <td style="text-align:right;">
                         {% if req.status == 'waiting' %}
-                        <form method="post" action="{% url 'warehouse_request_review' req.id %}" class="review-form" style="display:inline-flex; gap:8px;">
+                        <form method="post" action="{% url 'warehouse_request_review' req.id %}" class="review-form" style="display:inline-flex; gap:8px; align-items:center;">
                             {% csrf_token %}
+                            {% if omborlar %}
+                            <select name="ombor_id" class="field" style="max-width:150px;">
+                                <option value="">Ombor tanlang</option>
+                                {% for o in omborlar %}
+                                <option value="{{ o.id }}">{{ o.nomi }}</option>
+                                {% endfor %}
+                            </select>
+                            {% endif %}
                             <button class="btn success" type="submit" name="action" value="approve">Tasdiqlash</button>
                             <button class="btn danger" type="submit" name="action" value="reject">Rad etish</button>
                         </form>
@@ -59,7 +73,7 @@
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="6" style="text-align:center; padding:42px; color:var(--muted);">So'rov topilmadi.</td></tr>
+                <tr><td colspan="7" style="text-align:center; padding:42px; color:var(--muted);">So'rov topilmadi.</td></tr>
                 {% endfor %}
             </tbody>
         </table>

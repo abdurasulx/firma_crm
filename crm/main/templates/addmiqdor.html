@@ -180,14 +180,56 @@
         <p>Ishlab chiqarilgan mahsulot miqdorini zaxiraga kiriting</p>
     </div>
     <div class="form-card-body">
+        {% if pending_own_miqdor %}
+        <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:12px 16px; margin-bottom:18px;">
+            <div style="font-weight:700; color:#b45309; font-size:13px; margin-bottom:6px;">
+                ⏳ Sizda hali Agentda tasdiqlanishi kutilayotgan so'rovlar bor:
+            </div>
+            {% for p in pending_own_miqdor %}
+            <div style="font-size:13px; color:#78350f;">{{ p.mahsulot.nomi }} — {{ p.miqdor|floatformat:0 }} {{ p.mahsulot.turi.nomi }} ({{ p.vaqt_sana|date:"d.m H:i" }})</div>
+            {% endfor %}
+            <div style="font-size:12px; color:#92400e; margin-top:6px;">
+                Agar shu mahsulot uchun yana yubormoqchi bo'lsangiz — avval Desktop Agent'da badge skanerlab, yuqoridagilarni tasdiqlang, aks holda dublikat yaratilishi mumkin.
+            </div>
+        </div>
+        {% endif %}
+
+        {% if duplicate_warning %}
+        <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:12px 16px; margin-bottom:18px;">
+            <div style="font-weight:700; color:#b91c1c; font-size:13px; margin-bottom:6px;">
+                ⚠ Diqqat: dublikat bo'lishi mumkin
+            </div>
+            <div style="font-size:13px; color:#7f1d1d;">
+                {{ duplicate_warning.mahsulot.nomi }} uchun sizda allaqachon {{ duplicate_warning.miqdor|floatformat:0 }}
+                {{ duplicate_warning.mahsulot.turi.nomi }} miqdorida tasdiqlanmagan so'rov bor
+                ({{ duplicate_warning.vaqt_sana|date:"d.m H:i" }}, hali Agentda kutilmoqda).
+            </div>
+            <form method="POST" enctype="multipart/form-data" style="margin-top:10px;">
+                {% csrf_token %}
+                <input type="hidden" name="mahsulot" value="{{ duplicate_mahsulot_id }}">
+                <input type="hidden" name="miqdor" value="{{ duplicate_miqdor }}">
+                {% if duplicate_complete_request_id %}
+                <input type="hidden" name="complete_request_id" value="{{ duplicate_complete_request_id }}">
+                {% endif %}
+                <input type="hidden" name="confirm_duplicate" value="1">
+                <button type="submit" style="border:1px solid #fca5a5; background:#fff; color:#b91c1c; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer;">
+                    Baribir yuborish (bu haqiqatan yangi ishlab chiqarish)
+                </button>
+            </form>
+        </div>
+        {% endif %}
+
         <form method="POST" enctype="multipart/form-data">
             {% csrf_token %}
+            {% if complete_request_id %}
+            <input type="hidden" name="complete_request_id" value="{{ complete_request_id }}">
+            {% endif %}
 
             <div class="form-group">
                 <label for="mahsulot">Mahsulot</label>
                 <select name="mahsulot" id="mahsulot" class="form-control" required>
                     {% for m in mahsulotlar %}
-                    <option value="{{ m.id }}">{{ m.nomi }} ({{ m.turi.nomi }})</option>
+                    <option value="{{ m.id }}" {% if prefill_mahsulot_id == m.id %}selected{% endif %}>{{ m.nomi }} ({{ m.turi.nomi }})</option>
                     {% endfor %}
                 </select>
             </div>
@@ -195,9 +237,18 @@
             <div class="form-group">
                 <label for="miqdor">Qo'shiladigan Miqdor</label>
                 <input type="number" name="miqdor" id="miqdor" class="form-control" required min="0.01" step="0.01"
-                    placeholder="0.00">
+                    placeholder="0.00" value="{{ prefill_miqdor|unlocalize|default:'' }}">
+                {% if prefill_miqdor %}
+                <div style="font-size:12px; color:var(--text-light); margin-top:4px;">
+                    So'ralgan xom ashyo asosida taxminiy hisoblandi — kerak bo'lsa kamaytiring yoki ko'paytiring.
+                </div>
+                {% endif %}
             </div>
 
+            {% if not request.company.custom_desktop_agent_stations %}
+            {# Desktop Agent ishlatuvchi firmalarda bu ortiqcha: tasdiqlash/audit
+               izi endi ombor kamerasi (video yozuv) + Serial QR orqali
+               ta'minlanadi (87/82-qadam), qo'lda rasm biriktirish shart emas. #}
             <div class="form-group">
                 <label>Rasm (ixtiyoriy)</label>
                 <div class="upload-area" id="uploadArea">
@@ -210,6 +261,7 @@
                     <img id="preview" src="" alt="preview">
                 </div>
             </div>
+            {% endif %}
 
             <button type="submit" class="btn-submit">
                 <i class="fa-solid fa-check-circle"></i>

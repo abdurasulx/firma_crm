@@ -1,0 +1,102 @@
+{% extends 'egabase.html' %}
+
+{% block title %}Moliya{% endblock %}
+{% block page_title %}Moliya{% endblock %}
+
+{% block content %}
+{% include 'warehouse_styles.html' %}
+<div class="warehouse-page">
+
+<form method="get" class="card" style="padding:18px 20px; display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-bottom:22px;">
+    <label>
+        <div style="font-weight:800; margin-bottom:6px; font-size:13px;">Dan</div>
+        <input class="field" type="date" name="from" value="{{ from_date }}">
+    </label>
+    <label>
+        <div style="font-weight:800; margin-bottom:6px; font-size:13px;">Gacha</div>
+        <input class="field" type="date" name="to" value="{{ to_date }}">
+    </label>
+    <button class="btn primary" type="submit"><i class="fa-solid fa-filter"></i> Ko'rsatish</button>
+    <a class="btn" href="?from={{ from_date }}&to={{ to_date }}&export=xlsx"><i class="fa-solid fa-file-excel"></i> Excel</a>
+</form>
+
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:22px;">
+    <div class="card" style="padding:18px;">
+        <div style="font-size:12px; color:var(--muted); font-weight:800; text-transform:uppercase;">Umumiy tushum</div>
+        <div style="font-size:24px; font-weight:900; margin-top:8px;">{{ revenue|floatformat:0 }} so'm</div>
+    </div>
+    <div class="card" style="padding:18px;">
+        <div style="font-size:12px; color:var(--muted); font-weight:800; text-transform:uppercase;">Naqd pul aylanma</div>
+        <div style="font-size:24px; font-weight:900; margin-top:8px;">{{ cash_turnover|floatformat:0 }} so'm</div>
+    </div>
+    <div class="card" style="padding:18px;">
+        <div style="font-size:12px; color:var(--muted); font-weight:800; text-transform:uppercase;">Xomashyo xarajati (COGS)</div>
+        <div style="font-size:24px; font-weight:900; margin-top:8px;">{{ cogs|floatformat:0 }} so'm</div>
+    </div>
+    <div class="card" style="padding:18px;">
+        <div style="font-size:12px; color:var(--muted); font-weight:800; text-transform:uppercase;">Qo'shimcha xarajatlar</div>
+        <div style="font-size:24px; font-weight:900; margin-top:8px;">{{ qoshimcha|floatformat:0 }} so'm</div>
+    </div>
+    <div class="card" style="padding:18px; background:#f0fdf4; border-color:#bbf7d0;">
+        <div style="font-size:12px; color:#166534; font-weight:800; text-transform:uppercase;">Sof foyda</div>
+        <div style="font-size:24px; font-weight:900; margin-top:8px; color:#065f46;">{{ net_profit|floatformat:0 }} so'm</div>
+    </div>
+    <div class="card" style="padding:18px;">
+        <div style="font-size:12px; color:var(--muted); font-weight:800; text-transform:uppercase;">Marja</div>
+        <div style="font-size:24px; font-weight:900; margin-top:8px;">{{ margin_percent|floatformat:1 }}%</div>
+    </div>
+</div>
+
+<p style="font-size:12px; color:var(--muted);">
+    Sof foyda = Umumiy tushum − Xomashyo xarajati (COGS) − Ish haqi (tanlangan davrda to'langan) − Qo'shimcha xarajatlar.
+</p>
+
+<div class="card" style="padding:16px 20px; margin-top:8px; background:#f8fafc;">
+    <div style="font-size:12px; color:var(--muted); font-weight:800; text-transform:uppercase; margin-bottom:10px;">
+        Joriy oy ish haqi ({{ joriy_oy_nomi }}) — sana filtridan mustaqil
+    </div>
+    <div style="display:flex; gap:32px; flex-wrap:wrap;">
+        <div>
+            <div style="font-size:11px; color:var(--muted); font-weight:700;">Umumiy ish haqqi (hisoblangan)</div>
+            <div style="font-size:19px; font-weight:900; margin-top:4px;">{{ umumiy_ish_haqi|floatformat:0 }} so'm</div>
+        </div>
+        <div>
+            <div style="font-size:11px; color:var(--muted); font-weight:700;">To'langan ish haqqi</div>
+            <div style="font-size:19px; font-weight:900; margin-top:4px;">{{ tolangan_ish_haqi_joriy_oy|floatformat:0 }} so'm</div>
+        </div>
+    </div>
+</div>
+
+{% if outstanding_months %}
+<div class="card" style="margin-top:22px;">
+    <div style="padding:18px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="margin:0;">O'tgan oylardan yopilmagan to'lovlar</h3>
+        <b style="color:#b45309;">Jami: {{ outstanding_total|floatformat:0 }} so'm</b>
+    </div>
+    <p style="padding:0 20px; font-size:12px; color:var(--muted);">
+        Bu oylar uchun hisob-kitob hali yopilmagan ("Oyni yopish" bosilmagan) —
+        xodim ishlab topgan summadan avans ayrilgandan qolgan qism hali to'lanmagan bo'lishi mumkin.
+    </p>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>Xodim</th><th>Oy</th><th>Qolgan summa</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for row in outstanding_months %}
+                <tr>
+                    <td>{{ row.user.tuliq_ismi|default:row.user.username }}</td>
+                    <td>{{ row.yil }}-{{ row.oy|stringformat:"02d" }}</td>
+                    <td style="color:#b45309; font-weight:700;">{{ row.owed|floatformat:0 }} so'm</td>
+                    <td style="text-align:right;">
+                        <a class="btn" href="{% url 'profile' row.user.username %}">Profilga o'tish</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,6 @@
+sotuvchi roli faqat bir joyda turib savdo qilish uchun. savdogar asosiy fokusi sotilgan mahsulotni shartnomalarini psf yasashi va qo'l qo'yilgan shartnomani( avval yasalgan shartnomani chiqarib so'ng qo'l qo'yilgach skanerlab ) kiritishi kerak. shuningdek shaxsning id kartasi(pasport) 
+kabi malumotlarini ham. nasiya savdoga etibor berilsin. bu savdosi nasiya savdolarning kuni kelayotgani haqida malumot ham bersin. nasiya quyidagicha taqsimlanadi.
+3,6,9,12 oy va ularga 10,15,20,30 % qo'shimcha narx qo'shilsin. bu narx yopilish vaqtiga qarab belgilansin. men 3 oyga olgan tovarimni 2 oyda to'lasam arzonroq bo'lishi kerak. agar 4 oyda yopsam ko'proq.
+tizim ishlashi haqida shartnomada ko'rsatib o'tilishi kerak( tizimga doir qismini o'zgaritirb bo'lmasligi kerak). admin savdogar rolini ochish uchun 10$ to'lashi kerak. va har bir hodim uchun doimgidek 1$. 
+admin savdogar rolini ochganidan so'ng shartnomani shakklantirishi kerak. aks holda savdogar savdo qila olmasin. savdogan har bir savdoni elektron pdf varianti va qo'l qo'yilgan variantiini bog'lashi majburiy bo'lsin. 
+shuningdek rasmni biriktirish ham. ai analitika ham savdogar savdosi uchun o'zgacha bo'lsin. 

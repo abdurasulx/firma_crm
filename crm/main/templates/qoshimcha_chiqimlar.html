@@ -1,0 +1,66 @@
+{% extends 'egabase.html' %}
+
+{% block title %}Qo'shimcha chiqimlar{% endblock %}
+{% block page_title %}Qo'shimcha chiqimlar{% endblock %}
+
+{% block content %}
+{% include 'warehouse_styles.html' %}
+<div class="warehouse-page">
+<div style="display:grid; grid-template-columns:minmax(280px, 420px) 1fr; gap:22px;">
+    <form method="post" class="card" style="padding:24px;">
+        {% csrf_token %}
+        <h3 style="margin-bottom:18px;">Yangi chiqim</h3>
+        <label style="display:block; margin-bottom:14px;">
+            <div style="font-weight:800; margin-bottom:8px;">Nomi</div>
+            <input class="field" type="text" name="nomi" placeholder="Masalan: Ijara" required>
+        </label>
+        <label style="display:block; margin-bottom:14px;">
+            <div style="font-weight:800; margin-bottom:8px;">Summa</div>
+            <input class="field" type="number" step="0.01" min="0.01" name="summa" required>
+        </label>
+        <label style="display:block; margin-bottom:14px;">
+            <div style="font-weight:800; margin-bottom:8px;">Sana</div>
+            <input class="field" type="date" name="sana">
+        </label>
+        <label style="display:block; margin-bottom:18px;">
+            <div style="font-weight:800; margin-bottom:8px;">Izoh</div>
+            <textarea class="field" name="izoh" rows="3"></textarea>
+        </label>
+        <button class="btn primary" type="submit"><i class="fa-solid fa-check"></i> Saqlash</button>
+    </form>
+
+    <div class="card">
+        <div style="padding:18px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="margin:0;">Chiqimlar tarixi</h3>
+            <b>Jami: {{ jami|floatformat:0 }} so'm</b>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Sana</th>
+                        <th>Nomi</th>
+                        <th>Summa</th>
+                        <th>Izoh</th>
+                        <th>Kim kiritdi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in chiqimlar %}
+                    <tr>
+                        <td>{{ c.sana|date:"d.m.Y" }}</td>
+                        <td>{{ c.nomi }}</td>
+                        <td>{{ c.summa|floatformat:0 }} so'm</td>
+                        <td>{{ c.izoh|default:"" }}</td>
+                        <td>{{ c.created_by.username|default:"-" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" style="text-align:center; padding:34px; color:var(--muted);">Chiqim yo'q.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</div>
+{% endblock %}

@@ -495,6 +495,7 @@
             </a>
 
             <div class="nav-section-label">Faoliyat</div>
+            {% if not request.company.custom_desktop_agent_stations %}
             <a href="{% url 'add_miqdor' %}" class="nav-item {% if request.resolver_match.url_name == 'add_miqdor' %}active{% endif %} {% block nav_miqdor %}{% endblock %}">
                 <i class="fa-solid fa-plus-circle"></i>
                 <span>Miqdor Qo'shish</span>
@@ -503,6 +504,7 @@
                 <i class="fa-solid fa-truck-fast"></i>
                 <span>Yuklama Yaratish</span>
             </a>
+            {% endif %}
             <a href="{% url 'pz_sorov_tarixi' %}" class="nav-item {% if request.resolver_match.url_name == 'pz_sorov_tarixi' %}active{% endif %} {% block nav_sorovlar %}{% endblock %}">
                 <i class="fa-solid fa-clock-rotate-left"></i>
                 <span>So'rovlar Tarixi</span>

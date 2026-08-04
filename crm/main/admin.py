@@ -2,7 +2,9 @@ from django.contrib import admin
 from .models import (
     Company, User, HaridorDukon, Pazanda, YetkazibBeruvchi,
     MahsulotTuri, Mahsulot, MiqdorQoshish, Savdo, YuklamaSorov, NasiyaTolov,
-    ProductionMaterialRequest
+    ProductionMaterialRequest, MahsulotRetsept, QoshimchaChiqim, Serial, SerialHarakat,
+    Ombor, OmborZaxira, XodimBadge, MahsulotQoshimchaXarajat, PazandaMahsulot,
+    ProductionTask, TaskMaterialPickup, XodimMaosh, XodimTolov, XodimOyYopish,
 )
 
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
@@ -106,3 +108,108 @@ class ProductionMaterialRequestAdmin(admin.ModelAdmin):
     list_display = ('producer', 'material', 'target_product', 'qty', 'status', 'created_at', 'reviewed_by')
     list_filter = ('company', 'status', 'created_at')
     search_fields = ('producer__tuliq_ismi', 'material__nomi', 'target_product__nomi')
+
+
+class TaskMaterialPickupInline(admin.TabularInline):
+    model = TaskMaterialPickup
+    extra = 0
+
+
+@admin.register(ProductionTask)
+class ProductionTaskAdmin(admin.ModelAdmin):
+    list_display = ('mahsulot', 'rejalashtirilgan_miqdor', 'sana', 'status', 'pazanda', 'company')
+    list_filter = ('company', 'status', 'sana')
+    search_fields = ('mahsulot__nomi', 'pazanda__tuliq_ismi', 'kod')
+    inlines = [TaskMaterialPickupInline]
+
+
+# --- Mahsulot Retsepti (BOM) ---
+@admin.register(MahsulotRetsept)
+class MahsulotReseptAdmin(admin.ModelAdmin):
+    list_display = ('mahsulot', 'komponent', 'norma_miqdor', 'company')
+    list_filter = ('company',)
+    search_fields = ('mahsulot__nomi', 'komponent__nomi')
+
+
+# --- Qo'shimcha Chiqim ---
+@admin.register(QoshimchaChiqim)
+class QoshimchaChiqimAdmin(admin.ModelAdmin):
+    list_display = ('nomi', 'company', 'summa', 'sana', 'created_by')
+    list_filter = ('company', 'sana')
+    search_fields = ('nomi', 'izoh')
+
+
+# --- Xodim ish haqi (avans + oyni yopish) ---
+@admin.register(XodimMaosh)
+class XodimMaoshAdmin(admin.ModelAdmin):
+    list_display = ('user', 'company', 'oylik_maosh', 'updated_at', 'updated_by')
+    list_filter = ('company',)
+    search_fields = ('user__username', 'user__tuliq_ismi')
+
+
+@admin.register(XodimTolov)
+class XodimTolovAdmin(admin.ModelAdmin):
+    list_display = ('user', 'company', 'turi', 'summa', 'sana', 'berdi')
+    list_filter = ('company', 'turi', 'sana')
+    search_fields = ('user__username', 'user__tuliq_ismi')
+
+
+@admin.register(XodimOyYopish)
+class XodimOyYopishAdmin(admin.ModelAdmin):
+    list_display = (
+        'user', 'company', 'yil', 'oy', 'ishlab_topgan', 'avanslar_jami',
+        'tolangan_yakuniy_summa', 'manba', 'yopgan_user',
+    )
+    list_filter = ('company', 'yil', 'oy', 'manba')
+    search_fields = ('user__username', 'user__tuliq_ismi')
+
+
+# --- Serial (QR) ---
+@admin.register(Serial)
+class SerialAdmin(admin.ModelAdmin):
+    list_display = ('kod', 'mahsulot', 'batch', 'unit_index', 'holati', 'yetkazib_beruvchi', 'chiqarilgan_at', 'scan_soni', 'company')
+    list_filter = ('company', 'holati')
+    search_fields = ('kod', 'mahsulot__nomi', 'yetkazib_beruvchi__tuliq_ismi')
+
+
+@admin.register(SerialHarakat)
+class SerialHarakatAdmin(admin.ModelAdmin):
+    list_display = ('serial', 'event', 'user', 'izoh', 'vaqt', 'company')
+    list_filter = ('company', 'event')
+    search_fields = ('serial__kod', 'user__username', 'user__tuliq_ismi')
+
+
+# --- Ombor (ko'p-ombor) ---
+@admin.register(Ombor)
+class OmborAdmin(admin.ModelAdmin):
+    list_display = ('nomi', 'manzil', 'company', 'created_at')
+    list_filter = ('company',)
+    search_fields = ('nomi', 'manzil')
+
+
+@admin.register(OmborZaxira)
+class OmborZaxiraAdmin(admin.ModelAdmin):
+    list_display = ('ombor', 'mahsulot', 'miqdor', 'updated_at', 'company')
+    list_filter = ('company', 'ombor')
+    search_fields = ('mahsulot__nomi', 'ombor__nomi')
+
+
+@admin.register(XodimBadge)
+class XodimBadgeAdmin(admin.ModelAdmin):
+    list_display = ('user', 'kod', 'company', 'created_at')
+    list_filter = ('company',)
+    search_fields = ('user__username', 'kod')
+
+
+@admin.register(MahsulotQoshimchaXarajat)
+class MahsulotQoshimchaXarajatAdmin(admin.ModelAdmin):
+    list_display = ('mahsulot', 'nomi', 'summa', 'company', 'created_at')
+    list_filter = ('company',)
+    search_fields = ('mahsulot__nomi', 'nomi')
+
+
+@admin.register(PazandaMahsulot)
+class PazandaMahsulotAdmin(admin.ModelAdmin):
+    list_display = ('pazanda', 'mahsulot', 'company', 'created_at')
+    list_filter = ('company',)
+    search_fields = ('pazanda__tuliq_ismi', 'mahsulot__nomi')

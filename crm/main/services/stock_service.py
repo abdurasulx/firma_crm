@@ -1,9 +1,84 @@
+import datetime as dt
+from decimal import Decimal
+
 from django.db import transaction
+from django.db.models import Sum
 from django.utils import timezone
 from ..models import (
-    Mahsulot, YetkazibBeruvchi, YuklamaSorov, 
-    MiqdorQoshish, DeliveryStock, StockHistory
+    Mahsulot, YetkazibBeruvchi, YuklamaSorov,
+    MiqdorQoshish, DeliveryStock, StockHistory,
+    MahsulotRetsept, ProductionMaterialRequest,
 )
+from . import qr_service
+
+
+def get_pazanda_month_stats(pazanda, company, yil=None, oy=None):
+    """
+    Ishlab chiqaruvchi (pazanda/ishlab_chiqaruvchi) uchun oy statistikasi
+    (standart — joriy oy, `yil`/`oy` berilsa o'sha oy uchun): ishlab
+    chiqargan mahsulotlari (nomi bo'yicha jamlangan miqdor) va shu oyda
+    topgan puli. `ish_haqi_summasi` allaqachon jarima ayirilgan holda hisoblab
+    qo'yilgan (_apply_retsept_hisobkitob), shuning uchun bu yerda sof qiymat.
+    """
+    now = timezone.localtime()
+    if yil is None or oy is None:
+        yil, oy = now.year, now.month
+    month_start = timezone.make_aware(dt.datetime(yil, oy, 1))
+    if oy == 12:
+        month_end = timezone.make_aware(dt.datetime(yil + 1, 1, 1))
+    else:
+        month_end = timezone.make_aware(dt.datetime(yil, oy + 1, 1))
+    qs = MiqdorQoshish.objects.filter(
+        pazanda=pazanda, company=company, tasdiqlangan=True,
+        vaqt_sana__gte=month_start, vaqt_sana__lt=month_end,
+    )
+    earnings = float(qs.aggregate(t=Sum('ish_haqi_summasi'))['t'] or 0)
+    jarima = float(qs.aggregate(t=Sum('jarima_summasi'))['t'] or 0)
+    # `earnings` (sof) = `gross` (ishlab chiqargani uchun to'plangan, jarimasiz) - `jarima`
+    # — shuning uchun bu yerdan qayta hisoblanadi (Decimal'dan aggregatsiya
+    # qilinmaydi, ikkalasi ham allaqachon bor).
+    gross = earnings + jarima
+    per_product = list(
+        qs.values('mahsulot__nomi', 'mahsulot__turi__nomi')
+        .annotate(jami_miqdor=Sum('miqdor'))
+        .order_by('-jami_miqdor')
+    )
+    return {
+        'earnings': earnings,
+        'gross': gross,
+        'jarima': jarima,
+        'per_product': per_product,
+    }
+
+def recompute_tannarx(mahsulot):
+    """
+    Mahsulotning yakuniy tannarxini qayta hisoblaydi:
+    (baza_tannarx (distributor uchun kirim narxi, ishlab chiqaruvchi uchun
+    retsept bo'yicha hisoblangan qism) + mahsulotga bog'langan qo'shimcha
+    xarajatlar yig'indisi) ustiga amortizatsiya foizi qo'shiladi (ustama
+    sifatida ko'paytiriladi). Har doim shu funksiya orqali chaqiriladi —
+    tannarx hech qayerda to'g'ridan-to'g'ri qo'lda o'rnatilmaydi.
+
+    Qo'shimcha xarajatlar ikki turda bo'lishi mumkin (har bir firma har xil
+    ishlaydi): `turi='miqdor'` — aniq summa (to'g'ridan-to'g'ri qo'shiladi);
+    `turi='foiz'` — baza tannarxga nisbatan foiz (baza_tannarx * foiz/100).
+
+    Narxi (sotuv narxi) bunga tegilmaydi — ega tomonidan qo'lda kiritiladi
+    (faqat tannarxdan yuqori bo'lishi talab qilinadi, tekshiruv view
+    darajasida amalga oshiriladi).
+    """
+    baza = Decimal(str(mahsulot.baza_tannarx or 0))
+
+    extra_miqdor = mahsulot.qoshimcha_xarajatlar.filter(turi='miqdor').aggregate(t=Sum('summa'))['t'] or 0
+    extra_foiz_yigindisi = mahsulot.qoshimcha_xarajatlar.filter(turi='foiz').aggregate(t=Sum('summa'))['t'] or 0
+    extra_foiz = baza * (Decimal(str(extra_foiz_yigindisi)) / Decimal('100'))
+
+    subtotal = baza + Decimal(str(extra_miqdor)) + extra_foiz
+    foiz = Decimal(str(mahsulot.amortizatsiya_foizi or 0))
+    mahsulot.tannarx = subtotal * (1 + foiz / Decimal('100'))
+    mahsulot.save(update_fields=['tannarx'])
+    return mahsulot.tannarx
+
 
 def log_stock_change(actor, mahsulot, old_qty, new_qty, event_type, yetkazib_beruvchi=None, company=None):
     """Utility to log stock movement in StockHistory."""
@@ -18,6 +93,62 @@ def log_stock_change(actor, mahsulot, old_qty, new_qty, event_type, yetkazib_ber
         new_qty=new_qty,
         delta=delta
     )
+
+def _apply_retsept_hisobkitob(req, mahsulot):
+    """
+    Retsept (BOM) mavjud bo'lsa: normadan chetlashish jarimasi, tannarx va
+    (agar company.ish_haqi_turi == 'per_unit' bo'lsa) ish haqini hisoblaydi.
+    Retsept yo'q bo'lsa hech narsa qilmaydi (eski xulq-atvor saqlanadi).
+    """
+    bom_rows = list(
+        MahsulotRetsept.objects.filter(company=req.company, mahsulot=mahsulot).select_related('komponent')
+    )
+    if not bom_rows:
+        return
+
+    prev = (
+        MiqdorQoshish.objects.filter(pazanda=req.pazanda, mahsulot=mahsulot, tasdiqlangan=True)
+        .exclude(id=req.id)
+        .order_by('-vaqt_sana')
+        .first()
+    )
+    window_start = prev.vaqt_sana if prev else None
+
+    jarima_summasi = Decimal('0')
+    tannarx_ulushi = Decimal('0')
+
+    for row in bom_rows:
+        expected_qty = row.norma_miqdor * req.miqdor
+
+        matched_qs = ProductionMaterialRequest.objects.select_for_update().filter(
+            company=req.company,
+            producer=req.pazanda,
+            target_product=mahsulot,
+            material=row.komponent,
+            status='approved',
+            consumed_in__isnull=True,
+        )
+        if window_start:
+            matched_qs = matched_qs.filter(reviewed_at__gte=window_start)
+
+        actual_qty = matched_qs.aggregate(t=Sum('qty'))['t'] or 0
+        matched_qs.update(consumed_in=req)
+
+        deviation = actual_qty - expected_qty
+        # Jarima narxi alohida kiritilmaydi — ishlab chiqarishga berilgan narx
+        # (ishlab_chiqarish_narxi) bilan bir xil ishlatiladi.
+        jarima_summasi += abs(Decimal(str(deviation))) * mahsulot.ishlab_chiqarish_narxi
+        tannarx_ulushi += Decimal(str(row.komponent.tannarx)) * Decimal(str(row.norma_miqdor))
+
+    req.jarima_summasi = jarima_summasi
+    if req.company and req.company.ish_haqi_turi == 'per_unit':
+        req.ish_haqi_summasi = Decimal(str(req.miqdor)) * mahsulot.ishlab_chiqarish_narxi - jarima_summasi
+
+    mahsulot.baza_tannarx = tannarx_ulushi
+    mahsulot.save(update_fields=['baza_tannarx'])
+    unit_cost = recompute_tannarx(mahsulot)
+    req.tannarx_snapshot = unit_cost
+
 
 @transaction.atomic
 def approve_miqdor_qoshish_service(request_id, actor):
@@ -34,17 +165,23 @@ def approve_miqdor_qoshish_service(request_id, actor):
     mahsulot.miqdori = new_qty
     mahsulot.save()
 
+    # Retsept (BOM) asosida jarima/tannarx/ish haqi hisob-kitobi
+    _apply_retsept_hisobkitob(req, mahsulot)
+
     # Update Request Status
     req.tasdiqlangan = True
     req.save()
 
     # Log History
     log_stock_change(actor, mahsulot, old_qty, new_qty, 'ADD', company=req.company)
-    
+
+    # QR/Serial — mahsulot serial_granularity yoqilgan bo'lsa avtomatik yaratiladi
+    qr_service.generate_serials_for_batch(req)
+
     return True, "Zaxira muvaffaqiyatli oshirildi."
 
 @transaction.atomic
-def approve_yuklama_sorov_service(request_id, actor):
+def approve_yuklama_sorov_service(request_id, actor, serial_ids=None):
     """Approves a delivery stock request (YuklamaSorov) and transfers stock from warehouse to delivery person."""
     req = YuklamaSorov.objects.select_for_update().get(id=request_id)
     if req.tasdiq:
@@ -94,6 +231,14 @@ def approve_yuklama_sorov_service(request_id, actor):
     req.mode = 'done'
     req.tasdiq = True
     req.save()
+
+    # QR/Serial — kim olib chiqqani (req.user) bilan birga yoziladi; Desktop
+    # Agent aynan skanerlangan donalarni serial_ids orqali beradi, web oqimida
+    # esa avvalgidek FIFO ishlaydi.
+    qr_service.mark_serials_chiqarilgan(
+        mahsulot, req.company, req.miqdor,
+        yetkazib_beruvchi=req.user, serial_ids=serial_ids,
+    )
 
     return True, "Yuklama muvaffaqiyatli topshirildi."
 

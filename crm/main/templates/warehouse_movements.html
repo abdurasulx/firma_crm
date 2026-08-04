@@ -16,7 +16,7 @@
             <div style="font-weight:800; margin-bottom:8px;">Mahsulot</div>
             <select class="field" name="mahsulot" id="movementProduct" required>
                 {% for product in products %}
-                <option value="{{ product.id }}" data-price="{{ product.narxi|unlocalize }}">{{ product.nomi }} - {{ product.miqdori|floatformat:2 }} {{ product.turi.nomi }}</option>
+                <option value="{{ product.id }}" data-price="{{ product.tannarx|unlocalize }}">{{ product.nomi }} - {{ product.miqdori|floatformat:2 }} {{ product.turi.nomi }}</option>
                 {% endfor %}
             </select>
         </label>
@@ -28,6 +28,17 @@
             <div style="font-weight:800; margin-bottom:8px;">Miqdor</div>
             <input class="field" type="number" step="0.01" min="0.01" name="qty" required>
         </label>
+        {% if omborlar %}
+        <label style="display:block; margin-bottom:18px;">
+            <div style="font-weight:800; margin-bottom:8px;">Ombor (ixtiyoriy, faqat xom ashyo/yarim tayyor uchun)</div>
+            <select class="field" name="ombor_id">
+                <option value="">Tanlanmagan</option>
+                {% for o in omborlar %}
+                <option value="{{ o.id }}">{{ o.nomi }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        {% endif %}
         <button class="btn primary" type="submit" style="width:100%;"><i class="fa-solid fa-check"></i> Saqlash</button>
     </form>
 

@@ -117,6 +117,9 @@
                 <input type="checkbox" id="show-shops" checked> 🏠 Barcha do'konlar
             </label>
             <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                <input type="checkbox" id="show-omborlar" checked> 🏭 Omborlar
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
                 <input type="checkbox" id="show-routes" checked> 📍 Yo'llarni ko'rsatish
             </label>
         </div>
@@ -143,11 +146,13 @@
         let routeLayers = {};
         let saleMarkers = [];
         let shopMarkers = [];
+        let omborMarkers = [];
 
         function updateMap() {
             const showSales = document.getElementById('show-sales').checked;
             const showDeliverers = document.getElementById('show-deliverers').checked;
             const showShops = document.getElementById('show-shops').checked;
+            const showOmborlar = document.getElementById('show-omborlar').checked;
             const showRoutes = document.getElementById('show-routes').checked;
             
             fetch('{% url "api_map_data" %}')
@@ -257,6 +262,24 @@
                         });
                     }
 
+                    // Update Omborlar (warehouses)
+                    omborMarkers.forEach(m => map.removeLayer(m));
+                    omborMarkers = [];
+                    if (showOmborlar) {
+                        data.omborlar.forEach(o => {
+                            const icon = L.divIcon({
+                                className: 'ombor-marker',
+                                html: `<div class="marker-label" style="background:#0f172a;">🏭 ${o.name}</div><div class="shop-avatar-wrapper" style="border-color:#0f172a; width:32px; height:32px; border-radius:8px; background:#fff; display:flex; align-items:center; justify-content:center; font-size:16px;">🏭</div>`,
+                                iconSize: [32, 32],
+                                iconAnchor: [16, 16]
+                            });
+                            const marker = L.marker([o.lat, o.lng], {icon: icon})
+                                .addTo(map)
+                                .bindPopup(`<b>${o.name}</b>${o.manzil ? '<br>' + o.manzil : ''}`);
+                            omborMarkers.push(marker);
+                        });
+                    }
+
                     // Update active list
                     const list = document.getElementById('active-list');
                     const isExpanded = list.classList.contains('expanded');
@@ -312,6 +335,7 @@
         document.getElementById('show-deliverers').addEventListener('change', updateMap);
         document.getElementById('show-sales').addEventListener('change', updateMap);
         document.getElementById('show-shops').addEventListener('change', updateMap);
+        document.getElementById('show-omborlar').addEventListener('change', updateMap);
         document.getElementById('show-routes').addEventListener('change', updateMap);
     });
 </script>

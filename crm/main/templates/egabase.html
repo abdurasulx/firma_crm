@@ -1023,7 +1023,20 @@
                             <li><a class="submenu-link {% if request.resolver_match.url_name == 'warehouse_movements' %}active{% endif %}" href="{% url 'warehouse_movements' %}"><i class="fa-solid fa-right-left"></i> Kirim-chiqim</a></li>
                             <li><a class="submenu-link {% if request.resolver_match.url_name == 'warehouse_requests' %}active{% endif %}" href="{% url 'warehouse_requests' %}"><i class="fa-solid fa-clipboard-list"></i> So'rovlar</a></li>
                             <li><a class="submenu-link {% if request.resolver_match.url_name == 'warehouse_history' %}active{% endif %}" href="{% url 'warehouse_history' %}"><i class="fa-solid fa-clock-rotate-left"></i> Tarix</a></li>
+                            {% if request.user.type == 'ega' %}
+                            <li><a class="submenu-link {% if request.resolver_match.url_name == 'ombor_list' %}active{% endif %}" href="{% url 'ombor_list' %}"><i class="fa-solid fa-warehouse"></i> Omborlar</a></li>
+                            {% endif %}
                         </ul>
+                    </li>
+                    {% endif %}
+                    {% if request.user.type == 'ega' and request.company.custom_desktop_agent_stations %}
+                    <li class="menu-item">
+                        <a href="{% url 'vazifalar' %}"
+                            class="menu-link {% if request.resolver_match.url_name == 'vazifalar' %}active{% endif %}"
+                            data-title="Vazifalar">
+                            <span class="menu-icon"><i class="fa-solid fa-list-check"></i></span>
+                            <span class="menu-text">Vazifalar</span>
+                        </a>
                     </li>
                     {% endif %}
                     {% if request.user.type != 'omborchi' %}
@@ -1046,6 +1059,14 @@
                             data-title="Hisobotlar">
                             <span class="menu-icon"><i class="fa-solid fa-chart-bar"></i></span>
                             <span class="menu-text">Hisobotlar</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{% url 'moliya_dashboard' %}"
+                            class="menu-link {% if request.resolver_match.url_name == 'moliya_dashboard' %}active{% endif %}"
+                            data-title="Moliya">
+                            <span class="menu-icon"><i class="fa-solid fa-chart-line"></i></span>
+                            <span class="menu-text">Moliya</span>
                         </a>
                     </li>
                     {% if has_analytics %}
@@ -1143,6 +1164,14 @@
                         </a>
                     </li>
                     {% endif %}
+                    <li class="menu-item">
+                        <a href="{% url 'xodim_badge' %}"
+                            class="menu-link {% if request.resolver_match.url_name == 'xodim_badge' or request.resolver_match.url_name == 'xodim_badge_for' %}active{% endif %}"
+                            data-title="Mening QR badgem">
+                            <span class="menu-icon"><i class="fa-solid fa-id-badge"></i></span>
+                            <span class="menu-text">Mening QR badgem</span>
+                        </a>
+                    </li>
                 </ul>
                 {% endif %}
             </div>
@@ -1174,6 +1203,13 @@
             <span><i class="fa-solid fa-triangle-exclamation" style="margin-right: 8px;"></i> Tizim hozirda sozlash rejimida. Boshqa xodimlar kira olmaydi.</span>
             <a href="{% url 'end_setup' %}" style="background: white; color: var(--warning-color); padding: 5px 15px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 12px;">SOZLASHNI YAKUNLASH</a>
         </div>
+        {% endif %}
+        {% if request.user.type == 'ega' %}
+        <div id="agentOfflineBanner" style="background:#dc2626; color:white; padding:10px 30px; display:{% if offline_agent_stations %}flex{% else %}none{% endif %}; justify-content:space-between; align-items:center; font-size:14px; font-weight:500; z-index:101; position:relative;">
+            <span><i class="fa-solid fa-triangle-exclamation" style="margin-right:8px;"></i><span id="agentOfflineBannerText">{% if offline_agent_stations|length == 1 %}Desktop Agent stansiyasi ("{{ offline_agent_stations.0.tuliq_ismi|default:offline_agent_stations.0.username }}") onlayn emas.{% elif offline_agent_stations %}{{ offline_agent_stations|length }} ta Desktop Agent stansiyasi onlayn emas.{% endif %}</span></span>
+            <a href="{% url 'hodimlar_list' %}?role=desktop_agent" style="background:white; color:#dc2626; padding:5px 15px; border-radius:8px; text-decoration:none; font-weight:700; font-size:12px;">KO'RISH</a>
+        </div>
+        {{ agent_stations_status|json_script:"agentStationsSeed" }}
         {% endif %}
         <header class="top-header">
             <div class="header-left">
@@ -1514,6 +1550,95 @@
             }
         });
 
+        // Desktop Agent stansiyalari — real-vaqtli onlayn/oflayn holat.
+        // Onlaynga o'tish WebSocket orqali darhol keladi (`agent_heartbeat`
+        // hodisasi); oflaynga o'tish esa shu yerda, mahalliy (sahifani qayta
+        // yuklashsiz) — agar kutilgan vaqt ichida yangi heartbeat kelmasa,
+        // JS o'zi stansiyani oflayn deb belgilaydi.
+        const AGENT_ONLINE_THRESHOLD_MS = {{ agent_online_threshold_seconds|default:90 }} * 1000;
+        const AGENT_OFFLINE_GRACE_MS = 15000; // tarmoq kechikishi uchun qo'shimcha zaxira
+        const agentStations = {};
+
+        function scheduleAgentOfflineTimeout(stationId, delayMs) {
+            // `delayMs` berilmasa — bu "hozirgina yangi heartbeat keldi"
+            // holati, to'liq chegara + zaxiradan hisoblanadi. Sahifa
+            // birinchi ochilganda esa (seedAgentStations) HAQIQIY qolgan
+            // vaqt beriladi — aks holda stansiya sahifa yuklanishidan
+            // oldin allaqachon o'chirilgan bo'lsa ham, JS uni yana to'liq
+            // muddat "onlayn" deb ko'rsatib turaverardi (topilgan bug).
+            const st = agentStations[stationId];
+            if (!st) return;
+            if (st.timeoutHandle) clearTimeout(st.timeoutHandle);
+            const delay = (typeof delayMs === 'number') ? delayMs : (AGENT_ONLINE_THRESHOLD_MS + AGENT_OFFLINE_GRACE_MS);
+            st.timeoutHandle = setTimeout(function() {
+                st.isOnline = false;
+                renderAgentOfflineBanner();
+            }, delay);
+        }
+
+        function handleAgentHeartbeat(extra) {
+            if (!extra || !extra.station_id) return;
+            const id = extra.station_id;
+            if (!agentStations[id]) {
+                agentStations[id] = {name: '', isOnline: true, timeoutHandle: null};
+            }
+            if (extra.is_online === false) {
+                // Agent tozalik bilan yopilganda (`agent_logout`) darhol
+                // keladi — 90 soniyalik kutish oynasini kutmasdan, banner
+                // shu zahoti qizil rangga o'tadi.
+                if (agentStations[id].timeoutHandle) {
+                    clearTimeout(agentStations[id].timeoutHandle);
+                    agentStations[id].timeoutHandle = null;
+                }
+                agentStations[id].isOnline = false;
+                renderAgentOfflineBanner();
+                return;
+            }
+            agentStations[id].isOnline = true;
+            scheduleAgentOfflineTimeout(id); // heartbeat hozirgina keldi -> to'liq muddatdan hisoblanadi
+            renderAgentOfflineBanner();
+        }
+
+        function renderAgentOfflineBanner() {
+            const banner = document.getElementById('agentOfflineBanner');
+            const textEl = document.getElementById('agentOfflineBannerText');
+            if (!banner || !textEl) return;
+            const offline = Object.values(agentStations).filter(function(s) { return !s.isOnline; });
+            if (offline.length === 0) {
+                banner.style.display = 'none';
+                return;
+            }
+            if (offline.length === 1) {
+                textEl.textContent = 'Desktop Agent stansiyasi ("' + (offline[0].name || 'stansiya') + '") onlayn emas.';
+            } else {
+                textEl.textContent = offline.length + ' ta Desktop Agent stansiyasi onlayn emas.';
+            }
+            banner.style.display = 'flex';
+        }
+
+        (function seedAgentStations() {
+            const seedEl = document.getElementById('agentStationsSeed');
+            if (!seedEl) return;
+            let seed = [];
+            try {
+                seed = JSON.parse(seedEl.textContent);
+            } catch (err) {
+                return;
+            }
+            seed.forEach(function(s) {
+                agentStations[s.id] = {name: s.name, isOnline: s.is_online, timeoutHandle: null};
+                if (s.is_online) {
+                    // Sahifa yuklangan vaqtdan emas — serverda hisoblangan
+                    // HAQIQIY qolgan vaqtdan (`seconds_until_offline`)
+                    // hisoblanadi, aks holda stansiya sahifa ochilishidan
+                    // bir necha soniya oldin o'chirilgan bo'lsa ham, JS uni
+                    // yana to'liq muddat "onlayn" deb ko'rsatib turaverardi.
+                    const remainingMs = (s.seconds_until_offline || 0) * 1000 + AGENT_OFFLINE_GRACE_MS;
+                    scheduleAgentOfflineTimeout(s.id, remainingMs);
+                }
+            });
+        })();
+
         // WebSocket Notifications
         (function() {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -1546,6 +1671,10 @@
                     try {
                         const data = JSON.parse(e.data);
                         if (data.type === 'pong') return; // Ignore pong
+                        if (data.event === 'agent_heartbeat') {
+                            handleAgentHeartbeat(data.extra);
+                            return; // sarlavha/matn yo'q — toast/panel ko'rsatilmaydi
+                        }
                         const notifType = data.type || 'info';
                         showNotification(data.title, data.message, notifType);
                         addToNotifPanel(data.title, data.message, notifType);

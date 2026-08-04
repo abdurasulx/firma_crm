@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<title>QR chop etish — {{ req.mahsulot.nomi }}</title>
+<style>
+    body { font-family: Arial, sans-serif; margin: 24px; color: #1e293b; }
+    .toolbar { margin-bottom: 20px; }
+    .toolbar button {
+        background: #6366f1; color: white; border: none; padding: 10px 20px;
+        border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer;
+    }
+    h1 { font-size: 18px; }
+    .grid {
+        display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 16px;
+    }
+    .label {
+        border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; text-align: center;
+    }
+    .label img { width: 120px; height: 120px; }
+    .label .nomi { font-size: 12px; font-weight: 700; margin-top: 6px; }
+    @media print {
+        .toolbar { display: none; }
+        .label { break-inside: avoid; }
+    }
+</style>
+</head>
+<body>
+    <div class="toolbar">
+        <button onclick="window.print()">Chop etish</button>
+    </div>
+    <h1>{{ req.mahsulot.nomi }} — {{ req.miqdor }} dona ({{ seriallar.count }} ta QR)</h1>
+    <div class="grid">
+        {% for serial in seriallar %}
+        <div class="label">
+            <img src="{% url 'qr_image' serial.kod %}" alt="QR">
+            <div class="nomi">{{ req.mahsulot.nomi }}{% if serial.unit_index %} #{{ serial.unit_index }}{% endif %}</div>
+        </div>
+        {% empty %}
+        <p>Bu partiya uchun QR kod yaratilmagan (mahsulotda serial kuzatuv yoqilmagan).</p>
+        {% endfor %}
+    </div>
+</body>
+</html>

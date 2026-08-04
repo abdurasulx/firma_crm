@@ -349,6 +349,16 @@
     <div>
         <h1>Assalomu alaykum, {{ request.user.tuliq_ismi }}!</h1>
         <p>Bugun ham mahsulotlarni boshqarish tayyor.</p>
+        {% if is_agent_company %}
+        <div class="hero-actions">
+            <a href="{% url 'profile' request.user.username %}" class="btn-hero primary">
+                <i class="fa-solid fa-qrcode"></i> Shaxsiy QR badge'im
+            </a>
+        </div>
+        <p style="margin-top:10px; opacity:.85; font-size:13px;">
+            Yangi vazifalarni va yuklama topshirishni Desktop Agent stansiyasida (badge'ingizni skanerlab) amalga oshiring.
+        </p>
+        {% else %}
         <div class="hero-actions">
             <a href="{% url 'add_miqdor' %}" class="btn-hero primary">
                 <i class="fa-solid fa-plus"></i> Miqdor Qo'shish
@@ -360,6 +370,7 @@
                 <i class="fa-solid fa-boxes-stacked"></i> Material So'rash
             </a>
         </div>
+        {% endif %}
     </div>
 </div>
 
@@ -418,6 +429,7 @@
     <!-- Right Column -->
     <div style="display:flex; flex-direction:column; gap:20px;">
 
+        {% if not is_agent_company %}
         <!-- Quick Actions -->
         <div class="content-card">
             <div class="card-head">
@@ -439,6 +451,7 @@
                 </a>
             </div>
         </div>
+        {% endif %}
 
         <!-- Today's Activity -->
         <div class="content-card" style="flex:1;">
@@ -451,10 +464,16 @@
                 {% if kunlik_miqdorlar %}
                 {% for faol in kunlik_miqdorlar %}
                 <div class="act-item">
-                    <div class="act-dot add">➕</div>
+                    <div class="act-dot add">{% if faol.tasdiqlangan %}➕{% else %}⏳{% endif %}</div>
                     <div class="act-info">
                         <div class="act-title">{{ faol.mahsulot.nomi }}</div>
-                        <div class="act-sub">+{{ faol.miqdor }} {{ faol.mahsulot.turi.nomi }} qo'shildi</div>
+                        <div class="act-sub">
+                            {% if faol.tasdiqlangan %}
+                            +{{ faol.miqdor }} {{ faol.mahsulot.turi.nomi }} qo'shildi
+                            {% else %}
+                            <span style="color:#b45309;">+{{ faol.miqdor }} {{ faol.mahsulot.turi.nomi }} — so'rov yuborildi, Agentda tasdiqlanishi kutilmoqda</span>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
                 {% endfor %}
@@ -525,7 +544,166 @@
                     {% endif %}
                 </div>
             </div>
+            {% with sent_miqdor=req.miqdor_qoshishlar.all|first %}
+            {% if req.status == 'waiting' %}
+            <form method="post" action="{% url 'add_miqdor' %}" style="margin-left:auto;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="cancel_material_request">
+                <input type="hidden" name="request_id" value="{{ req.id }}">
+                <button type="submit" style="border:1px solid #fecaca; background:#fff1f2; color:#be123c; padding:6px 12px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:700;">
+                    Bekor qilish
+                </button>
+            </form>
+            {% elif req.status == 'approved' and sent_miqdor and not sent_miqdor.tasdiqlangan %}
+            <span style="margin-left:auto; border:1px solid #fde68a; background:#fffbeb; color:#b45309; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:700; white-space:nowrap;">
+                ⏳ Miqdor yuborildi — Agentda tasdiqlanishi kutilmoqda
+            </span>
+            {% elif req.status == 'approved' and sent_miqdor and sent_miqdor.tasdiqlangan %}
+            <span style="margin-left:auto; border:1px solid #bbf7d0; background:#f0fdf4; color:#15803d; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:700; white-space:nowrap;">
+                ✓ Tugallandi
+            </span>
+            {% elif req.status == 'approved' and not req.consumed_in_id %}
+            <a href="{% url 'add_miqdor' %}?complete_request={{ req.id }}" style="margin-left:auto; border:1px solid #a7f3d0; background:#ecfdf5; color:#047857; padding:6px 12px; border-radius:8px; text-decoration:none; font-size:12px; font-weight:700; white-space:nowrap;">
+                ✓ Bo'ldim
+            </a>
+            {% endif %}
+            {% endwith %}
         </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if is_agent_company %}
+<div class="content-card" style="margin-top:20px;">
+    <div class="card-head">
+        <h3><i class="fa-solid fa-plus-circle" style="color:#0f766e;margin-right:8px;"></i>Vazifa yaratish</h3>
+    </div>
+    <div class="card-body">
+        {% if task_mahsulotlar %}
+        <form method="post" action="{% url 'pz_create_task' %}" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+            {% csrf_token %}
+            <div style="flex:1; min-width:180px;">
+                <label style="display:block; font-size:12px; font-weight:700; color:var(--text-light); margin-bottom:6px;">Mahsulot</label>
+                <select name="mahsulot" id="pzTaskMahsulotSelect" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #e2e8f0;">
+                    {% for m in task_mahsulotlar %}
+                    <option value="{{ m.id }}" data-granularity="{{ m.serial_granularity }}">{{ m.nomi }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="min-width:140px;">
+                <label style="display:block; font-size:12px; font-weight:700; color:var(--text-light); margin-bottom:6px;">Miqdor</label>
+                <input type="number" name="rejalashtirilgan_miqdor" min="0.01" step="0.01" placeholder="Masalan: 100" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #e2e8f0;">
+            </div>
+            <div id="pzTaskQadoqHajmiRow" style="display:none; min-width:160px;">
+                <label style="display:block; font-size:12px; font-weight:700; color:var(--text-light); margin-bottom:6px;">Necha donadan qadoq?</label>
+                <input type="number" name="qadoq_hajmi" min="1" step="1" placeholder="Masalan: 3" style="width:100%; padding:10px; border-radius:8px; border:1px solid #e2e8f0;">
+            </div>
+            <label id="pzTaskForceUnevenRow" style="display:none; font-size:12px; white-space:nowrap;">
+                <input type="checkbox" name="force_uneven_qadoq" value="1"> Bo'linmasa ham davom et
+            </label>
+            <button type="submit" class="btn-hero primary" style="padding:10px 18px;">
+                <i class="fa-solid fa-plus"></i> Vazifa yaratish
+            </button>
+        </form>
+        <p style="font-size:12px; color:var(--text-light); margin-top:10px;">
+            Vazifa yaratilgach, Desktop Agent'da badge'ingizni skanerlab xom ashyoni tortib oling — vazifa darhol o'zingizga tegishli bo'ladi.
+            "Partiya" turidagi mahsulotlarda qadoqlash hajmi (necha donadan bitta QR) kiritilishi shart.
+        </p>
+        <script>
+            (function () {
+                var select = document.getElementById('pzTaskMahsulotSelect');
+                var qadoqRow = document.getElementById('pzTaskQadoqHajmiRow');
+                var forceRow = document.getElementById('pzTaskForceUnevenRow');
+                if (!select) return;
+                function toggle() {
+                    var opt = select.options[select.selectedIndex];
+                    var isBatch = opt && opt.getAttribute('data-granularity') === 'batch';
+                    qadoqRow.style.display = isBatch ? 'block' : 'none';
+                    forceRow.style.display = isBatch ? 'block' : 'none';
+                }
+                select.addEventListener('change', toggle);
+                toggle();
+            })();
+        </script>
+        {% else %}
+        <div class="empty"><i class="fa-solid fa-triangle-exclamation"></i><p>Retsept (BOM) kiritilgan mahsulot yo'q — egangizdan mahsulotga retsept qo'shishini so'rang.</p></div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="content-card" style="margin-top:20px;">
+    <div class="card-head">
+        <h3><i class="fa-solid fa-list-check" style="color:#0f766e;margin-right:8px;"></i>Ochiq vazifalar</h3>
+        <span class="card-badge" style="background:#ccfbf1;color:#0f766e;">{{ open_tasks|length }}</span>
+    </div>
+    <div class="card-body">
+        {% for task in open_tasks %}
+        <div class="act-item">
+            <div class="act-dot send"><i class="fa-solid fa-industry"></i></div>
+            <div class="act-info">
+                <div class="act-title">{{ task.mahsulot.nomi }}</div>
+                <div class="act-sub">{{ task.rejalashtirilgan_miqdor|floatformat:0 }} dona — {{ task.sana|date:"d.m.Y" }}</div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty"><i class="fa-solid fa-inbox"></i><p>Hozircha ochiq vazifa yo'q.</p></div>
+        {% endfor %}
+        <p style="font-size:12px; color:var(--text-light); margin-top:10px;">
+            Vazifani o'zingizga olish uchun Desktop Agent stansiyasida shaxsiy badge'ingizni va vazifa QR kodini (taxtaga yopishtirilgan) ketma-ket skanerlang.
+        </p>
+    </div>
+</div>
+
+<div class="content-card" style="margin-top:20px;">
+    <div class="card-head">
+        <h3><i class="fa-solid fa-user-check" style="color:#0f766e;margin-right:8px;"></i>Mening vazifalarim</h3>
+        <span class="card-badge" style="background:#ccfbf1;color:#0f766e;">{{ my_tasks|length }}</span>
+    </div>
+    <div class="card-body">
+        {% for task in my_tasks %}
+        <div class="act-item">
+            <div class="act-dot send"><i class="fa-solid fa-industry"></i></div>
+            <div class="act-info">
+                <div class="act-title">{{ task.mahsulot.nomi }}</div>
+                <div class="act-sub">
+                    {{ task.rejalashtirilgan_miqdor|floatformat:0 }} dona
+                    &nbsp;·&nbsp;
+                    {% if task.status == 'claimed' %}
+                    <span style="color:#b45309;font-weight:600;">⏳ Xom ashyoni Desktop Agent'da tarozida tortib oling</span>
+                    {% elif task.status == 'materials_ready' %}
+                    <span style="color:#9a3412;font-weight:600;">📦 Xom ashyo tortildi — mahsulotni tayyorlab bo'lgach "Ish bitdi"ni bosing</span>
+                    {% elif task.status == 'producing' and not task.labels_printed %}
+                    <span style="color:#9a3412;font-weight:600;">🖨 Yorliqlar hali chop etilmagan — Desktop Agent'da badge'ingizni skanerlang</span>
+                    {% elif task.status == 'producing' %}
+                    <span style="color:#1d4ed8;font-weight:600;">
+                        ⚙ Ishlab chiqildi: {{ task.produced_count }}/{{ task.rejalashtirilgan_miqdor|floatformat:0 }}
+                    </span>
+                    {% elif task.status == 'done' %}
+                    <span style="color:#16a34a;font-weight:600;">✓ Bajarildi ({{ task.produced_count }}/{{ task.rejalashtirilgan_miqdor|floatformat:0 }})</span>
+                    {% else %}
+                    <span style="color:#64748b;font-weight:600;">Bekor qilindi</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% if task.status == 'materials_ready' %}
+            <form method="post" action="{% url 'pz_confirm_task_finished' task.id %}" style="margin-left:auto;">
+                {% csrf_token %}
+                <button type="submit" style="border:1px solid #86efac; background:#f0fdf4; color:#15803d; padding:6px 14px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:700; white-space:nowrap;">
+                    Ish bitdi ✓
+                </button>
+            </form>
+            {% elif task.status == 'producing' and task.labels_printed %}
+            <form method="post" action="{% url 'pz_finish_task' task.id %}" style="margin-left:auto;" onsubmit="return confirm('Hali {{ task.rejalashtirilgan_miqdor|floatformat:0 }} tadan {{ task.produced_count }} tasi tayyor. Qolganini yakunlab qo\'ymasdan yopsangiz, ishlab chiqarilmagan dona uchun shtraf qo\'llanadi. Davom etasizmi?');">
+                {% csrf_token %}
+                <button type="submit" style="border:1px solid #fecaca; background:#fff1f2; color:#be123c; padding:6px 14px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:700; white-space:nowrap;">
+                    Tugatish
+                </button>
+            </form>
+            {% endif %}
+        </div>
+        {% empty %}
+        <div class="empty"><i class="fa-solid fa-inbox"></i><p>Hali hech qanday vazifa olmagansiz.</p></div>
         {% endfor %}
     </div>
 </div>

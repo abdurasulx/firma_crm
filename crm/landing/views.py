@@ -151,7 +151,7 @@ MARKETING_PAGES = {
         "lead": "Subdomain asosidagi tenant ajratish, rollar, super admin va firma ichidagi user limitlar ma'lumotlarni tartibli saqlaydi.",
         "items": [
             ("Tenant isolation", "Firma ma'lumotlari boshqa firmadan ajratiladi."),
-            ("Rollar", "Ega, pazanda va yetkazuvchi huquqlari farqlanadi."),
+            ("Rollar", "Ega, ishlab chiqaruvchi va yetkazuvchi huquqlari farqlanadi."),
             ("Audit", "Muhim harakatlar jurnalga yoziladi."),
             ("Backup", "Kerak bo'lsa ma'lumotlarni eksport va tiklash."),
         ],
@@ -163,7 +163,7 @@ MARKETING_PAGES = {
         "items": [
             ("1-qadam", "Firma va ega akkaunti yaratiladi."),
             ("2-qadam", "Mahsulot turlari, mahsulotlar va mijozlar kiritiladi."),
-            ("3-qadam", "Pazanda va yetkazuvchilar qo'shiladi."),
+            ("3-qadam", "Ishlab chiqaruvchi va yetkazuvchilar qo'shiladi."),
             ("4-qadam", "Savdo, zaxira va hisobotlar real ishda sinovdan o'tadi."),
         ],
     },
@@ -497,6 +497,45 @@ def super_plan_delete(request, pk):
 def custom_404(request, exception=None):
     return render(request, '404.html', status=404)
 
+
+def product_scan_view(request, kod):
+    """Public QR-skan sahifasi: stockfirm.uz/p/<kod>/"""
+    from main.services.qr_service import register_scan
+
+    serial = register_scan(kod)
+    if serial is None:
+        return render(request, '404.html', status=404)
+
+    yaroqlilik_sanasi = None
+    mahsulot = serial.mahsulot
+    if serial.batch and mahsulot.yaroqlilik_kun_soni:
+        from datetime import timedelta
+        yaroqlilik_sanasi = serial.batch.vaqt_sana + timedelta(days=mahsulot.yaroqlilik_kun_soni)
+
+    return render(request, 'landing/product_scan.html', {
+        'serial': serial,
+        'mahsulot': mahsulot,
+        'yaroqlilik_sanasi': yaroqlilik_sanasi,
+    })
+
+
+def qr_image_view(request, kod):
+    """Serial uchun QR PNG rasm qaytaradi — bugun 'yuklab olish' tugmasi, ertaga
+    Desktop Agent ham shu endpointdan foydalanadi."""
+    import qrcode
+    from io import BytesIO
+    from django.http import HttpResponse, Http404
+    from main.models import Serial
+
+    if not Serial.objects.filter(kod=kod).exists():
+        raise Http404("Serial topilmadi")
+
+    scan_url = f"https://{settings.BASE_DOMAIN}/p/{kod}/"
+    img = qrcode.make(scan_url)
+    buf = BytesIO()
+    img.save(buf, format='PNG')
+    return HttpResponse(buf.getvalue(), content_type='image/png')
+
 @user_passes_test(lambda u: u.is_superuser)
 def plan_requests_list(request):
     """Barcha tarif so'rovlari ro'yxati"""
@@ -651,6 +690,55 @@ def update_billing_status(request, company_id):
             mark_company_unpaid(company)
             messages.warning(request, f"⚠️ {company.name} to'lovi 'to'lanmagan' deb belgilandi.")
             broadcast_superadmin_update()
-        
+
     return redirect('super_billing_report')
+
+
+@user_passes_test(is_superuser)
+def super_backup_page(request):
+    """
+    Superadmin uchun zaxira (backup) sahifasi — yoki bitta firma, yoki
+    butun tizim (barcha firmalar + media) zaxirasini yuklab olish mumkin.
+    Faqat yuklab olish (export) uchun — qayta tiklash (restore) admin
+    panel orqali amalga oshirilmaydi (server ko'chirilganda qo'lda,
+    `loaddata` orqali qilinadi).
+    """
+    companies = Company.objects.all().order_by('name')
+    return render(request, "landing/super_backup.html", {'companies': companies})
+
+
+@user_passes_test(is_superuser)
+def super_backup_download(request):
+    """Superadmin uchun ZIP zaxirani yuklab olish (bitta firma yoki butun tizim)."""
+    from django.http import HttpResponse
+    from main.backup_utils import generate_backup, generate_full_system_backup
+
+    scope = request.GET.get('scope')
+    timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+
+    if scope == 'full':
+        try:
+            memory_zip = generate_full_system_backup()
+        except Exception as e:
+            messages.error(request, f"Butun tizim zaxirasini yaratishda xato: {str(e)}")
+            return redirect('super_backup_page')
+        filename = f"stockfirm_full_system_backup_{timestamp}.zip"
+    elif scope == 'company':
+        company_id = request.GET.get('company_id')
+        company = get_object_or_404(Company, id=company_id)
+        try:
+            memory_zip = generate_backup(company)
+        except Exception as e:
+            messages.error(request, f"{company.name} uchun zaxira yaratishda xato: {str(e)}")
+            return redirect('super_backup_page')
+        company.last_backup_at = timezone.now()
+        company.save(update_fields=['last_backup_at'])
+        filename = f"backup_{company.subdomain}_{timestamp}.zip"
+    else:
+        messages.error(request, "Zaxira turi ko'rsatilmagan.")
+        return redirect('super_backup_page')
+
+    response = HttpResponse(memory_zip.getvalue(), content_type='application/zip')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
 

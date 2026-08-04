@@ -1,17 +1,25 @@
 from django.shortcuts import redirect, render
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from .models import User, Mahsulot
 from django.core.paginator import Paginator
+from .decorators import role_required
 
 
 @login_required(login_url='login')
+@role_required('ega')
 def hodimlar_list(request):
     """Barcha xodimlar ro'yxati"""
-    if request.user.type != 'ega':
-        return redirect('main')
-    
+    if request.method == 'POST' and request.POST.get('action') == 'set_ish_haqi_turi':
+        turi = request.POST.get('ish_haqi_turi')
+        if turi in dict(request.company.ISH_HAQI_TURI_CHOICES):
+            request.company.ish_haqi_turi = turi
+            request.company.save(update_fields=['ish_haqi_turi'])
+            messages.success(request, "Ish haqi turi saqlandi.")
+        return redirect('hodimlar_list')
+
     hodimlar = User.objects.filter(company=request.company).exclude(type='ega').order_by('-date_joined')
-    
+
     # Qidiruv
     search_query = request.GET.get('q', '')
     if search_query:
@@ -74,9 +82,11 @@ def hodimlar_list(request):
         'search_query': search_query,
         'status_filter': status_filter,
         'role_filter': role_filter,
-        'sort_order': sort_order
+        'sort_order': sort_order,
+        'ish_haqi_turi_choices': request.company.ISH_HAQI_TURI_CHOICES,
+        'current_ish_haqi_turi': request.company.ish_haqi_turi,
     }
-    
+
     return render(request, 'hodimlar_list.html', context)
 
 
@@ -86,8 +96,8 @@ def mahsulotlar_list(request):
     if request.user.type != 'ega':
         return redirect('main')
     
-    mahsulotlar = Mahsulot.objects.filter(company=request.company)
-    
+    mahsulotlar = Mahsulot.objects.filter(company=request.company, warehouse_type='finished')
+
     # Qidiruv
     search_query = request.GET.get('q', '')
     if search_query:

@@ -1,7 +1,9 @@
 import hashlib
 import os
 import requests
+from decimal import Decimal, InvalidOperation
 from django.core.cache import cache
+from django.core.exceptions import ImproperlyConfigured
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import redirect
@@ -10,9 +12,20 @@ from datetime import timedelta
 from main.models import BillingPaymentLink, ClickTransaction
 from .services.billing_service import mark_company_paid
 
-CLICK_SECRET_KEY = os.getenv('CLICK_SECRET_KEY', 'HaLZ1bWlBHY')
-CLICK_MERCHANT_ID = os.getenv('CLICK_MERCHANT_ID', '40045')
-CLICK_SERVICE_ID = os.getenv('CLICK_SERVICE_ID', '80588')
+
+def _required_env(name):
+    value = os.getenv(name)
+    if not value:
+        raise ImproperlyConfigured(
+            f"{name} .env faylida o'rnatilmagan. Click to'lov integratsiyasi uchun "
+            f".env fayliga {name}=<qiymat> qo'shing."
+        )
+    return value
+
+
+CLICK_SECRET_KEY = _required_env('CLICK_SECRET_KEY')
+CLICK_MERCHANT_ID = _required_env('CLICK_MERCHANT_ID')
+CLICK_SERVICE_ID = _required_env('CLICK_SERVICE_ID')
 
 def check_sign(request_data):
     # sign_string = md5 ( click_trans_id + service_id + secret_key + merchant_trans_id + amount + action + sign_time )
@@ -39,11 +52,15 @@ def get_usd_rate():
             for item in data:
                 if item['Ccy'] == 'USD':
                     rate = float(item['Rate'])
-                    cache.set('usd_rate', rate, 3600 * 12) # cache for 12 hours
+                    cache.set('usd_rate', rate, 3600 * 12)  # 12 soatga cache
+                    cache.set('usd_rate_last_known', rate, None)  # muddatsiz — CBU vaqtincha ishlamasa fallback
                     return rate
     except Exception:
         pass
-    return 12500.0 # fallback conservative rate
+    last_known = cache.get('usd_rate_last_known')
+    if last_known:
+        return last_known
+    return float(os.getenv('USD_RATE_FALLBACK', '12500'))  # CBU va cache ikkalasi ham yo'q bo'lsagina ishlatiladi
 
 def click_pay_redirect(request):
     return redirect('billing_page')
@@ -56,11 +73,12 @@ def click_prepare(request):
 
         click_trans_id = request.POST.get('click_trans_id')
         merchant_trans_id = request.POST.get('merchant_trans_id') # payment_link_id
-        # amount might have decimal, Click sends it like 1000.00
-        # float handles it
+        # Click summani "1000.00" ko'rinishida yuboradi — to'g'ridan-to'g'ri
+        # Decimal sifatida o'qiladi (float orqali o'tkazilsa, aniqlik
+        # yo'qolish xavfi bor — pul summalari uchun bu qabul qilinmaydi).
         try:
-            amount = float(request.POST.get('amount', 0))
-        except ValueError:
+            amount = Decimal(request.POST.get('amount', '0'))
+        except (InvalidOperation, TypeError):
             return JsonResponse({'error': -2, 'error_note': 'Incorrect parameter amount'})
 
         try:

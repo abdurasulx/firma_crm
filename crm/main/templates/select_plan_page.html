@@ -240,6 +240,26 @@
                             </label>
                         </div>
                     </div>
+
+                    <div>
+                        <label style="display: block; font-weight: 700; margin-bottom: 12px; color: #1e293b;">
+                            <i class="fa-solid fa-desktop" style="color: #2563eb; margin-right: 6px;"></i> Desktop Agent
+                        </label>
+                        <div style="background: #f8fafc; padding: 20px; border-radius: 16px; border: 1px solid #f1f5f9;">
+                            <div style="display: flex; align-items: center; gap: 20px;">
+                                <input type="number" name="desktop_agent_stations" id="desktop_agent_stations_page"
+                                       value="{{ request.company.custom_desktop_agent_stations|default:0 }}" min="0" max="20"
+                                       style="width: 100px; padding: 12px; border-radius: 10px; border: 1px solid #cbd5e1; font-weight: 800; text-align: center; font-size: 18px;">
+                                <span style="font-weight: 600; color: #64748b;">$60 / stansiya / oy</span>
+                            </div>
+                            <p style="margin: 14px 0 0; font-size: 13px; color: #9a3412; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px; padding: 10px 14px; line-height: 1.6;">
+                                <i class="fa-solid fa-circle-exclamation" style="margin-right: 6px;"></i>
+                                Har bir stansiya uchun kamera, QR/shtrix-kod skaneri va XPrinter kerak bo'ladi (uskuna
+                                firmaning o'zida bo'lishi kerak). So'rov yuborilgach, admin tasdiqlagandan so'ng
+                                faollashadi.
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Right Column -->
@@ -293,6 +313,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const hasBot = document.getElementById('has_bot_page');
     const hasAnalytics = document.getElementById('has_analytics_page');
     const hasSavdogarSales = document.getElementById('has_savdogar_sales_page');
+    const desktopAgentStations = document.getElementById('desktop_agent_stations_page');
     const backupRadios = document.querySelectorAll('input[name="backup_type"]');
     const totalPriceEl = document.getElementById('total-price-page');
     const minStaffCount = {{ current_staff_count|default:0 }};
@@ -328,6 +349,13 @@ document.addEventListener('DOMContentLoaded', function() {
         if (hasAnalytics.checked) price += 15;
         if (hasSavdogarSales.checked) price += 10;
 
+        // Desktop Agent (dona narxi)
+        let stations = parseInt(desktopAgentStations.value) || 0;
+        if (stations < 0) stations = 0;
+        if (stations > 20) stations = 20;
+        desktopAgentStations.value = stations;
+        price += stations * 60;
+
         // Backup
         const checkedBackup = document.querySelector('input[name="backup_type"]:checked');
         if (checkedBackup) {
@@ -338,10 +366,11 @@ document.addEventListener('DOMContentLoaded', function() {
         totalPriceEl.textContent = '$' + price.toFixed(2);
     }
 
-    [staffInput, unlimitedCheck, hasMap, hasBot, hasAnalytics, hasSavdogarSales].forEach(el => {
+    [staffInput, unlimitedCheck, hasMap, hasBot, hasAnalytics, hasSavdogarSales, desktopAgentStations].forEach(el => {
         el.addEventListener('change', calculatePrice);
     });
     staffInput.addEventListener('input', calculatePrice);
+    desktopAgentStations.addEventListener('input', calculatePrice);
     backupRadios.forEach(r => r.addEventListener('change', calculatePrice));
 
     calculatePrice();

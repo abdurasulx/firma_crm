@@ -63,3 +63,12 @@ nasiya_excel.py
 nasiya_tolik.py
 nasiya_hisobot.xlsx
 nasiya_tolik_tolov.xlsx
+
+# Desktop Agent — build artefaktlari va lokal ma'lumotlar
+desktop_agent/build/
+desktop_agent/dist/
+desktop_agent/agent_data.db
+saved_videos/
+
+# Hujjat-generatsiya skriptlari (shaxsiy)
+tools/

@@ -30,6 +30,10 @@ urlpatterns = [
     # Billing
     path('billing/', landing_views.super_billing_report, name='super_billing_report'),
     path('billing/update/<int:company_id>/', landing_views.update_billing_status, name='update_billing_status'),
-    
+
+    # Backup (superadmin — bitta firma yoki butun tizim, faqat yuklab olish)
+    path('backup/', landing_views.super_backup_page, name='super_backup_page'),
+    path('backup/download/', landing_views.super_backup_download, name='super_backup_download'),
+
     path('admin_panel/', admin.site.urls),
 ]

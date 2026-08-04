@@ -35,7 +35,15 @@ from .warehouse_views import (
     warehouse_products,
     warehouse_request_review,
     warehouse_requests,
+    material_request_qr_image,
+    ombor_list_page,
 )
+from .production_views import (
+    serial_list_page, vazifalar_page, vazifa_qr_image, pz_create_task, pz_finish_task,
+    pz_confirm_task_finished,
+)
+from .finance_views import qoshimcha_chiqimlar_page, moliya_dashboard
+from .badge_views import xodim_badge_page, xodim_badge_image, agent_login_qr_image, regenerate_agent_qr
 from django.urls import path, re_path
 
 urlpatterns = [
@@ -93,8 +101,29 @@ urlpatterns = [
     path('ombor/kirim-chiqim/', warehouse_movements, name='warehouse_movements'),
     path('ombor/sorovlar/', warehouse_requests, name='warehouse_requests'),
     path('ombor/sorovlar/<int:request_id>/review/', warehouse_request_review, name='warehouse_request_review'),
+    path('ombor/sorovlar/qr/<str:kod>/', material_request_qr_image, name='material_request_qr_image'),
     path('ombor/tarix/', warehouse_history, name='warehouse_history'),
-    
+    path('omborlar/', ombor_list_page, name='ombor_list'),
+
+    # Xodim shaxsiy QR badge
+    path('xodim/badge/', xodim_badge_page, name='xodim_badge'),
+    path('xodim/badge/<int:user_id>/', xodim_badge_page, name='xodim_badge_for'),
+    path('xodim/badge/rasm/<str:kod>/', xodim_badge_image, name='xodim_badge_image'),
+    path('xodim/agent-qr/<int:user_id>/', agent_login_qr_image, name='agent_login_qr_image'),
+    path('xodim/agent-qr/<int:user_id>/yangilash/', regenerate_agent_qr, name='regenerate_agent_qr'),
+
+    # Ishlab chiqarish (serial/QR ro'yxati — "ish haqi turi" endi Hodimlar sahifasida)
+    path('ishlab-chiqarish/seriallar/<int:mahsulot_id>/', serial_list_page, name='serial_list'),
+    path('ishlab-chiqarish/vazifalar/', vazifalar_page, name='vazifalar'),
+    path('ishlab-chiqarish/vazifalar/<str:kod>/qr/', vazifa_qr_image, name='vazifa_qr_image'),
+    path('vazifa/yaratish/', pz_create_task, name='pz_create_task'),
+    path('vazifa/<int:task_id>/tugatish/', pz_finish_task, name='pz_finish_task'),
+    path('vazifa/<int:task_id>/ish-bitdi/', pz_confirm_task_finished, name='pz_confirm_task_finished'),
+
+    # Moliya
+    path('moliya/chiqimlar/', qoshimcha_chiqimlar_page, name='qoshimcha_chiqimlar'),
+    path('moliya/', moliya_dashboard, name='moliya_dashboard'),
+
     # KPI
     path('api/kpi/today/', kpi_today, name='kpi_today'),
     path('api/kpi/trend/', trend_30, name='trend_30'),

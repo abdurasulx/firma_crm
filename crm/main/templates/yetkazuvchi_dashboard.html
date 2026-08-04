@@ -402,6 +402,7 @@
         </div>
     </div>
 
+    {% if not is_agent_company %}
     <div class="stat-card warning">
         <div class="stat-header">
             <div class="stat-icon"><i class="fas fa-bell"></i></div>
@@ -411,6 +412,7 @@
             <span class="stat-label">Yangi so'rovlar</span>
         </div>
     </div>
+    {% endif %}
 
     <div class="stat-card info">
         <div class="stat-header">
@@ -464,6 +466,21 @@
     </div>
 </div>
 
+{% if is_agent_company %}
+<!-- Agent firmalarida yuklama olish faqat Desktop Agent orqali (Serial QR skanerlab) amalga oshadi -->
+<div class="dashboard-section">
+    <div class="section-header active" onclick="toggleSection(this)">
+        <h2><i class="fas fa-qrcode" style="color: var(--primary);"></i> Yuklama olish</h2>
+        <i class="fas fa-chevron-down toggle-caret"></i>
+    </div>
+    <div class="section-content show">
+        <div class="empty-state">
+            <div class="empty-icon"><i class="fas fa-desktop"></i></div>
+            <p>Yuklama olish endi Desktop Agent stansiyasida amalga oshadi — shaxsiy badge'ingizni va mahsulot QR kodlarini skanerlab yuklama oling.</p>
+        </div>
+    </div>
+</div>
+{% else %}
 <!-- Requests Section -->
 <div class="dashboard-section">
     <div class="section-header" onclick="toggleSection(this)">
@@ -504,6 +521,7 @@
         {% endif %}
     </div>
 </div>
+{% endif %}
 
 <!-- Inventory Section -->
 <div class="dashboard-section">

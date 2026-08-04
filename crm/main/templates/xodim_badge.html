@@ -1,0 +1,43 @@
+{% extends 'egabase.html' %}
+
+{% block title %}Shaxsiy QR badge{% endblock %}
+{% block page_title %}Shaxsiy QR badge{% endblock %}
+
+{% block content %}
+{% include 'warehouse_styles.html' %}
+<div class="warehouse-page">
+<div style="display:grid; grid-template-columns:minmax(280px, 380px) 1fr; gap:22px;">
+    <div class="card" style="padding:24px; text-align:center;">
+        <h3 style="margin-bottom:6px;">{{ target_user.tuliq_ismi|default:target_user.username }}</h3>
+        <div style="color:var(--muted); font-size:13px; margin-bottom:18px;">{{ target_user.get_type_display }}</div>
+        <img src="{% url 'xodim_badge_image' badge.kod %}" alt="QR badge" style="width:220px; height:220px; border:1px solid var(--border); border-radius:14px; padding:10px; background:#fff;">
+        <p style="margin-top:16px; color:var(--muted); font-size:12px;">Bu QR shaxsni tasdiqlash uchun ishlatiladi. Chop etib, ID-karta sifatida olib yuring.</p>
+        <a class="btn" href="{% url 'xodim_badge_image' badge.kod %}" download="badge_{{ target_user.username }}.png" style="margin-top:10px; display:inline-flex;"><i class="fa-solid fa-download"></i> Yuklab olish</a>
+    </div>
+
+    {% if xodimlar is not None %}
+    <div class="card">
+        <div style="padding:18px 20px; border-bottom:1px solid var(--border);">
+            <h3 style="margin:0;">Boshqa xodimlar</h3>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Xodim</th><th>Turi</th><th></th></tr></thead>
+                <tbody>
+                    {% for x in xodimlar %}
+                    <tr>
+                        <td>{{ x.tuliq_ismi|default:x.username }}</td>
+                        <td>{{ x.get_type_display }}</td>
+                        <td style="text-align:right;"><a class="btn" href="{% url 'xodim_badge_for' x.id %}">Badge ko'rish</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" style="text-align:center; padding:24px; color:var(--muted);">Xodim yo'q.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+</div>
+{% endblock %}

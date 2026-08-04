@@ -2,7 +2,7 @@ import os
 import json
 import zipfile
 import shutil
-from io import BytesIO
+from io import BytesIO, StringIO
 from django.core import serializers
 from django.conf import settings
 from django.utils import timezone
@@ -138,6 +138,56 @@ def generate_backup(company, start_date=None, end_date=None):
                 
     memory_zip.seek(0)
     return memory_zip
+
+def generate_full_system_backup():
+    """
+    Butun tizim (barcha firmalar + umumiy ma'lumotlar) uchun to'liq zaxira.
+    Faqat superadmin tomonidan, tizimni boshqa serverga ko'chirish uchun
+    ishlatiladi. DB dvigateli (sqlite/mysql)dan qat'i nazar ishlashi uchun
+    Django'ning standart `dumpdata` mexanizmidan foydalaniladi — yangi
+    serverda `python manage.py loaddata all_data.json` orqali tiklanadi
+    (qayta tiklash shu ZIP orqali emas, qo'lda amalga oshiriladi).
+    """
+    from django.core.management import call_command
+
+    output = StringIO()
+    call_command(
+        'dumpdata',
+        exclude=['contenttypes', 'auth.permission', 'sessions.session', 'admin.logentry'],
+        indent=2,
+        stdout=output,
+    )
+
+    memory_zip = BytesIO()
+    with zipfile.ZipFile(memory_zip, 'w', zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr('all_data.json', output.getvalue())
+        zf.writestr('README.txt', (
+            "StockFirm — butun tizim zaxirasi\n"
+            "=================================\n\n"
+            "Bu arxiv butun platformaning (barcha firmalar) ma'lumotlar bazasi\n"
+            "dumpi (all_data.json) va barcha media fayllarni (media/) o'z ichiga oladi.\n\n"
+            "Yangi serverga tiklash uchun (qo'lda, admin panel orqali emas):\n"
+            "  1. Yangi serverda loyihani va migratsiyalarni odatdagidek o'rnating\n"
+            "     (`python manage.py migrate`).\n"
+            "  2. `media/` papkasini yangi serverning MEDIA_ROOT joyiga nusxalang.\n"
+            "  3. `python manage.py loaddata all_data.json` buyrug'ini bajaring.\n"
+        ))
+
+        media_root = settings.MEDIA_ROOT
+        if os.path.isdir(media_root):
+            for root_dir, dirs, files in os.walk(media_root):
+                # Vaqtinchalik restore fayllarini o'tkazib yuboramiz
+                if os.path.basename(root_dir) == 'temp_backups':
+                    dirs[:] = []
+                    continue
+                for fname in files:
+                    full_path = os.path.join(root_dir, fname)
+                    rel_path = os.path.relpath(full_path, media_root)
+                    zf.write(full_path, 'media/' + rel_path.replace(os.sep, '/'))
+
+    memory_zip.seek(0)
+    return memory_zip
+
 
 def restore_backup(company, zip_file, start_date=None, end_date=None):
     """

@@ -107,20 +107,29 @@
             <label for="turi">Xodim turi</label>
             <select id="turi" name="turi" required onchange="toggleMashinaFields()">
                 <option value="ishlab_chiqaruvchi" {% if turi == 'ishlab_chiqaruvchi' or turi == 'pazanda' %}selected{% endif %}>Ishlab chiqaruvchi</option>
+                {% if not request.company.custom_desktop_agent_stations %}
                 <option value="omborchi" {% if turi == 'omborchi' %}selected{% endif %}>Omborchi</option>
+                {% endif %}
                 {% if request.company.custom_has_savdogar_sales or request.company.is_on_trial %}
                 <option value="savdogar" {% if turi == 'savdogar' %}selected{% endif %}>Savdogar</option>
                 {% else %}
                 <option value="savdogar" disabled>Savdogar ($10 modul kerak)</option>
                 {% endif %}
                 <option value="yetkazib_beruvchi" {% if turi == 'yetkazib_beruvchi' %}selected{% endif %}>Yetkazib beruvchi</option>
+                {% if desktop_agent_slots_left > 0 %}
+                <option value="desktop_agent" {% if turi == 'desktop_agent' %}selected{% endif %}>Desktop Agent ({{ desktop_agent_slots_left }} ta joy qoldi)</option>
+                {% else %}
+                <option value="desktop_agent" disabled>Desktop Agent (stansiya sotib olinmagan — biz bilan bog'laning)</option>
+                {% endif %}
             </select>
         </div>
 
-        <label for="rasmi_input"> Xodim rasmi 
-            <img src="{% static 'images/default_avatar.jpg' %}" alt="Xodim rasmi" id="preview-rasm" class="preview-img">
-        </label>
-        <input type="file" id="rasmi_input" name="rasmi" style="display: none;" accept="image/*" onchange="showPreview(event, 'preview-rasm')" required>
+        <div id="rasmi-field">
+            <label for="rasmi_input"> Xodim rasmi
+                <img src="{% static 'images/default_avatar.jpg' %}" alt="Xodim rasmi" id="preview-rasm" class="preview-img">
+            </label>
+            <input type="file" id="rasmi_input" name="rasmi" style="display: none;" accept="image/*" onchange="showPreview(event, 'preview-rasm')" required>
+        </div>
 
         <div id="mashina-fields" style="{% if turi == 'yetkazib_beruvchi' %}display:block;{% else %}display:none;{% endif %}">
             <div class="form-group">
@@ -144,6 +153,13 @@ function toggleMashinaFields() {
     const turi = document.getElementById("turi").value;
     const mashinaFields = document.getElementById("mashina-fields");
     mashinaFields.style.display = (turi === "yetkazib_beruvchi") ? "block" : "none";
+
+    // Desktop Agent — bu qurilma hisobi, xodim rasmi talab qilinmaydi
+    const rasmiField = document.getElementById("rasmi-field");
+    const rasmiInput = document.getElementById("rasmi_input");
+    const isDevice = (turi === "desktop_agent");
+    rasmiField.style.display = isDevice ? "none" : "block";
+    rasmiInput.required = !isDevice;
 }
 
 function showPreview(event, imgId) {

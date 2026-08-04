@@ -10,13 +10,6 @@
     <form method="get" style="display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
         <div style="display:flex; gap:12px; flex:1; min-width:280px;">
             <input class="field" type="search" name="q" value="{{ query }}" placeholder="Mahsulot yoki o'lchov bo'yicha qidirish">
-            {% if not warehouse_only %}
-            <select class="field" name="warehouse_type" style="max-width:240px;" onchange="this.form.submit()">
-                <option value="">Barcha bo'limlar</option>
-                <option value="semi_finished" {% if warehouse_type == 'semi_finished' %}selected{% endif %}>Ombor mahsulotlari</option>
-                <option value="finished" {% if warehouse_type == 'finished' %}selected{% endif %}>Tayyor mahsulotlar</option>
-            </select>
-            {% endif %}
         </div>
         <div style="display:flex; gap:10px;">
             <button class="btn" type="submit"><i class="fa-solid fa-filter"></i> Filter</button>
@@ -37,8 +30,8 @@
             <thead>
                 <tr>
                     <th>Mahsulot</th>
-                    <th>Bo'lim</th>
-                    <th>Narx</th>
+                    <th>Turi</th>
+                    <th>O'rtacha narx (tannarx)</th>
                     <th>Qoldiq</th>
                     <th>Minimum</th>
                     {% if not warehouse_only %}<th></th>{% endif %}
@@ -48,17 +41,28 @@
                 {% for product in products %}
                 <tr>
                     <td>
-                        <div style="font-weight:900;">{{ product.nomi }}</div>
-                        <div style="font-size:12px; color:var(--muted);">{{ product.turi.nomi }}</div>
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            {% if product.rasmi %}
+                            <img src="{{ product.rasmi.url }}" alt="{{ product.nomi }}" style="width:44px; height:44px; border-radius:10px; object-fit:cover; border:1px solid var(--border); flex-shrink:0;">
+                            {% else %}
+                            <div style="width:44px; height:44px; border-radius:10px; background:#f1f5f9; display:flex; align-items:center; justify-content:center; flex-shrink:0; color:var(--muted);">
+                                <i class="fa-solid fa-image"></i>
+                            </div>
+                            {% endif %}
+                            <div>
+                                <div style="font-weight:900;">{{ product.nomi }}</div>
+                                <div style="font-size:12px; color:var(--muted);">{{ product.turi.nomi }}</div>
+                            </div>
+                        </div>
                     </td>
                     <td>
-                        {% if product.warehouse_type == 'semi_finished' %}
-                            <span class="badge blue">Yarim tayyor</span>
+                        {% if product.ombor_turi == 'yarim_tayyor' %}
+                        <span class="badge blue">Yarim tayyor</span>
                         {% else %}
-                            <span class="badge blue">Tayyor mahsulot</span>
+                        <span class="badge">Xom ashyo</span>
                         {% endif %}
                     </td>
-                    <td>{{ product.narxi|floatformat:0 }} so'm</td>
+                    <td>{{ product.tannarx|floatformat:0 }} so'm</td>
                     <td>
                         <span class="badge {% if product.past_zaxira %}red{% else %}green{% endif %}">
                             {{ product.miqdori|floatformat:2 }} {{ product.turi.nomi }}

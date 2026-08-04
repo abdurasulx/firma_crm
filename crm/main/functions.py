@@ -236,6 +236,16 @@ def add_spctoint(x):
     if dec_part:
         return f"{formatted}.{dec_part}"
     return formatted
+def format_compact_money(value):
+    """1 250 000 -> '1.3M', 800 000 -> '800K', 500 -> '500'."""
+    value = float(value or 0)
+    if value >= 1_000_000:
+        return f"{value / 1_000_000:.1f}M"
+    if value >= 1_000:
+        return f"{value / 1_000:.0f}K"
+    return f"{value:.0f}"
+
+
 def get_bugungi_savdo_summ(savdolar):
     summa=0
    

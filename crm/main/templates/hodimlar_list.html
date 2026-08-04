@@ -486,6 +486,28 @@
     }
 </style>
 
+<div class="page-card" style="margin-bottom:24px;">
+    <h3 style="margin-bottom:16px;">Ish haqi turi</h3>
+    <form method="post" style="display:flex; gap:14px; align-items:center; flex-wrap:wrap;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="set_ish_haqi_turi">
+        <select name="ish_haqi_turi" class="form-control" style="max-width:340px; padding:10px 14px; border-radius:10px; border:1px solid var(--border-color);">
+            {% for value, label in ish_haqi_turi_choices %}
+            <option value="{{ value }}" {% if value == current_ish_haqi_turi %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <button class="submit-btn" type="submit" style="width:auto; padding:10px 20px; margin-top:0;">
+            <i class="fa-solid fa-floppy-disk"></i> Saqlash
+        </button>
+    </form>
+    <p style="margin-top:12px; color:var(--text-light); font-size:13px;">
+        "Mahsulot soniga qarab" tanlansa, har bir xodim ishlab chiqargan mahsulot soniga
+        qarab ish haqi va normadan chetlashish jarimasi hisoblanadi (mahsulotning o'z
+        sozlash sahifasidagi "Ishlab chiqarish narxi"ga asosan). "Oylik" tanlansa, tizim
+        maosh hisoblamaydi.
+    </p>
+</div>
+
 <div class="page-card">
     <!-- Header -->
     <div class="page-header-actions">
@@ -528,6 +550,7 @@
                 <option value="savdogar" {% if role_filter == 'savdogar' %}selected{% endif %}>Savdogar</option>
                 <option value="yetkazib_beruvchi" {% if role_filter == 'yetkazib_beruvchi' %}selected{% endif %}>Yetkazib
                     beruvchi</option>
+                <option value="desktop_agent" {% if role_filter == 'desktop_agent' %}selected{% endif %}>Desktop Agent</option>
             </select>
 
             <select name="status" class="filter-select" onchange="this.form.submit()">
@@ -579,6 +602,17 @@
                         <span class="status-badge status-active"><span class="status-dot"></span> Active</span>
                         {% else %}
                         <span class="status-badge status-inactive"><span class="status-dot"></span> Inactive</span>
+                        {% endif %}
+                        {% if x.type == 'desktop_agent' %}
+                        {% if x.is_agent_online %}
+                        <span class="status-badge" style="background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; margin-left:4px;">
+                            <span class="status-dot" style="background:#059669;"></span> Onlayn
+                        </span>
+                        {% else %}
+                        <span class="status-badge" style="background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; margin-left:4px;">
+                            <span class="status-dot" style="background:#dc2626;"></span> Oflayn
+                        </span>
+                        {% endif %}
                         {% endif %}
                     </td>
                     <td>

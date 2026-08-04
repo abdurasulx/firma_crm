@@ -406,7 +406,9 @@
                 <div class="edit-card">
                     <h3 class="card-title"><i class="fa-solid fa-boxes-stacked"></i> Yuklangan Mahsulotlar (Stock)</h3>
                     <p style="font-size: 12px; color: var(--text-light); margin-bottom: 20px;">
-                        Yetkazib beruvchining joriy zaxirasidagi mahsulot miqdorlarini tahrirlash.
+                        Faqat ko'rish uchun — bu miqdorlar endi qo'lda tahrirlanmaydi.
+                        O'zgartirish uchun "yuklama" so'rovi (web'da tasdiqlash yoki
+                        Desktop Agent orqali Serial QR skanerlash) ishlatiladi.
                     </p>
 
                     <div style="max-height: 400px; overflow-y: auto; padding-right: 8px;">
@@ -423,17 +425,8 @@
         </span>
     </div>
 
-    <div class="input-wrapper" style="width: 140px;">
-        <i class="fa-solid fa-hashtag" style="font-size: 12px; left: 12px;"></i>
-
-        <input type="number"
-               name="qty_{{ m.id }}"
-               value="{% for nom, qty in current_yuklamalar.items %}{% if nom == m.nomi %}{{ qty|floatformat:0 }}{% endif %}{% endfor %}"
-               class="form-control"
-               style="padding: 10px 10px 10px 34px; font-size: 14px;"
-               placeholder="0"
-               min="0"
-               step="any">
+    <div style="font-size:14px; font-weight:800; color:var(--text-dark); min-width:60px; text-align:right;">
+        {% for nom, q in current_yuklamalar.items %}{% if nom == m.nomi %}{{ q|floatformat:0 }}{% endif %}{% endfor %}
     </div>
 
 </div>
@@ -447,6 +440,81 @@
             </div>
         </div>
     </form>
+
+    {% if user_edit.type == 'pazanda' or user_edit.type == 'ishlab_chiqaruvchi' %}
+    <div class="edit-grid" style="margin-top:0;">
+        <div class="edit-card" style="grid-column: 1 / -1;">
+            <h3 class="card-title"><i class="fa-solid fa-flask"></i> Biriktirilgan mahsulotlar</h3>
+            <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px;">
+                {% for pm in assigned_products %}
+                <form method="post" style="display:inline-flex;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="unassign_mahsulot">
+                    <input type="hidden" name="mahsulot_id" value="{{ pm.mahsulot.id }}">
+                    <button type="submit" title="Olib tashlash" style="display:flex; align-items:center; gap:8px; padding:8px 14px; background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; border-radius:999px; font-weight:700; font-size:13px; cursor:pointer;">
+                        {{ pm.mahsulot.nomi }}
+                        <i class="fa-solid fa-xmark" style="color:#059669;"></i>
+                    </button>
+                </form>
+                {% empty %}
+                <span style="color:var(--text-light); font-size:14px;">Hech narsa biriktirilmagan.</span>
+                {% endfor %}
+            </div>
+            <form method="post" style="display:flex; gap:10px; flex-wrap:wrap;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="assign_mahsulot">
+                <select name="mahsulot_id" class="form-control" style="flex:1; min-width:220px;" required>
+                    {% for m in assignable_products %}
+                    <option value="{{ m.id }}">{{ m.nomi }}</option>
+                    {% empty %}
+                    <option value="" disabled selected>Biriktirish uchun mahsulot yo'q</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="submit-btn" style="width:auto; padding:10px 20px;">
+                    <i class="fa-solid fa-plus"></i> Biriktirish
+                </button>
+            </form>
+        </div>
+
+        <div class="edit-card" style="grid-column: 1 / -1;">
+            <h3 class="card-title"><i class="fa-solid fa-chart-line"></i> Bu oy statistikasi</h3>
+            <div style="margin-bottom:20px; display:flex; gap:14px; flex-wrap:wrap;">
+                <div style="display:inline-block; background:#eff6ff; border:1px solid #bfdbfe; border-radius:14px; padding:16px 22px;">
+                    <div style="font-size:12px; color:#1e40af; font-weight:700; text-transform:uppercase;">Ishlab topgani (jarimasiz)</div>
+                    <div style="font-size:24px; font-weight:900; color:#1e3a8a;">{{ pazanda_month_stats.gross|floatformat:0 }} so'm</div>
+                </div>
+                {% if pazanda_month_stats.jarima %}
+                <div style="display:inline-block; background:#fef2f2; border:1px solid #fecaca; border-radius:14px; padding:16px 22px;">
+                    <div style="font-size:12px; color:#991b1b; font-weight:700; text-transform:uppercase;">Shtraf</div>
+                    <div style="font-size:24px; font-weight:900; color:#b91c1c;">-{{ pazanda_month_stats.jarima|floatformat:0 }} so'm</div>
+                </div>
+                {% endif %}
+                <div style="display:inline-block; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:14px; padding:16px 22px;">
+                    <div style="font-size:12px; color:#166534; font-weight:700; text-transform:uppercase;">Bu oy topgan puli (sof)</div>
+                    <div style="font-size:24px; font-weight:900; color:#065f46;">{{ pazanda_month_stats.earnings|floatformat:0 }} so'm</div>
+                </div>
+            </div>
+            <table style="width:100%; border-collapse:collapse;">
+                <thead>
+                    <tr style="border-bottom:1px solid var(--border-color); text-align:left;">
+                        <th style="padding:8px 4px; font-size:12px; color:var(--text-light);">Mahsulot</th>
+                        <th style="padding:8px 4px; font-size:12px; color:var(--text-light);">Ishlab chiqargan miqdori (shu oy)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in pazanda_month_stats.per_product %}
+                    <tr style="border-bottom:1px solid #f1f5f9;">
+                        <td style="padding:10px 4px; font-weight:700;">{{ row.mahsulot__nomi }}</td>
+                        <td style="padding:10px 4px;">{{ row.jami_miqdor|floatformat:0 }} {{ row.mahsulot__turi__nomi }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="2" style="padding:16px 4px; color:var(--text-light);">Shu oy hali hech narsa ishlab chiqarilmagan.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <!-- Hidden deletion form (outside main form) -->

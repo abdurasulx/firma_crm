@@ -292,6 +292,22 @@
             <div class="stat-lab">Bugun yukladi</div>
         </div>
     </div>
+    {% if ish_haqi_turi_per_unit %}
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#eff6ff;color:#2563eb;box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);"><i class="fa-solid fa-sack-dollar"></i></div>
+        <div class="stat-details">
+            <div class="stat-val">{{ davr_ish_haqi|floatformat:0 }} so'm</div>
+            <div class="stat-lab">Davr uchun ish haqi (jarima ayirilgan)</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#fef2f2;color:#dc2626;box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <div class="stat-details">
+            <div class="stat-val">{{ davr_jarima|floatformat:0 }} so'm</div>
+            <div class="stat-lab">Davr uchun jarima (norma chetlashishi)</div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <div class="filter-card">
@@ -328,6 +344,7 @@
                     <th>Sana</th>
                     <th>Mahsulot</th>
                     <th>Miqdor</th>
+                    {% if ish_haqi_turi_per_unit %}<th>Ish haqi</th><th>Jarima</th>{% endif %}
                     <th>Rasm</th>
                 </tr>
             </thead>
@@ -338,6 +355,10 @@
                     <td>{{ m.vaqt_sana|date:"d.m.Y, H:i" }}</td>
                     <td><strong>{{ m.mahsulot.nomi }}</strong></td>
                     <td><span class="badge badge-green">{{ m.miqdor }}</span></td>
+                    {% if ish_haqi_turi_per_unit %}
+                    <td>{{ m.ish_haqi_summasi|floatformat:0 }} so'm</td>
+                    <td>{% if m.jarima_summasi %}<span class="badge" style="background:#fef2f2;color:#dc2626;">{{ m.jarima_summasi|floatformat:0 }} so'm</span>{% else %}—{% endif %}</td>
+                    {% endif %}
                     <td>
                         {% if m.rasmi %}
                         <button class="view-btn" onclick="openImageModal('{{ m.rasmi.url }}')">

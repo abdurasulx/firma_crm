@@ -22,44 +22,140 @@
                 {% endfor %}
             </select>
         </label>
-        {% if warehouse_only %}
-        <input type="hidden" name="warehouse_type" value="semi_finished">
-        {% else %}
+        {% if product %}
         <label>
-            <div style="font-weight:800; margin-bottom:8px;">Bo'lim</div>
-            <select class="field" name="warehouse_type" required>
-                <option value="semi_finished" {% if not product or product.warehouse_type == 'semi_finished' %}selected{% endif %}>Ombor mahsulotlari</option>
-                <option value="finished" {% if product and product.warehouse_type == 'finished' %}selected{% endif %}>Tayyor mahsulotlar</option>
-            </select>
+            <div style="font-weight:800; margin-bottom:8px;">Narxi (avtomatik — tannarxga teng)</div>
+            <input class="field" type="text" value="{{ product.narxi|unlocalize }} so'm" disabled>
         </label>
         {% endif %}
         <label>
-            <div style="font-weight:800; margin-bottom:8px;">Narxi</div>
-            <input class="field" type="number" step="0.01" name="narxi" value="{% if product %}{{ product.narxi|unlocalize }}{% else %}0{% endif %}" required>
+            <div style="font-weight:800; margin-bottom:8px;">Turi</div>
+            <select class="field" name="ombor_turi">
+                {% for value, label in ombor_turi_choices %}
+                <option value="{{ value }}" {% if product and product.ombor_turi == value or not product and value == 'xom_ashyo' %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        {% if product %}
+        <label>
+            <div style="font-weight:800; margin-bottom:8px;">Tannarx (avtomatik hisoblanadi)</div>
+            <input class="field" type="text" value="{{ product.tannarx|unlocalize }} so'm" disabled>
+        </label>
+        {% endif %}
+        {% if product and product.ombor_turi == 'yarim_tayyor' %}
+        <label>
+            <div style="font-weight:800; margin-bottom:8px;">Ishlab chiqarish narxi (ishchi haqi)</div>
+            <input class="field" type="number" step="0.01" name="ishlab_chiqarish_narxi" value="{{ product.ishlab_chiqarish_narxi|unlocalize }}">
         </label>
         <label>
+            <div style="font-weight:800; margin-bottom:8px;">Amortizatsiya (foizda)</div>
+            <input class="field" type="number" step="0.01" min="0" max="100" name="amortizatsiya_foizi" value="{{ product.amortizatsiya_foizi|unlocalize }}">
+        </label>
+        {% endif %}
+        <label>
             <div style="font-weight:800; margin-bottom:8px;">Miqdori</div>
-            <input class="field" type="number" step="0.01" name="miqdori" value="{% if product %}{{ product.miqdori|unlocalize }}{% else %}0{% endif %}" required>
+            {% if product %}
+            <input class="field" type="number" value="{{ product.miqdori|unlocalize }}" disabled readonly>
+            <div style="font-size:12px; color:var(--muted); margin-top:4px;">
+                Miqdor faqat "Kirim-chiqim" sahifasi orqali o'zgaradi — bu yerdan tahrirlab bo'lmaydi.
+            </div>
+            {% else %}
+            <input class="field" type="number" step="0.01" name="miqdori" value="0" required>
+            {% endif %}
         </label>
         <label>
             <div style="font-weight:800; margin-bottom:8px;">Minimum qoldiq</div>
             <input class="field" type="number" step="0.01" name="min_miqdori" value="{% if product %}{{ product.min_miqdori|unlocalize }}{% else %}10{% endif %}" required>
         </label>
         <label>
-            <div style="font-weight:800; margin-bottom:8px;">Rasm</div>
-            <input class="field" type="file" name="rasmi" accept="image/*">
+            <div style="font-weight:800; margin-bottom:8px;">Rasm {% if not product or not product.rasmi %}<span style="color:#dc2626;">*majburiy</span>{% endif %}</div>
+            {% if product and product.rasmi %}
+            <img src="{{ product.rasmi.url }}" alt="" style="width:60px; height:60px; object-fit:cover; border-radius:8px; margin-bottom:8px; display:block;">
+            {% endif %}
+            <input class="field" type="file" name="rasmi" accept="image/*" {% if not product or not product.rasmi %}required{% endif %}>
         </label>
-        {% if not warehouse_only %}
-        <label style="display:flex; gap:10px; align-items:center; font-weight:800; padding-top:30px;">
-            <input type="checkbox" name="is_savdogar_product" value="1" {% if product and product.is_savdogar_product %}checked{% endif %}>
-            Savdogar sotadigan mahsulot
-        </label>
-        {% endif %}
     </div>
     <div style="display:flex; gap:10px; margin-top:24px;">
         <button class="btn primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Saqlash</button>
         <a class="btn" href="{% url 'warehouse_products' %}">Bekor qilish</a>
     </div>
 </form>
+
+{% if product and product.ombor_turi == 'yarim_tayyor' %}
+<div class="card" style="padding:24px; max-width:900px; margin-top:20px;">
+    <h3 style="margin-bottom:16px;">Qo'shimcha xarajatlar (1 donaga)</h3>
+    <table style="width:100%; border-collapse:collapse; margin-bottom:16px;">
+        <tbody>
+            {% for x in xarajatlar %}
+            <tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:8px 4px;">{{ x.nomi }}</td>
+                <td style="padding:8px 4px; font-weight:800;">
+                    {% if x.turi == 'foiz' %}{{ x.summa|floatformat:0 }}%{% else %}{{ x.summa|floatformat:0 }} so'm{% endif %}
+                </td>
+                <td style="padding:8px 4px; text-align:right;">
+                    <form method="post" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="delete_xarajat">
+                        <input type="hidden" name="xarajat_id" value="{{ x.id }}">
+                        <button class="btn danger" type="submit"><i class="fa-solid fa-trash"></i></button>
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" style="padding:14px 4px; color:var(--muted);">Qo'shimcha xarajat kiritilmagan.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <form method="post" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_xarajat">
+        <label style="flex:1; min-width:160px;">
+            <div style="font-weight:800; margin-bottom:8px;">Nomi</div>
+            <input class="field" type="text" name="xarajat_nomi" placeholder="Masalan: Tashish" required>
+        </label>
+        <label style="min-width:150px;">
+            <div style="font-weight:800; margin-bottom:8px;">Turi</div>
+            <select class="field" name="xarajat_turi">
+                <option value="miqdor">Aniq miqdor (so'm)</option>
+                <option value="foiz">Foiz (baza tannarxdan)</option>
+            </select>
+        </label>
+        <label style="flex:1; min-width:140px;">
+            <div style="font-weight:800; margin-bottom:8px;">Summa / Foiz</div>
+            <input class="field" type="number" step="0.01" min="0.01" name="xarajat_summa" required>
+        </label>
+        <button class="btn primary" type="submit"><i class="fa-solid fa-plus"></i> Qo'shish</button>
+    </form>
+</div>
+
+{% if product.ombor_turi == 'yarim_tayyor' %}
+<div class="card" style="padding:24px; max-width:900px; margin-top:20px;">
+    <h3 style="margin-bottom:16px;">Retsept</h3>
+    <table style="width:100%; border-collapse:collapse; margin-bottom:16px;">
+        <tbody>
+            {% for row in retsept_rows %}
+            <tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:8px 4px;">{{ row.komponent.nomi }}</td>
+                <td style="padding:8px 4px;">{{ row.norma_miqdor }} {{ row.komponent.turi.nomi }}</td>
+                <td style="padding:8px 4px; font-weight:800;">{{ row.komponent.tannarx|floatformat:0 }} so'm/{{ row.komponent.turi.nomi }}</td>
+                <td style="padding:8px 4px; text-align:right;">
+                    <form method="post" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="delete_retsept_row">
+                        <input type="hidden" name="row_id" value="{{ row.id }}">
+                        <button class="btn danger" type="submit"><i class="fa-solid fa-trash"></i></button>
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" style="padding:14px 4px; color:var(--muted);">Retsept qatori yo'q.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <button type="button" class="btn primary" onclick="openRetseptModal()"><i class="fa-solid fa-plus"></i> Retseptga qo'shish</button>
+</div>
+{% include 'retsept_modal.html' with mahsulot=product %}
+{% endif %}
+{% endif %}
 </div>
 {% endblock %}

@@ -12,9 +12,34 @@ from .views import (
     super_plan_delete,
     plan_requests_list,
     approve_plan_request,
-    reject_plan_request
+    reject_plan_request,
+    product_scan_view,
+    qr_image_view,
 )
 from main.views import login
+from main.agent_api_views import (
+    agent_station_login,
+    agent_login_by_qr,
+    agent_verify_kiosk_unlock,
+    agent_omborlar,
+    agent_badge_scan,
+    agent_scan,
+    agent_material_requests,
+    agent_acknowledge_material_request,
+    agent_weigh_material_request,
+    agent_weigh_task_pickup,
+    agent_pending_print_batch,
+    agent_mark_batch_printed,
+    agent_miqdor_requests,
+    agent_my_task_pickups,
+    agent_approve_miqdor_qoshish,
+    agent_miqdor_print_page,
+    agent_scan_delivery_serial,
+    agent_finalize_yuklama,
+    agent_toggle_attendance,
+    agent_heartbeat,
+    agent_logout,
+)
 
 urlpatterns = [
     path('', landing_home, name='landing_home'),
@@ -45,8 +70,39 @@ urlpatterns = [
     # Billing
     path('super/billing/', views.super_billing_report, name='super_billing_report'),
     path('super/billing/update/<int:company_id>/', views.update_billing_status, name='update_billing_status'),
+
+    # Backup (superadmin — bitta firma yoki butun tizim, faqat yuklab olish)
+    path('super/backup/', views.super_backup_page, name='super_backup_page'),
+    path('super/backup/download/', views.super_backup_download, name='super_backup_download'),
     
     path('404/', custom_404, name='custom_404_preview'),
+
+    # QR/Serial — public
+    path('p/<str:kod>/', product_scan_view, name='product_scan'),
+    path('api/qr/image/<str:kod>/', qr_image_view, name='qr_image'),
+
+    # Desktop Agent REST API (token orqali autentifikatsiya, subdomain'ga bog'liq emas)
+    path('api/agent/login/', agent_station_login, name='agent_station_login'),
+    path('api/agent/login-by-qr/', agent_login_by_qr, name='agent_login_by_qr'),
+    path('api/agent/verify-kiosk-unlock/', agent_verify_kiosk_unlock, name='agent_verify_kiosk_unlock'),
+    path('api/agent/omborlar/', agent_omborlar, name='agent_omborlar'),
+    path('api/agent/badge-scan/', agent_badge_scan, name='agent_badge_scan'),
+    path('api/agent/scan/', agent_scan, name='agent_scan'),
+    path('api/agent/material-requests/', agent_material_requests, name='agent_material_requests'),
+    path('api/agent/material-requests/<int:request_id>/acknowledge/', agent_acknowledge_material_request, name='agent_acknowledge_material_request'),
+    path('api/agent/material-requests/<int:request_id>/weigh/', agent_weigh_material_request, name='agent_weigh_material_request'),
+    path('api/agent/task-pickup/<int:pickup_id>/weigh/', agent_weigh_task_pickup, name='agent_weigh_task_pickup'),
+    path('api/agent/pending-print-batch/', agent_pending_print_batch, name='agent_pending_print_batch'),
+    path('api/agent/mark-batch-printed/', agent_mark_batch_printed, name='agent_mark_batch_printed'),
+    path('api/agent/my-task-pickups/', agent_my_task_pickups, name='agent_my_task_pickups'),
+    path('api/agent/miqdor-qoshish/', agent_miqdor_requests, name='agent_miqdor_requests'),
+    path('api/agent/miqdor-qoshish/<int:request_id>/tasdiqlash/', agent_approve_miqdor_qoshish, name='agent_approve_miqdor_qoshish'),
+    path('api/agent/miqdor-qoshish/<int:request_id>/chop-etish/', agent_miqdor_print_page, name='agent_miqdor_print_page'),
+    path('api/agent/yuklama/skaner/', agent_scan_delivery_serial, name='agent_scan_delivery_serial'),
+    path('api/agent/yuklama/yakunlash/', agent_finalize_yuklama, name='agent_finalize_yuklama'),
+    path('api/agent/davomat/', agent_toggle_attendance, name='agent_toggle_attendance'),
+    path('api/agent/heartbeat/', agent_heartbeat, name='agent_heartbeat'),
+    path('api/agent/logout/', agent_logout, name='agent_logout'),
 ]
 
 if settings.SERVE_MEDIA_FILES:

@@ -73,4 +73,66 @@
         <span class="profile-label">Turi:</span> {{ user.get_type_display }}
     </div>
 </div>
+
+{% if own_badge %}
+<div class="profile-container" style="margin-top:24px;">
+    <h3 style="margin-bottom:12px; color:#0f172a;">Mening shaxsiy QR badge'im</h3>
+    <img src="{% url 'xodim_badge_image' own_badge.kod %}" alt="QR badge" style="width:180px; height:180px; border:1px solid #e2e8f0; border-radius:14px; padding:10px; background:#fff;">
+    <p style="margin-top:12px; color:#64748b; font-size:12px;">Desktop Agent stansiyasida o'zingizni tasdiqlash uchun shu QR'ni skanerlang.</p>
+    <a href="{% url 'xodim_badge_image' own_badge.kod %}" download="badge_{{ user.username }}.png" style="display:inline-block; margin-top:6px; color:#0f766e; font-weight:700; font-size:13px; text-decoration:none;">
+        <i class="fa-solid fa-download"></i> Yuklab olish
+    </a>
+</div>
+{% endif %}
+
+{% if pazanda_month_stats %}
+<div class="profile-container" style="margin-top:24px; text-align:left;">
+    <h3 style="margin-bottom:16px; color:#0f172a;">Mening mahsulotlarim</h3>
+    <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:24px;">
+        {% for pm in assigned_products %}
+        <span style="display:inline-flex; align-items:center; padding:8px 14px; background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; border-radius:999px; font-weight:700; font-size:13px;">
+            {{ pm.mahsulot.nomi }}
+        </span>
+        {% empty %}
+        <span style="color:#64748b; font-size:14px;">Sizga hech qanday mahsulot biriktirilmagan.</span>
+        {% endfor %}
+    </div>
+
+    <h3 style="margin-bottom:16px; color:#0f172a;">Bu oy statistikam</h3>
+    <div style="margin-bottom:20px; display:flex; gap:14px; flex-wrap:wrap;">
+        <div style="display:inline-block; background:#eff6ff; border:1px solid #bfdbfe; border-radius:14px; padding:16px 22px;">
+            <div style="font-size:12px; color:#1e40af; font-weight:700; text-transform:uppercase;">Ishlab topganim (jarimasiz)</div>
+            <div style="font-size:24px; font-weight:900; color:#1e3a8a;">{{ pazanda_month_stats.gross|floatformat:0 }} so'm</div>
+        </div>
+        {% if pazanda_month_stats.jarima %}
+        <div style="display:inline-block; background:#fef2f2; border:1px solid #fecaca; border-radius:14px; padding:16px 22px;">
+            <div style="font-size:12px; color:#991b1b; font-weight:700; text-transform:uppercase;">Shtraf</div>
+            <div style="font-size:24px; font-weight:900; color:#b91c1c;">-{{ pazanda_month_stats.jarima|floatformat:0 }} so'm</div>
+        </div>
+        {% endif %}
+        <div style="display:inline-block; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:14px; padding:16px 22px;">
+            <div style="font-size:12px; color:#166534; font-weight:700; text-transform:uppercase;">Bu oy topgan pulim (sof)</div>
+            <div style="font-size:24px; font-weight:900; color:#065f46;">{{ pazanda_month_stats.earnings|floatformat:0 }} so'm</div>
+        </div>
+    </div>
+    <table style="width:100%; border-collapse:collapse;">
+        <thead>
+            <tr style="border-bottom:1px solid #e2e8f0; text-align:left;">
+                <th style="padding:8px 4px; font-size:12px; color:#64748b;">Mahsulot</th>
+                <th style="padding:8px 4px; font-size:12px; color:#64748b;">Ishlab chiqargan miqdorim (shu oy)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in pazanda_month_stats.per_product %}
+            <tr style="border-bottom:1px solid #f1f5f9;">
+                <td style="padding:10px 4px; font-weight:700;">{{ row.mahsulot__nomi }}</td>
+                <td style="padding:10px 4px;">{{ row.jami_miqdor|floatformat:0 }} {{ row.mahsulot__turi__nomi }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="2" style="padding:16px 4px; color:#64748b;">Shu oy hali hech narsa ishlab chiqarmagansiz.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
 {% endblock %}

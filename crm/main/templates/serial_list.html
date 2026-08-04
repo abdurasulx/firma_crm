@@ -1,0 +1,51 @@
+{% extends 'egabase.html' %}
+
+{% block title %}Seriallar — {{ mahsulot.nomi }}{% endblock %}
+{% block page_title %}Seriallar — {{ mahsulot.nomi }}{% endblock %}
+
+{% block content %}
+{% include 'warehouse_styles.html' %}
+<div class="warehouse-page">
+<div class="card">
+    <div style="padding:18px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="margin:0;">{{ mahsulot.nomi }} — so'nggi 300 ta serial</h3>
+        <a class="btn" href="{% url 'mahsulotlar_list' %}">Orqaga</a>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Kod</th>
+                    <th>Partiya</th>
+                    <th>Birlik</th>
+                    <th>Holati</th>
+                    <th>Scan soni</th>
+                    <th>Yaratilgan</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in seriallar %}
+                <tr>
+                    <td style="font-family:monospace; font-size:12px;">{{ s.kod|slice:":12" }}…</td>
+                    <td>{% if s.batch %}#{{ s.batch.id }}{% else %}—{% endif %}</td>
+                    <td>{{ s.unit_index|default:"Partiya" }}</td>
+                    <td>
+                        <span class="badge {% if s.holati == 'omborda' %}green{% else %}blue{% endif %}">{{ s.get_holati_display }}</span>
+                    </td>
+                    <td>{{ s.scan_soni }}</td>
+                    <td>{{ s.created_at|date:"d.m.Y H:i" }}</td>
+                    <td style="text-align:right;">
+                        <a class="btn" href="https://{{ base_domain }}/api/qr/image/{{ s.kod }}/" target="_blank"><i class="fa-solid fa-qrcode"></i> QR</a>
+                        <a class="btn" href="https://{{ base_domain }}/p/{{ s.kod }}/" target="_blank"><i class="fa-solid fa-up-right-from-square"></i></a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" style="text-align:center; padding:34px; color:var(--muted);">Serial hali yo'q. Bu mahsulot uchun "Serial/QR kuzatuv" yoqilgan bo'lsa, keyingi ishlab chiqarish tasdiqlanganda avtomatik yaratiladi.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+</div>
+{% endblock %}

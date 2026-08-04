@@ -65,6 +65,10 @@
         border-color: #f59e0b;
     }
 
+    .stat-card.teal {
+        border-color: #0d9488;
+    }
+
     .stat-header {
         display: flex;
         justify-content: space-between;
@@ -245,6 +249,20 @@
         border: 2px solid #e5e7eb;
         transition: all 0.3s ease;
         text-align: center;
+        position: relative;
+    }
+
+    .earn-badge {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: #ecfdf5;
+        color: #059669;
+        font-size: 11px;
+        font-weight: 800;
+        padding: 3px 8px;
+        border-radius: 999px;
+        border: 1px solid #a7f3d0;
     }
 
     .item-card:hover {
@@ -315,7 +333,7 @@
 <!-- Welcome Section -->
 <div class="welcome-section">
     <h2><i class="fa-solid fa-hand-sparkles"></i> Assalomu alaykum, {{ request.user.tuliq_ismi }}!</h2>
-    <p>Bugungi faoliyat: {{ bsoni }} ta savdo, {{ bsumma|floatformat:0 }} so'm</p>
+    <p>Bugungi faoliyat: {{ bsoni }} ta savdo, {{ bsumma|default:"0" }} so'm</p>
 </div>
 
 <!-- Plan Selection Alert for Pending Requests -->
@@ -535,6 +553,22 @@
                         </div>
                     </div>
                 </div>
+
+                <div>
+                    <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1e293b;">
+                        <i class="fa-solid fa-desktop" style="color: #2563eb;"></i> Desktop Agent stansiyalari
+                    </label>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <input type="number" name="desktop_agent_stations" id="desktop_agent_stations"
+                               value="{{ request.company.custom_desktop_agent_stations|default:0 }}" min="0" max="20"
+                               style="width: 80px; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; font-weight: 700; text-align: center; color: #0f172a;">
+                        <span style="font-size: 14px; color: #64748b;">$60 / stansiya / oy</span>
+                    </div>
+                    <p style="margin: 10px 0 0; font-size: 12px; color: #9a3412; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 8px 12px; line-height: 1.5;">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                        Kamera, QR/shtrix-kod skaneri va XPrinter kerak bo'ladi (uskuna firmada bo'lishi shart).
+                    </p>
+                </div>
             </div>
 
             <!-- Column 2: Backup & Total -->
@@ -583,6 +617,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const hasBot = document.getElementById('has_bot');
     const hasAnalytics = document.getElementById('has_analytics');
     const hasSavdogar = document.getElementById('has_savdogar_sales');
+    const desktopAgentStations = document.getElementById('desktop_agent_stations');
     const backupRadios = document.querySelectorAll('input[name="backup_type"]');
     const totalPriceEl = document.getElementById('total-price');
 
@@ -613,6 +648,13 @@ document.addEventListener('DOMContentLoaded', function() {
         if (hasAnalytics.checked) price += 15;
         if (hasSavdogar.checked) price += 10;
 
+        // Desktop Agent (dona narxi)
+        let stations = parseInt(desktopAgentStations.value) || 0;
+        if (stations < 0) stations = 0;
+        if (stations > 20) stations = 20;
+        desktopAgentStations.value = stations;
+        price += stations * 60;
+
         // Backup
         const checkedBackup = document.querySelector('input[name="backup_type"]:checked');
         if (checkedBackup) {
@@ -625,10 +667,11 @@ document.addEventListener('DOMContentLoaded', function() {
         totalPriceEl.textContent = '$' + price.toFixed(2);
     }
 
-    [staffInput, unlimitedCheck, hasMap, hasBot, hasAnalytics, hasSavdogar].forEach(el => {
+    [staffInput, unlimitedCheck, hasMap, hasBot, hasAnalytics, hasSavdogar, desktopAgentStations].forEach(el => {
         el.addEventListener('change', calculatePrice);
     });
     staffInput.addEventListener('input', calculatePrice);
+    desktopAgentStations.addEventListener('input', calculatePrice);
     backupRadios.forEach(r => r.addEventListener('change', calculatePrice));
 
     // Handle initial state
@@ -648,7 +691,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="stat-header">
             <div>
                 <div class="stat-label">Jami Hodimlar</div>
-                <div class="stat-value">{{ soni }}</div>
+                <div class="stat-value">{{ ishchilar_soni }}</div>
             </div>
             <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
         </div>
@@ -681,11 +724,77 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="stat-header">
             <div>
                 <div class="stat-label">Bugungi Daromad</div>
-                <div class="stat-value">{{ bsumma|floatformat:0|default:"0" }}</div>
+                <div class="stat-value">{{ bsumma|default:"0" }}</div>
             </div>
             <div class="stat-icon"><i class="fa-solid fa-sack-dollar"></i></div>
         </div>
         <div class="stat-trend">so'm</div>
+    </div>
+
+    <div class="stat-card teal">
+        <div class="stat-header">
+            <div>
+                <div class="stat-label">Oylik Sof Foyda</div>
+                <div class="stat-value">{{ oylik_foyda|default:"0" }}</div>
+            </div>
+            <div class="stat-icon"><i class="fa-solid fa-chart-line"></i></div>
+        </div>
+        <div class="stat-trend">so'm — narx-tannarx (shu oy)</div>
+    </div>
+
+    <div class="stat-card blue">
+        <div class="stat-header">
+            <div>
+                <div class="stat-label">Oylik Pul Aylanma</div>
+                <div class="stat-value">{{ oylik_pul_aylanma|default:"0" }}</div>
+            </div>
+            <div class="stat-icon"><i class="fa-solid fa-money-bill-transfer"></i></div>
+        </div>
+        <div class="stat-trend">so'm — naqd/karta + nasiya to'lovlari</div>
+    </div>
+
+    <div class="stat-card orange">
+        <div class="stat-header">
+            <div>
+                <div class="stat-label">Oylik Xomashyo Xarajati</div>
+                <div class="stat-value">{{ oylik_cogs|default:"0" }}</div>
+            </div>
+            <div class="stat-icon"><i class="fa-solid fa-boxes-stacked"></i></div>
+        </div>
+        <div class="stat-trend">so'm — COGS (shu oy)</div>
+    </div>
+
+    <div class="stat-card purple">
+        <div class="stat-header">
+            <div>
+                <div class="stat-label">Oylik Qo'shimcha Xarajat</div>
+                <div class="stat-value">{{ oylik_qoshimcha|default:"0" }}</div>
+            </div>
+            <div class="stat-icon"><i class="fa-solid fa-receipt"></i></div>
+        </div>
+        <div class="stat-trend">so'm — shu oy</div>
+    </div>
+
+    <div class="stat-card green">
+        <div class="stat-header">
+            <div>
+                <div class="stat-label">Oylik Marja</div>
+                <div class="stat-value">{{ oylik_marja|default:"0" }}%</div>
+            </div>
+            <div class="stat-icon"><i class="fa-solid fa-percent"></i></div>
+        </div>
+        <div class="stat-trend">sof foyda / tushum</div>
+    </div>
+
+    <div class="stat-card teal">
+        <div class="stat-header">
+            <div>
+                <div class="stat-label">Ombordagi Mahsulotlar Qiymati</div>
+                <div class="stat-value">{{ ombor_qiymati|default:"0" }}</div>
+            </div>
+            <div class="stat-icon"><i class="fa-solid fa-warehouse"></i></div>
+        </div>
+        <div class="stat-trend">so'm — hozirgi zaxira x narxi</div>
     </div>
 </div>
 
@@ -830,7 +939,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <div class="section-card">
     <div class="section-header">
         <h3 class="section-title">
-            <i class="fa-solid fa-users-viewfinder"></i> So'nggi Hodimlar
+            <i class="fa-solid fa-trophy"></i> Top Hodimlar (bu oy)
             <span
                 style="background: #e5e7eb; padding: 4px 12px; border-radius: 6px; font-size: 14px; font-weight: 600;">{{ ishchilar_soni }} ta</span>
         </h3>
@@ -841,6 +950,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="items-grid">
         {% for h in hodims %}
         <div class="item-card">
+            {% if h.earned %}<span class="earn-badge">+{{ h.earned_display }}</span>{% endif %}
             <img src="{% if h.rasmi %}{{ h.rasmi }}{% else %}{% static 'images/default_avatar.jpg' %}{% endif %}"
                 alt="{{ h.tuliq_ismi }}" class="item-avatar">
             <div class="item-name">{{ h.tuliq_ismi }}</div>
@@ -1017,16 +1127,26 @@ document.addEventListener('DOMContentLoaded', function() {
                             pointBackgroundColor: '#10b981',
                             fill: true,
                             tension: 0.4,
+                        }, {
+                            label: 'Sof foyda (so\'m)',
+                            data: data.foyda_data,
+                            borderColor: '#0d9488',
+                            backgroundColor: 'rgba(13,148,136,0.08)',
+                            borderWidth: 2,
+                            pointRadius: data.labels.length <= 14 ? 4 : 2,
+                            pointBackgroundColor: '#0d9488',
+                            fill: true,
+                            tension: 0.4,
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
-                            legend: { display: false },
+                            legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 12 } } },
                             tooltip: {
                                 callbacks: {
-                                    label: ctx => ' ' + Math.round(ctx.parsed.y).toLocaleString('uz-UZ') + ' so\'m'
+                                    label: ctx => ' ' + ctx.dataset.label + ': ' + Math.round(ctx.parsed.y).toLocaleString('uz-UZ') + ' so\'m'
                                 }
                             }
                         },

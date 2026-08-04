@@ -1,5 +1,6 @@
 {% extends 'egabase.html' %}
 {% load static %}
+{% load l10n %}
 
 {% block title %}{{ mahsulot.nomi }} | Mahsulot{% endblock %}
 {% block page_title %}Mahsulotni tahrirlash{% endblock %}
@@ -401,7 +402,65 @@
                             <div class="input-wrapper">
                                 <i class="fa-solid fa-money-bill-1-wave"></i>
                                 <input type="number" id="narxi" name="narxi" class="form-control"
-                                       value="{{ mahsulot.narxi|floatformat:0 }}" step="0.01" required>
+                                       value="{{ mahsulot.narxi|unlocalize }}" step="0.01" min="0" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Tannarx (avtomatik hisoblanadi)</label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-money-bill-transfer"></i>
+                                <input type="text" class="form-control" value="{{ mahsulot.tannarx|floatformat:0 }} so'm" disabled>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Mahsulot turi</label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-industry"></i>
+                                <select id="mahsulot_turi" name="mahsulot_turi" class="form-control">
+                                    {% for value, label in mahsulot_turi_choices %}
+                                    <option value="{{ value }}" {% if mahsulot.mahsulot_turi == value %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Serial/QR kod</label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-qrcode"></i>
+                                <select id="serial_granularity" name="serial_granularity" class="form-control">
+                                    {% for value, label in serial_granularity_choices %}
+                                    <option value="{{ value }}" {% if mahsulot.serial_granularity == value %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div style="font-size:12px; color:var(--text-light); margin-top:4px;">
+                                "Har bir donaga alohida QR" tanlansa — ishlab chiqarish tasdiqlanganda
+                                (Desktop Agent orqali) har bir dona uchun alohida QR yorliq avtomatik
+                                chop etiladi.
+                            </div>
+                        </div>
+
+                        {% if mahsulot.mahsulot_turi != 'distributor' %}
+                        <div class="form-group">
+                            <label class="form-label">Ishlab chiqarish narxi</label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-hand-holding-dollar"></i>
+                                <input type="number" id="ishlab_chiqarish_narxi" name="ishlab_chiqarish_narxi" class="form-control"
+                                       value="{{ mahsulot.ishlab_chiqarish_narxi|floatformat:0 }}" step="0.01">
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="form-group">
+                            <label class="form-label">Amortizatsiya (foizda)</label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-gears"></i>
+                                <input type="number" id="amortizatsiya_foizi" name="amortizatsiya_foizi" class="form-control"
+                                       value="{{ mahsulot.amortizatsiya_foizi|unlocalize }}" step="0.01" min="0" max="100">
+                                <span style="margin-left:6px; color:var(--text-light);">%</span>
                             </div>
                         </div>
 
@@ -421,23 +480,21 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Ombor bo'limi</label>
-                        <div class="input-wrapper">
-                            <i class="fa-solid fa-warehouse"></i>
-                            <select id="warehouse_type" name="warehouse_type" class="form-control" required>
-                                <option value="finished" {% if mahsulot.warehouse_type == 'finished' %}selected{% endif %}>Tayyor mahsulotlar ombori</option>
-                                <option value="semi_finished" {% if mahsulot.warehouse_type == 'semi_finished' %}selected{% endif %}>Ombor mahsulotlari</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
                         <label class="form-label">Miqdori</label>
                         <div class="input-wrapper">
                             <i class="fa-solid fa-cubes-stacked"></i>
+                            {% if mahsulot.mahsulot_turi == 'distributor' %}
                             <input type="number" id="miqdori" name="miqdori" class="form-control"
                                    value="{{ mahsulot.miqdori|floatformat:0 }}" step="0.01" required>
+                            {% else %}
+                            <input type="number" class="form-control" value="{{ mahsulot.miqdori|floatformat:0 }}" disabled readonly>
+                            {% endif %}
                         </div>
+                        {% if mahsulot.mahsulot_turi != 'distributor' %}
+                        <div style="font-size:12px; color:var(--text-light); margin-top:4px;">
+                            Miqdor faqat ishlab chiqarish tasdiqlanganda (tizim orqali) o'zgaradi — bu yerdan tahrirlab bo'lmaydi.
+                        </div>
+                        {% endif %}
 
                         <div class="stock-info">
                             <span style="color:var(--text-light); font-weight:800;">Joriy holat:</span>
@@ -466,6 +523,81 @@
             </div>
         </div>
     </form>
+
+    <div class="edit-card" style="margin-top:20px;">
+        <h3 class="card-title"><i class="fa-solid fa-receipt"></i> Qo'shimcha xarajatlar (1 donaga)</h3>
+        <table style="width:100%; border-collapse:collapse; margin-bottom:16px;">
+            <tbody>
+                {% for x in xarajatlar %}
+                <tr style="border-bottom:1px solid var(--border-color,#e2e8f0);">
+                    <td style="padding:8px 4px;">{{ x.nomi }}</td>
+                    <td style="padding:8px 4px; font-weight:800;">
+                        {% if x.turi == 'foiz' %}{{ x.summa|floatformat:0 }}%{% else %}{{ x.summa|floatformat:0 }} so'm{% endif %}
+                    </td>
+                    <td style="padding:8px 4px; text-align:right;">
+                        <form method="post" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete_xarajat">
+                            <input type="hidden" name="xarajat_id" value="{{ x.id }}">
+                            <button type="submit" style="border:1px solid #fecaca; background:#fff1f2; color:#be123c; padding:6px 10px; border-radius:8px; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="3" style="padding:14px 4px; color:var(--text-light);">Qo'shimcha xarajat kiritilmagan.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <form method="post" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_xarajat">
+            <label style="flex:1; min-width:160px;">
+                <div class="form-label">Nomi</div>
+                <input type="text" name="xarajat_nomi" class="form-control" placeholder="Masalan: Tashish" required>
+            </label>
+            <label style="min-width:150px;">
+                <div class="form-label">Turi</div>
+                <select name="xarajat_turi" class="form-control">
+                    <option value="miqdor">Aniq miqdor (so'm)</option>
+                    <option value="foiz">Foiz (baza tannarxdan)</option>
+                </select>
+            </label>
+            <label style="flex:1; min-width:140px;">
+                <div class="form-label">Summa / Foiz</div>
+                <input type="number" step="0.01" min="0.01" name="xarajat_summa" class="form-control" required>
+            </label>
+            <button type="submit" class="btn primary"><i class="fa-solid fa-plus"></i> Qo'shish</button>
+        </form>
+    </div>
+
+    {% if mahsulot.mahsulot_turi == 'ishlab_chiqariladigan' %}
+    <div class="edit-card" style="margin-top:20px;">
+        <h3 class="card-title"><i class="fa-solid fa-flask"></i> Retsept</h3>
+        <table style="width:100%; border-collapse:collapse; margin-bottom:16px;">
+            <tbody>
+                {% for row in retsept_rows %}
+                <tr style="border-bottom:1px solid var(--border-color,#e2e8f0);">
+                    <td style="padding:8px 4px;">{{ row.komponent.nomi }}</td>
+                    <td style="padding:8px 4px;">{{ row.norma_miqdor }} {{ row.komponent.turi.nomi }}</td>
+                    <td style="padding:8px 4px; font-weight:800;">{{ row.komponent.tannarx|floatformat:0 }} so'm/{{ row.komponent.turi.nomi }}</td>
+                    <td style="padding:8px 4px; text-align:right;">
+                        <form method="post" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete_retsept_row">
+                            <input type="hidden" name="row_id" value="{{ row.id }}">
+                            <button type="submit" style="border:1px solid #fecaca; background:#fff1f2; color:#be123c; padding:6px 10px; border-radius:8px; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" style="padding:14px 4px; color:var(--text-light);">Retsept qatori yo'q.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <button type="button" class="btn primary" onclick="openRetseptModal()"><i class="fa-solid fa-plus"></i> Retseptga qo'shish</button>
+    </div>
+    {% include 'retsept_modal.html' %}
+    {% endif %}
 </div>
 
 <!-- Hidden delete form (outside main form) -->

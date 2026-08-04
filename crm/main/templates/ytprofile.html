@@ -206,11 +206,21 @@
                     </span>
                 </div>
             </div>
+
+            {% if own_badge %}
+            <div class="info-section" style="margin-top:20px; text-align:center;">
+                <span class="info-label"><i class="fas fa-qrcode"></i> Mening shaxsiy QR badge'im</span>
+                <div style="margin-top:10px;">
+                    <img src="{% url 'xodim_badge_image' own_badge.kod %}" alt="QR badge" style="width:160px; height:160px; border:1px solid var(--slate-200); border-radius:14px; padding:10px; background:#fff;">
+                </div>
+                <p style="margin-top:10px; color:var(--slate-500); font-size:12px;">Desktop Agent stansiyasida o'zingizni tasdiqlash uchun shu QR'ni skanerlang.</p>
+            </div>
+            {% endif %}
         </div>
 
         <!-- Footer -->
         <div class="profile-footer">
-            <a href="{% url 'logout_view' %}" class="btn-logout">
+            <a href="{% url 'logout' %}" class="btn-logout">
                 <i class="fas fa-sign-out-alt"></i> Tizimdan chiqish
             </a>
         </div>

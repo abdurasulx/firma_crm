@@ -1,0 +1,66 @@
+{% extends 'landing/base.html' %}
+
+{% block title %}{{ mahsulot.nomi }} — Original mahsulot tekshiruvi{% endblock %}
+{% block meta_description %}StockFirm CRM orqali ishlab chiqarilgan mahsulotning originalligini tekshiring.{% endblock %}
+
+{% block content %}
+<section class="container" style="padding: 48px 0 60px;">
+    <div style="max-width: 520px; margin: 0 auto; font-family: 'Inter', sans-serif; color: #1e293b;">
+        <div style="border: 1px solid #e2e8f0; border-radius: 20px; padding: 32px; background: #fff; text-align: center;">
+            <div style="width: 64px; height: 64px; border-radius: 50%; background: #ecfdf5; color: #10b981; display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; font-size: 28px;">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 6px;">Original mahsulot</h1>
+            <p style="color: #64748b; font-size: 14px; margin-bottom: 22px;">Ushbu mahsulot StockFirm CRM tizimida ro'yxatga olingan.</p>
+
+            {% if mahsulot.rasmi %}
+            <img src="{{ mahsulot.rasmi.url }}" alt="{{ mahsulot.nomi }}" style="width: 100%; max-height: 260px; object-fit: cover; border-radius: 14px; margin-bottom: 22px;">
+            {% endif %}
+
+            <div style="text-align: left; border-top: 1px solid #e2e8f0; padding-top: 20px; display: flex; flex-direction: column; gap: 12px;">
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: #64748b; font-size: 13px;">Mahsulot</span>
+                    <strong>{{ mahsulot.nomi }}</strong>
+                </div>
+                {% if serial.batch %}
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: #64748b; font-size: 13px;">Ishlab chiqarilgan sana</span>
+                    <strong>{{ serial.batch.vaqt_sana|date:"d.m.Y" }}</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: #64748b; font-size: 13px;">Partiya</span>
+                    <strong>#{{ serial.batch.id }}</strong>
+                </div>
+                {% endif %}
+                {% if yaroqlilik_sanasi %}
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: #64748b; font-size: 13px;">Yaroqlilik muddati</span>
+                    <strong>{{ yaroqlilik_sanasi|date:"d.m.Y" }}</strong>
+                </div>
+                {% endif %}
+                {% if serial.unit_index %}
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: #64748b; font-size: 13px;">Birlik raqami</span>
+                    <strong>{{ serial.unit_index }}</strong>
+                </div>
+                {% endif %}
+                {% if serial.holati == 'sotilgan' %}
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: #64748b; font-size: 13px;">Holati</span>
+                    <strong style="color:#16a34a;">Sotilgan</strong>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if mahsulot.qr_tavsif %}
+            <div style="text-align: left; border-top: 1px solid #e2e8f0; margin-top: 20px; padding-top: 20px;">
+                <div style="color: #64748b; font-size: 13px; margin-bottom: 8px; font-weight: 700;">Mahsulot haqida</div>
+                <p style="font-size: 14px; line-height: 1.6; white-space: pre-line;">{{ mahsulot.qr_tavsif }}</p>
+            </div>
+            {% endif %}
+
+            <p style="margin-top: 26px; color: #94a3b8; font-size: 12px;">Serial: {{ serial.kod }}</p>
+        </div>
+    </div>
+</section>
+{% endblock %}

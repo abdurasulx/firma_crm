@@ -106,7 +106,180 @@
                 <a class="action" href="{% url 'billing_page' %}"><i class="fa-solid fa-wallet"></i> Billing</a>
                 <a class="action" href="{% url 'savdogar_admin_dashboard' %}"><i class="fa-solid fa-file-signature"></i> Savdogar</a>
                 <a class="action" href="{% url 'select_plan_page' %}"><i class="fa-solid fa-star"></i> Tariflar</a>
+                <a class="action" href="{% url 'moliya_dashboard' %}"><i class="fa-solid fa-chart-line"></i> Moliya</a>
             </div>
+        </div>
+        {% endif %}
+
+        {% if request.user.type == 'ega' %}
+        <div class="owner-card" style="text-align:center;">
+            <div class="owner-label">Desktop Agent QR-login</div>
+            <p class="muted" style="font-size:12px; margin:8px 0 12px;">
+                Qo'lda login/parol o'rniga — Desktop Agent'ning Sozlamalar
+                sahifasida shu QR kodni kamerasiga ko'rsating, stansiya
+                avtomatik tizimga kiradi. QR kod shifrlangan (faqat server
+                ocha oladi).
+            </p>
+            <img src="{% url 'agent_login_qr_image' user.id %}?v={{ user.agent_qr_nonce }}" alt="Agent login QR"
+                 style="width:420px; height:420px; max-width:100%; border:1px solid #e2e8f0; border-radius:14px; padding:10px; background:#fff;">
+            <form method="post" action="{% url 'regenerate_agent_qr' user.id %}" style="margin-top:12px;"
+                  onsubmit="return confirm('Eski QR kod bekor bo\'ladi (agar chop etilgan/ko\'rsatilgan bo\'lsa, endi ishlamaydi). Davom etasizmi?');">
+                {% csrf_token %}
+                <button type="submit" class="save-btn" style="background:#0f172a;"><i class="fa-solid fa-rotate"></i> QR kodni yangilash</button>
+            </form>
+        </div>
+        {% endif %}
+
+        {% if user.type != 'ega' %}
+        <div class="owner-card">
+            <div class="owner-label">Oylik maosh</div>
+            {% if payroll_is_per_unit_pazanda %}
+            <div class="info-row"><span class="muted">Hisoblash usuli</span><span>Ishlab chiqarilganga qarab</span></div>
+            <div style="margin:14px 0;">
+                <div style="display:inline-block; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:14px; padding:16px 22px;">
+                    <div style="font-size:12px; color:#166534; font-weight:700; text-transform:uppercase;">Bu oy hisoblangan</div>
+                    <div style="font-size:24px; font-weight:900; color:#065f46;">{{ payroll_summary.earned|floatformat:0 }} so'm</div>
+                </div>
+            </div>
+            {% else %}
+            <div class="info-row"><span class="muted">Belgilangan oylik</span><span>{{ payroll_maosh_obj.oylik_maosh|default:0|floatformat:0 }} so'm</span></div>
+            {% if can_edit_payroll %}
+            <form method="post" style="display:flex; gap:8px; margin-top:12px;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="set_oylik_maosh">
+                <input type="number" step="0.01" min="0" name="oylik_maosh" class="field" placeholder="Masalan: 3000000" style="flex:1; padding:12px 13px; border:1px solid #cbd5e1; border-radius:12px;" required>
+                <button type="submit" class="save-btn"><i class="fa-solid fa-floppy-disk"></i> Saqlash</button>
+            </form>
+            {% endif %}
+            {% endif %}
+        </div>
+
+        <div class="owner-card">
+            <div class="owner-label">Bu oy hisob-kitobi</div>
+            <div class="info-row"><span class="muted">Ishlab topgan</span><span>{{ payroll_summary.earned|floatformat:0 }} so'm</span></div>
+            <div class="info-row"><span class="muted">Berilgan avans</span><span>{{ payroll_summary.avans_sum|floatformat:0 }} so'm</span></div>
+            <div class="info-row"><span class="muted">Qoldiq</span><span>{{ payroll_summary.qoldiq|floatformat:0 }} so'm</span></div>
+            <div class="info-row">
+                <span class="muted">Holat</span>
+                <span class="{% if payroll_summary.is_closed %}status-ok{% else %}status-warn{% endif %}">
+                    {% if payroll_summary.is_closed %}Yopilgan{% else %}Ochiq{% endif %}
+                </span>
+            </div>
+
+            {% if can_edit_payroll and not payroll_summary.is_closed %}
+            <form method="post" style="display:grid; grid-template-columns:1fr 1fr auto; gap:8px; margin-top:14px;" onsubmit="return confirm('Avans berilsinmi?');">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="give_avans">
+                <input type="number" step="0.01" min="0.01" name="summa" placeholder="Summa" style="padding:12px 13px; border:1px solid #cbd5e1; border-radius:12px;" required>
+                <input type="date" name="sana" value="{% now 'Y-m-d' %}" style="padding:12px 13px; border:1px solid #cbd5e1; border-radius:12px;">
+                <button type="submit" class="save-btn"><i class="fa-solid fa-hand-holding-dollar"></i> Avans berish</button>
+            </form>
+            <form method="post" style="margin-top:10px;" onsubmit="return confirm('Bu oyni yopsangiz, keyin avans berib bo\'lmaydi va yakuniy to\'lov avtomatik hisoblanadi. Davom etasizmi?');">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="close_oy">
+                <button type="submit" class="save-btn" style="background:#0f172a;"><i class="fa-solid fa-lock"></i> Oyni yopish</button>
+            </form>
+            {% endif %}
+        </div>
+
+        <div class="owner-card">
+            <div class="owner-label">To'lovlar tarixi</div>
+            <div class="table-wrap" style="margin-top:12px;">
+                <table style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr style="text-align:left; font-size:12px; color:#64748b; text-transform:uppercase;">
+                            <th style="padding:8px 0;">Sana</th>
+                            <th>Turi</th>
+                            <th>Summa</th>
+                            <th>Bergan</th>
+                            <th>Izoh</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tolov in payroll_history %}
+                        <tr style="border-top:1px solid #f1f5f9;">
+                            <td style="padding:8px 0;">{{ tolov.sana|date:"d.m.Y" }}</td>
+                            <td>{{ tolov.get_turi_display }}</td>
+                            <td>{{ tolov.summa|floatformat:0 }} so'm</td>
+                            <td class="muted">{{ tolov.berdi.tuliq_ismi|default:"-" }}</td>
+                            <td class="muted">{{ tolov.izoh|default:"-" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="muted" style="padding:12px 0;">Hali to'lov yo'q.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if pazanda_obj %}
+        <div class="owner-card">
+            <div class="owner-label">Biriktirilgan mahsulotlar</div>
+            <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; margin-bottom:14px;">
+                {% for pm in assigned_products %}
+                <form method="post" style="display:inline-flex;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="unassign_mahsulot">
+                    <input type="hidden" name="mahsulot_id" value="{{ pm.mahsulot.id }}">
+                    <button type="submit" title="Olib tashlash" style="display:flex; align-items:center; gap:8px; padding:8px 14px; background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; border-radius:999px; font-weight:700; font-size:13px; cursor:pointer;">
+                        {{ pm.mahsulot.nomi }}
+                        <i class="fa-solid fa-xmark" style="color:#059669;"></i>
+                    </button>
+                </form>
+                {% empty %}
+                <span class="muted">Hech narsa biriktirilmagan (barcha tayyor mahsulotlar ko'rinadi)</span>
+                {% endfor %}
+            </div>
+            <form method="post" style="display:flex; gap:8px;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="assign_mahsulot">
+                <select name="mahsulot_id" class="form-control" style="flex:1;">
+                    {% for m in assignable_products %}
+                    <option value="{{ m.id }}">{{ m.nomi }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="action"><i class="fa-solid fa-plus"></i> Biriktirish</button>
+            </form>
+        </div>
+
+        <div class="owner-card">
+            <div class="owner-label">Bu oy statistikasi</div>
+            <div style="margin:14px 0; display:flex; gap:14px; flex-wrap:wrap;">
+                <div style="display:inline-block; background:#eff6ff; border:1px solid #bfdbfe; border-radius:14px; padding:16px 22px;">
+                    <div style="font-size:12px; color:#1e40af; font-weight:700; text-transform:uppercase;">Ishlab topgani (jarimasiz)</div>
+                    <div style="font-size:24px; font-weight:900; color:#1e3a8a;">{{ pazanda_month_stats.gross|floatformat:0 }} so'm</div>
+                </div>
+                {% if pazanda_month_stats.jarima %}
+                <div style="display:inline-block; background:#fef2f2; border:1px solid #fecaca; border-radius:14px; padding:16px 22px;">
+                    <div style="font-size:12px; color:#991b1b; font-weight:700; text-transform:uppercase;">Shtraf</div>
+                    <div style="font-size:24px; font-weight:900; color:#b91c1c;">-{{ pazanda_month_stats.jarima|floatformat:0 }} so'm</div>
+                </div>
+                {% endif %}
+                <div style="display:inline-block; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:14px; padding:16px 22px;">
+                    <div style="font-size:12px; color:#166534; font-weight:700; text-transform:uppercase;">Bu oy topgan puli (sof)</div>
+                    <div style="font-size:24px; font-weight:900; color:#065f46;">{{ pazanda_month_stats.earnings|floatformat:0 }} so'm</div>
+                </div>
+            </div>
+            {% for row in pazanda_month_stats.per_product %}
+            <div class="info-row">
+                <span class="muted">{{ row.mahsulot__nomi }}</span>
+                <span>{{ row.jami_miqdor|floatformat:0 }} {{ row.mahsulot__turi__nomi }}</span>
+            </div>
+            {% empty %}
+            <div class="info-row"><span class="muted">Shu oy hali hech narsa ishlab chiqarilmagan.</span></div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if own_badge %}
+        <div class="owner-card" style="text-align:center;">
+            <div class="owner-label">Mening shaxsiy QR badge'im</div>
+            <img src="{% url 'xodim_badge_image' own_badge.kod %}" alt="QR badge" style="width:160px; height:160px; border:1px solid #e2e8f0; border-radius:14px; padding:10px; background:#fff; margin-top:10px;">
+            <p class="muted" style="font-size:12px; margin-top:10px;">Desktop Agent stansiyasida o'zingizni tasdiqlash uchun shu QR'ni skanerlang.</p>
+            <a href="{% url 'xodim_badge_image' own_badge.kod %}" download="badge_{{ user.username }}.png" style="display:inline-block; margin-top:4px; color:#0f766e; font-weight:900; font-size:13px; text-decoration:none;">
+                <i class="fa-solid fa-download"></i> Yuklab olish
+            </a>
         </div>
         {% endif %}
     </section>

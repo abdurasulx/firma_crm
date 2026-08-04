@@ -250,9 +250,19 @@ def sync_company_lifecycle(company, now=None, save=True):
             company.payment_status = "paid"
             company.next_payment_date = None
             changed = True
-    elif company.payment_status == "unpaid" and company.next_payment_date:
-        if now > company.next_payment_date + timedelta(days=3):
-            payment_reason = "payment_overdue"
+    else:
+        # To'lov muddati (`next_payment_date`) o'tib ketgan bo'lsa, firma
+        # "to'lanmagan" holatga o'tkaziladi — bu holat pastdagi 3 kunlik
+        # muhlat tekshiruvi uchun zarur. Bu qadamsiz `payment_status`
+        # "paid" bo'lib qolaverardi va tizim hech qachon qulflanmasdi
+        # (real bug — 2026-07-21 kuni aniqlandi).
+        if company.payment_status == "paid" and company.next_payment_date and now > company.next_payment_date:
+            company.payment_status = "unpaid"
+            changed = True
+
+        if company.payment_status == "unpaid" and company.next_payment_date:
+            if now > company.next_payment_date + timedelta(days=3):
+                payment_reason = "payment_overdue"
 
     if save and changed:
         company.save(
@@ -337,6 +347,8 @@ def get_billing_dashboard_data(company, now=None):
         "current_plan_name": current_plan_name,
         "has_savdogar_sales": bool(company.is_on_trial or company.custom_has_savdogar_sales),
         "savdogar_contract_text": company.savdogar_contract_text,
+        "desktop_agent_stations": company.custom_desktop_agent_stations,
+        "desktop_agent_addon_price": company.desktop_agent_addon_price,
         "monthly_price_usd": monthly_price_usd,
         "payment_due_usd": payment_due_usd,
         "pending_amount_usd": pending_amount_usd,
@@ -374,6 +386,7 @@ def apply_plan_request(plan_request, now=None):
         company.custom_has_analytics = plan_request.custom_has_analytics
         company.custom_has_map = plan_request.custom_has_map
         company.custom_has_savdogar_sales = plan_request.custom_has_savdogar_sales
+        company.custom_desktop_agent_stations = plan_request.custom_desktop_agent_stations
         company.custom_backup_type = plan_request.custom_backup_type
         company.custom_price = plan_request.custom_price
     else:
@@ -384,6 +397,7 @@ def apply_plan_request(plan_request, now=None):
         company.custom_has_analytics = False
         company.custom_has_map = False
         company.custom_has_savdogar_sales = False
+        company.custom_desktop_agent_stations = 0
         company.custom_backup_type = "none"
         company.custom_price = 0
 

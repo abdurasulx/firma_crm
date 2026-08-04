@@ -84,7 +84,7 @@ def trend_30(request):
     days  = int(request.GET.get('days', 30))
     days  = min(max(days, 7), 90)
 
-    labels, summa_data, soni_data = [], [], []
+    labels, summa_data, soni_data, foyda_data = [], [], [], []
     for i in range(days - 1, -1, -1):
         day   = now.date() - dt.timedelta(days=i)
         start = timezone.make_aware(dt.datetime.combine(day, dt.time.min))
@@ -93,9 +93,11 @@ def trend_30(request):
         labels.append(day.strftime('%d.%m'))
         summa_data.append(float(qs.aggregate(t=Sum('summa'))['t'] or 0))
         soni_data.append(qs.count())
+        foyda_data.append(float(qs.aggregate(t=Sum('foyda'))['t'] or 0))
 
     return JsonResponse({
         'labels':     labels,
         'summa_data': summa_data,
         'soni_data':  soni_data,
+        'foyda_data': foyda_data,
     })

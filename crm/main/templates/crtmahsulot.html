@@ -308,22 +308,14 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Ombor bo'limi</label>
+                        <label class="form-label">Mahsulot turi</label>
                         <div class="input-wrapper">
-                            <i class="fa-solid fa-warehouse"></i>
-                            <select id="warehouse_type" name="warehouse_type" class="form-control" required>
-                                <option value="finished">Tayyor mahsulotlar ombori</option>
-                                <option value="semi_finished">Ombor mahsulotlari</option>
+                            <i class="fa-solid fa-industry"></i>
+                            <select id="mahsulot_turi" name="mahsulot_turi" class="form-control">
+                                {% for value, label in mahsulot_turi_choices %}
+                                <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
                             </select>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Narxi</label>
-                        <div class="input-wrapper">
-                            <i class="fa-solid fa-money-bill-wave"></i>
-                            <input type="number" id="narxi" name="narxi" class="form-control" value="{{ narxi }}"
-                                step="0.01" placeholder="0.00" required>
                         </div>
                     </div>
 

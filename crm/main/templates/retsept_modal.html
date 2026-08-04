@@ -1,0 +1,115 @@
+<!-- Retsept komponent qo'shish modali — 2 bosqichli: qidirish -> miqdor.
+     Narx maydoni yo'q, komponentning o'z tannarxi asosida avtomatik hisoblanadi. -->
+<div id="retseptModalOverlay" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,.6); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:16px; padding:22px; width:min(92vw, 440px); max-height:85vh; overflow-y:auto; position:relative;">
+        <button type="button" onclick="closeRetseptModal()" style="position:absolute; top:14px; right:14px; border:none; background:none; font-size:20px; cursor:pointer;">&times;</button>
+
+        <div id="retseptStep1">
+            <h3 style="margin-bottom:14px;">Komponent tanlang</h3>
+            <input type="text" id="retseptSearchInput" placeholder="Qidirish..." class="form-control" style="width:100%; margin-bottom:12px;" oninput="filterRetseptKomponentlar()">
+            <div id="retseptSearchResults" style="max-height:320px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;"></div>
+        </div>
+
+        <div id="retseptStep2" style="display:none;">
+            <h3 style="margin-bottom:14px;">Miqdorini kiriting</h3>
+            <div style="font-weight:800; margin-bottom:10px;" id="retseptSelectedName"></div>
+            <label style="display:block; margin-bottom:12px;">
+                <div class="form-label">Norma miqdori (1 dona uchun)</div>
+                <input type="number" id="retseptMiqdorInput" step="0.0001" min="0.0001" class="form-control" oninput="updateRetseptPreview()">
+            </label>
+            <div style="background:#f8fafc; border-radius:10px; padding:12px; margin-bottom:14px; font-size:14px;">
+                <div>Ushbu komponent narxi: <strong id="retseptLineCost">0</strong> so'm</div>
+                <div style="margin-top:4px;">Retsept umumiy tannarxi (taxminiy): <strong id="retseptRunningTotal">0</strong> so'm</div>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button type="button" class="btn" onclick="backToRetseptStep1()">Orqaga</button>
+                <button type="button" class="btn primary" onclick="submitRetseptRow()">Qo'shish</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form id="retseptHiddenForm" method="post" style="display:none;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="add_retsept_row">
+    <input type="hidden" name="komponent" id="retseptKomponentInput">
+    <input type="hidden" name="norma_miqdor" id="retseptNormaInput">
+</form>
+
+<script>
+const RETSEPT_KOMPONENTLAR = [
+    {% for k in retsept_komponentlar %}
+    {id: {{ k.id }}, nomi: "{{ k.nomi|escapejs }}", tannarx: {{ k.tannarx|default:0|stringformat:"f" }}, birlik: "{{ k.turi.nomi|escapejs }}"}{% if not forloop.last %},{% endif %}
+    {% endfor %}
+];
+const RETSEPT_EXISTING_TOTAL = {{ mahsulot.baza_tannarx|default:0|stringformat:"f" }};
+let retseptSelected = null;
+
+function openRetseptModal() {
+    document.getElementById('retseptModalOverlay').style.display = 'flex';
+    document.getElementById('retseptStep1').style.display = 'block';
+    document.getElementById('retseptStep2').style.display = 'none';
+    document.getElementById('retseptSearchInput').value = '';
+    renderRetseptResults(RETSEPT_KOMPONENTLAR);
+}
+
+function closeRetseptModal() {
+    document.getElementById('retseptModalOverlay').style.display = 'none';
+}
+
+function renderRetseptResults(list) {
+    const box = document.getElementById('retseptSearchResults');
+    box.innerHTML = '';
+    if (!list.length) {
+        box.innerHTML = '<div style="color:#94a3b8; padding:10px;">Komponent topilmadi.</div>';
+        return;
+    }
+    list.forEach((k) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.style.cssText = 'text-align:left; padding:10px 12px; border:1px solid #e2e8f0; border-radius:10px; background:#fff; cursor:pointer;';
+        btn.innerHTML = `<strong>${k.nomi}</strong> <span style="color:#64748b; font-size:12px;">(${k.tannarx} so'm/${k.birlik})</span>`;
+        btn.onclick = () => selectRetseptKomponent(k);
+        box.appendChild(btn);
+    });
+}
+
+function filterRetseptKomponentlar() {
+    const q = document.getElementById('retseptSearchInput').value.toLowerCase();
+    renderRetseptResults(RETSEPT_KOMPONENTLAR.filter((k) => k.nomi.toLowerCase().includes(q)));
+}
+
+function selectRetseptKomponent(k) {
+    retseptSelected = k;
+    document.getElementById('retseptStep1').style.display = 'none';
+    document.getElementById('retseptStep2').style.display = 'block';
+    document.getElementById('retseptSelectedName').textContent = k.nomi + ' (' + k.tannarx + " so'm/" + k.birlik + ')';
+    document.getElementById('retseptMiqdorInput').value = '';
+    updateRetseptPreview();
+}
+
+function backToRetseptStep1() {
+    document.getElementById('retseptStep2').style.display = 'none';
+    document.getElementById('retseptStep1').style.display = 'block';
+}
+
+function updateRetseptPreview() {
+    if (!retseptSelected) return;
+    const miqdor = parseFloat(document.getElementById('retseptMiqdorInput').value) || 0;
+    const lineCost = miqdor * retseptSelected.tannarx;
+    document.getElementById('retseptLineCost').textContent = lineCost.toFixed(0);
+    document.getElementById('retseptRunningTotal').textContent = (RETSEPT_EXISTING_TOTAL + lineCost).toFixed(0);
+}
+
+function submitRetseptRow() {
+    if (!retseptSelected) return;
+    const miqdor = document.getElementById('retseptMiqdorInput').value;
+    if (!miqdor || parseFloat(miqdor) <= 0) {
+        alert("Norma miqdorini to'g'ri kiriting.");
+        return;
+    }
+    document.getElementById('retseptKomponentInput').value = retseptSelected.id;
+    document.getElementById('retseptNormaInput').value = miqdor;
+    document.getElementById('retseptHiddenForm').submit();
+}
+</script>

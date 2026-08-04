@@ -1,0 +1,4 @@
+# Faqat .exe build qilish uchun kerak (ishga tushirish uchun emas).
+# O'rnatish: pip install -r requirements.txt -r requirements-build.txt
+pyinstaller==6.21.0
+pyinstaller-hooks-contrib==2026.6

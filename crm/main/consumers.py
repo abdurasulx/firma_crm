@@ -34,8 +34,37 @@ class NotificationConsumer(AsyncWebsocketConsumer):
                 self.channel_name
             )
             await self.accept()
-        else:
-            await self.close()
+            return
+
+        # Desktop Agent'ning o'zi Django sessiyasiga ega emas (token orqali
+        # autentifikatsiya qiladi) — shuning uchun WS ulanishida tokenni
+        # query-param sifatida yuboradi (`?token=...`). Kompaniya token
+        # orqali topilsa, uning O'Z subdomeni bo'yicha guruhga qo'shiladi —
+        # Host header'idan emas (mahalliy/test serverlarda Host subdomenni
+        # o'zida saqlamasligi mumkin, lekin token har doim to'g'ri
+        # kompaniyani ko'rsatadi).
+        query_string = self.scope.get('query_string', b'').decode()
+        token = dict(
+            pair.split('=', 1) for pair in query_string.split('&') if '=' in pair
+        ).get('token', '')
+        company = await self._company_from_agent_token(token)
+        if company:
+            self.group_name = f"notifications_{company.subdomain}"
+            await self.channel_layer.group_add(
+                self.group_name,
+                self.channel_name
+            )
+            await self.accept()
+            return
+
+        await self.close()
+
+    @database_sync_to_async
+    def _company_from_agent_token(self, token):
+        if not token:
+            return None
+        from .agent_api_views import _resolve_company_by_token
+        return _resolve_company_by_token(token)
 
     async def disconnect(self, close_code):
         if hasattr(self, 'group_name'):
@@ -113,6 +142,8 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         title = event['title']
         notif_type = event.get('notification_type', 'info') # 'success', 'info', 'warning'
         refresh = event.get('refresh', False)
+        agent_event = event.get('event')  # masalan 'ombor_changed' — Desktop Agent uchun
+        extra = event.get('extra') or {}  # masalan stansiya onlayn holati — brauzer JS uchun
 
         # Send message to WebSocket
         await self.send(text_data=json.dumps({
@@ -120,6 +151,8 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             'message': message,
             'type': notif_type,
             'refresh': refresh,
+            'event': agent_event,
+            'extra': extra,
         }))
 
 

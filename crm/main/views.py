@@ -7,8 +7,8 @@ from django.core.paginator import Paginator
 from django.http import HttpResponse
 from django.utils import timezone
 from django.shortcuts import redirect
-from .models import BACKUP_CHOICES, BillingPaymentLink, Company, Plan, HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri, Savdo, YuklamaSorov, MiqdorQoshish, HaridorDukon, AmalLog, qaytarilgan_mahsulotlar, PlanRequest, NasiyaTolov, ProductionMaterialRequest, StockHistory
-from .functions import mahsulotlar_miqdori, makenewform, yuklama_maker, accptyuk, sotishm, sotuv_new_form ,yetkazuvchi_mahsulot_filter, get_bugungi_savdo_summ, add_spctoint
+from .models import BACKUP_CHOICES, BillingPaymentLink, Company, Plan, HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri, Savdo, YuklamaSorov, MiqdorQoshish, HaridorDukon, AmalLog, qaytarilgan_mahsulotlar, PlanRequest, NasiyaTolov, ProductionMaterialRequest, StockHistory, Serial, Ombor, MahsulotQoshimchaXarajat, PazandaMahsulot, MahsulotRetsept, DESKTOP_AGENT_UNIT_PRICE, XodimBadge, ProductionTask, XodimMaosh, XodimTolov, XodimOyYopish, QoshimchaChiqim
+from .functions import mahsulotlar_miqdori, makenewform, yuklama_maker, accptyuk, sotishm, sotuv_new_form ,yetkazuvchi_mahsulot_filter, get_bugungi_savdo_summ, add_spctoint, format_compact_money
 from .plan_utils import (
     company_has_access, get_feature_flags,
     is_tariff_change_locked, get_tariff_lock_reason,
@@ -16,10 +16,43 @@ from .plan_utils import (
 )
 import datetime as dt
 import json
+from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Count, F, Q, Sum
 from collections import defaultdict
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
+
+# Login brute-force himoyasi (UPDATENEWVERSION.md #8) — IP + username
+# bo'yicha muvaffaqiyatsiz urinishlarni sanaydi, limitga yetganda vaqtincha
+# bloklaydi. Yangi tashqi kutubxona (masalan django-axes) kerak emas —
+# mavjud Django cache orqali yetarli.
+LOGIN_MAX_ATTEMPTS = 5
+LOGIN_LOCKOUT_SECONDS = 15 * 60
+
+
+def _get_client_ip(request):
+    forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
+    if forwarded:
+        return forwarded.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR', 'unknown')
+
+
+def _login_throttle_key(request, username):
+    return f'login_throttle:{_get_client_ip(request)}:{(username or "").lower()}'
+
+
+def _is_login_locked_out(request, username):
+    return cache.get(_login_throttle_key(request, username), 0) >= LOGIN_MAX_ATTEMPTS
+
+
+def _register_failed_login(request, username):
+    key = _login_throttle_key(request, username)
+    attempts = cache.get(key, 0) + 1
+    cache.set(key, attempts, LOGIN_LOCKOUT_SECONDS)
+
+
+def _reset_login_throttle(request, username):
+    cache.delete(_login_throttle_key(request, username))
 
 def send_ws_notification(company_subdomain, title, message, type='info', refresh=False):
     try:
@@ -57,9 +90,13 @@ def end_setup(request):
 
 
 from .services.stock_service import (
-    approve_miqdor_qoshish_service, 
-    approve_yuklama_sorov_service
+    approve_miqdor_qoshish_service,
+    approve_yuklama_sorov_service,
+    get_pazanda_month_stats,
+    recompute_tannarx,
 )
+from .services.retsept_service import add_retsept_row, delete_retsept_row
+from .services import qr_service, task_service, payroll_service
 from .services.auth_service import create_user_service, update_user_service
 from .services.billing_service import (
     consume_billing_payment_link,
@@ -85,8 +122,25 @@ User = get_user_model()
 # Create your views here.
 from .bot_logic import verify_tg_link_token
 
+def _apply_session_expiry(request, user):
+    """'ega' roli moliyaviy/billing amallarni boshqargani uchun sessiyasi
+    qisqaroq bo'lishi kerak (UPDATENEWVERSION.md — sessiya muddati).
+
+    Shuningdek, bitta faol veb-sessiya qoidasini ta'minlash uchun joriy
+    sessiya kalitini `User.web_session_key`ga yozib qo'yadi — boshqa
+    qurilmada/brauzerda avval kirilgan bo'lsa, o'sha eski sessiya
+    `CompanyMiddleware` orqali keyingi so'rovda avtomatik yopiladi."""
+    if getattr(user, 'type', None) == 'ega':
+        request.session.set_expiry(60 * 60 * 24)  # 1 kun
+    request.session.save()  # session_key generatsiya qilinishi uchun majburiy
+    user.web_session_key = request.session.session_key
+    user.save(update_fields=['web_session_key'])
+
+
 def login(request):
     data={}
+    if request.GET.get('session_kicked'):
+        messages.info(request, "Boshqa qurilma yoki brauzerda tizimga kirilgani uchun bu sessiya yopildi.")
     is_tg_linking = bool(request.GET.get('tg_id') and request.GET.get('hash'))
     is_session_linking = bool(request.session.get('pending_tg_id'))
     
@@ -129,6 +183,7 @@ def login(request):
             if linked_user:
                 if getattr(request, 'has_telegram_bot', False) or linked_user.type == 'ega':
                     auth_login(request, linked_user)
+                    _apply_session_expiry(request, linked_user)
                     messages.success(request, f"Xush kelibsiz, {linked_user.tuliq_ismi or linked_user.username}! (Telegram orqali kirildi)")
                     from django.conf import settings
                     return redirect(get_company_dashboard_url(linked_user.company, getattr(settings, 'BASE_DOMAIN', 'stockfirm.uz')))
@@ -145,9 +200,18 @@ def login(request):
         password = request.POST.get('password')
         data['username'] = username
         data['password'] = password
+
+        if _is_login_locked_out(request, username):
+            messages.error(
+                request,
+                "Juda ko'p muvaffaqiyatsiz urinish. Iltimos, 15 daqiqadan keyin qayta urinib ko'ring.",
+            )
+            return render(request, 'login.html', data)
+
         user = authenticate(request, username=username, password=password)
 
         if user is not None:
+            _reset_login_throttle(request, username)
             # Successful authentication
             # Check for pending Telegram link
             pending_tg_id = request.session.get('pending_tg_id')
@@ -167,12 +231,14 @@ def login(request):
             # Check if it's a superuser logging into the admin panel
             if user.is_superuser and getattr(request, 'is_admin_panel', False):
                 auth_login(request, user)
+                _apply_session_expiry(request, user)
                 return redirect('super_dashboard')
-            
+
             # Standard company user login
             user_company = getattr(user, 'company', None)
             if user_company and (user_company == request.company or is_tg_linking or is_session_linking):
                 auth_login(request, user)
+                _apply_session_expiry(request, user)
                 if not request.company:
                     # Redirect to subdomain if logging in from landing
                     from django.conf import settings
@@ -181,6 +247,7 @@ def login(request):
             else:
                 messages.error(request, "Siz ushbu firmaga tegishli emassiz!")
         else:
+            _register_failed_login(request, username)
             messages.error(request, "Login yoki parol noto'g'ri!")
 
     return render(request, 'login.html',data)
@@ -275,6 +342,10 @@ def select_custom_plan(request):
     has_map = 'has_map' in request.POST
     has_savdogar_sales = 'has_savdogar_sales' in request.POST
     backup_type = request.POST.get('backup_type', 'none')
+    try:
+        desktop_agent_stations = max(int(request.POST.get('desktop_agent_stations', 0) or 0), 0)
+    except ValueError:
+        desktop_agent_stations = 0
 
     price = Decimal("0.00")
     if staff_count == 0: price += Decimal("55.00")
@@ -284,6 +355,7 @@ def select_custom_plan(request):
     if has_bot: price += Decimal("5.00")
     if has_analytics: price += Decimal("15.00")
     if has_savdogar_sales: price += Decimal("10.00")
+    price += desktop_agent_stations * DESKTOP_AGENT_UNIT_PRICE
 
     if backup_type == 'monthly': price += Decimal("5.00")
     elif backup_type == 'weekly': price += Decimal("15.00")
@@ -298,6 +370,7 @@ def select_custom_plan(request):
         custom_has_analytics=has_analytics,
         custom_has_map=has_map,
         custom_has_savdogar_sales=has_savdogar_sales,
+        custom_desktop_agent_stations=desktop_agent_stations,
         custom_backup_type=backup_type,
         custom_price=price,
         status='pending'
@@ -1016,8 +1089,43 @@ def main(request):
             messages.error(request, "Profil topilmadi. Administrator bilan bog'laning.")
             return redirect('login')
         payload['sorovlar'] = YuklamaSorov.objects.filter(company=request.company, pazanda=pz, mode='waiting').all()
-        payload['zaxira_mahsulotlar']=Mahsulot.objects.filter(company=request.company, warehouse_type='finished')
-        payload['material_requests'] = ProductionMaterialRequest.objects.filter(company=request.company, producer=pz)[:8]
+        payload['zaxira_mahsulotlar'] = _pazanda_mahsulotlar_qs(request.company, pz)
+        payload['is_agent_company'] = bool(request.company.custom_desktop_agent_stations)
+        if payload['is_agent_company']:
+            # Agent firmalarida "Material So'rash"/"Miqdor Qo'shish" o'rniga
+            # "Vazifalar paneli" ishlatiladi (103-108 qadamlar) — bandlik/
+            # bajarish har doim Desktop Agent orqali, veb sahifada faqat
+            # ma'lumot uchun ko'rsatiladi.
+            payload['open_tasks'] = ProductionTask.objects.filter(
+                company=request.company, status='open',
+            ).select_related('mahsulot').order_by('sana', '-created_at')[:20]
+            my_tasks = list(ProductionTask.objects.filter(
+                company=request.company, pazanda=pz,
+            ).exclude(status='open').select_related('mahsulot').order_by('-created_at')[:20])
+            for t in my_tasks:
+                t.produced_count = task_service.task_progress(t)
+                # "Tugatish" (erta yopish, shtraf bilan) tugmasi faqat
+                # yorliqlar Desktop Agent'da haqiqatda chop etilgandan
+                # keyin ko'rsatilishi kerak — aks holda pazanda "Ish
+                # bitdi"ni bosgach, hali stansiyaga borib skanerlashdan
+                # oldin bexosdan "Tugatish"ni bosib, 0 dona uchun shtraf
+                # olishi mumkin (real holatda sodir bo'lgan bug).
+                mq = t.miqdor_qoshishlar.first() if t.status == 'producing' else None
+                t.labels_printed = bool(mq and mq.labels_printed)
+            payload['my_tasks'] = my_tasks
+            # Ishlab chiqaruvchi o'zi vazifa yaratishi uchun — faqat BOM
+            # (retsept) kiritilgan mahsulotlar tanlanishi mumkin.
+            bom_mahsulot_ids = MahsulotRetsept.objects.filter(
+                company=request.company,
+            ).values_list('mahsulot_id', flat=True).distinct()
+            payload['task_mahsulotlar'] = Mahsulot.objects.filter(
+                company=request.company, id__in=bom_mahsulot_ids,
+                warehouse_type='finished', mahsulot_turi='ishlab_chiqariladigan',
+            ).order_by('nomi')
+        else:
+            payload['material_requests'] = ProductionMaterialRequest.objects.filter(
+                company=request.company, producer=pz,
+            ).prefetch_related('miqdor_qoshishlar')[:8]
         zapros=MiqdorQoshish.objects.filter(company=request.company, pazanda=pz,vaqt_sana__range=(today_start, today_end)).all()
         payload['qms']=len(zapros)
         payload['kunlik_miqdorlar'] = zapros
@@ -1071,6 +1179,7 @@ def main(request):
         payload.update({
             'materials': Mahsulot.objects.filter(company=request.company, warehouse_type='semi_finished').order_by('nomi'),
             'pending_material_requests': pending_material_requests,
+            'omborlar': Ombor.objects.filter(company=request.company).order_by('nomi'),
         })
         return render(request, 'warehouse_dashboard.html', payload)
     elif user.type == 'savdogar':
@@ -1130,6 +1239,7 @@ def main(request):
             mahs=Mahsulot.objects.filter(company=request.company)
             payload['zaxira_mahsulotlar'] = mahs
             payload['lnmahs']=len(mahs)
+            payload['is_agent_company'] = bool(request.company.custom_desktop_agent_stations)
 
             now = timezone.localtime()
             today_start = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.min))
@@ -1148,6 +1258,19 @@ def main(request):
                
                 if 'accept' in yk_id:
                     yk_id=yk_id.replace('accept','')
+                    # Desktop Agent ishlatuvchi firmalarda bu yerdan
+                    # tasdiqlash butunlay yopiladi — aks holda yetkazib
+                    # beruvchi/savdogar hech qanday fizik nazoratsiz
+                    # ("o'zi so'rab-o'zi tasdiqlaydi") o'zining yuklamasini
+                    # o'zi tasdiqlab yuborishi mumkin edi. Bunday firmalarda
+                    # tasdiqlash faqat Desktop Agent'da Serial QR skanerlab
+                    # amalga oshadi (`agent_finalize_yuklama`).
+                    if request.company.custom_desktop_agent_stations > 0:
+                        messages.error(
+                            request,
+                            "Bu firmada yuklama faqat Desktop Agent orqali (Serial QR skanerlab) tasdiqlanadi."
+                        )
+                        return redirect('main')
                     # Refactored to use Service
                     success, message = approve_yuklama_sorov_service(yk_id, request.user)
                     if success:
@@ -1175,6 +1298,7 @@ def main(request):
             payload['nfs'] = nfs
 
             payload['yuklamalar'] = yuklamalar
+            payload['is_agent_company'] = bool(request.company.custom_desktop_agent_stations)
             now = timezone.localtime()
             today_start = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.min))
             today_end = timezone.make_aware(dt.datetime.combine(now.date(), dt.time.max))
@@ -1186,11 +1310,10 @@ def main(request):
             payload['reqyuklama'] = reqyuklama
             mahs=Mahsulot.objects.filter(company=request.company)
             payload['zaxira_mahsulotlar'] = mahs
-            
+
             return render(request, 'yetkazuvchi_dashboard.html',payload)
             
     
-    hodims = User.objects.filter(company=request.company).exclude(type='ega').order_by('-date_joined')[:6]  # Faqat 6 ta
     mahs = Mahsulot.objects.filter(company=request.company).order_by('nomi')[:6]  # Faqat 6 ta
     
     # Jami sonlar
@@ -1198,8 +1321,7 @@ def main(request):
     jami_mahsulotlar = Mahsulot.objects.filter(company=request.company).count()
     
     payload['mahsulotlar'] = mahs
-    payload['hodims'] = hodims
-    
+
     soni = jami_hodimlar
     msoni = jami_mahsulotlar
 
@@ -1234,6 +1356,71 @@ def main(request):
     payload['bsavdo'] = bsavdo
     payload['savdo'] = savdo
     payload['bsoni'] = bsoni
+
+    # ── Oylik sof foyda (narx - tannarx, sotuv paytidagi snapshot) ───────────
+    oylik_foyda = savdo.aggregate(t=Sum('foyda'))['t'] or 0
+    payload['oylik_foyda'] = add_spctoint(round(oylik_foyda))
+
+    # ── Moliya bo'limidagi qo'shimcha ko'rsatkichlar (shu oy uchun) ──────────
+    savdo_totals = savdo.aggregate(revenue=Sum('summa'), base=Sum('base_summa'))
+    oylik_tushum = savdo_totals['revenue'] or 0
+    oylik_cogs = (savdo_totals['base'] or 0) - oylik_foyda
+    oylik_naqd_savdo = savdo.filter(st__in=['naqd', 'karta']).aggregate(t=Sum('summa'))['t'] or 0
+    oylik_nasiya_tolov = NasiyaTolov.objects.filter(
+        company=request.company, tolov_sanasi__range=(month_start, today_end),
+    ).aggregate(t=Sum('tolov_summasi'))['t'] or 0
+    oylik_pul_aylanma = oylik_naqd_savdo + oylik_nasiya_tolov
+    oylik_qoshimcha = QoshimchaChiqim.objects.filter(
+        company=request.company, sana__range=(month_start.date(), today_end.date()),
+    ).aggregate(t=Sum('summa'))['t'] or 0
+    oylik_ish_haqi_tolov = XodimTolov.objects.filter(
+        company=request.company, sana__range=(month_start.date(), today_end.date()),
+    ).aggregate(t=Sum('summa'))['t'] or 0
+    oylik_sof_foyda_toliq = oylik_foyda - float(oylik_qoshimcha) - float(oylik_ish_haqi_tolov)
+    oylik_marja = (oylik_sof_foyda_toliq / oylik_tushum * 100) if oylik_tushum else 0
+
+    payload['oylik_pul_aylanma'] = add_spctoint(round(oylik_pul_aylanma))
+    payload['oylik_cogs'] = add_spctoint(round(oylik_cogs))
+    payload['oylik_qoshimcha'] = add_spctoint(round(oylik_qoshimcha))
+    payload['oylik_marja'] = round(oylik_marja, 1)
+
+    # ── Ombordagi hozirgi mahsulotlar qiymati (miqdori x narxi) ──────────────
+    from django.db.models import F, DecimalField, ExpressionWrapper
+    ombor_qiymati = Mahsulot.objects.filter(company=request.company).aggregate(
+        t=Sum(
+            ExpressionWrapper(F('miqdori') * F('narxi'), output_field=DecimalField(max_digits=18, decimal_places=2)),
+        )
+    )['t'] or 0
+    payload['ombor_qiymati'] = add_spctoint(round(ombor_qiymati))
+
+    # ── Top 8 — bu oy eng ko'p pul ishlab topgan hodimlar ────────────────────
+    all_staff = list(User.objects.filter(company=request.company).exclude(type='ega'))
+    for staff in all_staff:
+        earned = 0
+        if staff.type in ('pazanda', 'ishlab_chiqaruvchi'):
+            pz = Pazanda.objects.filter(user=staff, company=request.company).first()
+            if pz:
+                earned = MiqdorQoshish.objects.filter(
+                    pazanda=pz, company=request.company, tasdiqlangan=True,
+                    vaqt_sana__range=(month_start, today_end),
+                ).aggregate(t=Sum('ish_haqi_summasi'))['t'] or 0
+        elif staff.type == 'savdogar':
+            earned = Savdo.objects.filter(
+                company=request.company, savdogar=staff,
+                vaqt_sana__range=(month_start, today_end),
+            ).aggregate(t=Sum('summa'))['t'] or 0
+        elif staff.type == 'yetkazib_beruvchi':
+            yt_obj = YetkazibBeruvchi.objects.filter(user=staff, company=request.company).first()
+            if yt_obj:
+                earned = Savdo.objects.filter(
+                    company=request.company, yetkazib_beruvchi=yt_obj,
+                    vaqt_sana__range=(month_start, today_end),
+                ).aggregate(t=Sum('summa'))['t'] or 0
+        staff.earned = float(earned)
+        staff.earned_display = format_compact_money(earned)
+
+    hodims = sorted(all_staff, key=lambda u: u.earned, reverse=True)[:8]
+    payload['hodims'] = hodims
 
     # ── Haftalik savdo (oxirgi 7 kun) ────────────────────────────────────────
     UZ_DAYS = ['Dush', 'Sesh', 'Chor', 'Pay', 'Jum', 'Shan', 'Yak']
@@ -1289,6 +1476,8 @@ def main(request):
 @login_required(login_url='login')
 def logout_view(request):
     """Foydalanuvchini tizimdan chiqarish"""
+    if request.user.is_authenticated:
+        User.objects.filter(pk=request.user.pk).update(web_session_key=None)
     auth_logout(request)
     return redirect('login')
 @login_required(login_url='login')
@@ -1326,22 +1515,84 @@ def add_haridor(request):
         base_template = 'sgbase.html' if request.user.type == 'savdogar' else 'ytbase.html'
         return render(request, 'add_haridor.html', {'base_template': base_template})
     return redirect('main')
+def _payroll_context(user, company, can_edit):
+    """Xodim (istalgan turdagi) uchun ish haqi/avans kontekstini quradi —
+    `ega` boshqa xodim profilini ko'rganda ham (tahrirlash huquqi bilan),
+    xodimning o'zi o'z profilini ko'rganda ham (faqat o'qish uchun)."""
+    return {
+        'payroll_maosh_obj': XodimMaosh.objects.filter(user=user, company=company).first(),
+        'payroll_summary': payroll_service.get_month_summary(user, company),
+        'payroll_history': payroll_service.get_payment_history(user, company),
+        'payroll_is_per_unit_pazanda': (
+            company.ish_haqi_turi == 'per_unit'
+            and Pazanda.objects.filter(user=user, company=company).exists()
+        ),
+        'can_edit_payroll': can_edit,
+    }
+
+
+def _pazanda_assignment_context(pz, company):
+    """Pazanda uchun biriktirilgan/biriktirilishi mumkin bo'lgan mahsulotlar + oylik statistika."""
+    assignable_products = Mahsulot.objects.filter(
+        Q(warehouse_type='finished', mahsulot_turi='ishlab_chiqariladigan')
+        | Q(warehouse_type='semi_finished', ombor_turi='yarim_tayyor'),
+        company=company,
+    ).exclude(
+        id__in=PazandaMahsulot.objects.filter(pazanda=pz).values_list('mahsulot_id', flat=True)
+    ).order_by('nomi')
+    assigned_products = PazandaMahsulot.objects.filter(
+        pazanda=pz
+    ).select_related('mahsulot').order_by('mahsulot__nomi')
+    return {
+        'pazanda_obj': pz,
+        'assignable_products': assignable_products,
+        'assigned_products': assigned_products,
+        'pazanda_month_stats': get_pazanda_month_stats(pz, company),
+    }
+
+
 @login_required(login_url='login')
 def profile_view(request, username):
     user = get_object_or_404(User, username=username, company=request.company)
     if request.method == 'GET':
-    
+
         if request.user.type in ['yetkazib_beruvchi', 'savdogar']:
             base_template = 'sgbase.html' if request.user.type == 'savdogar' else 'ytbase.html'
-            return render(request, 'ytprofile.html', {'user': user, 'base_template': base_template})
+            context = {'user': user, 'base_template': base_template}
+            context.update(_payroll_context(user, request.company, can_edit=False))
+            if request.user.pk == user.pk:
+                context['own_badge'], _ = XodimBadge.objects.get_or_create(
+                    user=user, defaults={'company': request.company},
+                )
+            return render(request, 'ytprofile.html', context)
         elif request.user.type in ['pazanda', 'ishlab_chiqaruvchi']:
-            return render(request, 'pzprofile.html', {'user': user})
+            context = {'user': user}
+            pz = Pazanda.objects.filter(user=user, company=request.company).first()
+            if pz:
+                context['pazanda_month_stats'] = get_pazanda_month_stats(pz, request.company)
+                context['assigned_products'] = PazandaMahsulot.objects.filter(
+                    pazanda=pz
+                ).select_related('mahsulot').order_by('mahsulot__nomi')
+            context.update(_payroll_context(user, request.company, can_edit=False))
+            if request.user.pk == user.pk:
+                context['own_badge'], _ = XodimBadge.objects.get_or_create(
+                    user=user, defaults={'company': request.company},
+                )
+            return render(request, 'pzprofile.html', context)
         elif request.user.type == 'omborchi':
-            return render(request, 'egaprofile.html', {'user': user, 'profile_stats': None})
+            context = {'user': user, 'profile_stats': None}
+            context.update(_payroll_context(user, request.company, can_edit=False))
+            if request.user.pk == user.pk:
+                context['own_badge'], _ = XodimBadge.objects.get_or_create(
+                    user=user, defaults={'company': request.company},
+                )
+            return render(request, 'egaprofile.html', context)
         elif request.user.type=='ega':
             if user.type in ['yetkazib_beruvchi', 'savdogar']:
                 yuklamalar = mahsulotlar_miqdori( YetkazibBeruvchi.objects.get(user=user).mahsulotlar) or []
-                return render(request, 'egayt.html',{'user': user,'yuklamalar': yuklamalar})
+                context = {'user': user, 'yuklamalar': yuklamalar}
+                context.update(_payroll_context(user, request.company, can_edit=True))
+                return render(request, 'egayt.html', context)
             company = request.company
             flags = get_feature_flags(company)
             profile_stats = {
@@ -1357,9 +1608,76 @@ def profile_view(request, username):
                 'has_savdogar_sales': flags.get('has_savdogar_sales'),
                 'savdogar_contract_ready': bool((company.savdogar_contract_text or '').strip()),
             }
-            return render(request, 'egaprofile.html', {'user': user, 'profile_stats': profile_stats})
+            context = {'user': user, 'profile_stats': profile_stats}
+            if user.type in ['pazanda', 'ishlab_chiqaruvchi']:
+                pz = Pazanda.objects.filter(user=user, company=company).first()
+                if pz:
+                    context.update(_pazanda_assignment_context(pz, company))
+            if user.type != 'ega':
+                context.update(_payroll_context(user, company, can_edit=True))
+            if request.user.pk == user.pk:
+                context['own_badge'], _ = XodimBadge.objects.get_or_create(
+                    user=user, defaults={'company': request.company},
+                )
+            return render(request, 'egaprofile.html', context)
     elif request.method == 'POST':
         if request.user.type == 'ega':
+            if request.POST.get('action') == 'set_oylik_maosh' and user.type != 'ega':
+                try:
+                    oylik_maosh = Decimal(request.POST.get('oylik_maosh') or '0')
+                except InvalidOperation:
+                    messages.error(request, "Maosh summasi noto'g'ri kiritildi.")
+                    return redirect('profile', username=user.username)
+                try:
+                    payroll_service.set_fixed_salary(user, request.company, oylik_maosh, request.user)
+                    messages.success(request, "Oylik maosh saqlandi.")
+                except ValueError as e:
+                    messages.error(request, str(e))
+                return redirect('profile', username=user.username)
+
+            if request.POST.get('action') == 'give_avans' and user.type != 'ega':
+                try:
+                    summa = Decimal(request.POST.get('summa') or '0')
+                except InvalidOperation:
+                    messages.error(request, "Summa noto'g'ri kiritildi.")
+                    return redirect('profile', username=user.username)
+                sana_str = (request.POST.get('sana') or '').strip()
+                try:
+                    sana = dt.date.fromisoformat(sana_str) if sana_str else timezone.localdate()
+                except ValueError:
+                    sana = timezone.localdate()
+                izoh = (request.POST.get('izoh') or '').strip()
+                try:
+                    payroll_service.give_avans(user, request.company, summa, sana, request.user, izoh=izoh)
+                    messages.success(request, "Avans berildi.")
+                except ValueError as e:
+                    messages.error(request, str(e))
+                return redirect('profile', username=user.username)
+
+            if request.POST.get('action') == 'close_oy' and user.type != 'ega':
+                try:
+                    snapshot = payroll_service.close_month(user, request.company, request.user)
+                    messages.success(
+                        request,
+                        f"Oy yopildi. Yakuniy to'lov: {snapshot.tolangan_yakuniy_summa:,.0f} so'm",
+                    )
+                except ValueError as e:
+                    messages.error(request, str(e))
+                return redirect('profile', username=user.username)
+
+            if request.POST.get('action') in ('assign_mahsulot', 'unassign_mahsulot') and user.type in ['pazanda', 'ishlab_chiqaruvchi']:
+                pz = get_object_or_404(Pazanda, user=user, company=request.company)
+                if request.POST.get('action') == 'assign_mahsulot':
+                    mahsulot = get_object_or_404(Mahsulot, id=request.POST.get('mahsulot_id'), company=request.company)
+                    PazandaMahsulot.objects.get_or_create(company=request.company, pazanda=pz, mahsulot=mahsulot)
+                    messages.success(request, "Mahsulot biriktirildi.")
+                else:
+                    PazandaMahsulot.objects.filter(
+                        pazanda=pz, mahsulot_id=request.POST.get('mahsulot_id'), company=request.company,
+                    ).delete()
+                    messages.success(request, "Mahsulot biriktirilishi bekor qilindi.")
+                return redirect('profile', username=user.username)
+
             if user.type == 'ega':
                 new_username = (request.POST.get('username') or '').strip()
                 fullname = (request.POST.get('tuliq_ismi') or '').strip()
@@ -1418,6 +1736,13 @@ def profile_view(request, username):
                 yt.save()
                 yuklamalar = mahsulotlar_miqdori( YetkazibBeruvchi.objects.get(user=user).mahsulotlar) or []
                 return render(request, 'egayt.html',{'user': user,'yuklamalar': yuklamalar})
+def _desktop_agent_slots_left(company):
+    if not company:
+        return 0
+    used = User.objects.filter(company=company, type='desktop_agent').count()
+    return max(company.custom_desktop_agent_stations - used, 0)
+
+
 @login_required(login_url='login')
 def crtuser(request):
     if request.method == 'POST':
@@ -1428,7 +1753,21 @@ def crtuser(request):
             flags = get_feature_flags(company)
             if requested_type == 'savdogar' and not flags.get('has_savdogar_sales'):
                 messages.error(request, "Savdogar rolini ochish uchun maxsus tarifda $10 lik Savdogar savdo modulini yoqing.")
-                return render(request, 'useryaratish.html', request.POST.dict())
+                ctx = request.POST.dict()
+                ctx['desktop_agent_slots_left'] = _desktop_agent_slots_left(company)
+                return render(request, 'useryaratish.html', ctx)
+
+            if requested_type == 'desktop_agent':
+                current_stations = User.objects.filter(company=company, type='desktop_agent').count()
+                if current_stations >= company.custom_desktop_agent_stations:
+                    messages.error(
+                        request,
+                        f"Siz sotib olgan Desktop Agent stansiyalari soni ({company.custom_desktop_agent_stations}) "
+                        f"ga yetgan. Ko'proq stansiya kerak bo'lsa, biz bilan bog'laning."
+                    )
+                    ctx = request.POST.dict()
+                    ctx['desktop_agent_slots_left'] = _desktop_agent_slots_left(company)
+                    return render(request, 'useryaratish.html', ctx)
 
             # Get max_users from custom plan or standard plan
             if company.is_custom_plan:
@@ -1437,13 +1776,16 @@ def crtuser(request):
                 max_users = company.plan.max_users
             else:
                 max_users = 5 # Default for trial/no plan
-            
-            # 0 means Unlimited
-            if max_users > 0:
-                current_users_count = User.objects.filter(company=company).count()
+
+            # 0 means Unlimited. Desktop Agent stansiyalari alohida (billing addon)
+            # kvota bilan cheklangani uchun umumiy xodim limitiga hisoblanmaydi.
+            if max_users > 0 and requested_type != 'desktop_agent':
+                current_users_count = User.objects.filter(company=company).exclude(type='desktop_agent').count()
                 if current_users_count >= max_users:
                     messages.error(request, f"Siz tanlagan tarif bo'yicha maksimal foydalanuvchilar soni ({max_users}) ga yetgan. Qo'shish uchun tarifni yangilang.")
-                    return render(request, 'useryaratish.html', request.POST.dict())
+                    ctx = request.POST.dict()
+                    ctx['desktop_agent_slots_left'] = _desktop_agent_slots_left(company)
+                    return render(request, 'useryaratish.html', ctx)
 
         user, message = create_user_service(
             username=request.POST.get('username'),
@@ -1461,9 +1803,13 @@ def crtuser(request):
             return redirect('hodimlar_list')
         else:
             messages.error(request, message)
-            return render(request, 'useryaratish.html', request.POST.dict())
+            ctx = request.POST.dict()
+            ctx['desktop_agent_slots_left'] = _desktop_agent_slots_left(company)
+            return render(request, 'useryaratish.html', ctx)
 
-    return render(request, 'useryaratish.html')
+    return render(request, 'useryaratish.html', {
+        'desktop_agent_slots_left': _desktop_agent_slots_left(request.company),
+    })
 
 @login_required(login_url='login')
 def editusr(request, username):
@@ -1487,7 +1833,7 @@ def editusr(request, username):
 
     if request.method == 'POST':
         action_type = request.POST.get('action_type')
-        
+
         if action_type == 'delete_account':
             if request.POST.get('confirm_text') == 'OCHIR':
                 user_edit.delete()
@@ -1496,6 +1842,19 @@ def editusr(request, username):
             else:
                 messages.error(request, "Tasdiq matni noto'g'ri.")
                 return redirect('edituser', username=username)
+
+        if request.POST.get('action') in ('assign_mahsulot', 'unassign_mahsulot') and user_edit.type in ['pazanda', 'ishlab_chiqaruvchi']:
+            pz = get_object_or_404(Pazanda, user=user_edit, company=request.company)
+            if request.POST.get('action') == 'assign_mahsulot':
+                mahsulot = get_object_or_404(Mahsulot, id=request.POST.get('mahsulot_id'), company=request.company)
+                PazandaMahsulot.objects.get_or_create(company=request.company, pazanda=pz, mahsulot=mahsulot)
+                messages.success(request, "Mahsulot biriktirildi.")
+            else:
+                PazandaMahsulot.objects.filter(
+                    pazanda=pz, mahsulot_id=request.POST.get('mahsulot_id'), company=request.company,
+                ).delete()
+                messages.success(request, "Mahsulot biriktirilishi bekor qilindi.")
+            return redirect('edituser', username=username)
 
         # Refactored to Auth Service
         user, message = update_user_service(
@@ -1510,33 +1869,79 @@ def editusr(request, username):
             is_active=(request.POST.get('is_active') == "1")
         )
 
-        # Handle manual stock override for delivery users if they are not using sorov flow
-        if user.type == 'yetkazib_beruvchi':
-            yb = YetkazibBeruvchi.objects.get(user=user)
-            new_yuklamalar_str = ""
-            all_mahs = Mahsulot.objects.filter(company=request.company)
-            for m in all_mahs:
-                miqdor = request.POST.get(f'qty_{m.id}') # Use ID as sent from updated template
-                if miqdor and float(miqdor) > 0:
-                    new_yuklamalar_str += f"{m.nomi} {int(float(miqdor))},"
-            yb.mahsulotlar = new_yuklamalar_str
-            yb.save()
+        # Yetkazib beruvchining zaxirasi endi bu yerdan qo'lda tahrirlanmaydi —
+        # faqat "yuklama" so'rovi (web'da tasdiqlash yoki Desktop Agent orqali
+        # Serial QR skanerlash) orqali, tizim tomonidan o'zgaradi.
 
         messages.success(request, message)
         return redirect('hodimlar_list')
 
-    return render(request, 'editusr.html', {
+    context = {
         'user_edit': user_edit,
         'mn': mn,
         'mr': mr,
         'all_mahsulotlar': all_mahsulotlar,
-        'current_yuklamalar': current_yuklamalar_dict
-    })
+        'current_yuklamalar': current_yuklamalar_dict,
+    }
+    if user_edit.type in ['pazanda', 'ishlab_chiqaruvchi']:
+        pz = Pazanda.objects.filter(user=user_edit, company=request.company).first()
+        if pz:
+            context.update(_pazanda_assignment_context(pz, request.company))
+
+    return render(request, 'editusr.html', context)
 @login_required(login_url='login')
 def seemahsulot(request, mahsulot_id):
-    mahsulot = get_object_or_404(Mahsulot, id=mahsulot_id, company=request.company)
+    mahsulot = get_object_or_404(Mahsulot, id=mahsulot_id, company=request.company, warehouse_type='finished')
     turs = MahsulotTuri.objects.all().order_by('nomi')
+
     if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'add_xarajat':
+            nomi_x = (request.POST.get('xarajat_nomi') or '').strip()
+            turi_x = request.POST.get('xarajat_turi') or 'miqdor'
+            if turi_x not in dict(MahsulotQoshimchaXarajat.XARAJAT_TURI_CHOICES):
+                turi_x = 'miqdor'
+            try:
+                summa_x = float(request.POST.get('xarajat_summa') or 0)
+            except ValueError:
+                summa_x = 0
+            if nomi_x and summa_x > 0:
+                MahsulotQoshimchaXarajat.objects.create(
+                    company=request.company, mahsulot=mahsulot, nomi=nomi_x, turi=turi_x, summa=summa_x,
+                )
+                recompute_tannarx(mahsulot)
+                messages.success(request, "Qo'shimcha xarajat qo'shildi.")
+            else:
+                messages.error(request, "Xarajat nomi va summasi to'g'ri kiritilishi kerak.")
+            return redirect('seeproduct', mahsulot_id=mahsulot.id)
+
+        if action == 'delete_xarajat':
+            MahsulotQoshimchaXarajat.objects.filter(
+                id=request.POST.get('xarajat_id'), company=request.company, mahsulot=mahsulot,
+            ).delete()
+            recompute_tannarx(mahsulot)
+            messages.success(request, "Qo'shimcha xarajat o'chirildi.")
+            return redirect('seeproduct', mahsulot_id=mahsulot.id)
+
+        if action == 'add_retsept_row':
+            komponent = get_object_or_404(Mahsulot, id=request.POST.get('komponent'), company=request.company)
+            try:
+                norma_miqdor = float(request.POST.get('norma_miqdor') or 0)
+            except ValueError:
+                norma_miqdor = 0
+            ok, err = add_retsept_row(request.company, mahsulot, komponent, norma_miqdor)
+            if ok:
+                messages.success(request, "Retsept qatori saqlandi.")
+            else:
+                messages.error(request, err)
+            return redirect('seeproduct', mahsulot_id=mahsulot.id)
+
+        if action == 'delete_retsept_row':
+            delete_retsept_row(request.company, mahsulot, request.POST.get('row_id'))
+            messages.success(request, "Retsept qatori o'chirildi.")
+            return redirect('seeproduct', mahsulot_id=mahsulot.id)
+
         if 'nomi' in request.POST:
             nnomi = request.POST.get('nomi')
             yts = YetkazibBeruvchi.objects.all()
@@ -1549,43 +1954,87 @@ def seemahsulot(request, mahsulot_id):
                 yt.save()
             mahsulot.nomi = nnomi
 
-        mahsulot.miqdori = request.POST.get('miqdori')
-        mahsulot.narxi = request.POST.get('narxi')
-        
+        # Miqdor — faqat mahsulot birinchi marta yaratilganda (createmahsulot)
+        # kiritiladi. Undan keyin faqat tizim orqali (ishlab chiqarish
+        # tasdiqlanishi, sotish, qaytarish) o'zgaradi — bu yerdan qo'lda
+        # tahrirlash imkoni yo'q (distributor turi bundan mustasno — ularga
+        # hali alohida "kirim" oqimi qurilmagan, shuning uchun vaqtincha
+        # eski xatti-harakat saqlanadi).
+        if mahsulot.mahsulot_turi == 'distributor':
+            mahsulot.miqdori = request.POST.get('miqdori')
+        mahsulot.ishlab_chiqarish_narxi = request.POST.get('ishlab_chiqarish_narxi') or 0
+        mahsulot.amortizatsiya_foizi = request.POST.get('amortizatsiya_foizi') or 0
+        mahsulot.mahsulot_turi = request.POST.get('mahsulot_turi', mahsulot.mahsulot_turi)
+
+        serial_granularity = request.POST.get('serial_granularity')
+        if serial_granularity in dict(Mahsulot.SERIAL_GRANULARITY_CHOICES):
+            mahsulot.serial_granularity = serial_granularity
+
         # Look up by ID as sent from the template <option value="{{ tur.id }}">
         turi_id = request.POST.get('turi')
         if turi_id:
             mahsulot.turi = get_object_or_404(MahsulotTuri, id=turi_id)
-        mahsulot.warehouse_type = request.POST.get('warehouse_type', mahsulot.warehouse_type)
         mahsulot.is_savdogar_product = 'is_savdogar_product' in request.POST
-            
+
         if 'rasmi' in request.FILES:
             mahsulot.rasmi = request.FILES['rasmi']
-        
+
         mahsulot.save()
+        recompute_tannarx(mahsulot)
+
+        try:
+            yangi_narxi = Decimal(str(request.POST.get('narxi') or 0))
+        except Exception:
+            yangi_narxi = Decimal('0')
+
+        if yangi_narxi <= mahsulot.tannarx:
+            messages.error(
+                request,
+                f"Narxi tannarxdan ({mahsulot.tannarx:.0f} so'm) yuqori bo'lishi kerak. "
+                f"Narxi saqlanmadi, boshqa o'zgarishlar saqlandi."
+            )
+            return redirect('seeproduct', mahsulot_id=mahsulot.id)
+
+        mahsulot.narxi = yangi_narxi
+        mahsulot.save(update_fields=['narxi'])
         messages.success(request, "Mahsulot muvaffaqiyatli saqlandi.")
         return redirect('mahsulotlar_list')
-    return render(request, 'seemahsulot.html', {'mahsulot': mahsulot, 'turs': turs})
+    context = {
+        'mahsulot': mahsulot, 'turs': turs,
+        'mahsulot_turi_choices': Mahsulot.MAHSULOT_TURI_CHOICES,
+        'serial_granularity_choices': Mahsulot.SERIAL_GRANULARITY_CHOICES,
+        'xarajatlar': mahsulot.qoshimcha_xarajatlar.all(),
+    }
+    if mahsulot.mahsulot_turi == 'ishlab_chiqariladigan':
+        context['retsept_rows'] = MahsulotRetsept.objects.filter(
+            company=request.company, mahsulot=mahsulot
+        ).select_related('komponent')
+        context['retsept_komponentlar'] = Mahsulot.objects.filter(
+            company=request.company, warehouse_type='semi_finished'
+        ).order_by('nomi')
+    return render(request, 'seemahsulot.html', context)
 @login_required(login_url='login')
 def createmahsulot(request):
     tur=MahsulotTuri.objects.all().order_by('nomi')
-    payload={}  
+    payload={}
     payload['turs']=tur
+    payload['mahsulot_turi_choices'] = Mahsulot.MAHSULOT_TURI_CHOICES
     if request.method == 'POST':
         nomi = request.POST.get('nomi')
         miqdori = request.POST.get('miqdori')
         turi=get_object_or_404(MahsulotTuri, id=request.POST.get('turi'))
         rasmi = request.FILES.get('rasmi')
-        narxi=request.POST.get('narxi')
-        warehouse_type = request.POST.get('warehouse_type', 'finished')
+        mahsulot_turi = request.POST.get('mahsulot_turi', 'ishlab_chiqariladigan')
         is_savdogar_product = 'is_savdogar_product' in request.POST
-        mh=Mahsulot.objects.create(nomi=nomi, miqdori=miqdori, turi=turi, narxi=narxi, rasmi=rasmi, company=request.company, warehouse_type=warehouse_type, is_savdogar_product=is_savdogar_product)
-        mh.save()
+        mh=Mahsulot.objects.create(
+            nomi=nomi, miqdori=miqdori, turi=turi, narxi=0, rasmi=rasmi, company=request.company,
+            warehouse_type='finished', mahsulot_turi=mahsulot_turi, is_savdogar_product=is_savdogar_product,
+        )
         # Activity log
         AmalLog.objects.create(
             user=request.user,
             company=request.company,
-            amal_shifri=f"mahsulot_yaratish|{nomi}|{miqdori}|{narxi}"
+            amal_shifri=f"mahsulot_yaratish|{nomi}|{miqdori}"
         )
         return redirect('main')
     return render(request, 'crtmahsulot.html',payload)
@@ -1609,14 +2058,85 @@ def deleteprdct(request, product_id):
             from django.contrib import messages
             messages.error(request, "Tasdiqlash matni noto'g'ri.")
     return redirect('seeproduct', mahsulot_id=product_id)
+
+
+def _pazanda_mahsulotlar_qs(company, pazanda):
+    """
+    Ishlab chiqaruvchi hisobot bera oladigan mahsulotlar (tayyor + yarim tayyor).
+    Agar unga aniq mahsulot biriktirilgan bo'lsa — faqat o'shalar; hech narsa
+    biriktirilmagan bo'lsa — eski xulq-atvor (faqat tayyor mahsulotlar).
+    """
+    assigned_ids = list(
+        PazandaMahsulot.objects.filter(pazanda=pazanda).values_list('mahsulot_id', flat=True)
+    )
+    if assigned_ids:
+        return Mahsulot.objects.filter(company=company, id__in=assigned_ids).order_by('nomi')
+    return Mahsulot.objects.filter(company=company, warehouse_type='finished').order_by('nomi')
+
+
 @login_required(login_url='login')
 def addmiqdor(request):
     if request.user.type in ['pazanda', 'ishlab_chiqaruvchi']:
-        
+        # 108-qadam: agent-yoqilgan firmalarda "Miqdor Qo'shish"/"Material
+        # So'rash" endi ishlatilmaydi — o'rniga "Vazifalar paneli" (103-107
+        # qadamlar), bandlik/bajarish faqat Desktop Agent orqali. Agentsiz
+        # firmalarda bu sahifa o'zgarishsiz ishlayveradi.
+        if request.company.custom_desktop_agent_stations > 0:
+            messages.info(
+                request,
+                "Bu funksiya endi Desktop Agent orqali ishlaydi. Yangi vazifalarni "
+                "va yuklama topshirishni stansiyada badge'ingizni skanerlab bajaring.",
+            )
+            return redirect('main')
+
         payload={}
-        payload['mahsulotlar']=Mahsulot.objects.filter(company=request.company, warehouse_type='finished').order_by('nomi')
+        try:
+            pz_for_list = Pazanda.objects.get(user=request.user, company=request.company)
+            payload['mahsulotlar'] = _pazanda_mahsulotlar_qs(request.company, pz_for_list)
+        except Pazanda.DoesNotExist:
+            payload['mahsulotlar'] = Mahsulot.objects.filter(company=request.company, warehouse_type='finished').order_by('nomi')
         payload['materials']=Mahsulot.objects.filter(company=request.company, warehouse_type='semi_finished').order_by('nomi')
-        
+
+        # Agent-yoqilgan firmalarda hali tasdiqlanmagan (Desktop Agent'da
+        # kutilayotgan) so'rovlarni shu sahifaning o'zida ko'rsatamiz —
+        # aks holda foydalanuvchi buni bilmasdan, bir xil mahsulot uchun
+        # yana bir marta yuborishi (dublikat) mumkin edi (bugungi haqiqiy
+        # holatda aynan shu tarzda bir necha marta takrorlangan edi).
+        if request.company.custom_desktop_agent_stations > 0:
+            try:
+                pz_for_pending = Pazanda.objects.get(user=request.user, company=request.company)
+                payload['pending_own_miqdor'] = MiqdorQoshish.objects.filter(
+                    company=request.company, pazanda=pz_for_pending, tasdiqlangan=False,
+                ).select_related('mahsulot').order_by('-vaqt_sana')
+            except Pazanda.DoesNotExist:
+                pass
+
+        # "✓ Bo'ldim" havolasi orqali kelgan bo'lsa (pazanda_dashboard.html'dagi
+        # tasdiqlangan, hali "tugallanmagan" material so'rovi) — mahsulot va
+        # miqdorni oldindan to'ldiramiz (retsept/BOM orqali hisoblab: so'ralgan
+        # xom ashyo miqdori / norma_miqdor = taxminiy tayyor mahsulot soni).
+        # Foydalanuvchi baribir bu qiymatni kamaytirishi/ko'paytirishi mumkin —
+        # bu shunchaki oldindan to'ldirish, majburiy qiymat emas.
+        complete_request_id = request.GET.get('complete_request')
+        if complete_request_id:
+            try:
+                pz_prefill = Pazanda.objects.get(user=request.user, company=request.company)
+                creq = ProductionMaterialRequest.objects.select_related('material', 'target_product').get(
+                    id=complete_request_id, company=request.company, producer=pz_prefill,
+                    status='approved', consumed_in__isnull=True,
+                )
+                payload['prefill_mahsulot_id'] = creq.target_product_id
+                payload['complete_request_id'] = creq.id
+                bom_row = MahsulotRetsept.objects.filter(
+                    company=request.company, mahsulot=creq.target_product, komponent=creq.material,
+                ).first()
+                if bom_row and bom_row.norma_miqdor:
+                    payload['prefill_miqdor'] = round(creq.qty / bom_row.norma_miqdor, 2)
+                else:
+                    payload['prefill_miqdor'] = creq.qty
+            except (Pazanda.DoesNotExist, ProductionMaterialRequest.DoesNotExist):
+                pass
+
         if request.method == 'POST':
             try:
                 pz = Pazanda.objects.get(user=request.user, company=request.company)
@@ -1631,10 +2151,8 @@ def addmiqdor(request):
                     warehouse_type='semi_finished'
                 )
                 target_product = get_object_or_404(
-                    Mahsulot,
+                    _pazanda_mahsulotlar_qs(request.company, pz),
                     id=request.POST.get('target_product'),
-                    company=request.company,
-                    warehouse_type='finished'
                 )
                 try:
                     qty = float((request.POST.get('material_qty') or '0').replace(',', '.'))
@@ -1677,25 +2195,119 @@ def addmiqdor(request):
                 messages.success(request, "Material so'rovi omborchiga yuborildi.")
                 return redirect('main')
 
-            mxs=Mahsulot.objects.get(id=request.POST.get('mahsulot'), company=request.company, warehouse_type='finished')
+            if request.POST.get('action') == 'cancel_material_request':
+                # Ishlab chiqaruvchi o'zi yuborgan, hali "kutilmoqda" holatidagi
+                # so'rovni bekor qiladi. Desktop Agent'da bekor qilish imkoni
+                # yo'q (klaviatura/sichqonchasiz stansiya) — shuning uchun
+                # foydalanuvchi bilan kelishilgan qaror: bekor qilish faqat
+                # shu yerdan, o'z so'rovlari ro'yxatidan amalga oshiriladi.
+                req = ProductionMaterialRequest.objects.filter(
+                    id=request.POST.get('request_id'), company=request.company,
+                    producer=pz, status='waiting',
+                ).first()
+                if req:
+                    req.status = 'rejected'
+                    req.reviewed_by = request.user
+                    req.reviewed_at = timezone.now()
+                    req.save(update_fields=['status', 'reviewed_by', 'reviewed_at'])
+                    messages.success(request, "So'rov bekor qilindi.")
+                else:
+                    messages.error(request, "So'rov topilmadi yoki allaqachon ko'rib chiqilgan.")
+                return redirect('main')
+
+            mxs = get_object_or_404(_pazanda_mahsulotlar_qs(request.company, pz), id=request.POST.get('mahsulot'))
             mqdr=request.POST.get('miqdor')
             rasmi=request.FILES.get('rasm')
+
+            # "✓ Bo'ldim" havolasi orqali kelgan bo'lsa — shu material
+            # so'rovi uchun avvalroq allaqachon miqdor yuborilmaganini
+            # tekshiramiz (BOM/retsept bo'lmagan mahsulotlarda `consumed_in`
+            # hech qachon yozilmagani uchun, tugma qayta-qayta bosilib
+            # dublikat yozuv yaratilishining oldini shu tekshiruv oladi).
+            source_material_request = None
+            complete_request_id = request.POST.get('complete_request_id')
+            if complete_request_id:
+                source_material_request = ProductionMaterialRequest.objects.filter(
+                    id=complete_request_id, company=request.company, producer=pz,
+                    status='approved', consumed_in__isnull=True, miqdor_qoshishlar__isnull=True,
+                ).first()
+                if not source_material_request:
+                    messages.error(request, "Bu so'rov uchun miqdor allaqachon yuborilgan yoki topilmadi.")
+                    return redirect('main')
+
+            # Yuqoridagi tekshiruv faqat "✓ Bo'ldim" havolasi orqali kelgan
+            # (complete_request_id bilan) submitlarni himoya qiladi. Lekin
+            # aynan shu sahifadan to'g'ridan-to'g'ri (havolasiz) yuborilgan
+            # so'rovlar ham xuddi shunday dublikat bo'lishi mumkin — masalan
+            # foydalanuvchi "hech narsa bo'lmadi" deb o'ylab, bir xil
+            # mahsulot/miqdorni bir necha marta (soatlar oralig'ida ham)
+            # qayta yuboradi, chunki hozircha tasdiqlanmagan so'rovi
+            # borligini ko'rmaydi. Shuning uchun bu yerda — agent-yoqilgan
+            # firmalarda — umumiy tekshiruv: shu mahsulot uchun hali
+            # tasdiqlanmagan so'rov mavjud bo'lsa va foydalanuvchi ataylab
+            # tasdiqlamagan bo'lsa (confirm_duplicate), bloklanadi.
+            if request.company.custom_desktop_agent_stations > 0 and request.POST.get('confirm_duplicate') != '1':
+                pending_duplicate = MiqdorQoshish.objects.filter(
+                    company=request.company, pazanda=pz, mahsulot=mxs, tasdiqlangan=False,
+                ).order_by('-vaqt_sana').first()
+                if pending_duplicate:
+                    payload['duplicate_warning'] = pending_duplicate
+                    payload['duplicate_mahsulot_id'] = mxs.id
+                    payload['duplicate_miqdor'] = mqdr
+                    payload['duplicate_complete_request_id'] = complete_request_id
+                    return render(request, 'addmiqdor.html', payload)
+
             # Create request for this company (Unapproved initially)
             nw=MiqdorQoshish.objects.create(
                 company=request.company,
                 mahsulot=mxs,
                 miqdor=mqdr,
                 rasmi=rasmi,
-                tasdiqlangan=False, 
-                pazanda=pz
+                tasdiqlangan=False,
+                pazanda=pz,
+                source_material_request=source_material_request,
             )
-            
+
+            # Desktop Agent ishlatadigan firmalarda (stansiya sotib olingan)
+            # bu yerda DARHOL tasdiqlanmaydi — ishlab chiqaruvchi Desktop
+            # Agent'ga borib, badge skanerlab, o'sha yerda tasdiqlashi kerak
+            # (81-qadamdagi xom ashyo so'rovi bilan bir xil qaror: agent
+            # ishlatilganda, bu bosqich fizik hozirlikni tasdiqlaydi va
+            # Serial QR chop etish imkonini beradi). Desktop Agent'i yo'q
+            # firmalar uchun eski xatti-harakat (darhol tasdiqlash)
+            # o'zgarishsiz qoladi.
+            if request.company.custom_desktop_agent_stations > 0:
+                send_ws_notification(
+                    request.company.subdomain,
+                    "Yangi miqdor qo'shish so'rovi",
+                    f"{pz.tuliq_ismi} {mqdr} ta {mxs.nomi} uchun so'rov yubordi — Desktop Agent'da tasdiqlanishi kerak.",
+                    'warning',
+                )
+                messages.success(request, "So'rovingiz yuborildi. Desktop Agent'ga borib badge'ingizni skanerlab tasdiqlang.")
+                # Desktop Agent stansiyasi hozir oflayn bo'lsa — foydalanuvchi
+                # buni darhol bilishi kerak, aks holda so'rov "havoga" ketgandek
+                # tuyulishi mumkin (agent yoqilmaguncha hech kim tasdiqlamaydi).
+                # `is_agent_online` heartbeat orqali (~25 soniyada bir marta)
+                # doim yangilanib turadi — shuning uchun bu yerda alohida
+                # so'rov/kutish shart emas, joriy holat allaqachon amalda
+                # real-vaqtga yaqin (90 soniyagacha aniq).
+                stations = User.objects.filter(
+                    company=request.company, type='desktop_agent', is_active=True,
+                )
+                if stations.exists() and not any(s.is_agent_online for s in stations):
+                    messages.warning(
+                        request,
+                        "Diqqat: Desktop Agent stansiyasi hozir oflayn ko'rinmoqda! "
+                        "So'rovingiz saqlandi, lekin stansiya yoqilib, badge skanerlanmaguncha tasdiqlanmaydi.",
+                    )
+                return redirect('main')
+
             # Delegate to atomic service to prevent race conditions and log history
             success, message = approve_miqdor_qoshish_service(nw.id, request.user)
             if not success:
                 messages.error(request, message)
                 return redirect('main')
-            
+
             # WebSocket Notification
             send_ws_notification(
                 request.company.subdomain,
@@ -1703,13 +2315,24 @@ def addmiqdor(request):
                 f"{pz.tuliq_ismi} {mqdr} ta {mxs.nomi} qo'shdi.",
                 'success'
             )
-            
+
             return redirect('main')
         return render(request, 'addmiqdor.html',payload)
     return redirect('main')
 @login_required(login_url='login')
 def add_yuklama(request):
     if request.user.type not in ['pazanda', 'ishlab_chiqaruvchi']:
+        return redirect('main')
+    # 108-qadam: agent-yoqilgan firmalarda yetkazib beruvchi/savdogar
+    # to'g'ridan-to'g'ri Serial-QR skanerlab yuklama oladi (Desktop Agent,
+    # `agent_scan_delivery_serial`/`agent_finalize_yuklama`) — alohida
+    # "so'rov yaratish" kerak emas.
+    if request.company.custom_desktop_agent_stations > 0:
+        messages.info(
+            request,
+            "Bu funksiya endi Desktop Agent orqali ishlaydi. Yetkazib beruvchi/savdogar "
+            "stansiyada badge'ini va mahsulot QR kodlarini skanerlab yuklama oladi.",
+        )
         return redirect('main')
     try:
         pazanda = Pazanda.objects.get(user=request.user, company=request.company)
@@ -1869,6 +2492,45 @@ def sotish(request):
                         messages.error(request, str(exc))
                         return redirect('sotish')
 
+                # QR/Serial — "unit" granularity mahsulotlar uchun savdo yopishda
+                # skanerlangan/kiritilgan serial kodlari majburiy va oldindan
+                # tekshiriladi (hech qanday zaxira o'zgarishidan oldin).
+                expected_serial_holati = 'chiqarilgan' if request.user.type == 'yetkazib_beruvchi' else 'omborda'
+                serial_ids_by_nom = {}
+                for m in mahsulotlar:
+                    nom = m['nom'] if isinstance(m, dict) else m.nom
+                    miqdor = request.POST.get(f'miqdor_{nom}')
+                    if not miqdor or miqdor == '0':
+                        continue
+                    mahsulot_for_check = Mahsulot.objects.filter(nomi=nom, company=request.company).first()
+                    if not mahsulot_for_check or mahsulot_for_check.serial_granularity != 'unit':
+                        continue
+                    miqdor_float = float(miqdor)
+                    kodlar_raw = request.POST.get(f'serial_kodlari_{nom}', '')
+                    kodlar = [k.strip() for k in kodlar_raw.replace(',', '\n').splitlines() if k.strip()]
+                    if len(kodlar) != int(miqdor_float):
+                        messages.error(
+                            request,
+                            f"{nom} uchun {int(miqdor_float)} ta serial (QR) kodi kiritilishi/skanerlanishi shart, {len(kodlar)} ta kiritildi.",
+                        )
+                        return redirect('sotish')
+                    serials_qs = Serial.objects.select_for_update().filter(
+                        company=request.company, mahsulot=mahsulot_for_check,
+                        kod__in=kodlar, holati=expected_serial_holati, savdo__isnull=True,
+                    )
+                    found_kodlar = set(serials_qs.values_list('kod', flat=True))
+                    missing = [k for k in kodlar if k not in found_kodlar]
+                    if missing:
+                        messages.error(
+                            request,
+                            f"{nom} uchun quyidagi serial kodlari yaroqsiz yoki allaqachon ishlatilgan: {', '.join(missing[:5])}.",
+                        )
+                        return redirect('sotish')
+                    if len(found_kodlar) != len(set(kodlar)):
+                        messages.error(request, f"{nom} uchun takrorlangan serial kodlari topildi.")
+                        return redirect('sotish')
+                    serial_ids_by_nom[nom] = list(serials_qs.values_list('id', flat=True))
+
                 sotilganlar = []
                 for m in mahsulotlar:
                     nom = m['nom'] if isinstance(m, dict) else m.nom
@@ -1886,10 +2548,11 @@ def sotish(request):
                         else:
                             m.miqdor -= miqdor_float
                         sotilganlar.append((nom, miqdor))  # Logging uchun
-                    
+
                 if len(sotilganlar) > 0:
                     txt=''
                     summa=0
+                    foyda=0
                     sale_items = []
                     for s in sotilganlar:
                         mxs = Mahsulot.objects.filter(nomi=s[0], company=request.company).first()
@@ -1899,7 +2562,9 @@ def sotish(request):
                         txt+=f'{s[0]} {s[1]} {mxs.narxi},'
                         qty = float(s[1])
                         price = float(mxs.narxi)
+                        cost = float(mxs.tannarx or 0)
                         summa+=qty*price
+                        foyda+=qty*(price-cost)
                         sale_items.append({
                             'name': mxs.nomi,
                             'qty': qty,
@@ -1943,6 +2608,7 @@ def sotish(request):
                             contract_number=contract_number,
                             base_summa=summa,
                             summa=sale_summa,
+                            foyda=foyda,
                             credit_down_payment=down_payment,
                             credit_term_months=credit_months,
                             credit_markup_percent=credit_markup,
@@ -1977,6 +2643,7 @@ def sotish(request):
                             contract_number=contract_number,
                             base_summa=summa,
                             summa=summa,
+                            foyda=foyda,
                             contract_pdf=contract_pdf,
                             signed_contract_scan=signed_contract_scan,
                             customer_passport_image=customer_passport_image,
@@ -1984,6 +2651,12 @@ def sotish(request):
                             latitude=seller_lat,
                             longitude=seller_lng
                         )
+
+                    # QR/Serial — validatsiyadan o'tgan seriallar shu savdoga bog'lanadi
+                    # (SerialHarakat'ga "kim sotgan" logi bilan birga)
+                    for serial_ids in serial_ids_by_nom.values():
+                        qr_service.mark_serials_sotilgan(serial_ids, svd, actor=request.user)
+
                     if request.user.type == 'savdogar':
                         Company.objects.filter(pk=company.pk).update(
                             savdogar_contract_next_number=F('savdogar_contract_next_number') + 1
@@ -2034,11 +2707,15 @@ def sotish(request):
         return redirect('main')
 
     template_name = 'sgsot.html' if request.user.type == 'savdogar' else 'ytsot.html'
+    unit_serial_products = list(
+        Mahsulot.objects.filter(company=request.company, serial_granularity='unit').values_list('nomi', flat=True)
+    )
     return render(request, template_name, {
         'mahsulotlar': mahsulotlar,
         'haridorlar': xaridorlar,
         'credit_terms': credit_terms,
         'next_contract_number': request.company.savdogar_contract_next_number,
+        'unit_serial_products': unit_serial_products,
     })
 
 
@@ -2307,7 +2984,18 @@ def pazanda_hisobot(request, username):
     today_start = timezone.make_aware(_dt.datetime.combine(now.date(), _dt.time.min))
     bugun_miqdor = MiqdorQoshish.objects.filter(company=request.company, pazanda=pz, vaqt_sana__gte=today_start).aggregate(t=DSum('miqdor'))['t'] or 0
     bugun_yuklama = YuklamaSorov.objects.filter(pazanda=pz, sana__gte=today_start).aggregate(t=DSum('miqdor'))['t'] or 0
-    
+
+    # Ish haqi (mahsulot soniga qarab) — faqat company shunday sozlangan bo'lsa ko'rsatiladi
+    ish_haqi_turi_per_unit = request.company.ish_haqi_turi == 'per_unit'
+    davr_ish_haqi = 0
+    davr_jarima = 0
+    if ish_haqi_turi_per_unit:
+        davr_summalar = miqdorlar_qs.filter(tasdiqlangan=True).aggregate(
+            ish_haqi=DSum('ish_haqi_summasi'), jarima=DSum('jarima_summasi'),
+        )
+        davr_ish_haqi = davr_summalar['ish_haqi'] or 0
+        davr_jarima = davr_summalar['jarima'] or 0
+
     # Excel Export Logic
     if request.GET.get('export') == 'xlsx':
         import pandas as pd
@@ -2340,6 +3028,9 @@ def pazanda_hisobot(request, username):
         'from_date': from_date.isoformat(),
         'to_date': to_date.isoformat(),
         'base_template': base_template,
+        'ish_haqi_turi_per_unit': ish_haqi_turi_per_unit,
+        'davr_ish_haqi': davr_ish_haqi,
+        'davr_jarima': davr_jarima,
     }
 
     return render(request, 'pz_hisobot.html', context)

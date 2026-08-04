@@ -219,6 +219,15 @@
                         <button type="button" class="step-btn step-plus" onclick="stepBy({{ forloop.counter }}, 1)"><i class="fas fa-plus"></i></button>
                     </div>
                     <input type="hidden" name="miqdor_{{ m.nom }}" id="pinp{{ forloop.counter }}" value="0">
+                    {% if m.nom in unit_serial_products %}
+                    <div class="serial-scan-block" style="margin-top:10px; grid-column:1/-1;">
+                        <div style="font-size:12px; font-weight:700; color:var(--slate-500,#64748b); margin-bottom:6px;">
+                            Serial (QR) kodlari — har qatorda bittadan, sotilayotgan miqdorga teng
+                        </div>
+                        <textarea class="serial-kodlari-input" name="serial_kodlari_{{ m.nom }}" rows="2" style="width:100%; border-radius:10px; border:1px solid #e2e8f0; padding:8px;" placeholder="Skanerlang yoki qo'lda kiriting"></textarea>
+                        <button type="button" class="btn-scan-qr" data-target="serial_kodlari_{{ m.nom }}" style="margin-top:6px;"><i class="fas fa-qrcode"></i> Kamera bilan skanerlash</button>
+                    </div>
+                    {% endif %}
                 </div>
                 {% empty %}
                 <div class="empty">Savdogar uchun alohida mahsulot biriktirilmagan</div>
@@ -386,4 +395,5 @@
     document.getElementById('credit-down-payment').addEventListener('input', updateContractLink);
     updateContractLink();
 </script>
+{% include 'qr_scan_widget.html' %}
 {% endblock %}

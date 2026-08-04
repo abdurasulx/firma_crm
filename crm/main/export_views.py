@@ -267,7 +267,7 @@ def export_xodimlar(request):
 
     TYPE_MAP = {
         'yetkazib_beruvchi': 'Yetkazuvchi',
-        'pazanda': 'Pazanda',
+        'pazanda': 'Ishlab chiqaruvchi',
         'omborchi': 'Omborchi',
         'savdogar': 'Savdogar',
         'ishlab_chiqaruvchi': 'Ishlab chiqaruvchi',

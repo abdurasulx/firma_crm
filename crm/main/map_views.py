@@ -8,7 +8,7 @@ from django.utils.dateparse import parse_date, parse_datetime
 from django.views.decorators.http import require_POST
 from datetime import datetime, time, timedelta
 from math import asin, cos, radians, sin, sqrt
-from .models import YetkazibBeruvchi, LocationHistory, Savdo, HaridorDukon
+from .models import YetkazibBeruvchi, LocationHistory, Savdo, HaridorDukon, Ombor
 from .plan_utils import company_has_access
 
 ROUTE_GAP_LIMIT = timedelta(minutes=4)
@@ -311,10 +311,28 @@ def api_map_data(request):
             'pic': s.dukon_rasmi.url if s.dukon_rasmi else None
         })
 
+    # Omborlar (lokatsiyasi kiritilganlar) — statik belgilar sifatida
+    omborlar = Ombor.objects.filter(
+        company=request.company,
+        latitude__isnull=False,
+        longitude__isnull=False,
+    )
+    omborlar_data = [
+        {
+            'id': o.id,
+            'name': o.nomi,
+            'manzil': o.manzil,
+            'lat': o.latitude,
+            'lng': o.longitude,
+        }
+        for o in omborlar
+    ]
+
     return JsonResponse({
         'deliverers': deliverers_data,
         'sales': sales_data,
-        'shops': shops_data
+        'shops': shops_data,
+        'omborlar': omborlar_data,
     })
 
 @login_required(login_url='login')

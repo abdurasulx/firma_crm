@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,12 +26,26 @@ load_dotenv(BASE_DIR / '.env')
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-fallback-key-for-dev')
+SECRET_KEY = os.getenv('SECRET_KEY')
+if not SECRET_KEY:
+    raise ImproperlyConfigured(
+        "SECRET_KEY .env faylida o'rnatilmagan. Xavfsizlik uchun standart "
+        "qiymat ishlatilmaydi — .env fayliga SECRET_KEY=<uzun tasodifiy qator> qo'shing."
+    )
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'True') == 'True'
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
+if DEBUG:
+    ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
+else:
+    _allowed_hosts_env = os.getenv('ALLOWED_HOSTS', '')
+    if not _allowed_hosts_env:
+        raise ImproperlyConfigured(
+            "DEBUG=False bo'lganda ALLOWED_HOSTS .env faylida aniq ro'yxat "
+            "sifatida ko'rsatilishi shart (masalan: stockfirm.uz,*.stockfirm.uz)."
+        )
+    ALLOWED_HOSTS = _allowed_hosts_env.split(',')
 
 CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',')
 if not any(CSRF_TRUSTED_ORIGINS):
@@ -55,6 +70,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'channels',
+    'rest_framework',
     'main',
     'landing',
 ]
@@ -77,13 +93,14 @@ ROOT_URLCONF = 'crm.urls'
 ASGI_APPLICATION = 'crm.asgi.application'
 
 REDIS_URL = os.getenv('REDIS_URL')
+_use_redis_channel_layer = REDIS_URL or os.getenv('USE_REDIS_CHANNEL_LAYER', '').lower() in ('1', 'true', 'yes')
 
-if REDIS_URL:
+if _use_redis_channel_layer:
     CHANNEL_LAYERS = {
         'default': {
             'BACKEND': 'channels_redis.core.RedisChannelLayer',
             'CONFIG': {
-                'hosts': [REDIS_URL],
+                'hosts': [REDIS_URL or 'redis://redis:6379/0'],
             },
         },
     }
@@ -91,16 +108,6 @@ else:
     CHANNEL_LAYERS = {
         'default': {
             'BACKEND': 'channels.layers.InMemoryChannelLayer',
-        },
-    }
-
-if os.getenv('USE_REDIS_CHANNEL_LAYER', '').lower() in ('1', 'true', 'yes'):
-    CHANNEL_LAYERS = {
-        'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-                'hosts': [os.getenv('REDIS_URL', 'redis://redis:6379/0')],
-            },
         },
     }
 
@@ -229,3 +236,15 @@ LANDING_DOMAINS = [
 ]
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 LOGIN_URL = '/login/'
+
+# Production xavfsizlik sozlamalari (faqat DEBUG=False bo'lganda) — nginx
+# HTTPS orqali proxy qilishi va SECURE_PROXY_SSL_HEADER to'g'ri sozlangan
+# bo'lishi kerak, aks holda SECURE_SSL_REDIRECT redirect-loop keltirib
+# chiqarishi mumkin.
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 yil
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True

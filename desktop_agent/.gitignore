@@ -1,0 +1,9 @@
+venv/
+__pycache__/
+*.pyc
+agent_data.db
+
+# PyInstaller build chiqishi
+build/
+dist/
+*.spec
