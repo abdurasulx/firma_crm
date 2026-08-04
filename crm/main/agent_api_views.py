@@ -943,6 +943,41 @@ def agent_miqdor_print_page(request, request_id):
     })
 
 
+@api_view(['GET'])
+def agent_delivery_requests(request):
+    """Yetkazib beruvchi/savdogar badge skanerlab "yuklama" sessiyasini
+    boshlaganda chaqiriladi — dashboardda oldindan so'ragan (zayavka,
+    mode='waiting') mahsulotlari ro'yxatini qaytaradi, agent ekranida
+    "nima olishingiz kerak" sifatida ko'rsatiladi."""
+    company = _company_from_token(request)
+    if not company:
+        return Response({'detail': "Token noto'g'ri yoki topilmadi."}, status=status.HTTP_401_UNAUTHORIZED)
+
+    user_id = _user_id_from_session_token(request.GET.get('session_token'), company)
+    if not user_id:
+        return Response(
+            {'detail': "Sessiya-token yo'q yoki muddati tugagan. Badge'ni qayta skanerlang."},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+
+    yb = YetkazibBeruvchi.objects.filter(user_id=user_id, company=company).first()
+    if not yb:
+        return Response({'detail': "Bu foydalanuvchi yetkazib beruvchi emas."}, status=status.HTTP_404_NOT_FOUND)
+
+    so_rovlar = [
+        {
+            'mahsulot_id': r.mahsulot_id,
+            'mahsulot': r.mahsulot.nomi if r.mahsulot else '',
+            'miqdor': r.miqdor,
+            'birlik': str(r.mahsulot.turi) if r.mahsulot else '',
+        }
+        for r in YuklamaSorov.objects.filter(
+            company=company, user=yb, mode='waiting',
+        ).select_related('mahsulot', 'mahsulot__turi').order_by('sana')
+    ]
+    return Response({'so_rovlar': so_rovlar})
+
+
 @api_view(['POST'])
 def agent_scan_delivery_serial(request):
     """Yetkazib beruvchi **yoki savdogar** (ikkalasi ham `YetkazibBeruvchi`
@@ -965,18 +1000,33 @@ def agent_scan_delivery_serial(request):
             status=status.HTTP_401_UNAUTHORIZED,
         )
 
-    if not YetkazibBeruvchi.objects.filter(user_id=user_id, company=company).exists():
+    yb = YetkazibBeruvchi.objects.filter(user_id=user_id, company=company).first()
+    if not yb:
         return Response({'detail': "Bu foydalanuvchi yetkazib beruvchi emas."}, status=status.HTTP_404_NOT_FOUND)
 
     kod = (request.data.get('kod') or '').strip()
     if not kod:
         return Response({'detail': "'kod' parametri kerak."}, status=status.HTTP_400_BAD_REQUEST)
 
-    serial = Serial.objects.filter(kod=kod, company=company, holati='omborda').select_related('mahsulot').first()
+    # QR ichida odatda serialning public URL'i (`/p/<kod>/`) bo'ladi —
+    # universal skan (`agent_scan`) kabi URL'dan kod ajratib olinadi.
+    candidates = _kod_candidates(kod)
+    serial = Serial.objects.filter(kod__in=candidates, company=company, holati='omborda').select_related('mahsulot').first()
     if not serial:
         return Response(
             {'detail': "Bu QR kod topilmadi yoki mahsulot allaqachon omboradan chiqarilgan."},
             status=status.HTTP_404_NOT_FOUND,
+        )
+
+    # Yuklama faqat dashboardda oldindan so'ralgan (zayavka, mode='waiting')
+    # mahsulotlardan olinadi — so'ralmagan mahsulot skanerlansa rad etiladi,
+    # xodim uni joyiga qaytarib qo'yishi kerak.
+    if not YuklamaSorov.objects.filter(
+        company=company, user=yb, mahsulot=serial.mahsulot, mode='waiting',
+    ).exists():
+        return Response(
+            {'detail': f"{serial.mahsulot.nomi} — buni so'ramagansiz. Joyiga qo'yib qo'ying."},
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
     return Response({
@@ -1035,9 +1085,20 @@ def agent_finalize_yuklama(request):
         serial_ids = [int(s) for s in raw_serial_ids if str(s).isdigit()]
 
         with transaction.atomic():
-            req = YuklamaSorov.objects.create(
-                company=company, user=yb, mahsulot=mahsulot, miqdor=miqdor, mode='waiting',
-            )
+            # Dashboardda oldindan yaratilgan zayavka (mode='waiting') bo'lsa —
+            # yangi so'rov ochilmaydi, aynan o'sha tasdiqlanadi (miqdor real
+            # skanerlangan soniga moslanadi); bo'lmasa (eski oqim/zaxira yo'l)
+            # avvalgidek yangi so'rov yaratiladi.
+            req = YuklamaSorov.objects.select_for_update().filter(
+                company=company, user=yb, mahsulot=mahsulot, mode='waiting',
+            ).order_by('sana').first()
+            if req:
+                req.miqdor = miqdor
+                req.save(update_fields=['miqdor'])
+            else:
+                req = YuklamaSorov.objects.create(
+                    company=company, user=yb, mahsulot=mahsulot, miqdor=miqdor, mode='waiting',
+                )
             success, message = approve_yuklama_sorov_service(req.id, actor=None, serial_ids=serial_ids)
 
         results.append({'mahsulot': mahsulot.nomi, 'miqdor': miqdor, 'success': success, 'detail': message})

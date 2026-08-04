@@ -1236,7 +1236,10 @@ def main(request):
             yuklamalar = mahsulotlar_miqdori(yt_obj.mahsulotlar) or []
 
             payload['yuklamalar'] = yuklamalar
-            mahs=Mahsulot.objects.filter(company=request.company)
+            # Yetkazib beruvchiga faqat sotuvga chiqadigan tayyor mahsulotlar
+            # ko'rsatiladi — xom ashyo/yarim tayyor (semi_finished) uning
+            # ishiga aloqasi yo'q va ro'yxatni chalg'itadi.
+            mahs=Mahsulot.objects.filter(company=request.company, warehouse_type='finished')
             payload['zaxira_mahsulotlar'] = mahs
             payload['lnmahs']=len(mahs)
             payload['is_agent_company'] = bool(request.company.custom_desktop_agent_stations)
@@ -1253,7 +1256,45 @@ def main(request):
             payload['nfs'] = nfs
             return render(request, 'yetkazuvchi_dashboard.html',payload)
         elif request.method == 'POST':
-            if 'yk_id' in request.POST: 
+            if 'sorov_submit' in request.POST:
+                # Agent firmalarda yetkazib beruvchi kerakli mahsulotlarni
+                # dashboardda oldindan so'raydi (zayavka) — bir formada bir
+                # nechta mahsulot birdan (har biriga alohida miqdor). Keyin
+                # stansiyada aynan shu so'ralgan mahsulotlarning Serial QR
+                # kodlarini skanerlab oladi; so'ralmagan mahsulot skani
+                # agentda rad etiladi (`agent_scan_delivery_serial`).
+                yaratilgan = []
+                for m in Mahsulot.objects.filter(company=request.company, warehouse_type='finished'):
+                    try:
+                        sorov_miqdor = float(request.POST.get(f'sorov_miqdor_{m.id}') or 0)
+                    except ValueError:
+                        continue
+                    if sorov_miqdor <= 0:
+                        continue
+                    if YuklamaSorov.objects.filter(
+                        company=request.company, user=yt_obj, mahsulot=m, mode='waiting',
+                    ).exists():
+                        messages.error(request, f"{m.nomi} uchun kutilayotgan so'rovingiz allaqachon bor — o'tkazib yuborildi.")
+                        continue
+                    YuklamaSorov.objects.create(
+                        company=request.company, user=yt_obj,
+                        mahsulot=m, miqdor=sorov_miqdor, mode='waiting',
+                    )
+                    yaratilgan.append(f"{sorov_miqdor:g} {m.turi} {m.nomi}")
+                if yaratilgan:
+                    send_ws_notification(
+                        request.company.subdomain, "Yuklama so'rovi",
+                        f"{yt_obj.tuliq_ismi} so'radi: {', '.join(yaratilgan)}.",
+                        "info",
+                    )
+                    messages.success(
+                        request,
+                        f"So'rov yuborildi ({len(yaratilgan)} mahsulot) — endi stansiyada badge'ingizni skanerlab, QR kodlarni skanerlang.",
+                    )
+                else:
+                    messages.error(request, "Hech qanday miqdor kiritilmadi.")
+                return redirect('main')
+            if 'yk_id' in request.POST:
                 yk_id=request.POST.get('yk_id')
                
                 if 'accept' in yk_id:
@@ -1308,7 +1349,7 @@ def main(request):
             payload['savdo'] = savdo
             # reqyuklama=YuklamaSorov.objects.filter(user=YetkazibBeruvchi.objects.get(user=request.user),tasdiq=False, mode='waiting',sana=dt.date.today() ).all()
             payload['reqyuklama'] = reqyuklama
-            mahs=Mahsulot.objects.filter(company=request.company)
+            mahs=Mahsulot.objects.filter(company=request.company, warehouse_type='finished')
             payload['zaxira_mahsulotlar'] = mahs
 
             return render(request, 'yetkazuvchi_dashboard.html',payload)

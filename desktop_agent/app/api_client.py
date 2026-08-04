@@ -90,7 +90,13 @@ def _request(method: str, server_url: str, token: str, path: str,
         except ValueError:
             raise ApiError("Token noto'g'ri yoki eskirgan.", status_code=401)
     if resp.status_code == 404:
-        raise ApiError("Topilmadi.")
+        # Server aniq sabab yuborgan bo'lsa (masalan "QR topilmadi yoki
+        # allaqachon chiqarilgan") — umumiy "Topilmadi." o'rniga shuni
+        # ko'rsatamiz; JSON bo'lmasa (haqiqiy yo'q sahifa) — eski xabar.
+        try:
+            raise ApiError(resp.json().get("detail", "Topilmadi."))
+        except ValueError:
+            raise ApiError("Topilmadi.")
     if resp.status_code == 400:
         try:
             raise ApiError(resp.json().get("detail", "Noto'g'ri so'rov."))
@@ -348,6 +354,16 @@ def approve_miqdor_qoshish(server_url: str, token: str, request_id: int, session
     return _post(server_url, token, f"/api/agent/miqdor-qoshish/{request_id}/tasdiqlash/", data={
         "session_token": session_token,
     })
+
+
+def fetch_delivery_requests(server_url: str, token: str, session_token: str):
+    """Yuklama sessiyasi boshida chaqiriladi — yetkazib beruvchi dashboardda
+    oldindan so'ragan (zayavka) mahsulotlar ro'yxatini qaytaradi, ekranda
+    "nima olishingiz kerak" sifatida ko'rsatiladi."""
+    data = _get(server_url, token, "/api/agent/yuklama/sorovlar/", params={
+        "session_token": session_token,
+    })
+    return data.get("so_rovlar", [])
 
 
 def scan_delivery_serial(server_url: str, token: str, session_token: str, kod: str):

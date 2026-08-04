@@ -15,6 +15,7 @@ from ..api_client import (
     fetch_material_requests, weigh_material_request, fetch_miqdor_requests,
     approve_miqdor_qoshish, scan_delivery_serial, finalize_yuklama, toggle_attendance, scan, ApiError,
     weigh_task_pickup, fetch_my_task_pickups, fetch_pending_print_batch, mark_batch_printed,
+    fetch_delivery_requests,
 )
 from ..label_printer_service import LabelPrintWorker
 
@@ -179,6 +180,10 @@ class EmployeeScanWidget(QWidget):
         self._auto_submit_pending = False
         self._awaiting_scale_clear = False
         self._delivery_cart: dict = {}
+        # Dashboardda so'ralgan (zayavka) mahsulotlar: {mahsulot_id: {'mahsulot', 'miqdor'}}
+        # — skanerlashda limit shu yerdan tekshiriladi (so'ralganidan ortiq
+        # dona savatga qo'shilmaydi).
+        self._delivery_requested: dict = {}
         self._resolve_worker: _ApiCallWorker | None = None
         self._requests_worker: _ApiCallWorker | None = None
         self._weigh_worker: _ApiCallWorker | None = None
@@ -443,6 +448,18 @@ class EmployeeScanWidget(QWidget):
         delivery_title = QLabel("Yuklama — mahsulot QR kodlarini skanerlang")
         delivery_title.setStyleSheet("font-size:14px; font-weight:800; color:#166534;")
         delivery_outer.addWidget(delivery_title)
+
+        # Dashboardda oldindan so'ralgan (zayavka) mahsulotlar — xodim
+        # aynan nimalarni (va qanchadan) olishi kerakligi shu yerda
+        # ko'rsatiladi; so'ralmagan mahsulot skanini server baribir rad
+        # etadi, bu ro'yxat xodimga yo'l-yo'riq uchun.
+        self.delivery_requests_label = QLabel("So'rovlaringiz yuklanmoqda...")
+        self.delivery_requests_label.setWordWrap(True)
+        self.delivery_requests_label.setStyleSheet(
+            "font-size:13px; font-weight:700; color:#0f172a; background:#dcfce7; "
+            "border-radius:8px; padding:8px;"
+        )
+        delivery_outer.addWidget(self.delivery_requests_label)
 
         self.delivery_cart_label = QLabel("Hali hech narsa skanerlanmadi.")
         self.delivery_cart_label.setWordWrap(True)
@@ -755,7 +772,9 @@ class EmployeeScanWidget(QWidget):
             self._delivery_cart = {}
             self.delivery_cart_label.setText("Hali hech narsa skanerlanmadi.")
             self.delivery_feedback_label.setText("")
+            self.delivery_requests_label.setText("So'rovlaringiz yuklanmoqda...")
             self.delivery_card.setVisible(True)
+            self._load_delivery_requests(info["session_token"])
             self._rec_start(f"delivery-{info['session_token']}", "yuklama")
             self._extend_session()  # birinchi mahsulotgacha ham uzunroq muddat berilsin
             return
@@ -763,6 +782,55 @@ class EmployeeScanWidget(QWidget):
         self._load_material_requests(info["session_token"])
 
     # ── Yetkazib beruvchi — "yuklama" (yuk olish) savati ─────────────────
+
+    def _load_delivery_requests(self, session_token: str):
+        server_url = db.get_setting("server_url", "")
+        token = db.get_setting("agent_token", "")
+        worker = _ApiCallWorker(fetch_delivery_requests, server_url, token, session_token)
+        worker.succeeded.connect(self._on_delivery_requests_loaded)
+        worker.failed.connect(
+            lambda _msg: self.delivery_requests_label.setText(
+                "So'rovlar ro'yxatini olib bo'lmadi — baribir skanerlashingiz mumkin."
+            )
+        )
+        self._replace_worker("_delivery_requests_worker", worker)
+        worker.start()
+
+    def _on_delivery_requests_loaded(self, so_rovlar: list):
+        if not so_rovlar:
+            self._delivery_requested = {}
+            self.delivery_requests_label.setStyleSheet(
+                "font-size:13px; font-weight:700; color:#b45309; background:#fef3c7; "
+                "border-radius:8px; padding:8px;"
+            )
+            self.delivery_requests_label.setText(
+                "Sizda kutilayotgan yuklama so'rovi yo'q — avval dashboardda "
+                "kerakli mahsulotlarni so'rang."
+            )
+            return
+        self._delivery_requested = {
+            r["mahsulot_id"]: r for r in so_rovlar if r.get("mahsulot_id") is not None
+        }
+        self.delivery_requests_label.setStyleSheet(
+            "font-size:13px; font-weight:700; color:#0f172a; background:#dcfce7; "
+            "border-radius:8px; padding:8px;"
+        )
+        self._refresh_delivery_requests_label()
+
+    def _refresh_delivery_requests_label(self):
+        """"Olishingiz kerak" ro'yxatini savatdagi hozirgi son bilan jonli
+        yangilaydi (masalan `• Burger — 1/2`), to'lgan qator ✓ bilan
+        belgilanadi."""
+        if not self._delivery_requested:
+            return
+        lines = []
+        for mid, r in self._delivery_requested.items():
+            scanned = (self._delivery_cart.get(mid) or {}).get("count", 0)
+            target = r["miqdor"]
+            mark = " ✓" if scanned >= target else ""
+            birlik = r.get("birlik") or ""
+            lines.append(f"• {r['mahsulot']} — {scanned:g}/{target:g} {birlik}".rstrip() + mark)
+        self.delivery_requests_label.setText("Olishingiz kerak:\n" + "\n".join(lines))
 
     def _handle_delivery_scan(self, kod: str):
         server_url = db.get_setting("server_url", "")
@@ -790,10 +858,22 @@ class EmployeeScanWidget(QWidget):
             self.delivery_feedback_label.setStyleSheet("font-size:13px; font-weight:700; color:#b45309;")
             self.delivery_feedback_label.setText(f"Bu dona allaqachon savatda ({info['mahsulot']}).")
             return
+        # So'ralgan miqdor limiti — zayavkada belgilangan sondan ortiq dona
+        # savatga qo'shilmaydi: xodim ortiqcha skanerlagan donani joyiga
+        # qaytarib, keyingi mahsulotga o'tishi kerak.
+        requested = self._delivery_requested.get(mahsulot_id)
+        if requested and entry["count"] >= requested["miqdor"]:
+            self.delivery_feedback_label.setStyleSheet("font-size:13px; font-weight:700; color:#b45309;")
+            self.delivery_feedback_label.setText(
+                f"{info['mahsulot']} — so'ralgan miqdor to'ldi ({entry['count']:g}/{requested['miqdor']:g}). "
+                "Bu donani joyiga qo'yib, keyingi mahsulotga o'ting."
+            )
+            return
         if serial_id is not None:
             entry["serial_ids"].append(serial_id)
         entry["count"] += 1
         self._refresh_delivery_cart_display()
+        self._refresh_delivery_requests_label()
         self.delivery_feedback_label.setStyleSheet("font-size:13px; font-weight:700; color:#166534;")
         self.delivery_feedback_label.setText(f"✓ {info['mahsulot']} qo'shildi ({entry['count']})")
 
@@ -1473,6 +1553,7 @@ class EmployeeScanWidget(QWidget):
         self._had_any_request = False
         self._delivery_mode_active = False
         self._delivery_cart = {}
+        self._delivery_requested = {}
         self._scale_last_value = None
         self._scale_stable_since = 0.0
         self._auto_submit_pending = False

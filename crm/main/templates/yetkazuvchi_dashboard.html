@@ -474,10 +474,64 @@
         <i class="fas fa-chevron-down toggle-caret"></i>
     </div>
     <div class="section-content show">
-        <div class="empty-state">
-            <div class="empty-icon"><i class="fas fa-desktop"></i></div>
-            <p>Yuklama olish endi Desktop Agent stansiyasida amalga oshadi — shaxsiy badge'ingizni va mahsulot QR kodlarini skanerlab yuklama oling.</p>
+        <p style="color: var(--slate-500); font-size: 0.875rem; margin-bottom: 0.75rem;">
+            Kerakli mahsulotni shu yerda so'rang, so'ng stansiyada badge'ingizni skanerlab, aynan shu mahsulotlarning
+            QR kodlarini skanerlab yuklama oling. So'ralmagan mahsulot skanerlanmaydi.
+        </p>
+        <form method="post" style="margin-bottom: 1rem;">
+            {% csrf_token %}
+            <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem;">
+                {% for m in zaxira_mahsulotlar %}
+                <div style="display: flex; align-items: center; gap: 0.75rem; background: var(--slate-50, #f8fafc); border: 1px solid var(--slate-200, #e2e8f0); border-radius: 10px; padding: 0.6rem 0.9rem;">
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-weight: 800; color: var(--slate-900);">{{ m.nomi }}</div>
+                        <div style="font-size: 0.75rem; color: var(--slate-500);">Omborda: {{ m.miqdori|floatformat:"-2" }} {{ m.turi }}</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.4rem;">
+                        <button type="button" onclick="sorovStep('{{ m.id }}', -1)"
+                                style="width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--slate-200, #e2e8f0); background: #fff; color: var(--slate-600, #475569); font-weight: 800; cursor: pointer;">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <input type="number" id="sorov_inp_{{ m.id }}" name="sorov_miqdor_{{ m.id }}" step="any" min="0" value="0"
+                               style="width: 64px; padding: 0.45rem 0; border: none; background: transparent; text-align: center; font-weight: 800; font-size: 1.05rem; color: var(--slate-900, #0f172a); -moz-appearance: textfield;">
+                        <button type="button" onclick="sorovStep('{{ m.id }}', 1)"
+                                style="width: 34px; height: 34px; border-radius: 10px; border: none; background: var(--primary, #10b981); color: #fff; font-weight: 800; cursor: pointer;">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <button type="submit" name="sorov_submit" value="1" class="btn-main" style="width: 100%; padding: 0.7rem;">
+                <i class="fas fa-paper-plane"></i> So'rov yuborish
+            </button>
+        </form>
+        <style>
+            /* Brauzerning o'z +/- spinner'lari yashiriladi — faqat bizning tugmalar */
+            input[id^="sorov_inp_"]::-webkit-outer-spin-button,
+            input[id^="sorov_inp_"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        </style>
+        <script>
+            function sorovStep(id, delta) {
+                const inp = document.getElementById('sorov_inp_' + id);
+                const val = Math.max(0, (parseFloat(inp.value) || 0) + delta);
+                inp.value = val;
+            }
+        </script>
+        {% if reqyuklama %}
+        <div class="req-list">
+            {% for yk in reqyuklama %}
+            <div class="req-card">
+                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                    <span style="font-weight: 800; color: var(--slate-900);">{{ yk.mahsulot.nomi }}</span>
+                    <span style="color: var(--slate-500); font-weight: 500;">
+                        {{ yk.miqdor|floatformat:"-2" }} {{ yk.mahsulot.turi }} — <i class="fas fa-qrcode"></i> stansiyada skanerlashingiz kutilmoqda
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
         </div>
+        {% endif %}
     </div>
 </div>
 {% else %}

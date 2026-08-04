@@ -6,6 +6,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
 from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
 from datetime import datetime, time, timedelta
 from math import asin, cos, radians, sin, sqrt
 from .models import YetkazibBeruvchi, LocationHistory, Savdo, HaridorDukon, Ombor
@@ -143,9 +144,14 @@ def _optional_float(value):
         return None
 
 
+@csrf_exempt
 @login_required(login_url='login')
 @require_POST
 def api_location_batch(request):
+    # CSRF'dan ozod: PWA'da sahifa service worker keshidan ochilganda undagi
+    # CSRF token eskirgan bo'ladi (login'da token aylanadi) va offline'da
+    # yig'ilgan GPS nuqtalar sinxronlanmay 403 olardi. Endpoint sessiya bilan
+    # himoyalangan, faqat o'z GPS tarixiga yozadi va dublikatlarni filtrlaydi.
     if request.user.type != 'yetkazib_beruvchi':
         return JsonResponse({'error': 'No access'}, status=403)
 
