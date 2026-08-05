@@ -22,12 +22,6 @@
                 {% endfor %}
             </select>
         </label>
-        {% if product %}
-        <label>
-            <div style="font-weight:800; margin-bottom:8px;">Narxi (avtomatik — tannarxga teng)</div>
-            <input class="field" type="text" value="{{ product.narxi|unlocalize }} so'm" disabled>
-        </label>
-        {% endif %}
         <label>
             <div style="font-weight:800; margin-bottom:8px;">Turi</div>
             <select class="field" name="ombor_turi">
