@@ -1,4 +1,5 @@
 {% extends 'egabase.html' %}
+{% load spc_filters %}
 
 {% block title %}Ombor mahsulotlari{% endblock %}
 {% block page_title %}Ombor mahsulotlari{% endblock %}
@@ -62,13 +63,13 @@
                         <span class="badge">Xom ashyo</span>
                         {% endif %}
                     </td>
-                    <td>{{ product.tannarx|floatformat:0 }} so'm</td>
+                    <td>{{ product.tannarx|spc }} so'm</td>
                     <td>
                         <span class="badge {% if product.past_zaxira %}red{% else %}green{% endif %}">
-                            {{ product.miqdori|floatformat:2 }} {{ product.turi.nomi }}
+                            {{ product.miqdori|spc:2 }} {{ product.turi.nomi }}
                         </span>
                     </td>
-                    <td>{{ product.min_miqdori|floatformat:2 }}</td>
+                    <td>{{ product.min_miqdori|spc:2 }}</td>
                     {% if not warehouse_only %}
                     <td style="text-align:right;">
                         <a class="btn" href="{% url 'warehouse_product_edit' product.id %}"><i class="fa-solid fa-pen"></i> Tahrirlash</a>
@@ -83,6 +84,19 @@
             </tbody>
         </table>
     </div>
+    {% if products.paginator.num_pages > 1 %}
+    <div style="display:flex; justify-content:center; align-items:center; gap:8px; padding:18px 20px; border-top:1px solid var(--border);">
+        {% if products.has_previous %}
+        <a class="btn" href="?q={{ query }}&page={{ products.previous_page_number }}"><i class="fa-solid fa-chevron-left"></i></a>
+        {% endif %}
+        <span style="font-size:13px; color:var(--muted); font-weight:700;">
+            {{ products.number }} / {{ products.paginator.num_pages }}-sahifa
+        </span>
+        {% if products.has_next %}
+        <a class="btn" href="?q={{ query }}&page={{ products.next_page_number }}"><i class="fa-solid fa-chevron-right"></i></a>
+        {% endif %}
+    </div>
+    {% endif %}
 </div>
 </div>
 {% endblock %}
