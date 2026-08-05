@@ -5,6 +5,125 @@
 {% block title %}Kirim-chiqim{% endblock %}
 {% block page_title %}Ombor kirim-chiqimlari{% endblock %}
 
+{% block extra_css %}
+<style>
+    .mv-picker-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, .5);
+        z-index: 1000;
+        align-items: flex-start;
+        justify-content: center;
+        padding: 6vh 16px;
+    }
+    .mv-picker-overlay.open { display: flex; }
+    .mv-picker-modal {
+        background: #fff;
+        border-radius: 16px;
+        width: 100%;
+        max-width: 640px;
+        max-height: 84vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 24px 60px rgba(15, 23, 42, .3);
+    }
+    .mv-picker-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px 20px;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .mv-picker-search-wrap {
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border-color);
+        position: relative;
+    }
+    .mv-picker-search-wrap i.fa-magnifying-glass {
+        position: absolute;
+        left: 34px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-light);
+    }
+    .mv-picker-search-wrap input {
+        padding-left: 38px;
+    }
+    .mv-picker-list {
+        overflow-y: auto;
+        flex: 1;
+        padding: 8px 12px;
+    }
+    .mv-picker-item {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 12px;
+        border-radius: 12px;
+        cursor: pointer;
+    }
+    .mv-picker-item:hover { background: #f8fafc; }
+    .mv-picker-item img,
+    .mv-picker-item .mv-picker-noimg {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        object-fit: cover;
+        flex-shrink: 0;
+        background: #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-light);
+    }
+    .mv-picker-item-name { font-weight: 800; }
+    .mv-picker-item-sub { font-size: 12px; color: var(--text-light); font-weight: 600; }
+    .mv-picker-item-price {
+        margin-left: auto;
+        font-weight: 800;
+        font-size: 13px;
+        color: #047857;
+        white-space: nowrap;
+    }
+    .mv-picker-footer {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 14px 20px;
+        border-top: 1px solid var(--border-color);
+    }
+    .mv-picker-empty {
+        text-align: center;
+        color: var(--text-light);
+        padding: 40px 12px;
+    }
+    .mv-product-trigger {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 14px;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        background: #fff;
+        cursor: pointer;
+        text-align: left;
+    }
+    .mv-product-trigger img,
+    .mv-product-trigger .mv-picker-noimg {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        object-fit: cover;
+        background: #f1f5f9;
+        flex-shrink: 0;
+    }
+    .mv-product-trigger .mv-product-placeholder { color: var(--text-light); }
+</style>
+{% endblock %}
+
 {% block content %}
 {% include 'warehouse_styles.html' %}
 <div class="warehouse-page">
@@ -17,11 +136,11 @@
 
         <label style="display:block; margin-bottom:14px;">
             <div style="font-weight:800; margin-bottom:8px;">Mahsulot</div>
-            <div class="ssel" id="movementProductSsel">
-                <input type="text" class="ssel-input" id="movementProductSearch" placeholder="Mahsulot qidirish..." autocomplete="off">
-                <i class="fa-solid fa-chevron-down ssel-caret"></i>
-                <div class="ssel-panel" id="movementProductPanel"></div>
-            </div>
+            <button type="button" class="mv-product-trigger" id="movementProductTrigger">
+                <span class="mv-picker-noimg" id="movementTriggerImgWrap"><i class="fa-solid fa-image"></i></span>
+                <span class="mv-product-placeholder" id="movementTriggerText">Mahsulot tanlash...</span>
+                <i class="fa-solid fa-chevron-down" style="margin-left:auto; color:var(--text-light);"></i>
+            </button>
         </label>
 
         <label id="movementPriceWrap" style="display:block; margin-bottom:14px;">
@@ -85,66 +204,145 @@
 </div>
 </div>
 
+<div class="mv-picker-overlay" id="mvPickerOverlay">
+    <div class="mv-picker-modal">
+        <div class="mv-picker-head">
+            <h3 style="margin:0;">Mahsulot tanlash</h3>
+            <button type="button" class="btn" id="mvPickerClose"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="mv-picker-search-wrap">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input class="field" type="text" id="mvPickerSearch" placeholder="Mahsulot yoki turi bo'yicha qidirish..." autocomplete="off">
+        </div>
+        <div class="mv-picker-list" id="mvPickerList"></div>
+        <div class="mv-picker-footer" id="mvPickerFooter"></div>
+    </div>
+</div>
+
 <script>
 (function () {
-    const products = [
-        {% for product in products %}
-        {id: {{ product.id }}, nomi: "{{ product.nomi|escapejs }}", birlik: "{{ product.turi.nomi|escapejs }}", miqdor: {{ product.miqdori|unlocalize }}, tannarx: {{ product.tannarx|unlocalize }}},
-        {% endfor %}
-    ];
+    const productsUrl = "{% url 'warehouse_products' %}";
+    const overlay = document.getElementById('mvPickerOverlay');
+    const trigger = document.getElementById('movementProductTrigger');
+    const closeBtn = document.getElementById('mvPickerClose');
+    const searchInput = document.getElementById('mvPickerSearch');
+    const listEl = document.getElementById('mvPickerList');
+    const footerEl = document.getElementById('mvPickerFooter');
 
-    const ssel = document.getElementById('movementProductSsel');
-    const search = document.getElementById('movementProductSearch');
-    const panel = document.getElementById('movementProductPanel');
     const productIdInput = document.getElementById('movementProductId');
     const priceInput = document.getElementById('movementPrice');
+    const triggerText = document.getElementById('movementTriggerText');
+    const triggerImgWrap = document.getElementById('movementTriggerImgWrap');
 
-    function renderPanel(filterText) {
-        const q = (filterText || '').trim().toLowerCase();
-        const filtered = products.filter((p) => p.nomi.toLowerCase().includes(q));
-        panel.innerHTML = '';
-        if (!filtered.length) {
-            const empty = document.createElement('div');
-            empty.className = 'ssel-empty';
-            empty.textContent = 'Mahsulot topilmadi.';
-            panel.appendChild(empty);
-            return;
+    let currentPage = 1;
+    let debounceTimer = null;
+    let abortCtrl = null;
+    let selectedProduct = null;
+
+    function openPicker() {
+        overlay.classList.add('open');
+        searchInput.value = '';
+        currentPage = 1;
+        fetchProducts('', 1);
+        setTimeout(() => searchInput.focus(), 50);
+    }
+
+    function closePicker() {
+        overlay.classList.remove('open');
+    }
+
+    trigger.addEventListener('click', openPicker);
+    closeBtn.addEventListener('click', closePicker);
+    overlay.addEventListener('click', (ev) => {
+        if (ev.target === overlay) closePicker();
+    });
+
+    function fetchProducts(query, page) {
+        listEl.innerHTML = '<div class="mv-picker-empty">Yuklanmoqda...</div>';
+        footerEl.innerHTML = '';
+        if (abortCtrl) abortCtrl.abort();
+        abortCtrl = new AbortController();
+        const url = `${productsUrl}?data_format=json&q=${encodeURIComponent(query)}&page=${page}`;
+        fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}, signal: abortCtrl.signal})
+            .then((r) => r.json())
+            .then((data) => renderResults(data, query))
+            .catch((err) => {
+                if (err.name !== 'AbortError') {
+                    listEl.innerHTML = '<div class="mv-picker-empty">Xatolik yuz berdi.</div>';
+                }
+            });
+    }
+
+    function renderResults(data, query) {
+        currentPage = data.page;
+        listEl.innerHTML = '';
+        if (!data.results.length) {
+            listEl.innerHTML = '<div class="mv-picker-empty">Mahsulot topilmadi.</div>';
+        } else {
+            data.results.forEach((p) => {
+                const item = document.createElement('div');
+                item.className = 'mv-picker-item';
+                const img = p.rasmi_url
+                    ? `<img src="${p.rasmi_url}" alt="">`
+                    : `<span class="mv-picker-noimg"><i class="fa-solid fa-image"></i></span>`;
+                item.innerHTML = `
+                    ${img}
+                    <div>
+                        <div class="mv-picker-item-name">${p.nomi}</div>
+                        <div class="mv-picker-item-sub">${p.turi} — ${Number(p.miqdori).toFixed(2)} qoldiq</div>
+                    </div>
+                    <div class="mv-picker-item-price">${Math.round(p.tannarx).toLocaleString('fr-FR').replace(/,/g, ' ')} so'm</div>
+                `;
+                item.addEventListener('click', () => selectProduct(p));
+                listEl.appendChild(item);
+            });
         }
-        filtered.forEach((p) => {
-            const item = document.createElement('div');
-            item.className = 'ssel-item';
-            item.innerHTML = `<span>${p.nomi}</span><span class="ssel-item-sub">${p.miqdor.toFixed(2)} ${p.birlik}</span>`;
-            item.addEventListener('click', () => selectProduct(p));
-            panel.appendChild(item);
-        });
+
+        if (data.num_pages > 1) {
+            const prevBtn = document.createElement('button');
+            prevBtn.type = 'button';
+            prevBtn.className = 'btn';
+            prevBtn.innerHTML = '<i class="fa-solid fa-chevron-left"></i>';
+            prevBtn.disabled = !data.has_prev;
+            prevBtn.addEventListener('click', () => fetchProducts(query, data.page - 1));
+
+            const label = document.createElement('span');
+            label.style.cssText = 'font-size:13px; font-weight:700; color:var(--text-light);';
+            label.textContent = `${data.page} / ${data.num_pages}-sahifa (${data.total} ta)`;
+
+            const nextBtn = document.createElement('button');
+            nextBtn.type = 'button';
+            nextBtn.className = 'btn';
+            nextBtn.innerHTML = '<i class="fa-solid fa-chevron-right"></i>';
+            nextBtn.disabled = !data.has_next;
+            nextBtn.addEventListener('click', () => fetchProducts(query, data.page + 1));
+
+            footerEl.appendChild(prevBtn);
+            footerEl.appendChild(label);
+            footerEl.appendChild(nextBtn);
+        }
     }
 
     function selectProduct(p) {
+        selectedProduct = p;
         productIdInput.value = p.id;
-        search.value = p.nomi;
         priceInput.value = p.tannarx;
-        ssel.classList.remove('open');
+        triggerText.textContent = p.nomi;
+        triggerText.classList.remove('mv-product-placeholder');
+        triggerImgWrap.outerHTML = p.rasmi_url
+            ? `<img id="movementTriggerImgWrap" src="${p.rasmi_url}" alt="">`
+            : `<span id="movementTriggerImgWrap" class="mv-picker-noimg"><i class="fa-solid fa-image"></i></span>`;
+        closePicker();
     }
 
-    search.addEventListener('focus', () => {
-        ssel.classList.add('open');
-        renderPanel(search.value === productForName() ? '' : search.value);
-    });
-    search.addEventListener('input', () => {
-        ssel.classList.add('open');
-        productIdInput.value = '';
-        renderPanel(search.value);
-    });
-    document.addEventListener('click', (ev) => {
-        if (!ssel.contains(ev.target)) ssel.classList.remove('open');
+    searchInput.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => fetchProducts(searchInput.value.trim(), 1), 250);
     });
 
-    function productForName() {
-        const p = products.find((x) => String(x.id) === String(productIdInput.value));
-        return p ? p.nomi : '';
-    }
-
-    renderPanel('');
+    document.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Escape' && overlay.classList.contains('open')) closePicker();
+    });
 
     // ── AJAX yuborish — sahifa qayta yuklanmaydi, "So'nggi harakatlar"
     // jadvaliga yangi qator darhol qo'shiladi, tanlangan mahsulotning
@@ -188,10 +386,9 @@
             if (xhr.status >= 200 && xhr.status < 300 && data.ok) {
                 showFeedback(data.message, true);
 
-                const p = products.find((x) => String(x.id) === String(productIdInput.value));
-                if (p) {
-                    p.tannarx = data.product.tannarx;
-                    p.miqdor = data.product.miqdori;
+                if (selectedProduct && String(selectedProduct.id) === String(productIdInput.value)) {
+                    selectedProduct.tannarx = data.product.tannarx;
+                    selectedProduct.miqdori = data.product.miqdori;
                 }
 
                 const emptyRow = document.getElementById('movementHistoryEmpty');
@@ -207,7 +404,7 @@
                 historyBody.insertBefore(tr, historyBody.firstChild);
 
                 document.getElementById('movementQty').value = '';
-                priceInput.value = p ? p.tannarx : '';
+                priceInput.value = data.product.tannarx;
             } else {
                 showFeedback(data.error || 'Xatolik yuz berdi.', false);
             }

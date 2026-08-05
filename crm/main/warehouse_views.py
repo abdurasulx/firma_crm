@@ -73,6 +73,25 @@ def warehouse_products(request):
         products = products.filter(Q(nomi__icontains=query) | Q(turi__nomi__icontains=query))
 
     products = products.order_by('nomi')
+
+    if request.GET.get('data_format') == 'json':
+        # Kirim-chiqim sahifasidagi "Mahsulot tanlash" modali uchun —
+        # 100+ mahsulot bo'lganda butun ro'yxatni JS massivida saqlash
+        # o'rniga, `mahsulotlar_list`/`hodimlar_list`dagi kabi server
+        # tomonda qidiriladigan/sahifalanadigan AJAX natija.
+        picker_paginator = Paginator(products, 12)
+        picker_page = picker_paginator.get_page(request.GET.get('page'))
+        return JsonResponse({
+            'results': [{
+                'id': p.id, 'nomi': p.nomi, 'turi': p.turi.nomi if p.turi else '',
+                'miqdori': p.miqdori, 'tannarx': float(p.tannarx),
+                'rasmi_url': p.rasmi.url if p.rasmi else None,
+            } for p in picker_page],
+            'page': picker_page.number, 'num_pages': picker_paginator.num_pages,
+            'has_next': picker_page.has_next(), 'has_prev': picker_page.has_previous(),
+            'total': products.count(),
+        })
+
     paginator = Paginator(products, 20)
     page_obj = paginator.get_page(request.GET.get('page'))
 
