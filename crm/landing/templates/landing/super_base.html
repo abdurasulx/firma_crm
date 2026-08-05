@@ -385,6 +385,12 @@
                     <span>Backup</span>
                 </a>
             </li>
+            <li class="nav-item">
+                <a href="{% url 'super_agent_releases' %}" class="nav-link {% if 'agent-releases' in request.path %}active{% endif %}">
+                    <i class="fa-solid fa-desktop"></i>
+                    <span>Agent versiyalari</span>
+                </a>
+            </li>
             <li class="nav-item" style="margin-top: 40px;">
                 <a href="/admin_panel/" class="nav-link">
                     <i class="fa-solid fa-database"></i>

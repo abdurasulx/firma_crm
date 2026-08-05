@@ -11,7 +11,7 @@ from .views import (
     savdogar_admin_dashboard, savdogar_contract_page, savdogar_contract_download, savdogar_sales_page,
     savdogar_admin_credit_page, savdogar_admin_products_page, savdogar_admin_analytics_page,
     savdogar_my_sales, savdogar_my_credit, savdogar_my_products, savdogar_analytics_page,
-    offline_page, service_worker_js,
+    offline_page, service_worker_js, download_desktop_agent,
 )
 from .hisobot_views import hisobotlar_view
 from .list_views import hodimlar_list, mahsulotlar_list
@@ -155,6 +155,7 @@ urlpatterns = [
     path('api/map/active-days/<int:deliverer_id>/', api_route_active_days, name='api_route_active_days'),
     path('api/map/route/<int:deliverer_id>/', api_route_history, name='api_route_history'),
     path('api/location/batch/', api_location_batch, name='api_location_batch'),
+    path('agent/yuklab-olish/', download_desktop_agent, name='download_desktop_agent'),
     path('offline/', offline_page, name='offline_page'),
     path('sw.js', service_worker_js, name='service_worker_js'),
     path('select-plan-page/', select_plan_page, name='select_plan_page'),

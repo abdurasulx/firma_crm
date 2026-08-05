@@ -76,6 +76,8 @@ urlpatterns = [
     # Backup (superadmin — bitta firma yoki butun tizim, faqat yuklab olish)
     path('super/backup/', views.super_backup_page, name='super_backup_page'),
     path('super/backup/download/', views.super_backup_download, name='super_backup_download'),
+    path('super/agent-releases/', views.super_agent_releases, name='super_agent_releases'),
+    path('super/agent-releases/<int:release_id>/delete/', views.super_agent_release_delete, name='super_agent_release_delete'),
     
     path('404/', custom_404, name='custom_404_preview'),
 

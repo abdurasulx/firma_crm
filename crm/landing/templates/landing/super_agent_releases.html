@@ -1,0 +1,78 @@
+{% extends 'landing/super_base.html' %}
+
+{% block super_content %}
+<div class="glass-card animate-fade">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2 style="font-size: 1.5rem; font-weight: 700;">Desktop Agent versiyalari</h2>
+    </div>
+
+    <p style="color: var(--text-muted); margin-bottom: 2rem; max-width: 720px;">
+        Bu yerda yuklangan eng oxirgi <code>StockFirmAgent.exe</code> — Desktop Agent stansiyasi
+        sotib olingan har qanday firma egasi o'z profilidan shu versiyani yuklab oladi.
+        Eski versiyalar ro'yxatda qoladi (audit uchun), lekin faqat eng oxirgisi firmalarga taklif qilinadi.
+    </p>
+
+    <div style="border: 1px solid var(--glass-border); border-radius: 16px; padding: 24px; margin-bottom: 28px; max-width: 520px;">
+        <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 16px;">
+            <i class="fa-solid fa-upload" style="margin-right: 8px; color: var(--primary-dark);"></i>
+            Yangi versiya yuklash
+        </h3>
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            <label style="display:block; font-size:13px; font-weight:700; margin-bottom:6px;">Versiya raqami</label>
+            <input type="text" name="version" placeholder="Masalan: 1.4.0" required
+                   style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--glass-border); margin-bottom: 14px;">
+
+            <label style="display:block; font-size:13px; font-weight:700; margin-bottom:6px;">O'zgarishlar (ixtiyoriy)</label>
+            <textarea name="izoh" rows="3" placeholder="Bu versiyada nima o'zgargani..."
+                      style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--glass-border); margin-bottom: 14px; resize: vertical;"></textarea>
+
+            <label style="display:block; font-size:13px; font-weight:700; margin-bottom:6px;">StockFirmAgent.exe fayli</label>
+            <input type="file" name="file" accept=".exe" required
+                   style="width: 100%; padding: 8px; border-radius: 10px; border: 1px solid var(--glass-border); margin-bottom: 18px;">
+
+            <button type="submit" class="btn btn-primary" style="width: 100%;">
+                <i class="fa-solid fa-cloud-arrow-up"></i> Yuklash
+            </button>
+        </form>
+    </div>
+
+    <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 12px;">Tarix</h3>
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="text-align: left; font-size: 12px; color: var(--text-muted); text-transform: uppercase;">
+                    <th style="padding: 10px 8px;">Versiya</th>
+                    <th style="padding: 10px 8px;">Sana</th>
+                    <th style="padding: 10px 8px;">Kim yukladi</th>
+                    <th style="padding: 10px 8px;">Izoh</th>
+                    <th style="padding: 10px 8px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in releases %}
+                <tr style="border-top: 1px solid var(--glass-border);">
+                    <td style="padding: 10px 8px; font-weight: 800;">
+                        v{{ r.version }}
+                        {% if forloop.first %}<span style="margin-left:6px; font-size:10px; font-weight:700; background:#dcfce7; color:#166534; padding:2px 8px; border-radius:999px;">JORIY</span>{% endif %}
+                    </td>
+                    <td style="padding: 10px 8px;">{{ r.created_at|date:"d.m.Y H:i" }}</td>
+                    <td style="padding: 10px 8px;">{{ r.uploaded_by.username|default:"—" }}</td>
+                    <td style="padding: 10px 8px; max-width: 320px; white-space: pre-line;">{{ r.izoh|default:"—" }}</td>
+                    <td style="padding: 10px 8px; text-align: right; white-space: nowrap;">
+                        <a href="{{ r.file.url }}" style="margin-right: 10px;"><i class="fa-solid fa-download"></i></a>
+                        <form method="POST" action="{% url 'super_agent_release_delete' r.id %}" style="display: inline;"
+                              onsubmit="return confirm('v{{ r.version }} o\'chirilsinmi?');">
+                            {% csrf_token %}
+                            <button type="submit" style="border: none; background: none; color: #dc2626; cursor: pointer;"><i class="fa-solid fa-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" style="padding: 20px 8px; color: var(--text-muted); text-align: center;">Hozircha versiya yuklanmagan.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

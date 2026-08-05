@@ -3,7 +3,7 @@ from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.contrib import messages
-from main.models import BillingPaymentLink, Company, User, Plan, PlanRequest
+from main.models import BillingPaymentLink, Company, User, Plan, PlanRequest, AgentRelease
 from django.db import models, transaction
 from django.db.models import Count, Q, Sum
 from django.contrib.auth.decorators import user_passes_test
@@ -856,4 +856,35 @@ def super_backup_download(request):
     response = HttpResponse(memory_zip.getvalue(), content_type='application/zip')
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
+
+
+@user_passes_test(is_superuser)
+def super_agent_releases(request):
+    """Superadmin — Desktop Agent (StockFirmAgent.exe) yangi versiyasini
+    yuklaydi. Firma egalari eng oxirgi yozuvni o'z profilidan yuklab
+    oladi (`download_desktop_agent`, main/views.py)."""
+    if request.method == 'POST':
+        version = (request.POST.get('version') or '').strip()
+        izoh = (request.POST.get('izoh') or '').strip()
+        file = request.FILES.get('file')
+        if not version or not file:
+            messages.error(request, "Versiya raqami va .exe fayl majburiy.")
+        else:
+            AgentRelease.objects.create(
+                version=version, file=file, izoh=izoh, uploaded_by=request.user,
+            )
+            messages.success(request, f"Agent v{version} yuklandi — endi firmalar shu versiyani olishadi.")
+        return redirect('super_agent_releases')
+
+    releases = AgentRelease.objects.order_by('-created_at')[:20]
+    return render(request, 'landing/super_agent_releases.html', {'releases': releases})
+
+
+@user_passes_test(is_superuser)
+def super_agent_release_delete(request, release_id):
+    release = get_object_or_404(AgentRelease, id=release_id)
+    if request.method == 'POST':
+        release.delete()
+        messages.success(request, "Versiya o'chirildi.")
+    return redirect('super_agent_releases')
 

@@ -7,7 +7,7 @@ from django.core.paginator import Paginator
 from django.http import HttpResponse
 from django.utils import timezone
 from django.shortcuts import redirect
-from .models import BACKUP_CHOICES, BillingPaymentLink, Company, Plan, HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri, Savdo, YuklamaSorov, MiqdorQoshish, HaridorDukon, AmalLog, qaytarilgan_mahsulotlar, PlanRequest, NasiyaTolov, ProductionMaterialRequest, StockHistory, Serial, Ombor, MahsulotQoshimchaXarajat, PazandaMahsulot, MahsulotRetsept, DESKTOP_AGENT_UNIT_PRICE, XodimBadge, ProductionTask, XodimMaosh, XodimTolov, XodimOyYopish, QoshimchaChiqim
+from .models import BACKUP_CHOICES, BillingPaymentLink, Company, Plan, HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri, Savdo, YuklamaSorov, MiqdorQoshish, HaridorDukon, AmalLog, qaytarilgan_mahsulotlar, PlanRequest, NasiyaTolov, ProductionMaterialRequest, StockHistory, Serial, Ombor, MahsulotQoshimchaXarajat, PazandaMahsulot, MahsulotRetsept, DESKTOP_AGENT_UNIT_PRICE, XodimBadge, ProductionTask, XodimMaosh, XodimTolov, XodimOyYopish, QoshimchaChiqim, AgentRelease
 from .functions import mahsulotlar_miqdori, makenewform, yuklama_maker, accptyuk, sotishm, sotuv_new_form ,yetkazuvchi_mahsulot_filter, get_bugungi_savdo_summ, add_spctoint, format_compact_money
 from .plan_utils import (
     company_has_access, get_feature_flags,
@@ -1657,6 +1657,8 @@ def profile_view(request, username):
                 'savdogar_contract_ready': bool((company.savdogar_contract_text or '').strip()),
             }
             context = {'user': user, 'profile_stats': profile_stats}
+            if user.username == request.user.username and company.custom_desktop_agent_stations:
+                context['agent_release'] = AgentRelease.objects.order_by('-created_at').first()
             if user.type in ['pazanda', 'ishlab_chiqaruvchi']:
                 pz = Pazanda.objects.filter(user=user, company=company).first()
                 if pz:
@@ -3232,3 +3234,21 @@ def service_worker_js(request):
     response['Service-Worker-Allowed'] = '/'
     response['Cache-Control'] = 'no-cache'
     return response
+
+
+@login_required(login_url='login')
+def download_desktop_agent(request):
+    """Faqat Desktop Agent stansiyasi sotib olingan firma egasi uchun —
+    superadmin yuklagan eng oxirgi StockFirmAgent.exe versiyasini
+    yuklab beradi (`AgentRelease`, superadmin panelidan boshqariladi)."""
+    if request.user.type != 'ega':
+        messages.error(request, "Faqat firma egasi Desktop Agent dasturini yuklab olishi mumkin.")
+        return redirect('main')
+    if not request.company.custom_desktop_agent_stations:
+        messages.error(request, "Sizning firmangizda Desktop Agent stansiyasi sotib olinmagan. Administrator bilan bog'laning.")
+        return redirect('main')
+    release = AgentRelease.objects.order_by('-created_at').first()
+    if not release or not release.file:
+        messages.error(request, "Hozircha Desktop Agent versiyasi yuklanmagan. Administrator bilan bog'laning.")
+        return redirect('main')
+    return redirect(release.file.url)

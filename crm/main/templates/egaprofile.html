@@ -111,6 +111,23 @@
         </div>
         {% endif %}
 
+        {% if request.user.type == 'ega' and user.username == request.user.username and request.company.custom_desktop_agent_stations %}
+        <div class="owner-card" style="text-align:center;">
+            <div class="owner-label">Desktop Agent dasturi</div>
+            {% if agent_release %}
+            <p class="muted" style="font-size:12px; margin:8px 0 4px;">Joriy versiya: <b>{{ agent_release.version }}</b></p>
+            {% if agent_release.izoh %}
+            <p class="muted" style="font-size:12px; white-space:pre-line; text-align:left; background:var(--bg-light,#f8fafc); border-radius:8px; padding:10px; margin-bottom:12px;">{{ agent_release.izoh }}</p>
+            {% endif %}
+            <a class="save-btn" href="{% url 'download_desktop_agent' %}" style="display:inline-flex; text-decoration:none;">
+                <i class="fa-solid fa-download"></i> StockFirmAgent.exe yuklab olish
+            </a>
+            {% else %}
+            <p class="muted" style="font-size:13px;">Hozircha yuklab olish uchun versiya joylanmagan. Administrator bilan bog'laning.</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
         {% if request.user.type == 'ega' %}
         <div class="owner-card" style="text-align:center;">
             <div class="owner-label">Desktop Agent QR-login</div>

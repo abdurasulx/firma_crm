@@ -1124,3 +1124,24 @@ class XodimOyYopish(models.Model):
 
     def __str__(self):
         return f"{self.user} — {self.yil}-{self.oy:02d}"
+
+
+class AgentRelease(models.Model):
+    """StockFirm Desktop Agent (StockFirmAgent.exe) ning platforma
+    bo'ylab bitta joriy versiyasi — superadmin yangi build yuklaganda
+    yaratiladi. Firma-maxsus emas: Desktop Agent stansiyasi sotib
+    olingan (`custom_desktop_agent_stations > 0`) har qanday firma egasi
+    eng oxirgi (`created_at` bo'yicha eng yangi) yozuvni yuklab oladi."""
+    version = models.CharField(max_length=30, help_text="Masalan: 1.4.0")
+    file = models.FileField(upload_to='agent_releases/')
+    izoh = models.TextField(blank=True, default="", help_text="Bu versiyada nima o'zgargani (changelog)")
+    uploaded_by = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Agent versiyasi"
+        verbose_name_plural = "Agent versiyalari"
+
+    def __str__(self):
+        return f"StockFirm Agent v{self.version}"
