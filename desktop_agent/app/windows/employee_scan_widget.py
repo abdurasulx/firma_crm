@@ -1367,8 +1367,20 @@ class EmployeeScanWidget(QWidget):
         deb topiladi) — qo'lda "Tekshirish" bosilmasdan avtomatik
         yuboriladi. Tasdiqlangandan keyin esa mahsulot tarozidan olib
         tashlanib (qiymat ~0ga qaytgach) — keyingi so'rov avtomatik
-        ko'rsatiladi (`_awaiting_scale_clear`)."""
+        ko'rsatiladi (`_awaiting_scale_clear`).
+
+        **Muhim**: joriy so'rov "dona"/"litr" kabi o'lchab bo'lmaydigan
+        (sanoq) birlikda bo'lsa, bu funksiya HECH NARSA QILMAYDI — aks
+        holda jismonan ulangan tarozining tasodifiy shovqin qiymati
+        (masalan bo'sh platforma ~0.26 kg) `_show_next_weigh_request`
+        avtomatik to'ldirgan to'g'ri sonni (masalan "10 dona") bosib,
+        keyin avtomatik yuborilganda serverga noto'g'ri qiymat
+        (o'lchangan vazn, kerakli dona o'rniga) jo'natilib, "Miqdor
+        normadan kam" xatosiga olib kelardi (real ishlab chiqarishda
+        kuzatilgan xato)."""
         if not self.weigh_card.isVisible():
+            return
+        if self._current_weigh_request is not None and not _is_weighable_birlik(self._current_weigh_request.get("birlik")):
             return
         self.weigh_input.setReadOnly(True)
         self.weigh_input.setText(f"{value:.2f}")
