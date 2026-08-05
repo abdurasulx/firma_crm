@@ -35,5 +35,9 @@ urlpatterns = [
     path('backup/', landing_views.super_backup_page, name='super_backup_page'),
     path('backup/download/', landing_views.super_backup_download, name='super_backup_download'),
 
+    # Desktop Agent versiyalari
+    path('agent-releases/', landing_views.super_agent_releases, name='super_agent_releases'),
+    path('agent-releases/<int:release_id>/delete/', landing_views.super_agent_release_delete, name='super_agent_release_delete'),
+
     path('admin_panel/', admin.site.urls),
 ]
