@@ -7,10 +7,106 @@
 {% include 'warehouse_styles.html' %}
 <div class="warehouse-page">
 
-<div style="display:grid; grid-template-columns:minmax(280px, 360px) 1fr; gap:22px;">
-    <form method="post" class="card" style="padding:24px;">
+<div class="card" style="margin-bottom:18px; padding:18px 20px;">
+    <form method="get" id="taskFilterForm" style="display:flex; flex-wrap:wrap; align-items:flex-end; gap:14px;">
+        <div style="display:flex; gap:4px; background:var(--bg-light,#f1f5f9); border-radius:10px; padding:4px;">
+            <button type="button" class="btn" id="modeDayBtn" style="padding:8px 14px;">Bitta kun</button>
+            <button type="button" class="btn" id="modeRangeBtn" style="padding:8px 14px;">Oraliq</button>
+        </div>
+        <input type="hidden" name="mode" id="taskFilterMode" value="{{ filter_mode }}">
+
+        <label id="dayFilterWrap" style="display:block;">
+            <div style="font-weight:800; margin-bottom:6px; font-size:12px;">Sana (faqat vazifa bor kunlar)</div>
+            <select class="field" name="sana" id="taskDaySelect">
+                <option value="">— barchasi —</option>
+                {% for d in active_days %}
+                <option value="{{ d|date:'Y-m-d' }}" {% if sel_sana == d|date:'Y-m-d' %}selected{% endif %}>{{ d|date:"d.m.Y" }}</option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label id="rangeFilterWrap" style="display:none;">
+            <div style="font-weight:800; margin-bottom:6px; font-size:12px;">Dan</div>
+            <input class="field" type="date" name="from" value="{{ sel_from|default:'' }}">
+        </label>
+        <label id="rangeFilterWrap2" style="display:none;">
+            <div style="font-weight:800; margin-bottom:6px; font-size:12px;">Gacha</div>
+            <input class="field" type="date" name="to" value="{{ sel_to|default:'' }}">
+        </label>
+
+        <label style="display:block;">
+            <div style="font-weight:800; margin-bottom:6px; font-size:12px;">Hodim</div>
+            <select class="field" name="pazanda">
+                <option value="">— barchasi —</option>
+                {% for p in pazanda_list %}
+                <option value="{{ p.id }}" {% if sel_pazanda == p.id|stringformat:"s" %}selected{% endif %}>{{ p.user.tuliq_ismi|default:p.user.username }}</option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <button class="btn primary" type="submit"><i class="fa-solid fa-filter"></i> Filtrlash</button>
+        <a class="btn" href="{% url 'vazifalar' %}">Tozalash</a>
+
+        <div style="flex:1;"></div>
+        <button type="button" class="btn primary" onclick="document.getElementById('newTaskModal').style.display='flex';">
+            <i class="fa-solid fa-plus"></i> Yangi vazifa
+        </button>
+    </form>
+</div>
+
+<div class="card">
+    <div style="padding:18px 20px; border-bottom:1px solid var(--border);">
+        <h3 style="margin:0;">Vazifalar ro'yxati</h3>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>Mahsulot</th><th>Miqdor</th><th>Sana</th><th>Hodim</th><th>Holat</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for task in tasks %}
+                <tr>
+                    <td>{{ task.mahsulot.nomi }}</td>
+                    <td>{{ task.rejalashtirilgan_miqdor|floatformat:0 }}</td>
+                    <td>{{ task.sana|date:"d.m.Y" }}</td>
+                    <td>{{ task.pazanda.user.tuliq_ismi|default:"—" }}</td>
+                    <td>
+                        {% if task.status == 'open' %}
+                        <span style="color:#0369a1; font-weight:700;">Ochiq</span>
+                        {% elif task.status == 'claimed' %}
+                        <span style="color:#b45309; font-weight:700;">Band</span>
+                        {% elif task.status == 'done' %}
+                        <span style="color:#16a34a; font-weight:700;">✓ Bajarildi</span>
+                        {% else %}
+                        <span style="color:#64748b; font-weight:700;">Bekor qilindi</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align:right;">
+                        {% if task.status == 'open' or task.status == 'claimed' %}
+                        <a class="btn" href="{% url 'vazifa_qr_image' task.kod %}" download="vazifa_{{ task.id }}.png">
+                            <i class="fa-solid fa-qrcode"></i> QR
+                        </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" style="text-align:center; padding:24px; color:var(--muted);">Tanlangan filtr bo'yicha vazifa topilmadi.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+</div>
+
+<!-- Yangi vazifa — modal (avval sahifada doim ochiq turgan katta forma edi,
+     endi ro'yxat/filtr uchun joy bo'shatildi). -->
+<div id="newTaskModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,.6); z-index:9999; align-items:center; justify-content:center; padding:16px;">
+    <form method="post" class="card" style="padding:24px; width:min(94vw, 440px); max-height:90vh; overflow-y:auto;">
         {% csrf_token %}
-        <h3 style="margin-bottom:18px;">Yangi vazifa</h3>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+            <h3 style="margin:0;">Yangi vazifa</h3>
+            <button type="button" onclick="document.getElementById('newTaskModal').style.display='none';" style="border:none; background:none; font-size:22px; cursor:pointer; color:#94a3b8;">&times;</button>
+        </div>
         <label style="display:block; margin-bottom:14px;">
             <div style="font-weight:800; margin-bottom:8px;">Mahsulot</div>
             <select class="field" name="mahsulot" id="taskMahsulotSelect" required>
@@ -40,60 +136,17 @@
         <label id="taskForceUnevenRow" style="display:none; margin-bottom:14px; font-size:13px;">
             <input type="checkbox" name="force_uneven_qadoq" value="1"> Bo'linmasa ham baribir davom et
         </label>
-        <label style="display:block; margin-bottom:14px;">
+        <label style="display:block; margin-bottom:18px;">
             <div style="font-weight:800; margin-bottom:8px;">Sana</div>
             <input class="field" type="date" name="sana" value="{{ today|date:'Y-m-d' }}">
         </label>
-        <button class="btn primary" type="submit"><i class="fa-solid fa-plus"></i> Vazifa yaratish</button>
+        <button class="btn primary" type="submit" style="width:100%;"><i class="fa-solid fa-plus"></i> Vazifa yaratish</button>
         <p style="font-size:12px; color:var(--muted); margin-top:14px;">
             Vazifa yaratilgach, uning QR kodini chop etib taxtaga yopishtiring —
             istalgan ishlab chiqaruvchi Desktop Agent'da o'z badge'ini va shu QR'ni
             skanerlab, vazifani o'ziga oladi.
         </p>
     </form>
-
-    <div class="card">
-        <div style="padding:18px 20px; border-bottom:1px solid var(--border);">
-            <h3 style="margin:0;">Vazifalar ro'yxati</h3>
-        </div>
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr><th>Mahsulot</th><th>Miqdor</th><th>Sana</th><th>Holat</th><th></th></tr>
-                </thead>
-                <tbody>
-                    {% for task in tasks %}
-                    <tr>
-                        <td>{{ task.mahsulot.nomi }}</td>
-                        <td>{{ task.rejalashtirilgan_miqdor|floatformat:0 }}</td>
-                        <td>{{ task.sana|date:"d.m.Y" }}</td>
-                        <td>
-                            {% if task.status == 'open' %}
-                            <span style="color:#0369a1; font-weight:700;">Ochiq</span>
-                            {% elif task.status == 'claimed' %}
-                            <span style="color:#b45309; font-weight:700;">Band — {{ task.pazanda.tuliq_ismi }}</span>
-                            {% elif task.status == 'done' %}
-                            <span style="color:#16a34a; font-weight:700;">✓ Bajarildi</span>
-                            {% else %}
-                            <span style="color:#64748b; font-weight:700;">Bekor qilindi</span>
-                            {% endif %}
-                        </td>
-                        <td style="text-align:right;">
-                            {% if task.status == 'open' or task.status == 'claimed' %}
-                            <a class="btn" href="{% url 'vazifa_qr_image' task.kod %}" download="vazifa_{{ task.id }}.png">
-                                <i class="fa-solid fa-qrcode"></i> QR
-                            </a>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="5" style="text-align:center; padding:24px; color:var(--muted);">Hali vazifa yo'q.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
 </div>
 
 <script>
@@ -101,15 +154,40 @@
         var select = document.getElementById('taskMahsulotSelect');
         var qadoqRow = document.getElementById('taskQadoqHajmiRow');
         var forceRow = document.getElementById('taskForceUnevenRow');
-        if (!select) return;
-        function toggle() {
-            var opt = select.options[select.selectedIndex];
-            var isBatch = opt && opt.getAttribute('data-granularity') === 'batch';
-            qadoqRow.style.display = isBatch ? 'block' : 'none';
-            forceRow.style.display = isBatch ? 'block' : 'none';
+        if (select) {
+            function toggle() {
+                var opt = select.options[select.selectedIndex];
+                var isBatch = opt && opt.getAttribute('data-granularity') === 'batch';
+                qadoqRow.style.display = isBatch ? 'block' : 'none';
+                forceRow.style.display = isBatch ? 'block' : 'none';
+            }
+            select.addEventListener('change', toggle);
+            toggle();
         }
-        select.addEventListener('change', toggle);
-        toggle();
+
+        // Filtr rejimi — "Bitta kun" / "Oraliq" almashtiradi, faqat mos
+        // maydonlar ko'rinadi/yuboriladi.
+        var modeInput = document.getElementById('taskFilterMode');
+        var dayBtn = document.getElementById('modeDayBtn');
+        var rangeBtn = document.getElementById('modeRangeBtn');
+        var dayWrap = document.getElementById('dayFilterWrap');
+        var rangeWrap = document.getElementById('rangeFilterWrap');
+        var rangeWrap2 = document.getElementById('rangeFilterWrap2');
+        var daySelect = document.getElementById('taskDaySelect');
+
+        function applyMode(mode) {
+            modeInput.value = mode;
+            var isRange = mode === 'range';
+            dayWrap.style.display = isRange ? 'none' : 'block';
+            rangeWrap.style.display = isRange ? 'block' : 'none';
+            rangeWrap2.style.display = isRange ? 'block' : 'none';
+            daySelect.disabled = isRange;
+            dayBtn.classList.toggle('primary', !isRange);
+            rangeBtn.classList.toggle('primary', isRange);
+        }
+        dayBtn.addEventListener('click', function () { applyMode('day'); });
+        rangeBtn.addEventListener('click', function () { applyMode('range'); });
+        applyMode(modeInput.value || 'day');
     })();
 </script>
 {% endblock %}

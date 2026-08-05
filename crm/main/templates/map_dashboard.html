@@ -133,14 +133,32 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Initialize Map
+        // Initialize Map — avval qattiq belgilangan (Toshkent) markazda
+        // ochiladi (tarmoq sekin/o'chgan bo'lsa ham sahifa ishlab tursin),
+        // keyin IP orqali taxminiy joylashuv aniqlansa, xaritaning o'zi
+        // (foydalanuvchi hali qo'lda harakatlantirmagan bo'lsa) o'sha
+        // joyga avtomatik ko'chadi — har safar qo'lda Toshkentga
+        // aylantirib turishning hojati bo'lmasin.
         const map = L.map('map').setView([41.311, 69.240], 12);
-        
+
         L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
             subdomains: 'abcd',
             maxZoom: 20
         }).addTo(map);
+
+        (function () {
+            let userMoved = false;
+            map.on('dragstart zoomstart', function () { userMoved = true; });
+            fetch('https://ipwho.is/')
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    if (!userMoved && d && d.success && d.latitude && d.longitude) {
+                        map.setView([d.latitude, d.longitude], 12);
+                    }
+                })
+                .catch(function () {});
+        })();
 
         let delivererMarkers = {};
         let routeLayers = {};

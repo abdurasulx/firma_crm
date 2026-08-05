@@ -89,14 +89,51 @@ def vazifalar_page(request):
         warehouse_type='finished', mahsulot_turi='ishlab_chiqariladigan',
     ).order_by('nomi')
 
+    # Faqat vazifa BOR kunlar ("active days") — sana filtri shu ro'yxatdan
+    # tanlanadi, xodim bo'sh kunni qidirib vaqt yo'qotmasin.
+    active_days = list(
+        ProductionTask.objects.filter(company=request.company)
+        .order_by('-sana').values_list('sana', flat=True).distinct()
+    )
+
+    pazanda_list = Pazanda.objects.filter(
+        company=request.company, olingan_vazifalar__isnull=False,
+    ).select_related('user').distinct().order_by('user__tuliq_ismi')
+
     tasks = ProductionTask.objects.filter(
         company=request.company,
-    ).select_related('mahsulot', 'pazanda').order_by('-created_at')[:100]
+    ).select_related('mahsulot', 'pazanda__user').order_by('-sana', '-created_at')
+
+    filter_mode = request.GET.get('mode', 'day')
+    sana_str = request.GET.get('sana')
+    from_str = request.GET.get('from')
+    to_str = request.GET.get('to')
+    pazanda_id = request.GET.get('pazanda')
+
+    if filter_mode == 'range' and (from_str or to_str):
+        if from_str:
+            tasks = tasks.filter(sana__gte=from_str)
+        if to_str:
+            tasks = tasks.filter(sana__lte=to_str)
+    elif sana_str:
+        tasks = tasks.filter(sana=sana_str)
+
+    if pazanda_id:
+        tasks = tasks.filter(pazanda_id=pazanda_id)
+
+    tasks = tasks[:200]
 
     return render(request, 'vazifalar.html', {
         'mahsulotlar': mahsulotlar,
         'tasks': tasks,
         'today': timezone.localdate(),
+        'active_days': active_days,
+        'pazanda_list': pazanda_list,
+        'filter_mode': filter_mode,
+        'sel_sana': sana_str,
+        'sel_from': from_str,
+        'sel_to': to_str,
+        'sel_pazanda': pazanda_id,
     })
 
 
