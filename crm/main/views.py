@@ -95,6 +95,7 @@ from .services.stock_service import (
     approve_miqdor_qoshish_service,
     approve_yuklama_sorov_service,
     get_pazanda_month_stats,
+    get_mahsulot_statistika,
     recompute_tannarx,
 )
 from .services.retsept_service import add_retsept_row, delete_retsept_row
@@ -2090,6 +2091,7 @@ def seemahsulot(request, mahsulot_id):
         context['retsept_komponentlar'] = Mahsulot.objects.filter(
             company=request.company, warehouse_type='semi_finished'
         ).order_by('nomi')
+        context['statistika'] = get_mahsulot_statistika(mahsulot)
     return render(request, 'seemahsulot.html', context)
 @login_required(login_url='login')
 def createmahsulot(request):

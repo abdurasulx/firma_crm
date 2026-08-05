@@ -50,6 +50,77 @@ def get_pazanda_month_stats(pazanda, company, yil=None, oy=None):
         'per_product': per_product,
     }
 
+def get_mahsulot_statistika(mahsulot, kunlar_oyiga=30):
+    """Mahsulot sahifasida ko'rsatiladigan ishlab chiqarish/foyda
+    statistikasi.
+
+    Har bir tasdiqlangan `MiqdorQoshish` partiyasi o'zining ishlab
+    chiqarilgan vaqtidagi tannarxini (`tannarx_snapshot`) saqlaydi —
+    retsept keyinroq o'zgargan bo'lsa ham, ESKI partiyalarning haqiqiy
+    xarajati o'zgarmaydi (shu snapshot orqali). Shu sababli "hozirgacha
+    qancha foyda qoldi" — har bir partiyani O'ZINING tannarxi bilan
+    hisoblab yig'indilanadi, hammasini bitta (joriy) tannarxga
+    tenglashtirib emas. `tannarx_snapshot` bo'lmagan (eski, bu maydon
+    qo'shilishidan oldingi) partiyalar uchun joriy tannarx bilan
+    taxminiy hisoblanadi (aniq belgilanadi).
+
+    Prognoz (`oylik`/`olti_oylik`/`yillik`) — oxirgi `kunlar_oyiga` kun
+    ichidagi ishlab chiqarish tezligi asosida, HOZIRGI retsept/narx bilan
+    davom etilsa qancha foyda kutilishini ko'rsatadi ("bu ketishda").
+    """
+    partiyalar = MiqdorQoshish.objects.filter(mahsulot=mahsulot, tasdiqlangan=True)
+
+    jami_dona = Decimal('0')
+    jami_xarajat = Decimal('0')
+    snapshot_yoq_soni = 0
+    for p in partiyalar:
+        miqdor = Decimal(str(p.miqdor))
+        birlik_tannarx = p.tannarx_snapshot
+        if birlik_tannarx is None:
+            birlik_tannarx = mahsulot.tannarx
+            snapshot_yoq_soni += 1
+        jami_dona += miqdor
+        jami_xarajat += Decimal(str(birlik_tannarx)) * miqdor
+
+    narxi = Decimal(str(mahsulot.narxi or 0))
+    joriy_tannarx = Decimal(str(mahsulot.tannarx or 0))
+
+    jami_daromad = jami_dona * narxi
+    jami_foyda = jami_daromad - jami_xarajat
+    ortacha_tarixiy_birlik_tannarx = (jami_xarajat / jami_dona) if jami_dona > 0 else Decimal('0')
+
+    # Oxirgi N kunlik ishlab chiqarish tezligi — bugungi/kelajakdagi
+    # prognoz shu tezlik va JORIY narx/tannarx bilan hisoblanadi.
+    now = timezone.now()
+    davr_boshi = now - dt.timedelta(days=kunlar_oyiga)
+    songi_davr_dona = MiqdorQoshish.objects.filter(
+        mahsulot=mahsulot, tasdiqlangan=True, vaqt_sana__gte=davr_boshi,
+    ).aggregate(t=Sum('miqdor'))['t'] or 0
+    kunlik_ortacha = Decimal(str(songi_davr_dona)) / Decimal(str(kunlar_oyiga))
+    joriy_birlik_foyda = narxi - joriy_tannarx
+
+    def prognoz(kun_soni):
+        return {
+            'dona': (kunlik_ortacha * kun_soni).quantize(Decimal('1')),
+            'foyda': kunlik_ortacha * kun_soni * joriy_birlik_foyda,
+        }
+
+    return {
+        'jami_dona': jami_dona,
+        'jami_xarajat': jami_xarajat,
+        'jami_daromad': jami_daromad,
+        'jami_foyda': jami_foyda,
+        'ortacha_tarixiy_birlik_tannarx': ortacha_tarixiy_birlik_tannarx,
+        'joriy_birlik_tannarx': joriy_tannarx,
+        'joriy_birlik_foyda': joriy_birlik_foyda,
+        'snapshot_yoq_soni': snapshot_yoq_soni,
+        'kunlik_ortacha': kunlik_ortacha,
+        'prognoz_oylik': prognoz(30),
+        'prognoz_olti_oylik': prognoz(180),
+        'prognoz_yillik': prognoz(365),
+    }
+
+
 def recompute_tannarx(mahsulot):
     """
     Mahsulotning yakuniy tannarxini qayta hisoblaydi:

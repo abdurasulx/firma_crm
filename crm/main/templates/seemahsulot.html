@@ -595,6 +595,64 @@
             </tbody>
         </table>
         <button type="button" class="btn primary" onclick="openRetseptModal()"><i class="fa-solid fa-plus"></i> Retseptga qo'shish</button>
+        <p style="font-size:12px; color:var(--text-light); margin-top:10px;">
+            Retsept o'zgartirilsa — allaqachon yaratilgan vazifalar va tasdiqlangan partiyalar
+            o'zining o'sha vaqtdagi xom ashyo miqdori/tannarxini saqlab qoladi, orqaga qarab o'zgarmaydi.
+        </p>
+    </div>
+
+    <div class="edit-card" style="margin-top:20px;">
+        <h3 class="card-title"><i class="fa-solid fa-chart-line"></i> Statistika</h3>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:18px;">
+            <div style="background:var(--bg-light,#f8fafc); border-radius:12px; padding:14px;">
+                <div style="font-size:12px; color:var(--text-light); font-weight:700;">Jami ishlab chiqarilgan</div>
+                <div style="font-size:20px; font-weight:800;">{{ statistika.jami_dona|floatformat:"-2" }} dona</div>
+            </div>
+            <div style="background:var(--bg-light,#f8fafc); border-radius:12px; padding:14px;">
+                <div style="font-size:12px; color:var(--text-light); font-weight:700;">Jami xarajat (o'z vaqtidagi tannarx bilan)</div>
+                <div style="font-size:20px; font-weight:800;">{{ statistika.jami_xarajat|floatformat:0 }} so'm</div>
+            </div>
+            <div style="background:#ecfdf5; border-radius:12px; padding:14px;">
+                <div style="font-size:12px; color:#166534; font-weight:700;">Hozirgacha qolgan (potentsial) foyda</div>
+                <div style="font-size:20px; font-weight:800; color:#166534;">{{ statistika.jami_foyda|floatformat:0 }} so'm</div>
+            </div>
+        </div>
+
+        {% if statistika.snapshot_yoq_soni %}
+        <p style="font-size:12px; color:#b45309; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:8px 12px; margin-bottom:16px;">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            {{ statistika.snapshot_yoq_soni }} ta eski partiyada o'z vaqtidagi tannarx saqlanmagan — ular uchun joriy tannarx bilan taxminiy hisoblandi.
+        </p>
+        {% endif %}
+
+        <div style="display:flex; gap:20px; flex-wrap:wrap; margin-bottom:18px; font-size:13px;">
+            <div><span style="color:var(--text-light);">O'rtacha tarixiy tannarx (1 dona):</span> <b>{{ statistika.ortacha_tarixiy_birlik_tannarx|floatformat:0 }} so'm</b></div>
+            <div><span style="color:var(--text-light);">Joriy (hozirgi retsept) tannarx (1 dona):</span> <b>{{ statistika.joriy_birlik_tannarx|floatformat:0 }} so'm</b></div>
+            <div><span style="color:var(--text-light);">Joriy foyda (1 dona):</span> <b>{{ statistika.joriy_birlik_foyda|floatformat:0 }} so'm</b></div>
+        </div>
+
+        <h4 style="font-size:14px; font-weight:800; margin-bottom:10px;">Hozirgi retsept/narx bilan bu ketishda prognoz</h4>
+        <p style="font-size:12px; color:var(--text-light); margin-bottom:12px;">
+            Oxirgi 30 kunlik ishlab chiqarish tezligi (kuniga o'rtacha {{ statistika.kunlik_ortacha|floatformat:"-2" }} dona) asosida, hozirgi narx/tannarx davom etsa.
+        </p>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px;">
+            <div style="border:1px solid var(--border-color,#e2e8f0); border-radius:12px; padding:12px;">
+                <div style="font-size:12px; color:var(--text-light); font-weight:700;">1 oyda</div>
+                <div style="font-weight:800;">{{ statistika.prognoz_oylik.dona|floatformat:0 }} dona</div>
+                <div style="color:#166534; font-weight:800;">{{ statistika.prognoz_oylik.foyda|floatformat:0 }} so'm foyda</div>
+            </div>
+            <div style="border:1px solid var(--border-color,#e2e8f0); border-radius:12px; padding:12px;">
+                <div style="font-size:12px; color:var(--text-light); font-weight:700;">6 oyda</div>
+                <div style="font-weight:800;">{{ statistika.prognoz_olti_oylik.dona|floatformat:0 }} dona</div>
+                <div style="color:#166534; font-weight:800;">{{ statistika.prognoz_olti_oylik.foyda|floatformat:0 }} so'm foyda</div>
+            </div>
+            <div style="border:1px solid var(--border-color,#e2e8f0); border-radius:12px; padding:12px;">
+                <div style="font-size:12px; color:var(--text-light); font-weight:700;">1 yilda</div>
+                <div style="font-weight:800;">{{ statistika.prognoz_yillik.dona|floatformat:0 }} dona</div>
+                <div style="color:#166534; font-weight:800;">{{ statistika.prognoz_yillik.foyda|floatformat:0 }} so'm foyda</div>
+            </div>
+        </div>
     </div>
     {% include 'retsept_modal.html' %}
     {% endif %}
