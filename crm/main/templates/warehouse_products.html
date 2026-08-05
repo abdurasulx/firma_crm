@@ -8,34 +8,22 @@
 {% include 'warehouse_styles.html' %}
 <div class="warehouse-page">
 <div class="card" style="padding:22px; margin-bottom:18px;">
-    <form method="get" id="wpFilterForm" style="display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
+    <div style="display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
         <div style="display:flex; gap:12px; flex:1; min-width:280px;">
-            <input class="field" type="search" name="q" id="wpFilterInput" value="{{ query }}" placeholder="Mahsulot yoki o'lchov bo'yicha qidirish" autocomplete="off">
+            <input class="field" type="search" id="wpFilterInput" value="{{ query }}" placeholder="Mahsulot yoki o'lchov bo'yicha qidirish" autocomplete="off">
         </div>
         <div style="display:flex; gap:10px;">
-            <button class="btn" type="submit"><i class="fa-solid fa-filter"></i> Filter</button>
             {% if not warehouse_only %}
             <a class="btn primary" href="{% url 'warehouse_product_create' %}"><i class="fa-solid fa-plus"></i> Yangi mahsulot</a>
             {% endif %}
         </div>
-    </form>
-    <script>
-        (function () {
-            const input = document.getElementById('wpFilterInput');
-            const form = document.getElementById('wpFilterForm');
-            let debounceTimer = null;
-            input.addEventListener('input', () => {
-                clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(() => form.submit(), 450);
-            });
-        })();
-    </script>
+    </div>
 </div>
 
 <div class="card">
     <div style="padding:18px 20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border);">
         <h3 style="margin:0;">Ro'yxat</h3>
-        <span class="badge blue">{{ total }} ta</span>
+        <span class="badge blue" id="wpTotalBadge">{{ total }} ta</span>
     </div>
     <div class="table-wrap">
         <table>
@@ -49,7 +37,7 @@
                     {% if not warehouse_only %}<th></th>{% endif %}
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="wpTableBody">
                 {% for product in products %}
                 <tr>
                     <td>
@@ -95,19 +83,121 @@
             </tbody>
         </table>
     </div>
-    {% if products.paginator.num_pages > 1 %}
-    <div style="display:flex; justify-content:center; align-items:center; gap:8px; padding:18px 20px; border-top:1px solid var(--border);">
-        {% if products.has_previous %}
-        <a class="btn" href="?q={{ query }}&page={{ products.previous_page_number }}"><i class="fa-solid fa-chevron-left"></i></a>
-        {% endif %}
-        <span style="font-size:13px; color:var(--muted); font-weight:700;">
-            {{ products.number }} / {{ products.paginator.num_pages }}-sahifa
-        </span>
-        {% if products.has_next %}
-        <a class="btn" href="?q={{ query }}&page={{ products.next_page_number }}"><i class="fa-solid fa-chevron-right"></i></a>
-        {% endif %}
-    </div>
-    {% endif %}
+    <div id="wpPagination" style="display:flex; justify-content:center; align-items:center; gap:8px; padding:18px 20px; border-top:1px solid var(--border);"></div>
 </div>
 </div>
+
+<script>
+(function () {
+    const listUrl = "{% url 'warehouse_products' %}";
+    const editUrlTemplate = "{% url 'warehouse_product_edit' 999999 %}".replace('999999', '__ID__');
+    const warehouseOnly = {% if warehouse_only %}true{% else %}false{% endif %};
+
+    const input = document.getElementById('wpFilterInput');
+    const tbody = document.getElementById('wpTableBody');
+    const paginationEl = document.getElementById('wpPagination');
+    const totalBadge = document.getElementById('wpTotalBadge');
+
+    let debounceTimer = null;
+    let abortCtrl = null;
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;',
+        }[ch]));
+    }
+
+    function fmtSpc(value, decimals) {
+        const fixed = Number(value).toFixed(decimals);
+        const [intPart, decPart] = fixed.split('.');
+        const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+        return decPart ? `${grouped}.${decPart}` : grouped;
+    }
+
+    function fetchList(query, page) {
+        if (abortCtrl) abortCtrl.abort();
+        abortCtrl = new AbortController();
+        const url = `${listUrl}?data_format=json&page_size=20&q=${encodeURIComponent(query)}&page=${page}`;
+        fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}, signal: abortCtrl.signal})
+            .then((r) => r.json())
+            .then((data) => renderList(data, query))
+            .catch((err) => {
+                if (err.name !== 'AbortError') {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:44px; color:var(--muted);">Xatolik yuz berdi.</td></tr>';
+                }
+            });
+    }
+
+    function renderList(data, query) {
+        totalBadge.textContent = `${data.total} ta`;
+        tbody.innerHTML = '';
+        if (!data.results.length) {
+            const colspan = warehouseOnly ? 5 : 6;
+            tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center; padding:44px; color:var(--muted);">Mahsulot topilmadi.</td></tr>`;
+        } else {
+            data.results.forEach((p) => {
+                const img = p.rasmi_url
+                    ? `<img src="${p.rasmi_url}" alt="" style="width:44px; height:44px; border-radius:10px; object-fit:cover; border:1px solid var(--border); flex-shrink:0;">`
+                    : `<div style="width:44px; height:44px; border-radius:10px; background:#f1f5f9; display:flex; align-items:center; justify-content:center; flex-shrink:0; color:var(--muted);"><i class="fa-solid fa-image"></i></div>`;
+                const turBadge = p.ombor_turi === 'yarim_tayyor'
+                    ? '<span class="badge blue">Yarim tayyor</span>'
+                    : '<span class="badge">Xom ashyo</span>';
+                const qtyBadgeClass = p.past_zaxira ? 'red' : 'green';
+                const editCol = warehouseOnly ? '' : `
+                    <td style="text-align:right;">
+                        <a class="btn" href="${editUrlTemplate.replace('__ID__', p.id)}"><i class="fa-solid fa-pen"></i> Tahrirlash</a>
+                    </td>`;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            ${img}
+                            <div>
+                                <div style="font-weight:900;">${escapeHtml(p.nomi)}</div>
+                                <div style="font-size:12px; color:var(--muted);">${escapeHtml(p.turi)}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>${turBadge}</td>
+                    <td>${fmtSpc(p.tannarx, 0)} so'm</td>
+                    <td><span class="badge ${qtyBadgeClass}">${fmtSpc(p.miqdori, 2)} ${escapeHtml(p.turi)}</span></td>
+                    <td>${fmtSpc(p.min_miqdori, 2)}</td>
+                    ${editCol}
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        paginationEl.innerHTML = '';
+        if (data.num_pages > 1) {
+            const prevBtn = document.createElement('button');
+            prevBtn.type = 'button';
+            prevBtn.className = 'btn';
+            prevBtn.innerHTML = '<i class="fa-solid fa-chevron-left"></i>';
+            prevBtn.disabled = !data.has_prev;
+            prevBtn.addEventListener('click', () => fetchList(query, data.page - 1));
+
+            const label = document.createElement('span');
+            label.style.cssText = 'font-size:13px; color:var(--muted); font-weight:700;';
+            label.textContent = `${data.page} / ${data.num_pages}-sahifa`;
+
+            const nextBtn = document.createElement('button');
+            nextBtn.type = 'button';
+            nextBtn.className = 'btn';
+            nextBtn.innerHTML = '<i class="fa-solid fa-chevron-right"></i>';
+            nextBtn.disabled = !data.has_next;
+            nextBtn.addEventListener('click', () => fetchList(query, data.page + 1));
+
+            paginationEl.appendChild(prevBtn);
+            paginationEl.appendChild(label);
+            paginationEl.appendChild(nextBtn);
+        }
+    }
+
+    input.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => fetchList(input.value.trim(), 1), 300);
+    });
+})();
+</script>
 {% endblock %}

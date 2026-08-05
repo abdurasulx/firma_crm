@@ -79,12 +79,18 @@ def warehouse_products(request):
         # 100+ mahsulot bo'lganda butun ro'yxatni JS massivida saqlash
         # o'rniga, `mahsulotlar_list`/`hodimlar_list`dagi kabi server
         # tomonda qidiriladigan/sahifalanadigan AJAX natija.
-        picker_paginator = Paginator(products, 12)
+        try:
+            page_size = int(request.GET.get('page_size', 12))
+        except ValueError:
+            page_size = 12
+        picker_paginator = Paginator(products, page_size)
         picker_page = picker_paginator.get_page(request.GET.get('page'))
         return JsonResponse({
             'results': [{
                 'id': p.id, 'nomi': p.nomi, 'turi': p.turi.nomi if p.turi else '',
                 'miqdori': p.miqdori, 'tannarx': float(p.tannarx),
+                'min_miqdori': p.min_miqdori, 'past_zaxira': p.past_zaxira,
+                'ombor_turi': p.ombor_turi,
                 'rasmi_url': p.rasmi.url if p.rasmi else None,
             } for p in picker_page],
             'page': picker_page.number, 'num_pages': picker_paginator.num_pages,
