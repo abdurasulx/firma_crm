@@ -233,6 +233,41 @@ def recompute_tannarx(mahsulot):
     return mahsulot.tannarx
 
 
+def cascade_recompute_tannarx(komponent, _seen=None):
+    """Bitta mahsulotning tannarxi o'zgarganda (masalan omborga kirim
+    qilinganda o'rtacha narx o'zgarsa), shu mahsulot BOSHQA biror
+    mahsulotning retseptida (`MahsulotRetsept.komponent`) ishlatilgan
+    bo'lsa — o'sha "ota" mahsulot(lar)ning tannarxi ESKI holicha qolib
+    ketardi, tadbirkor ularning tahrirlash sahifasini ochib "Saqlash"
+    bosgunicha (bu sahifa ham `recompute_tannarx` chaqiradi) yangilanmasdi.
+    Real ishlab chiqarishda aniqlangan xato — kutilgan xatti-harakat
+    "jonli" (real-time) yangilanish edi.
+
+    Bu funksiya `komponent`ni ishlatgan barcha "ota" mahsulotlarni qayta
+    hisoblaydi va REKURSIV ravishda ular ham boshqa birovning retseptida
+    komponent bo'lsa, yuqoriga qarab davom etadi (ko'p bosqichli BOM —
+    masalan xom ashyo -> yarim tayyor -> tayyor mahsulot zanjiri).
+    `_seen` — aylanma bog'lanish (bo'lmasligi kerak, lekin ehtiyot uchun)
+    va bir xil mahsulotni bir necha marta qayta hisoblashning oldini
+    oladi."""
+    seen = _seen if _seen is not None else set()
+    if komponent.id in seen:
+        return
+    seen.add(komponent.id)
+
+    parent_ids = list(
+        MahsulotRetsept.objects.filter(komponent=komponent)
+        .exclude(mahsulot_id__in=seen)
+        .values_list('mahsulot_id', flat=True).distinct()
+    )
+    for parent_id in parent_ids:
+        parent = Mahsulot.objects.filter(id=parent_id).first()
+        if not parent:
+            continue
+        recompute_tannarx(parent)
+        cascade_recompute_tannarx(parent, seen)
+
+
 def log_stock_change(actor, mahsulot, old_qty, new_qty, event_type, yetkazib_beruvchi=None, company=None):
     """Utility to log stock movement in StockHistory."""
     delta = new_qty - old_qty

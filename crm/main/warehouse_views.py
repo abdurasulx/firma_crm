@@ -12,7 +12,7 @@ from uuid import uuid4
 
 from .models import Mahsulot, MahsulotTuri, ProductionMaterialRequest, StockHistory, Ombor, MahsulotQoshimchaXarajat, MahsulotRetsept
 from .services.ombor_service import deduct_ombor_stock, add_ombor_stock
-from .services.stock_service import recompute_tannarx
+from .services.stock_service import recompute_tannarx, cascade_recompute_tannarx
 from .services.retsept_service import add_retsept_row, delete_retsept_row
 from .decorators import role_required
 
@@ -155,6 +155,7 @@ def warehouse_product_edit(request, product_id):
                     company=request.company, mahsulot=product, nomi=nomi_x, turi=turi_x, summa=summa_x,
                 )
                 recompute_tannarx(product)
+                cascade_recompute_tannarx(product)
                 messages.success(request, "Qo'shimcha xarajat qo'shildi.")
             else:
                 messages.error(request, "Xarajat nomi va summasi to'g'ri kiritilishi kerak.")
@@ -165,6 +166,7 @@ def warehouse_product_edit(request, product_id):
                 id=request.POST.get('xarajat_id'), company=request.company, mahsulot=product,
             ).delete()
             recompute_tannarx(product)
+            cascade_recompute_tannarx(product)
             messages.success(request, "Qo'shimcha xarajat o'chirildi.")
             return redirect('warehouse_product_edit', product_id=product.id)
 
@@ -206,6 +208,7 @@ def warehouse_product_edit(request, product_id):
         product.save()
         if recompute_needed:
             recompute_tannarx(product)
+            cascade_recompute_tannarx(product)
 
         messages.success(request, "Ombor mahsuloti saqlandi.")
         return redirect('warehouse_products')
@@ -283,6 +286,7 @@ def warehouse_movements(request):
             update_fields = ['miqdori', 'baza_tannarx']
             product.save(update_fields=update_fields)
             recompute_tannarx(product)
+            cascade_recompute_tannarx(product)
 
             ombor_id = request.POST.get('ombor_id')
             if ombor_id and product.warehouse_type == 'semi_finished':

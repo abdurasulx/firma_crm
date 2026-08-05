@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.db import transaction
 
 from ..models import MahsulotRetsept
-from .stock_service import recompute_tannarx
+from .stock_service import recompute_tannarx, cascade_recompute_tannarx
 
 
 def _creates_cycle(root_mahsulot, komponent):
@@ -31,7 +31,9 @@ def recompute_baza_tannarx_from_bom(mahsulot):
     )
     mahsulot.baza_tannarx = total
     mahsulot.save(update_fields=['baza_tannarx'])
-    return recompute_tannarx(mahsulot)
+    result = recompute_tannarx(mahsulot)
+    cascade_recompute_tannarx(mahsulot)
+    return result
 
 
 @transaction.atomic
