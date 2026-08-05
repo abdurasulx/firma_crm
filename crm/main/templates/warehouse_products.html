@@ -8,9 +8,9 @@
 {% include 'warehouse_styles.html' %}
 <div class="warehouse-page">
 <div class="card" style="padding:22px; margin-bottom:18px;">
-    <form method="get" style="display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
+    <form method="get" id="wpFilterForm" style="display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
         <div style="display:flex; gap:12px; flex:1; min-width:280px;">
-            <input class="field" type="search" name="q" value="{{ query }}" placeholder="Mahsulot yoki o'lchov bo'yicha qidirish">
+            <input class="field" type="search" name="q" id="wpFilterInput" value="{{ query }}" placeholder="Mahsulot yoki o'lchov bo'yicha qidirish" autocomplete="off">
         </div>
         <div style="display:flex; gap:10px;">
             <button class="btn" type="submit"><i class="fa-solid fa-filter"></i> Filter</button>
@@ -19,6 +19,17 @@
             {% endif %}
         </div>
     </form>
+    <script>
+        (function () {
+            const input = document.getElementById('wpFilterInput');
+            const form = document.getElementById('wpFilterForm');
+            let debounceTimer = null;
+            input.addEventListener('input', () => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => form.submit(), 450);
+            });
+        })();
+    </script>
 </div>
 
 <div class="card">
