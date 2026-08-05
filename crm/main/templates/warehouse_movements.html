@@ -5,7 +5,8 @@
 {% block title %}Kirim-chiqim{% endblock %}
 {% block page_title %}Ombor kirim-chiqimlari{% endblock %}
 
-{% block extra_css %}
+{% block content %}
+{% include 'warehouse_styles.html' %}
 <style>
     .mv-toolbar {
         display: flex;
@@ -125,10 +126,7 @@
     .mv-modal-product-name { font-weight: 800; }
     .mv-modal-product-sub { font-size: 12px; color: var(--text-light); font-weight: 600; }
 </style>
-{% endblock %}
 
-{% block content %}
-{% include 'warehouse_styles.html' %}
 <div class="warehouse-page">
 
 <div class="mv-toolbar">
