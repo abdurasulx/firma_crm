@@ -9,34 +9,19 @@
 
 <div class="card" style="margin-bottom:18px; padding:18px 20px;">
     <form method="get" id="taskFilterForm" style="display:flex; flex-wrap:wrap; align-items:flex-end; gap:14px;">
-        <div style="display:flex; gap:4px; background:var(--bg-light,#f1f5f9); border-radius:10px; padding:4px;">
-            <button type="button" class="btn" id="modeDayBtn" style="padding:8px 14px;">Bitta kun</button>
-            <button type="button" class="btn" id="modeRangeBtn" style="padding:8px 14px;">Oraliq</button>
-        </div>
-        <input type="hidden" name="mode" id="taskFilterMode" value="{{ filter_mode }}">
-
-        <label id="dayFilterWrap" style="display:block;">
-            <div style="font-weight:800; margin-bottom:6px; font-size:12px;">Sana (faqat vazifa bor kunlar)</div>
-            <select class="field" name="sana" id="taskDaySelect">
-                <option value="">— barchasi —</option>
-                {% for d in active_days %}
-                <option value="{{ d|date:'Y-m-d' }}" {% if sel_sana == d|date:'Y-m-d' %}selected{% endif %}>{{ d|date:"d.m.Y" }}</option>
-                {% endfor %}
-            </select>
-        </label>
-
-        <label id="rangeFilterWrap" style="display:none;">
-            <div style="font-weight:800; margin-bottom:6px; font-size:12px;">Dan</div>
-            <input class="field" type="date" name="from" value="{{ sel_from|default:'' }}">
-        </label>
-        <label id="rangeFilterWrap2" style="display:none;">
-            <div style="font-weight:800; margin-bottom:6px; font-size:12px;">Gacha</div>
-            <input class="field" type="date" name="to" value="{{ sel_to|default:'' }}">
+        <label style="display:block; position:relative;">
+            <div style="font-weight:800; margin-bottom:6px; font-size:12px;">Sana</div>
+            <input class="field" type="text" id="taskDateDisplay" readonly placeholder="Barchasi"
+                   style="width:220px; cursor:pointer; background:#fff;"
+                   value="{% if sel_from and sel_to and sel_to != sel_from %}{{ sel_from }} — {{ sel_to }}{% elif sel_from %}{{ sel_from }}{% endif %}">
+            <input type="hidden" name="from" id="taskDateFrom" value="{{ sel_from|default:'' }}">
+            <input type="hidden" name="to" id="taskDateTo" value="{{ sel_to|default:'' }}">
+            <div id="taskCalendarPopup" style="display:none; position:absolute; top:100%; left:0; margin-top:6px; background:#fff; border:1px solid var(--border,#e2e8f0); border-radius:12px; box-shadow:0 12px 30px rgba(0,0,0,.12); padding:14px; z-index:50; width:260px;"></div>
         </label>
 
         <label style="display:block;">
             <div style="font-weight:800; margin-bottom:6px; font-size:12px;">Hodim</div>
-            <select class="field" name="pazanda">
+            <select class="field" name="pazanda" onchange="document.getElementById('taskFilterForm').submit();">
                 <option value="">— barchasi —</option>
                 {% for p in pazanda_list %}
                 <option value="{{ p.id }}" {% if sel_pazanda == p.id|stringformat:"s" %}selected{% endif %}>{{ p.user.tuliq_ismi|default:p.user.username }}</option>
@@ -44,7 +29,6 @@
             </select>
         </label>
 
-        <button class="btn primary" type="submit"><i class="fa-solid fa-filter"></i> Filtrlash</button>
         <a class="btn" href="{% url 'vazifalar' %}">Tozalash</a>
 
         <div style="flex:1;"></div>
@@ -165,29 +149,113 @@
             toggle();
         }
 
-        // Filtr rejimi — "Bitta kun" / "Oraliq" almashtiradi, faqat mos
-        // maydonlar ko'rinadi/yuboriladi.
-        var modeInput = document.getElementById('taskFilterMode');
-        var dayBtn = document.getElementById('modeDayBtn');
-        var rangeBtn = document.getElementById('modeRangeBtn');
-        var dayWrap = document.getElementById('dayFilterWrap');
-        var rangeWrap = document.getElementById('rangeFilterWrap');
-        var rangeWrap2 = document.getElementById('rangeFilterWrap2');
-        var daySelect = document.getElementById('taskDaySelect');
+        // Bitta kalendar maydoni — bosilganda oy-ko'rinishi ochiladi:
+        //   • hech narsa tanlanmagan holda bir kunni bossa — o'sha KUN
+        //     tanlanadi va DARHOL filtrlanadi;
+        //   • allaqachon bitta kun tanlangan bo'lsa-yu, BOSHQA kun
+        //     bosilsa — ikkisi orasidagi ORALIQ hosil bo'ladi;
+        //   • xuddi shu (tanlangan) kunni yana bossa — qayta bitta kunga
+        //     qaytadi (oraliq bekor bo'ladi).
+        // "Faqat vazifa bor kunlar" — active_days nuqta (●) bilan
+        // belgilanadi, lekin tanlashni cheklamaydi (oraliq oralig'ida
+        // bo'sh kunlar ham bo'lishi tabiiy).
+        var activeDays = {{ active_days_json|safe }};
+        var activeSet = {};
+        activeDays.forEach(function (d) { activeSet[d] = true; });
 
-        function applyMode(mode) {
-            modeInput.value = mode;
-            var isRange = mode === 'range';
-            dayWrap.style.display = isRange ? 'none' : 'block';
-            rangeWrap.style.display = isRange ? 'block' : 'none';
-            rangeWrap2.style.display = isRange ? 'block' : 'none';
-            daySelect.disabled = isRange;
-            dayBtn.classList.toggle('primary', !isRange);
-            rangeBtn.classList.toggle('primary', isRange);
+        var display = document.getElementById('taskDateDisplay');
+        var fromInput = document.getElementById('taskDateFrom');
+        var toInput = document.getElementById('taskDateTo');
+        var popup = document.getElementById('taskCalendarPopup');
+        var filterForm = document.getElementById('taskFilterForm');
+
+        var OY_NOMLARI = ['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentabr','Oktabr','Noyabr','Dekabr'];
+
+        function toIso(y, m, d) {
+            return y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
         }
-        dayBtn.addEventListener('click', function () { applyMode('day'); });
-        rangeBtn.addEventListener('click', function () { applyMode('range'); });
-        applyMode(modeInput.value || 'day');
+
+        var initialFrom = fromInput.value;
+        var viewDate = initialFrom ? new Date(initialFrom + 'T00:00:00') : new Date();
+        var viewYear = viewDate.getFullYear();
+        var viewMonth = viewDate.getMonth();
+
+        function renderCalendar() {
+            var selFrom = fromInput.value;
+            var selTo = toInput.value || selFrom;
+            var firstOfMonth = new Date(viewYear, viewMonth, 1);
+            var startWeekday = (firstOfMonth.getDay() + 6) % 7; // Dushanba = 0
+            var daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+            var html = '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">'
+                + '<button type="button" id="calPrev" style="border:none; background:none; cursor:pointer; font-size:16px;">&lsaquo;</button>'
+                + '<b style="font-size:13px;">' + OY_NOMLARI[viewMonth] + ' ' + viewYear + '</b>'
+                + '<button type="button" id="calNext" style="border:none; background:none; cursor:pointer; font-size:16px;">&rsaquo;</button>'
+                + '</div>';
+            html += '<div style="display:grid; grid-template-columns:repeat(7,1fr); gap:2px; font-size:11px; color:var(--muted); text-align:center; margin-bottom:4px;">';
+            ['Du','Se','Cho','Pa','Ju','Sh','Ya'].forEach(function (d) { html += '<div>' + d + '</div>'; });
+            html += '</div>';
+            html += '<div style="display:grid; grid-template-columns:repeat(7,1fr); gap:2px;">';
+            for (var i = 0; i < startWeekday; i++) html += '<div></div>';
+            for (var day = 1; day <= daysInMonth; day++) {
+                var iso = toIso(viewYear, viewMonth, day);
+                var inRange = selFrom && selTo && iso >= (selFrom < selTo ? selFrom : selTo) && iso <= (selFrom < selTo ? selTo : selFrom);
+                var isEdge = iso === selFrom || iso === selTo;
+                var hasTask = !!activeSet[iso];
+                var bg = isEdge ? 'background:var(--primary,#10b981); color:#fff;' : (inRange ? 'background:#dcfce7;' : '');
+                html += '<div data-iso="' + iso + '" class="cal-day" style="' + bg + ' border-radius:8px; padding:6px 0; text-align:center; font-size:12px; cursor:pointer; position:relative;">'
+                    + day
+                    + (hasTask && !isEdge ? '<span style="position:absolute; bottom:1px; left:50%; transform:translateX(-50%); width:4px; height:4px; border-radius:50%; background:var(--primary,#10b981);"></span>' : '')
+                    + '</div>';
+            }
+            html += '</div>';
+            popup.innerHTML = html;
+
+            popup.querySelector('#calPrev').addEventListener('click', function () {
+                viewMonth--; if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+                renderCalendar();
+            });
+            popup.querySelector('#calNext').addEventListener('click', function () {
+                viewMonth++; if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+                renderCalendar();
+            });
+            popup.querySelectorAll('.cal-day').forEach(function (el) {
+                el.addEventListener('click', function () { onDayClick(el.getAttribute('data-iso')); });
+            });
+        }
+
+        function onDayClick(iso) {
+            var curFrom = fromInput.value;
+            var curTo = toInput.value;
+            if (!curFrom) {
+                // Hech narsa tanlanmagan — bitta kun tanlaymiz va darhol filtrlaymiz.
+                fromInput.value = iso; toInput.value = iso;
+                submitAndClose();
+            } else if (curFrom === iso && (!curTo || curTo === iso)) {
+                // Xuddi shu kun qayta bosildi — o'zgarishsiz, shunchaki yopamiz.
+                submitAndClose();
+            } else {
+                // Boshqa kun bosildi — oraliq hosil bo'ladi.
+                var a = curFrom, b = iso;
+                fromInput.value = a < b ? a : b;
+                toInput.value = a < b ? b : a;
+                submitAndClose();
+            }
+        }
+
+        function submitAndClose() {
+            popup.style.display = 'none';
+            filterForm.submit();
+        }
+
+        display.addEventListener('click', function (e) {
+            e.stopPropagation();
+            renderCalendar();
+            popup.style.display = popup.style.display === 'none' ? 'block' : 'none';
+        });
+        document.addEventListener('click', function (e) {
+            if (!popup.contains(e.target) && e.target !== display) popup.style.display = 'none';
+        });
     })();
 </script>
 {% endblock %}

@@ -1,3 +1,4 @@
+import json
 from io import BytesIO
 
 import qrcode
@@ -104,19 +105,18 @@ def vazifalar_page(request):
         company=request.company,
     ).select_related('mahsulot', 'pazanda__user').order_by('-sana', '-created_at')
 
-    filter_mode = request.GET.get('mode', 'day')
-    sana_str = request.GET.get('sana')
+    # Bitta kalendar maydoni: faqat `from` berilsa — bitta kun (sana=from);
+    # `from` va `to` ikkalasi ham (va farqli) bo'lsa — oraliq. Alohida
+    # "rejim" (mode) parametri kerak emas — foydalanuvchi tomonidan
+    # tanlangan sanalarning o'zi buni belgilaydi.
     from_str = request.GET.get('from')
     to_str = request.GET.get('to')
     pazanda_id = request.GET.get('pazanda')
 
-    if filter_mode == 'range' and (from_str or to_str):
-        if from_str:
-            tasks = tasks.filter(sana__gte=from_str)
-        if to_str:
-            tasks = tasks.filter(sana__lte=to_str)
-    elif sana_str:
-        tasks = tasks.filter(sana=sana_str)
+    if from_str and to_str and to_str != from_str:
+        tasks = tasks.filter(sana__gte=from_str, sana__lte=to_str)
+    elif from_str:
+        tasks = tasks.filter(sana=from_str)
 
     if pazanda_id:
         tasks = tasks.filter(pazanda_id=pazanda_id)
@@ -127,10 +127,8 @@ def vazifalar_page(request):
         'mahsulotlar': mahsulotlar,
         'tasks': tasks,
         'today': timezone.localdate(),
-        'active_days': active_days,
+        'active_days_json': json.dumps([d.isoformat() for d in active_days]),
         'pazanda_list': pazanda_list,
-        'filter_mode': filter_mode,
-        'sel_sana': sana_str,
         'sel_from': from_str,
         'sel_to': to_str,
         'sel_pazanda': pazanda_id,
