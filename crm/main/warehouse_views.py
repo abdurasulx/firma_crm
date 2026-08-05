@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -234,24 +235,29 @@ def warehouse_movements(request):
     products = _warehouse_product_queryset(request).order_by('nomi')
 
     if request.method == 'POST':
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+        def _fail(error_text):
+            if is_ajax:
+                return JsonResponse({'ok': False, 'error': error_text}, status=400)
+            messages.error(request, error_text)
+            return redirect('warehouse_movements')
+
         movement_type = request.POST.get('movement_type')
         qty = float(request.POST.get('qty') or 0)
         incoming_price = None
 
         if qty <= 0:
-            messages.error(request, "Miqdor 0 dan katta bo'lishi kerak.")
-            return redirect('warehouse_movements')
+            return _fail("Miqdor 0 dan katta bo'lishi kerak.")
         if movement_type != 'in':
-            messages.error(request, "Omborda faqat kirim kiritiladi. Kamaytirish ishlab chiqaruvchi so'rovlari orqali yuritiladi.")
-            return redirect('warehouse_movements')
+            return _fail("Omborda faqat kirim kiritiladi. Kamaytirish ishlab chiqaruvchi so'rovlari orqali yuritiladi.")
         if movement_type == 'in':
             try:
                 incoming_price = Decimal((request.POST.get('price') or '0').replace(',', '.'))
             except (InvalidOperation, AttributeError):
                 incoming_price = Decimal('0')
             if incoming_price < 0:
-                messages.error(request, "Kirim narxi manfiy bo'lishi mumkin emas.")
-                return redirect('warehouse_movements')
+                return _fail("Kirim narxi manfiy bo'lishi mumkin emas.")
 
         with transaction.atomic():
             product_qs = Mahsulot.objects.select_for_update().select_related('turi').filter(company=request.company)
@@ -292,7 +298,20 @@ def warehouse_movements(request):
                 new_qty=product.miqdori,
                 delta=delta,
             )
-        messages.success(request, f"{action_text} yozildi: {product.nomi} {qty:g} {product.turi.nomi}.")
+        success_text = f"{action_text} yozildi: {product.nomi} {qty:g} {product.turi.nomi}."
+        if is_ajax:
+            return JsonResponse({
+                'ok': True, 'message': success_text,
+                'product': {
+                    'id': product.id, 'tannarx': float(product.tannarx), 'miqdori': float(product.miqdori),
+                },
+                'history': {
+                    'sana': timezone.localtime(timezone.now()).strftime('%d.%m.%Y %H:%M'),
+                    'mahsulot': product.nomi, 'tur': 'Kirim',
+                    'delta': float(delta), 'yangi_qoldiq': float(product.miqdori),
+                },
+            })
+        messages.success(request, success_text)
         return redirect('warehouse_movements')
 
     recent_history = StockHistory.objects.filter(company=request.company).select_related('mahsulot', 'actor_user')

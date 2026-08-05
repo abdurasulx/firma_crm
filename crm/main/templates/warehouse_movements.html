@@ -1,5 +1,6 @@
 {% extends 'egabase.html' %}
 {% load l10n %}
+{% load spc_filters %}
 
 {% block title %}Kirim-chiqim{% endblock %}
 {% block page_title %}Ombor kirim-chiqimlari{% endblock %}
@@ -8,25 +9,28 @@
 {% include 'warehouse_styles.html' %}
 <div class="warehouse-page">
 <div style="display:grid; grid-template-columns:minmax(280px, 420px) 1fr; gap:22px;">
-    <form method="post" class="card" style="padding:24px;">
+    <form method="post" class="card" id="movementForm" style="padding:24px;">
         {% csrf_token %}
         <input type="hidden" name="movement_type" value="in">
-        <h3 style="margin-bottom:18px;">Yangi harakat</h3>
+        <input type="hidden" name="mahsulot" id="movementProductId" required>
+        <h3 style="margin-bottom:18px;">Yangi kirim</h3>
+
         <label style="display:block; margin-bottom:14px;">
             <div style="font-weight:800; margin-bottom:8px;">Mahsulot</div>
-            <select class="field" name="mahsulot" id="movementProduct" required>
-                {% for product in products %}
-                <option value="{{ product.id }}" data-price="{{ product.tannarx|unlocalize }}">{{ product.nomi }} - {{ product.miqdori|floatformat:2 }} {{ product.turi.nomi }}</option>
-                {% endfor %}
-            </select>
+            <div class="ssel" id="movementProductSsel">
+                <input type="text" class="ssel-input" id="movementProductSearch" placeholder="Mahsulot qidirish..." autocomplete="off">
+                <i class="fa-solid fa-chevron-down ssel-caret"></i>
+                <div class="ssel-panel" id="movementProductPanel"></div>
+            </div>
         </label>
+
         <label id="movementPriceWrap" style="display:block; margin-bottom:14px;">
             <div style="font-weight:800; margin-bottom:8px;">Kirim narxi</div>
             <input class="field" type="number" step="0.01" min="0" name="price" id="movementPrice" required>
         </label>
         <label style="display:block; margin-bottom:18px;">
             <div style="font-weight:800; margin-bottom:8px;">Miqdor</div>
-            <input class="field" type="number" step="0.01" min="0.01" name="qty" required>
+            <input class="field" type="number" step="0.01" min="0.01" name="qty" id="movementQty" required>
         </label>
         {% if omborlar %}
         <label style="display:block; margin-bottom:18px;">
@@ -39,7 +43,10 @@
             </select>
         </label>
         {% endif %}
-        <button class="btn primary" type="submit" style="width:100%;"><i class="fa-solid fa-check"></i> Saqlash</button>
+        <div id="movementFeedback" style="display:none; margin-bottom:14px; padding:10px 14px; border-radius:10px; font-size:13px; font-weight:700;"></div>
+        <button class="btn primary" type="submit" id="movementSubmitBtn" style="width:100%; padding:14px; font-size:15px;">
+            <i class="fa-solid fa-check"></i> Saqlash
+        </button>
     </form>
 
     <div class="card">
@@ -57,19 +64,19 @@
                         <th>Qoldiq</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="movementHistoryBody">
                     {% for item in recent_history %}
                     <tr>
                         <td>{{ item.created_at|date:"d.m.Y H:i" }}</td>
                         <td>{{ item.mahsulot.nomi }}</td>
                         <td>{{ item.get_event_type_display }}</td>
                         <td>
-                            <span class="badge {% if item.delta < 0 %}red{% else %}green{% endif %}">{{ item.delta|floatformat:2 }}</span>
+                            <span class="badge {% if item.delta < 0 %}red{% else %}green{% endif %}">{{ item.delta|spc:2 }}</span>
                         </td>
-                        <td>{{ item.new_qty|floatformat:2 }}</td>
+                        <td>{{ item.new_qty|spc:2 }}</td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="5" style="text-align:center; padding:34px; color:var(--muted);">Tarix yo'q.</td></tr>
+                    <tr id="movementHistoryEmpty"><td colspan="5" style="text-align:center; padding:34px; color:var(--muted);">Tarix yo'q.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -77,21 +84,140 @@
     </div>
 </div>
 </div>
-<script>
-    const movementProduct = document.getElementById('movementProduct');
-    const movementPrice = document.getElementById('movementPrice');
 
-    function syncMovementPrice() {
-        if (!movementProduct || !movementPrice) return;
-        if (!movementPrice.value) {
-            movementPrice.value = movementProduct.selectedOptions[0]?.dataset.price || '0';
+<script>
+(function () {
+    const products = [
+        {% for product in products %}
+        {id: {{ product.id }}, nomi: "{{ product.nomi|escapejs }}", birlik: "{{ product.turi.nomi|escapejs }}", miqdor: {{ product.miqdori|unlocalize }}, tannarx: {{ product.tannarx|unlocalize }}},
+        {% endfor %}
+    ];
+
+    const ssel = document.getElementById('movementProductSsel');
+    const search = document.getElementById('movementProductSearch');
+    const panel = document.getElementById('movementProductPanel');
+    const productIdInput = document.getElementById('movementProductId');
+    const priceInput = document.getElementById('movementPrice');
+
+    function renderPanel(filterText) {
+        const q = (filterText || '').trim().toLowerCase();
+        const filtered = products.filter((p) => p.nomi.toLowerCase().includes(q));
+        panel.innerHTML = '';
+        if (!filtered.length) {
+            const empty = document.createElement('div');
+            empty.className = 'ssel-empty';
+            empty.textContent = 'Mahsulot topilmadi.';
+            panel.appendChild(empty);
+            return;
         }
+        filtered.forEach((p) => {
+            const item = document.createElement('div');
+            item.className = 'ssel-item';
+            item.innerHTML = `<span>${p.nomi}</span><span class="ssel-item-sub">${p.miqdor.toFixed(2)} ${p.birlik}</span>`;
+            item.addEventListener('click', () => selectProduct(p));
+            panel.appendChild(item);
+        });
     }
 
-    movementProduct?.addEventListener('change', () => {
-        movementPrice.value = movementProduct.selectedOptions[0]?.dataset.price || '0';
-        syncMovementPrice();
+    function selectProduct(p) {
+        productIdInput.value = p.id;
+        search.value = p.nomi;
+        priceInput.value = p.tannarx;
+        ssel.classList.remove('open');
+    }
+
+    search.addEventListener('focus', () => {
+        ssel.classList.add('open');
+        renderPanel(search.value === productForName() ? '' : search.value);
     });
-    syncMovementPrice();
+    search.addEventListener('input', () => {
+        ssel.classList.add('open');
+        productIdInput.value = '';
+        renderPanel(search.value);
+    });
+    document.addEventListener('click', (ev) => {
+        if (!ssel.contains(ev.target)) ssel.classList.remove('open');
+    });
+
+    function productForName() {
+        const p = products.find((x) => String(x.id) === String(productIdInput.value));
+        return p ? p.nomi : '';
+    }
+
+    renderPanel('');
+
+    // ── AJAX yuborish — sahifa qayta yuklanmaydi, "So'nggi harakatlar"
+    // jadvaliga yangi qator darhol qo'shiladi, tanlangan mahsulotning
+    // (yangi o'rtacha) narxi shu zahoti keyingi kirim uchun yangilanadi.
+    const form = document.getElementById('movementForm');
+    const submitBtn = document.getElementById('movementSubmitBtn');
+    const feedback = document.getElementById('movementFeedback');
+    const historyBody = document.getElementById('movementHistoryBody');
+
+    function showFeedback(text, ok) {
+        feedback.style.display = 'block';
+        feedback.style.background = ok ? '#dcfce7' : '#fee2e2';
+        feedback.style.color = ok ? '#166534' : '#991b1b';
+        feedback.textContent = text;
+    }
+
+    function fmtSpc(value, decimals) {
+        const fixed = Number(value).toFixed(decimals);
+        const [intPart, decPart] = fixed.split('.');
+        const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+        return decPart ? `${grouped}.${decPart}` : grouped;
+    }
+
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (!productIdInput.value) {
+            showFeedback("Mahsulotni ro'yxatdan tanlang.", false);
+            return;
+        }
+        const fd = new FormData(form);
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', window.location.href, true);
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        submitBtn.disabled = true;
+        feedback.style.display = 'none';
+
+        xhr.onload = function () {
+            submitBtn.disabled = false;
+            let data = {};
+            try { data = JSON.parse(xhr.responseText); } catch (err) { /* ignore */ }
+            if (xhr.status >= 200 && xhr.status < 300 && data.ok) {
+                showFeedback(data.message, true);
+
+                const p = products.find((x) => String(x.id) === String(productIdInput.value));
+                if (p) {
+                    p.tannarx = data.product.tannarx;
+                    p.miqdor = data.product.miqdori;
+                }
+
+                const emptyRow = document.getElementById('movementHistoryEmpty');
+                if (emptyRow) emptyRow.remove();
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${data.history.sana}</td>
+                    <td>${data.history.mahsulot}</td>
+                    <td>${data.history.tur}</td>
+                    <td><span class="badge green">${fmtSpc(data.history.delta, 2)}</span></td>
+                    <td>${fmtSpc(data.history.yangi_qoldiq, 2)}</td>
+                `;
+                historyBody.insertBefore(tr, historyBody.firstChild);
+
+                document.getElementById('movementQty').value = '';
+                priceInput.value = p ? p.tannarx : '';
+            } else {
+                showFeedback(data.error || 'Xatolik yuz berdi.', false);
+            }
+        };
+        xhr.onerror = function () {
+            submitBtn.disabled = false;
+            showFeedback('Tarmoq xatosi — internetni tekshiring.', false);
+        };
+        xhr.send(fd);
+    });
+})();
 </script>
 {% endblock %}

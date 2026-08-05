@@ -87,4 +87,79 @@
     .warehouse-page .badge.blue { background: #ecfdf5; color: #047857; }
     .warehouse-page .badge.amber { background: #fef3c7; color: #92400e; }
     .warehouse-page .badge.red { background: #fee2e2; color: #991b1b; }
+
+    /* Qidiruvli mahsulot tanlash (native <select> o'rniga) — ro'yxat
+       uzun bo'lganda kerakli mahsulotni tez topish uchun. */
+    .warehouse-page .ssel {
+        position: relative;
+    }
+
+    .warehouse-page .ssel-input {
+        width: 100%;
+        padding: 11px 40px 11px 12px;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        background: #fff;
+        font: inherit;
+        cursor: pointer;
+    }
+
+    .warehouse-page .ssel-caret {
+        position: absolute;
+        right: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-light);
+        pointer-events: none;
+    }
+
+    .warehouse-page .ssel-panel {
+        display: none;
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0;
+        right: 0;
+        max-height: 280px;
+        overflow-y: auto;
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        box-shadow: 0 16px 36px rgba(15, 23, 42, .14);
+        z-index: 40;
+        padding: 6px;
+    }
+
+    .warehouse-page .ssel.open .ssel-panel {
+        display: block;
+    }
+
+    .warehouse-page .ssel-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 700;
+    }
+
+    .warehouse-page .ssel-item:hover,
+    .warehouse-page .ssel-item.active {
+        background: #f0fdf4;
+    }
+
+    .warehouse-page .ssel-item .ssel-item-sub {
+        font-weight: 600;
+        font-size: 12px;
+        color: var(--text-light);
+        white-space: nowrap;
+    }
+
+    .warehouse-page .ssel-empty {
+        padding: 16px 12px;
+        text-align: center;
+        color: var(--text-light);
+        font-size: 13px;
+    }
 </style>
