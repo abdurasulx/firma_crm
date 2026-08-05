@@ -58,6 +58,16 @@ SCALE_STABLE_THRESHOLD_KG = 0.01
 # (tasdiqlangandan keyin) tarozidan olib tashlangan deb hisoblanadi.
 SCALE_EMPTY_THRESHOLD_KG = 0.02
 
+# Faqat shu birliklar tarozida (massa asosida) o'lchanadi. Boshqa hamma
+# narsa (dona, litr, metr va h.k.) — sanoq/hajm, tarozida o'lchab
+# bo'lmaydi (tarozi faqat kilogramm/gramm o'qiydi) — bunday so'rovlar
+# uchun kartochka faqat ko'rsatish uchun, avtomatik tasdiqlanadi.
+WEIGHABLE_BIRLIKLAR = {"kg", "g", "gr", "gramm", "kilogramm"}
+
+
+def _is_weighable_birlik(birlik: str) -> bool:
+    return (birlik or "").strip().lower() in WEIGHABLE_BIRLIKLAR
+
 
 class _ApiCallWorker(QThread):
     """Har qanday tarmoq chaqiruvini (server sekin javob bersa yoki
@@ -383,7 +393,16 @@ class EmployeeScanWidget(QWidget):
         weigh_top_row.addLayout(weigh_text_col, 1)
         weigh_outer.addLayout(weigh_top_row)
 
-        weigh_input_row = QHBoxLayout()
+        # Faqat OG'IRLIK birligida (kg/g) so'ralgan komponentlar uchun
+        # ko'rinadi — tarozi haqiqatan mos keladi. "dona"/"litr" kabi
+        # sanoq/hajm birliklarini tarozida o'lchab bo'lmaydi (tarozi
+        # faqat massa o'qiydi), shuning uchun ular uchun bu qator
+        # butunlay yashirin qoladi — `_show_next_weigh_request` shu
+        # holatda kartani ko'rsatgan zahoti avtomatik tasdiqlaydi
+        # (`_is_weighable_birlik`ga qarang).
+        self.weigh_input_container = QWidget()
+        weigh_input_row = QHBoxLayout(self.weigh_input_container)
+        weigh_input_row.setContentsMargins(0, 0, 0, 0)
         weigh_input_row.addWidget(QLabel("Tarozi qiymati:"))
         self.weigh_input = QLineEdit()
         self.weigh_input.setPlaceholderText("hozircha qo'lda kiriting")
@@ -392,7 +411,7 @@ class EmployeeScanWidget(QWidget):
         self.weigh_submit_btn = QPushButton("Tekshirish")
         self.weigh_submit_btn.clicked.connect(self._submit_weigh)
         weigh_input_row.addWidget(self.weigh_submit_btn)
-        weigh_outer.addLayout(weigh_input_row)
+        weigh_outer.addWidget(self.weigh_input_container)
 
         self.weigh_feedback_label = QLabel("")
         self.weigh_feedback_label.setWordWrap(True)
@@ -1242,7 +1261,12 @@ class EmployeeScanWidget(QWidget):
 
         target_text = f" ({req['target_product']} uchun)" if req.get("target_product") else ""
         self.weigh_material_label.setText(f"{req['material']}{target_text}")
-        self.weigh_expected_label.setText(f"Kerakli miqdor: {req['qty']:g} {req['birlik']}ni o'lchang")
+        weighable = _is_weighable_birlik(req.get("birlik"))
+        if weighable:
+            self.weigh_expected_label.setText(f"Kerakli miqdor: {req['qty']:g} {req['birlik']}ni o'lchang")
+        else:
+            self.weigh_expected_label.setText(f"Kerakli miqdor: {req['qty']:g} {req['birlik']} — tasdiqlanmoqda...")
+        self.weigh_input_container.setVisible(weighable)
         self.weigh_input.clear()
         # Yangi so'rov — standart holatda qo'lda kiritish mumkin (tarozi
         # sozlanmagan bo'lsa fallback); jonli tarozi qiymati kelishi bilan
@@ -1261,6 +1285,16 @@ class EmployeeScanWidget(QWidget):
             worker.start()
 
         self.weigh_card.setVisible(True)
+
+        if not weighable:
+            # "dona"/"litr" kabi tarozida o'lchab bo'lmaydigan birlik —
+            # kartochka faqat ma'lumot uchun ko'rsatiladi, xodim hech
+            # narsa kiritmasdan avtomatik tasdiqlanadi ("vazifada
+            # ko'ringani yetarli" — foydalanuvchi bilan kelishilgan qaror).
+            self.weigh_input.setText(f"{req['qty']:g}")
+            QTimer.singleShot(600, self._submit_weigh)
+            return
+
         self.weigh_input.setFocus()
 
     def _on_weigh_photo_ready(self, content: bytes):
