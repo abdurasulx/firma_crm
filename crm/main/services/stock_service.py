@@ -86,7 +86,14 @@ def recompute_tannarx(mahsulot):
     darajasida amalga oshiriladi).
     """
     update_fields = ['tannarx']
-    if mahsulot.mahsulot_turi == 'ishlab_chiqariladigan':
+    # `mahsulot_turi` FAQAT `warehouse_type='finished'` (tayyor mahsulot)
+    # uchun ma'noli (model help_text'ida ham aytilgan) — ombor xom ashyo/
+    # yarim tayyor mahsulotlarida bu maydon ham default qiymat
+    # ('ishlab_chiqariladigan') bilan qoladi, garchi ular hech qachon
+    # retsept (BOM)ga ega bo'lmasa ham. Shu ikkinchi shartsiz tekshirilsa,
+    # xom ashyolarning baza_tannarxi (bo'sh BOM=0 dan) noto'g'ri
+    # nolga tushirib qo'yilardi (real bug — shu joyda topilgan).
+    if mahsulot.warehouse_type == 'finished' and mahsulot.mahsulot_turi == 'ishlab_chiqariladigan':
         rows = MahsulotRetsept.objects.filter(mahsulot=mahsulot).select_related('komponent')
         baza = sum(
             (Decimal(str(r.komponent.tannarx)) * Decimal(str(r.norma_miqdor)) for r in rows),
