@@ -108,8 +108,18 @@ def weigh_task_pickup(pickup_id, pazanda, measured_qty):
     chaqiradi, alohida "ishlab chiqarishni tasdiqlash" bosqichi kerak
     emas.
 
-    Natija dict qaytaradi: `{'approved': bool, 'detail'/... , 'task_completed': bool,
-    'miqdor_qoshish': MiqdorQoshish | None}`."""
+    Kerakli miqdor (`expected_qty`) bitta tarozida sig'maydigan darajada
+    katta bo'lishi mumkin (tarozilar 20/30/60 kg kabi turlicha sig'imga
+    ega) — shuning uchun bu funksiya BIR MARTALIK emas, KETMA-KET
+    chaqiruvlarni qo'llab-quvvatlaydi: har chaqiruv `measured_qty`ni
+    (bitta "tortish"/pour) `poured_qty`ga qo'shib boradi, faqat yig'indi
+    `expected_qty`ga (tolerantlik ichida) yetganda pickup yakuniy
+    tasdiqlanadi. Necha marta tortish kerakligini (tarozi sig'imidan kelib
+    chiqib) Desktop Agent o'zi hisoblaydi — server faqat yig'indini
+    kuzatadi, tarozi sig'imini bilishi shart emas.
+
+    Natija dict qaytaradi: `{'approved': bool, 'pour_completed': bool,
+    'materials_ready': bool, 'poured'/'remaining'/...}`."""
     with transaction.atomic():
         pickup = TaskMaterialPickup.objects.select_for_update().select_related(
             'task', 'komponent', 'komponent__turi',
@@ -119,23 +129,30 @@ def weigh_task_pickup(pickup_id, pazanda, measured_qty):
 
         expected = pickup.expected_qty
         tolerance = TASK_WEIGH_TOLERANCE_FIXED
-        deviation = measured_qty - expected
+        new_poured = pickup.poured_qty + measured_qty
+        remaining_after = expected - new_poured
 
-        if abs(deviation) > tolerance:
-            direction = "ko'p" if deviation > 0 else "kam"
+        if remaining_after < -tolerance:
+            # Bu tortish (avvalgi tortishlar bilan birga) kerakligidan
+            # ko'p bo'lib ketdi — hali hech narsa saqlanmadi, pazanda
+            # qayta tortishi kerak.
             return {
                 'approved': False, 'expected': expected, 'measured': measured_qty,
-                'detail': f"Miqdor normadan {direction} — kerakli: {expected:g}, o'lchangan: {measured_qty:g}. Qayta o'lchang.",
+                'poured': pickup.poured_qty, 'remaining': max(expected - pickup.poured_qty, 0),
+                'detail': f"Miqdor normadan ko'p — qolgan kerakli: {expected - pickup.poured_qty:g}, o'lchangan: {measured_qty:g}. Qayta o'lchang.",
             }
 
         komponent = Mahsulot.objects.select_for_update().select_related('turi').get(id=pickup.komponent_id)
         # Zaxiradan HAQIQIY tortilgan miqdor ayiriladi (rejalashtirilgan
         # emas) — tadbirkor bilan kelishilgan qaror: 50g tolerantlik
         # ichida ozroq yoki ko'proq tortilgan bo'lsa ham, ombor qoldig'i
-        # haqiqatda nima olinganini aniq aks ettirishi kerak.
+        # haqiqatda nima olinganini aniq aks ettirishi kerak. Har bir
+        # tortish (pour) darhol ayiriladi, yakuniy tasdiqlanishni
+        # kutmaydi.
         if komponent.miqdori < measured_qty:
             return {
                 'approved': False, 'expected': expected, 'measured': measured_qty,
+                'poured': pickup.poured_qty, 'remaining': max(expected - pickup.poured_qty, 0),
                 'detail': f"{komponent.nomi} omborda yetarli emas. Qoldiq: {komponent.miqdori:g} {komponent.turi.nomi if komponent.turi else ''}.",
             }
 
@@ -143,15 +160,28 @@ def weigh_task_pickup(pickup_id, pazanda, measured_qty):
         komponent.miqdori = old_qty - measured_qty
         komponent.save(update_fields=['miqdori'])
 
-        pickup.measured_qty = measured_qty
-        pickup.tasdiqlangan = True
-        pickup.tasdiqlangan_at = timezone.now()
-        pickup.save(update_fields=['measured_qty', 'tasdiqlangan', 'tasdiqlangan_at'])
-
         StockHistory.objects.create(
             actor_user=None, company=pickup.task.company, mahsulot=komponent, event_type='RAW_APPROVED',
             old_qty=old_qty, new_qty=komponent.miqdori, delta=-measured_qty,
         )
+
+        pickup.poured_qty = new_poured
+
+        if abs(remaining_after) > tolerance:
+            # Hali navbatdagi tortish(lar) bor — pickup ochiq qoladi,
+            # Desktop Agent keyingi porsiyani (qolgan miqdor va tarozi
+            # sig'imidan kichigini) so'raydi.
+            pickup.save(update_fields=['poured_qty'])
+            return {
+                'approved': True, 'pour_completed': True, 'pickup_completed': False, 'materials_ready': False,
+                'expected': expected, 'measured': measured_qty,
+                'poured': new_poured, 'remaining': max(remaining_after, 0),
+            }
+
+        pickup.measured_qty = new_poured
+        pickup.tasdiqlangan = True
+        pickup.tasdiqlangan_at = timezone.now()
+        pickup.save(update_fields=['poured_qty', 'measured_qty', 'tasdiqlangan', 'tasdiqlangan_at'])
 
         materials_ready = False
         # `select_for_update()` shu yerda vazifaning o'zini qulflaydi —
@@ -174,8 +204,9 @@ def weigh_task_pickup(pickup_id, pazanda, measured_qty):
             materials_ready = True
 
     return {
-        'approved': True, 'expected': expected, 'measured': measured_qty,
-        'materials_ready': materials_ready,
+        'approved': True, 'pour_completed': True, 'pickup_completed': True,
+        'expected': expected, 'measured': measured_qty,
+        'poured': new_poured, 'remaining': 0, 'materials_ready': materials_ready,
     }
 
 

@@ -962,6 +962,11 @@ class TaskMaterialPickup(models.Model):
     komponent = models.ForeignKey(Mahsulot, on_delete=models.CASCADE, related_name='task_pickuplari')
     expected_qty = models.FloatField(help_text="BOM.norma_miqdor * task.rejalashtirilgan_miqdor")
     measured_qty = models.FloatField(null=True, blank=True)
+    # Tarozi sig'imi cheklangan stansiyalarda `expected_qty` bir necha
+    # ketma-ket tortishga (pour) bo'lib tortiladi — har bir tortish
+    # `weigh_task_pickup`da shu maydonga qo'shib boriladi, `expected_qty`ga
+    # yetganda (tolerantlik ichida) pickup yakuniy tasdiqlanadi.
+    poured_qty = models.FloatField(default=0)
     tasdiqlangan = models.BooleanField(default=False)
     tasdiqlangan_at = models.DateTimeField(null=True, blank=True)
 

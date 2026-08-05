@@ -205,6 +205,27 @@ class SettingsPage(QWidget):
         scale_row.addWidget(self.scale_save_btn)
         layout.addLayout(scale_row)
 
+        scale_capacity_desc = QLabel(
+            "Tarozining maksimal sig'imi (kg) — tarozilar turlicha bo'ladi "
+            "(20/30/60 kg va h.k.). Kerakli xom ashyo miqdori shu sig'imdan "
+            "oshsa, tortish avtomatik bir necha ketma-ket porsiyaga "
+            "bo'linadi (masalan 45 kg, 30 kg sig'imli tarozida — avval 30 "
+            "kg, keyin 15 kg). Bo'sh qoldirilsa, cheklovsiz (bitta "
+            "tortishda) so'raladi."
+        )
+        scale_capacity_desc.setWordWrap(True)
+        scale_capacity_desc.setStyleSheet("color:#666; margin-top:8px;")
+        layout.addWidget(scale_capacity_desc)
+
+        scale_capacity_row = QHBoxLayout()
+        self.scale_capacity_input = QLineEdit()
+        self.scale_capacity_input.setPlaceholderText("Masalan: 30")
+        self.scale_capacity_save_btn = QPushButton("Saqlash")
+        self.scale_capacity_save_btn.clicked.connect(self._save_scale_capacity)
+        scale_capacity_row.addWidget(self.scale_capacity_input, 1)
+        scale_capacity_row.addWidget(self.scale_capacity_save_btn)
+        layout.addLayout(scale_capacity_row)
+
         # ── Etiketka printeri (XPrinter XP-365B va h.k. — TSPL) ──────────
         printer_title = QLabel("Etiketka printeri (QR chop etish)")
         printer_title.setStyleSheet("font-size:16px; font-weight:700; margin-top:20px;")
@@ -267,6 +288,7 @@ class SettingsPage(QWidget):
         self._refresh_printers()
         self._load_printer_settings()
         self._refresh_scale_ports()
+        self._load_scale_capacity()
 
     def _load(self):
         self.server_input.setText(db.get_setting("server_input_raw", "") or db.get_setting("server_url", ""))
@@ -487,6 +509,25 @@ class SettingsPage(QWidget):
 
     def _save_scale_settings(self):
         db.set_setting("scale_com_port", self.scale_com_combo.currentData() or "")
+        if self.on_scale_changed:
+            self.on_scale_changed()
+
+    def _load_scale_capacity(self):
+        self.scale_capacity_input.setText(db.get_setting("scale_max_capacity_kg", ""))
+
+    def _save_scale_capacity(self):
+        raw = self.scale_capacity_input.text().strip().replace(",", ".")
+        if raw:
+            try:
+                value = float(raw)
+                if value <= 0:
+                    raise ValueError
+            except ValueError:
+                QMessageBox.warning(self, "Xato", "Sig'im musbat son bo'lishi kerak (masalan 30).")
+                return
+            db.set_setting("scale_max_capacity_kg", str(value))
+        else:
+            db.set_setting("scale_max_capacity_kg", "")
         if self.on_scale_changed:
             self.on_scale_changed()
 

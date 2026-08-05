@@ -1,3 +1,4 @@
+import math
 import time
 import webbrowser
 
@@ -67,6 +68,28 @@ WEIGHABLE_BIRLIKLAR = {"kg", "g", "gr", "gramm", "kilogramm"}
 
 def _is_weighable_birlik(birlik: str) -> bool:
     return (birlik or "").strip().lower() in WEIGHABLE_BIRLIKLAR
+
+
+_GRAM_BIRLIKLAR = {"g", "gr", "gramm"}
+
+
+def _scale_capacity_for_birlik(birlik: str) -> float | None:
+    """Settings sahifasida kiritilgan tarozi sig'imini (doim kg da
+    saqlanadi) so'rov birligiga (kg yoki g) moslab qaytaradi. Sig'im
+    kiritilmagan/0 bo'lsa `None` — bu holda tortish cheklovsiz, bitta
+    porsiyada so'raladi (eski xatti-harakat)."""
+    raw = db.get_setting("scale_max_capacity_kg", "").strip()
+    if not raw:
+        return None
+    try:
+        cap_kg = float(raw)
+    except ValueError:
+        return None
+    if cap_kg <= 0:
+        return None
+    if (birlik or "").strip().lower() in _GRAM_BIRLIKLAR:
+        return cap_kg * 1000
+    return cap_kg
 
 
 class _ApiCallWorker(QThread):
@@ -1262,7 +1285,30 @@ class EmployeeScanWidget(QWidget):
         target_text = f" ({req['target_product']} uchun)" if req.get("target_product") else ""
         self.weigh_material_label.setText(f"{req['material']}{target_text}")
         weighable = _is_weighable_birlik(req.get("birlik"))
-        if weighable:
+
+        # Tarozi sig'imi cheklangan bo'lsa (Sozlamalar > Tarozi) va bu
+        # xom ashyoning qolgan (hali tortilmagan) miqdori sig'imdan katta
+        # bo'lsa — kartochka bir martalik "to'liq miqdor" o'rniga NAVBATDAGI
+        # porsiyani ko'rsatadi ("1/3-qism" kabi), pazanda shuni tarozida
+        # tortadi, tasdiqlagach navbatdagi porsiya avtomatik chiqadi —
+        # `_on_weigh_resolved`dagi `pickup_completed=False` shoxobchasi.
+        if req.get("_kind") == "task_pickup" and weighable:
+            remaining = req.get("remaining", req["qty"])
+            capacity = _scale_capacity_for_birlik(req.get("birlik"))
+            if capacity and remaining > capacity:
+                total_pours = math.ceil(req["qty"] / capacity)
+                pour_index = req.get("_pour_index", 1)
+                pour_target = min(remaining, capacity)
+                req["_pour_target"] = pour_target
+                self.weigh_expected_label.setText(
+                    f"{pour_index}/{total_pours}-qism: {pour_target:g} {req['birlik']}ni o'lchang "
+                    f"(tarozi sig'imi {capacity:g} {req['birlik']}) — jami kerak: {req['qty']:g} {req['birlik']}"
+                )
+            else:
+                req["_pour_target"] = remaining
+                self.weigh_expected_label.setText(f"Kerakli miqdor: {remaining:g} {req['birlik']}ni o'lchang")
+        elif weighable:
+            req["_pour_target"] = req["qty"]
             self.weigh_expected_label.setText(f"Kerakli miqdor: {req['qty']:g} {req['birlik']}ni o'lchang")
         else:
             self.weigh_expected_label.setText(f"Kerakli miqdor: {req['qty']:g} {req['birlik']} — tasdiqlanmoqda...")
@@ -1396,6 +1442,26 @@ class EmployeeScanWidget(QWidget):
         self.weigh_submit_btn.setEnabled(True)
         self._auto_submit_pending = False
         if result.get("approved"):
+            if not result.get("pickup_completed", True):
+                # Faqat bitta porsiya tortildi — tarozi sig'imi tufayli
+                # yana kamida bitta tortish kerak. So'rov navbatdan
+                # OLIB TASHLANMAYDI, faqat "qolgan miqdor" yangilanadi va
+                # kartochka navbatdagi porsiya bilan qayta ko'rsatiladi.
+                req = self._pending_requests[0] if self._pending_requests else self._current_weigh_request
+                if req is not None:
+                    req["remaining"] = result.get("remaining", 0)
+                    req["poured"] = result.get("poured", 0)
+                    req["_pour_index"] = req.get("_pour_index", 1) + 1
+                self._set_weigh_feedback(
+                    f"Porsiya qabul qilindi ✓ — yana {result.get('remaining', 0):g} qoldi, davom eting.",
+                    error=False,
+                )
+                if db.get_setting("scale_com_port", "").strip():
+                    self._awaiting_scale_clear = True
+                else:
+                    QTimer.singleShot(1200, self._show_next_weigh_request)
+                return
+
             self._set_weigh_feedback("Norma bo'yicha to'g'ri — oling! ✓", error=False)
             if self._pending_requests:
                 req = self._pending_requests.pop(0)

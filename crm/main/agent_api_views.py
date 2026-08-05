@@ -483,6 +483,12 @@ def _task_pickup_dict(pickup):
         'material': pickup.komponent.nomi,
         'birlik': pickup.komponent.turi.nomi if pickup.komponent.turi else '',
         'qty': pickup.expected_qty,
+        # Tarozi sig'imi cheklangan stansiyalarda bir necha tortishga
+        # bo'linadi — agent qayta ulanganda ("badge sessiyasi qayta
+        # boshlansa" kabi) qaysi porsiyada to'xtaganini shu ikkitasidan
+        # biladi.
+        'poured': pickup.poured_qty,
+        'remaining': max(pickup.expected_qty - pickup.poured_qty, 0),
         'rasmi': None,
         'target_product': pickup.task.mahsulot.nomi,
     }
@@ -739,6 +745,9 @@ def agent_weigh_task_pickup(request, pickup_id):
 
     response_data = {
         'approved': True, 'expected': result['expected'], 'measured': result['measured'],
+        'poured': result.get('poured', result['expected']), 'remaining': result.get('remaining', 0),
+        'pour_completed': result.get('pour_completed', True),
+        'pickup_completed': result.get('pickup_completed', True),
         'materials_ready': result['materials_ready'],
     }
     if result['materials_ready']:
