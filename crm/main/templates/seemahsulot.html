@@ -632,25 +632,47 @@
             <div><span style="color:var(--text-light);">Joriy foyda (1 dona):</span> <b>{{ statistika.joriy_birlik_foyda|floatformat:0 }} so'm</b></div>
         </div>
 
-        <h4 style="font-size:14px; font-weight:800; margin-bottom:10px;">Hozirgi retsept/narx bilan bu ketishda prognoz</h4>
+        <h4 style="font-size:14px; font-weight:800; margin-bottom:4px;">📦 Ishlab chiqarish tezligiga asoslangan prognoz</h4>
         <p style="font-size:12px; color:var(--text-light); margin-bottom:12px;">
-            Oxirgi 30 kunlik ishlab chiqarish tezligi (kuniga o'rtacha {{ statistika.kunlik_ortacha|floatformat:"-2" }} dona) asosida, hozirgi narx/tannarx davom etsa.
+            Oxirgi 30 kunda kuniga o'rtacha {{ statistika.kunlik_ortacha_ic|floatformat:"-2" }} dona ishlab chiqarilgan. Diqqat: bu — ishlab chiqarilgan, HALI SOTILMAGAN dona ham kiradi, shuning uchun foyda oshirib ko'rsatilishi mumkin.
         </p>
-        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px;">
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px; margin-bottom:22px;">
             <div style="border:1px solid var(--border-color,#e2e8f0); border-radius:12px; padding:12px;">
                 <div style="font-size:12px; color:var(--text-light); font-weight:700;">1 oyda</div>
-                <div style="font-weight:800;">{{ statistika.prognoz_oylik.dona|floatformat:0 }} dona</div>
-                <div style="color:#166534; font-weight:800;">{{ statistika.prognoz_oylik.foyda|floatformat:0 }} so'm foyda</div>
+                <div style="font-weight:800;">{{ statistika.prognoz_ic_oylik.dona|floatformat:0 }} dona</div>
+                <div style="color:#166534; font-weight:800;">{{ statistika.prognoz_ic_oylik.foyda|floatformat:0 }} so'm foyda</div>
             </div>
             <div style="border:1px solid var(--border-color,#e2e8f0); border-radius:12px; padding:12px;">
                 <div style="font-size:12px; color:var(--text-light); font-weight:700;">6 oyda</div>
-                <div style="font-weight:800;">{{ statistika.prognoz_olti_oylik.dona|floatformat:0 }} dona</div>
-                <div style="color:#166534; font-weight:800;">{{ statistika.prognoz_olti_oylik.foyda|floatformat:0 }} so'm foyda</div>
+                <div style="font-weight:800;">{{ statistika.prognoz_ic_olti_oylik.dona|floatformat:0 }} dona</div>
+                <div style="color:#166534; font-weight:800;">{{ statistika.prognoz_ic_olti_oylik.foyda|floatformat:0 }} so'm foyda</div>
             </div>
             <div style="border:1px solid var(--border-color,#e2e8f0); border-radius:12px; padding:12px;">
                 <div style="font-size:12px; color:var(--text-light); font-weight:700;">1 yilda</div>
-                <div style="font-weight:800;">{{ statistika.prognoz_yillik.dona|floatformat:0 }} dona</div>
-                <div style="color:#166534; font-weight:800;">{{ statistika.prognoz_yillik.foyda|floatformat:0 }} so'm foyda</div>
+                <div style="font-weight:800;">{{ statistika.prognoz_ic_yillik.dona|floatformat:0 }} dona</div>
+                <div style="color:#166534; font-weight:800;">{{ statistika.prognoz_ic_yillik.foyda|floatformat:0 }} so'm foyda</div>
+            </div>
+        </div>
+
+        <h4 style="font-size:14px; font-weight:800; margin-bottom:4px;">💵 Sotuv tezligiga asoslangan prognoz</h4>
+        <p style="font-size:12px; color:var(--text-light); margin-bottom:12px;">
+            Oxirgi 30 kunda kuniga o'rtacha {{ statistika.kunlik_ortacha_sotuv|floatformat:"-2" }} dona sotilgan — bu real (haqiqatan pul kelgan) foyda tezligi.
+        </p>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px;">
+            <div style="border:1px solid #86efac; background:#f0fdf4; border-radius:12px; padding:12px;">
+                <div style="font-size:12px; color:var(--text-light); font-weight:700;">1 oyda</div>
+                <div style="font-weight:800;">{{ statistika.prognoz_sotuv_oylik.dona|floatformat:0 }} dona</div>
+                <div style="color:#166534; font-weight:800;">{{ statistika.prognoz_sotuv_oylik.foyda|floatformat:0 }} so'm foyda</div>
+            </div>
+            <div style="border:1px solid #86efac; background:#f0fdf4; border-radius:12px; padding:12px;">
+                <div style="font-size:12px; color:var(--text-light); font-weight:700;">6 oyda</div>
+                <div style="font-weight:800;">{{ statistika.prognoz_sotuv_olti_oylik.dona|floatformat:0 }} dona</div>
+                <div style="color:#166534; font-weight:800;">{{ statistika.prognoz_sotuv_olti_oylik.foyda|floatformat:0 }} so'm foyda</div>
+            </div>
+            <div style="border:1px solid #86efac; background:#f0fdf4; border-radius:12px; padding:12px;">
+                <div style="font-size:12px; color:var(--text-light); font-weight:700;">1 yilda</div>
+                <div style="font-weight:800;">{{ statistika.prognoz_sotuv_yillik.dona|floatformat:0 }} dona</div>
+                <div style="color:#166534; font-weight:800;">{{ statistika.prognoz_sotuv_yillik.foyda|floatformat:0 }} so'm foyda</div>
             </div>
         </div>
     </div>

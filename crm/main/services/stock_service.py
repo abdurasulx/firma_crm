@@ -7,7 +7,7 @@ from django.utils import timezone
 from ..models import (
     Mahsulot, YetkazibBeruvchi, YuklamaSorov,
     MiqdorQoshish, DeliveryStock, StockHistory,
-    MahsulotRetsept, ProductionMaterialRequest,
+    MahsulotRetsept, ProductionMaterialRequest, Savdo,
 )
 from . import qr_service
 
@@ -50,6 +50,37 @@ def get_pazanda_month_stats(pazanda, company, yil=None, oy=None):
         'per_product': per_product,
     }
 
+def _sotilgan_dona_soni(mahsulot, kun_soni):
+    """`Savdo.smm` — bitta savdo tranzaksiyasidagi BARCHA mahsulotlarni
+    "Nomi miqdor narx,Nomi2 miqdor2 narx2,..." shaklida saqlaydigan matn
+    maydoni (alohida "sotuv qatori" jadvali yo'q). Shu matndan aynan shu
+    mahsulotning nomi bo'yicha miqdorlarini ajratib, oxirgi `kun_soni`
+    kunlik yig'indisini hisoblaydi — "sotuv tezligi" prognozi uchun."""
+    cutoff = timezone.now() - dt.timedelta(days=kun_soni)
+    jami = Decimal('0')
+    qs = Savdo.objects.filter(
+        company=mahsulot.company, vaqt_sana__gte=cutoff,
+    ).values_list('smm', flat=True)
+    for smm in qs:
+        if not smm:
+            continue
+        for entry in smm.split(','):
+            entry = entry.strip()
+            if not entry:
+                continue
+            parts = entry.rsplit(' ', 2)
+            if len(parts) != 3:
+                continue
+            nomi, miqdor_str, _narx = parts
+            if nomi.strip() != mahsulot.nomi:
+                continue
+            try:
+                jami += Decimal(str(float(miqdor_str)))
+            except ValueError:
+                continue
+    return jami
+
+
 def get_mahsulot_statistika(mahsulot, kunlar_oyiga=30):
     """Mahsulot sahifasida ko'rsatiladigan ishlab chiqarish/foyda
     statistikasi.
@@ -64,9 +95,12 @@ def get_mahsulot_statistika(mahsulot, kunlar_oyiga=30):
     qo'shilishidan oldingi) partiyalar uchun joriy tannarx bilan
     taxminiy hisoblanadi (aniq belgilanadi).
 
-    Prognoz (`oylik`/`olti_oylik`/`yillik`) — oxirgi `kunlar_oyiga` kun
-    ichidagi ishlab chiqarish tezligi asosida, HOZIRGI retsept/narx bilan
-    davom etilsa qancha foyda kutilishini ko'rsatadi ("bu ketishda").
+    Prognoz IKKI XIL tezlikka asosan alohida hisoblanadi (`_ic` — ishlab
+    chiqarish, `_sotuv` — sotuv), chunki ular har doim bir xil emas: agar
+    ishlab chiqarish sotuvdan tez bo'lsa, "ishlab chiqarish" prognozi
+    haqiqiy foydani oshirib ko'rsatadi (sotilmagan mahsulot hali daromad
+    keltirmagan) — shuning uchun ikkalasi ham ko'rsatiladi, foydalanuvchi
+    o'zi solishtirsin.
     """
     partiyalar = MiqdorQoshish.objects.filter(mahsulot=mahsulot, tasdiqlangan=True)
 
@@ -96,13 +130,19 @@ def get_mahsulot_statistika(mahsulot, kunlar_oyiga=30):
     songi_davr_dona = MiqdorQoshish.objects.filter(
         mahsulot=mahsulot, tasdiqlangan=True, vaqt_sana__gte=davr_boshi,
     ).aggregate(t=Sum('miqdor'))['t'] or 0
-    kunlik_ortacha = Decimal(str(songi_davr_dona)) / Decimal(str(kunlar_oyiga))
+    kunlik_ortacha_ic = Decimal(str(songi_davr_dona)) / Decimal(str(kunlar_oyiga))
+
+    # Sotuv tezligi — `Savdo.smm` matnidan shu mahsulot nomi bo'yicha
+    # oxirgi `kunlar_oyiga` kunda sotilgan miqdor.
+    songi_davr_sotuv_dona = _sotilgan_dona_soni(mahsulot, kunlar_oyiga)
+    kunlik_ortacha_sotuv = songi_davr_sotuv_dona / Decimal(str(kunlar_oyiga))
+
     joriy_birlik_foyda = narxi - joriy_tannarx
 
-    def prognoz(kun_soni):
+    def prognoz(kunlik_tezlik, kun_soni):
         return {
-            'dona': (kunlik_ortacha * kun_soni).quantize(Decimal('1')),
-            'foyda': kunlik_ortacha * kun_soni * joriy_birlik_foyda,
+            'dona': (kunlik_tezlik * kun_soni).quantize(Decimal('1')),
+            'foyda': kunlik_tezlik * kun_soni * joriy_birlik_foyda,
         }
 
     return {
@@ -114,10 +154,14 @@ def get_mahsulot_statistika(mahsulot, kunlar_oyiga=30):
         'joriy_birlik_tannarx': joriy_tannarx,
         'joriy_birlik_foyda': joriy_birlik_foyda,
         'snapshot_yoq_soni': snapshot_yoq_soni,
-        'kunlik_ortacha': kunlik_ortacha,
-        'prognoz_oylik': prognoz(30),
-        'prognoz_olti_oylik': prognoz(180),
-        'prognoz_yillik': prognoz(365),
+        'kunlik_ortacha_ic': kunlik_ortacha_ic,
+        'kunlik_ortacha_sotuv': kunlik_ortacha_sotuv,
+        'prognoz_ic_oylik': prognoz(kunlik_ortacha_ic, 30),
+        'prognoz_ic_olti_oylik': prognoz(kunlik_ortacha_ic, 180),
+        'prognoz_ic_yillik': prognoz(kunlik_ortacha_ic, 365),
+        'prognoz_sotuv_oylik': prognoz(kunlik_ortacha_sotuv, 30),
+        'prognoz_sotuv_olti_oylik': prognoz(kunlik_ortacha_sotuv, 180),
+        'prognoz_sotuv_yillik': prognoz(kunlik_ortacha_sotuv, 365),
     }
 
 
