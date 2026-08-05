@@ -9,11 +9,69 @@
 {% include 'warehouse_styles.html' %}
 <style>
     .mv-toolbar {
-        display: flex;
-        gap: 12px;
+        position: relative;
         margin-bottom: 18px;
+        max-width: 480px;
     }
-    .mv-toolbar .field { max-width: 360px; }
+
+    /* Hodimlar/Mahsulotlar sahifalaridagi bilan bir xil uslub — natijalar
+       asosiy grid'ni QAYTA CHIZMAYDI, o'zining suzuvchi paneli sifatida
+       ustidan chiqadi (shu sabab u yerda "tap-tap" chayqalish yo'q). */
+    .mv-search-results {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        width: 100%;
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, .12);
+        max-height: 400px;
+        overflow-y: auto;
+        display: none;
+        z-index: 1000;
+        border: 1px solid var(--border-color);
+    }
+    .mv-search-results.active {
+        display: block;
+        animation: mvSlideDown .3s ease;
+    }
+    @keyframes mvSlideDown {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .mv-result-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        cursor: pointer;
+        transition: background .2s;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .mv-result-item:last-child { border-bottom: none; }
+    .mv-result-item:hover { background: #f0fdf4; }
+    .mv-result-item img,
+    .mv-result-item .mv-picker-noimg {
+        width: 40px;
+        height: 40px;
+        border-radius: 9px;
+        object-fit: cover;
+        background: #f1f5f9;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-light);
+    }
+    .mv-result-item-name { font-weight: 800; font-size: 13.5px; }
+    .mv-result-item-sub { font-size: 12px; color: var(--text-light); font-weight: 600; }
+    .mv-result-item-price {
+        margin-left: auto;
+        font-weight: 800;
+        font-size: 12.5px;
+        color: #047857;
+        white-space: nowrap;
+    }
 
     .mv-grid {
         display: grid;
@@ -131,6 +189,7 @@
 
 <div class="mv-toolbar">
     <input class="field" type="text" id="mvGridSearch" placeholder="Mahsulot yoki turi bo'yicha qidirish..." autocomplete="off">
+    <div class="mv-search-results" id="mvSearchResults"></div>
 </div>
 
 <div class="mv-grid" id="mvGrid"></div>
@@ -226,6 +285,7 @@
     const gridEl = document.getElementById('mvGrid');
     const paginationEl = document.getElementById('mvGridPagination');
     const gridSearch = document.getElementById('mvGridSearch');
+    const searchResults = document.getElementById('mvSearchResults');
 
     const modalOverlay = document.getElementById('mvModalOverlay');
     const modalClose = document.getElementById('mvModalClose');
@@ -304,9 +364,70 @@
         }
     }
 
+    // ── Qidiruv — asosiy grid'ga TEGMAYDI (hech qachon qayta chizilmaydi,
+    // shu sabab "tap-tap" chayqalish yo'q), natijalar hodimlar/mahsulotlar
+    // sahifalaridagi kabi alohida suzuvchi panelda ko'rsatiladi.
+    let searchAbort = null;
+
+    function renderSearchResults(data) {
+        searchResults.innerHTML = '';
+        if (!data.results.length) {
+            searchResults.innerHTML = '<div style="padding:16px; text-align:center; color:var(--muted); font-size:13px;">Mahsulot topilmadi.</div>';
+            return;
+        }
+        data.results.forEach((p) => {
+            const item = document.createElement('div');
+            item.className = 'mv-result-item';
+            const img = p.rasmi_url
+                ? `<img src="${p.rasmi_url}" alt="">`
+                : `<span class="mv-picker-noimg"><i class="fa-solid fa-image"></i></span>`;
+            item.innerHTML = `
+                ${img}
+                <div>
+                    <div class="mv-result-item-name">${p.nomi}</div>
+                    <div class="mv-result-item-sub">${p.turi} — ${Number(p.miqdori).toFixed(2)} qoldiq</div>
+                </div>
+                <div class="mv-result-item-price">${Math.round(p.tannarx).toLocaleString('fr-FR').replace(/,/g, ' ')} so'm</div>
+            `;
+            item.addEventListener('click', () => {
+                searchResults.classList.remove('active');
+                gridSearch.value = '';
+                openModal(p);
+            });
+            searchResults.appendChild(item);
+        });
+    }
+
     gridSearch.addEventListener('input', () => {
+        const query = gridSearch.value.trim();
         clearTimeout(gridDebounce);
-        gridDebounce = setTimeout(() => fetchGrid(gridSearch.value.trim(), 1), 250);
+        if (!query) {
+            searchResults.classList.remove('active');
+            searchResults.innerHTML = '';
+            return;
+        }
+        searchResults.innerHTML = '<div style="padding:16px; text-align:center; color:var(--muted); font-size:13px;">Qidirilmoqda...</div>';
+        searchResults.classList.add('active');
+        gridDebounce = setTimeout(() => {
+            if (searchAbort) searchAbort.abort();
+            searchAbort = new AbortController();
+            fetch(`${productsUrl}?data_format=json&q=${encodeURIComponent(query)}&page=1`, {
+                headers: {'X-Requested-With': 'XMLHttpRequest'}, signal: searchAbort.signal,
+            })
+                .then((r) => r.json())
+                .then(renderSearchResults)
+                .catch((err) => {
+                    if (err.name !== 'AbortError') {
+                        searchResults.innerHTML = '<div style="padding:16px; text-align:center; color:var(--muted); font-size:13px;">Xatolik yuz berdi.</div>';
+                    }
+                });
+        }, 200);
+    });
+
+    document.addEventListener('click', (ev) => {
+        if (!ev.target.closest('.mv-toolbar')) {
+            searchResults.classList.remove('active');
+        }
     });
 
     fetchGrid('', 1);
