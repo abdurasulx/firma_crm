@@ -7,294 +7,277 @@
 
 {% block extra_css %}
 <style>
-    .mv-picker-overlay {
+    .mv-toolbar {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 18px;
+    }
+    .mv-toolbar .field { max-width: 360px; }
+
+    .mv-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 16px;
+        margin-bottom: 22px;
+    }
+    .mv-card {
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        overflow: hidden;
+        cursor: pointer;
+        transition: transform .15s ease, box-shadow .15s ease;
+        text-align: center;
+    }
+    .mv-card:hover {
+        transform: translateY(-4px) scale(1.02);
+        box-shadow: 0 16px 34px rgba(15, 23, 42, .16);
+    }
+    .mv-card-img-wrap {
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        background: #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-light);
+        font-size: 28px;
+        overflow: hidden;
+    }
+    .mv-card-img-wrap img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform .25s ease;
+    }
+    .mv-card:hover .mv-card-img-wrap img {
+        transform: scale(1.08);
+    }
+    .mv-card-body { padding: 10px 12px 14px; }
+    .mv-card-name { font-weight: 800; font-size: 13.5px; margin-bottom: 4px; }
+    .mv-card-sub { font-size: 12px; color: var(--text-light); font-weight: 600; }
+
+    .mv-empty {
+        text-align: center;
+        color: var(--muted);
+        padding: 60px 12px;
+        grid-column: 1 / -1;
+    }
+
+    .mv-pagination {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        margin-bottom: 26px;
+    }
+
+    /* ── "Yangi kirim" modal ── */
+    .mv-modal-overlay {
         display: none;
         position: fixed;
         inset: 0;
         background: rgba(15, 23, 42, .5);
         z-index: 1000;
-        align-items: flex-start;
+        align-items: center;
         justify-content: center;
-        padding: 6vh 16px;
+        padding: 16px;
     }
-    .mv-picker-overlay.open { display: flex; }
-    .mv-picker-modal {
+    .mv-modal-overlay.open { display: flex; }
+    .mv-modal {
         background: #fff;
-        border-radius: 16px;
+        border-radius: 18px;
         width: 100%;
-        max-width: 640px;
-        max-height: 84vh;
-        display: flex;
-        flex-direction: column;
+        max-width: 420px;
+        max-height: 92vh;
+        overflow-y: auto;
+        padding: 24px;
         box-shadow: 0 24px 60px rgba(15, 23, 42, .3);
     }
-    .mv-picker-head {
+    .mv-modal-head {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 18px 20px;
-        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 18px;
     }
-    .mv-picker-search-wrap {
-        padding: 16px 20px;
-        border-bottom: 1px solid var(--border-color);
-        position: relative;
-    }
-    .mv-picker-search-wrap i.fa-magnifying-glass {
-        position: absolute;
-        left: 34px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: var(--text-light);
-    }
-    .mv-picker-search-wrap input {
-        padding-left: 38px;
-    }
-    .mv-picker-list {
-        overflow-y: auto;
-        flex: 1;
-        padding: 8px 12px;
-    }
-    .mv-picker-item {
+    .mv-modal-product {
         display: flex;
         align-items: center;
-        gap: 14px;
+        gap: 12px;
         padding: 12px;
         border-radius: 12px;
-        cursor: pointer;
+        background: #f8fafc;
+        margin-bottom: 18px;
     }
-    .mv-picker-item:hover { background: #f8fafc; }
-    .mv-picker-item img,
-    .mv-picker-item .mv-picker-noimg {
+    .mv-modal-product img,
+    .mv-modal-product .mv-picker-noimg {
         width: 48px;
         height: 48px;
         border-radius: 10px;
         object-fit: cover;
+        background: #e2e8f0;
         flex-shrink: 0;
-        background: #f1f5f9;
         display: flex;
         align-items: center;
         justify-content: center;
         color: var(--text-light);
     }
-    .mv-picker-item-name { font-weight: 800; }
-    .mv-picker-item-sub { font-size: 12px; color: var(--text-light); font-weight: 600; }
-    .mv-picker-item-price {
-        margin-left: auto;
-        font-weight: 800;
-        font-size: 13px;
-        color: #047857;
-        white-space: nowrap;
-    }
-    .mv-picker-footer {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 12px;
-        padding: 14px 20px;
-        border-top: 1px solid var(--border-color);
-    }
-    .mv-picker-empty {
-        text-align: center;
-        color: var(--text-light);
-        padding: 40px 12px;
-    }
-    .mv-product-trigger {
-        width: 100%;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 10px 14px;
-        border: 1px solid var(--border-color);
-        border-radius: 10px;
-        background: #fff;
-        cursor: pointer;
-        text-align: left;
-    }
-    .mv-product-trigger img,
-    .mv-product-trigger .mv-picker-noimg {
-        width: 34px;
-        height: 34px;
-        border-radius: 8px;
-        object-fit: cover;
-        background: #f1f5f9;
-        flex-shrink: 0;
-    }
-    .mv-product-trigger .mv-product-placeholder { color: var(--text-light); }
+    .mv-modal-product-name { font-weight: 800; }
+    .mv-modal-product-sub { font-size: 12px; color: var(--text-light); font-weight: 600; }
 </style>
 {% endblock %}
 
 {% block content %}
 {% include 'warehouse_styles.html' %}
 <div class="warehouse-page">
-<div style="display:grid; grid-template-columns:minmax(280px, 420px) 1fr; gap:22px;">
-    <form method="post" class="card" id="movementForm" style="padding:24px;">
-        {% csrf_token %}
-        <input type="hidden" name="movement_type" value="in">
-        <input type="hidden" name="mahsulot" id="movementProductId" required>
-        <h3 style="margin-bottom:18px;">Yangi kirim</h3>
 
-        <label style="display:block; margin-bottom:14px;">
-            <div style="font-weight:800; margin-bottom:8px;">Mahsulot</div>
-            <button type="button" class="mv-product-trigger" id="movementProductTrigger">
-                <span class="mv-picker-noimg" id="movementTriggerImgWrap"><i class="fa-solid fa-image"></i></span>
-                <span class="mv-product-placeholder" id="movementTriggerText">Mahsulot tanlash...</span>
-                <i class="fa-solid fa-chevron-down" style="margin-left:auto; color:var(--text-light);"></i>
-            </button>
-        </label>
+<div class="mv-toolbar">
+    <input class="field" type="text" id="mvGridSearch" placeholder="Mahsulot yoki turi bo'yicha qidirish..." autocomplete="off">
+</div>
 
-        <label id="movementPriceWrap" style="display:block; margin-bottom:14px;">
-            <div style="font-weight:800; margin-bottom:8px;">Kirim narxi</div>
-            <input class="field" type="number" step="0.01" min="0" name="price" id="movementPrice" required>
-        </label>
-        <label style="display:block; margin-bottom:18px;">
-            <div style="font-weight:800; margin-bottom:8px;">Miqdor</div>
-            <input class="field" type="number" step="0.01" min="0.01" name="qty" id="movementQty" required>
-        </label>
-        {% if omborlar %}
-        <label style="display:block; margin-bottom:18px;">
-            <div style="font-weight:800; margin-bottom:8px;">Ombor (ixtiyoriy, faqat xom ashyo/yarim tayyor uchun)</div>
-            <select class="field" name="ombor_id">
-                <option value="">Tanlanmagan</option>
-                {% for o in omborlar %}
-                <option value="{{ o.id }}">{{ o.nomi }}</option>
+<div class="mv-grid" id="mvGrid"></div>
+<div class="mv-pagination" id="mvGridPagination"></div>
+
+<div class="card">
+    <div style="padding:18px 20px; border-bottom:1px solid var(--border);">
+        <h3 style="margin:0;">So'nggi harakatlar</h3>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Sana</th>
+                    <th>Mahsulot</th>
+                    <th>Tur</th>
+                    <th>Delta</th>
+                    <th>Qoldiq</th>
+                </tr>
+            </thead>
+            <tbody id="movementHistoryBody">
+                {% for item in recent_history %}
+                <tr>
+                    <td>{{ item.created_at|date:"d.m.Y H:i" }}</td>
+                    <td>{{ item.mahsulot.nomi }}</td>
+                    <td>{{ item.get_event_type_display }}</td>
+                    <td>
+                        <span class="badge {% if item.delta < 0 %}red{% else %}green{% endif %}">{{ item.delta|spc:2 }}</span>
+                    </td>
+                    <td>{{ item.new_qty|spc:2 }}</td>
+                </tr>
+                {% empty %}
+                <tr id="movementHistoryEmpty"><td colspan="5" style="text-align:center; padding:34px; color:var(--muted);">Tarix yo'q.</td></tr>
                 {% endfor %}
-            </select>
-        </label>
-        {% endif %}
-        <div id="movementFeedback" style="display:none; margin-bottom:14px; padding:10px 14px; border-radius:10px; font-size:13px; font-weight:700;"></div>
-        <button class="btn primary" type="submit" id="movementSubmitBtn" style="width:100%; padding:14px; font-size:15px;">
-            <i class="fa-solid fa-check"></i> Saqlash
-        </button>
-    </form>
-
-    <div class="card">
-        <div style="padding:18px 20px; border-bottom:1px solid var(--border);">
-            <h3 style="margin:0;">So'nggi harakatlar</h3>
-        </div>
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Sana</th>
-                        <th>Mahsulot</th>
-                        <th>Tur</th>
-                        <th>Delta</th>
-                        <th>Qoldiq</th>
-                    </tr>
-                </thead>
-                <tbody id="movementHistoryBody">
-                    {% for item in recent_history %}
-                    <tr>
-                        <td>{{ item.created_at|date:"d.m.Y H:i" }}</td>
-                        <td>{{ item.mahsulot.nomi }}</td>
-                        <td>{{ item.get_event_type_display }}</td>
-                        <td>
-                            <span class="badge {% if item.delta < 0 %}red{% else %}green{% endif %}">{{ item.delta|spc:2 }}</span>
-                        </td>
-                        <td>{{ item.new_qty|spc:2 }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr id="movementHistoryEmpty"><td colspan="5" style="text-align:center; padding:34px; color:var(--muted);">Tarix yo'q.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+            </tbody>
+        </table>
     </div>
 </div>
 </div>
 
-<div class="mv-picker-overlay" id="mvPickerOverlay">
-    <div class="mv-picker-modal">
-        <div class="mv-picker-head">
-            <h3 style="margin:0;">Mahsulot tanlash</h3>
-            <button type="button" class="btn" id="mvPickerClose"><i class="fa-solid fa-xmark"></i></button>
+<div class="mv-modal-overlay" id="mvModalOverlay">
+    <div class="mv-modal">
+        <div class="mv-modal-head">
+            <h3 style="margin:0;">Yangi kirim</h3>
+            <button type="button" class="btn" id="mvModalClose"><i class="fa-solid fa-xmark"></i></button>
         </div>
-        <div class="mv-picker-search-wrap">
-            <i class="fa-solid fa-magnifying-glass"></i>
-            <input class="field" type="text" id="mvPickerSearch" placeholder="Mahsulot yoki turi bo'yicha qidirish..." autocomplete="off">
+
+        <div class="mv-modal-product">
+            <span id="mvModalProductImgWrap" class="mv-picker-noimg"><i class="fa-solid fa-image"></i></span>
+            <div>
+                <div class="mv-modal-product-name" id="mvModalProductName"></div>
+                <div class="mv-modal-product-sub" id="mvModalProductSub"></div>
+            </div>
         </div>
-        <div class="mv-picker-list" id="mvPickerList"></div>
-        <div class="mv-picker-footer" id="mvPickerFooter"></div>
+
+        <form method="post" id="movementForm">
+            {% csrf_token %}
+            <input type="hidden" name="movement_type" value="in">
+            <input type="hidden" name="mahsulot" id="movementProductId">
+
+            <label id="movementPriceWrap" style="display:block; margin-bottom:14px;">
+                <div style="font-weight:800; margin-bottom:8px;">Kirim narxi</div>
+                <input class="field" type="number" step="0.01" min="0" name="price" id="movementPrice" required>
+            </label>
+            <label style="display:block; margin-bottom:18px;">
+                <div style="font-weight:800; margin-bottom:8px;">Miqdor</div>
+                <input class="field" type="number" step="0.01" min="0.01" name="qty" id="movementQty" required>
+            </label>
+            <label style="display:block; margin-bottom:18px;">
+                <div style="font-weight:800; margin-bottom:8px;">Ombor <span style="color:#dc2626;">*</span></div>
+                <select class="field" name="ombor_id" id="movementOmbor" {% if omborlar %}required{% endif %}>
+                    <option value="">— tanlang —</option>
+                    {% for o in omborlar %}
+                    <option value="{{ o.id }}">{{ o.nomi }}</option>
+                    {% endfor %}
+                </select>
+                {% if not omborlar %}
+                <div style="font-size:12px; color:#b45309; margin-top:6px;">Hozircha omborlar ro'yxati bo'sh.</div>
+                {% endif %}
+            </label>
+            <div id="movementFeedback" style="display:none; margin-bottom:14px; padding:10px 14px; border-radius:10px; font-size:13px; font-weight:700;"></div>
+            <button class="btn primary" type="submit" id="movementSubmitBtn" style="width:100%; padding:14px; font-size:15px;">
+                <i class="fa-solid fa-check"></i> Saqlash
+            </button>
+        </form>
     </div>
 </div>
 
 <script>
 (function () {
     const productsUrl = "{% url 'warehouse_products' %}";
-    const overlay = document.getElementById('mvPickerOverlay');
-    const trigger = document.getElementById('movementProductTrigger');
-    const closeBtn = document.getElementById('mvPickerClose');
-    const searchInput = document.getElementById('mvPickerSearch');
-    const listEl = document.getElementById('mvPickerList');
-    const footerEl = document.getElementById('mvPickerFooter');
+
+    const gridEl = document.getElementById('mvGrid');
+    const paginationEl = document.getElementById('mvGridPagination');
+    const gridSearch = document.getElementById('mvGridSearch');
+
+    const modalOverlay = document.getElementById('mvModalOverlay');
+    const modalClose = document.getElementById('mvModalClose');
+    const modalProductImgWrap = document.getElementById('mvModalProductImgWrap');
+    const modalProductName = document.getElementById('mvModalProductName');
+    const modalProductSub = document.getElementById('mvModalProductSub');
 
     const productIdInput = document.getElementById('movementProductId');
     const priceInput = document.getElementById('movementPrice');
-    const triggerText = document.getElementById('movementTriggerText');
-    const triggerImgWrap = document.getElementById('movementTriggerImgWrap');
 
-    let currentPage = 1;
-    let debounceTimer = null;
-    let abortCtrl = null;
+    let gridDebounce = null;
+    let gridAbort = null;
     let selectedProduct = null;
 
-    function openPicker() {
-        overlay.classList.add('open');
-        searchInput.value = '';
-        currentPage = 1;
-        fetchProducts('', 1);
-        setTimeout(() => searchInput.focus(), 50);
-    }
-
-    function closePicker() {
-        overlay.classList.remove('open');
-    }
-
-    trigger.addEventListener('click', openPicker);
-    closeBtn.addEventListener('click', closePicker);
-    overlay.addEventListener('click', (ev) => {
-        if (ev.target === overlay) closePicker();
-    });
-
-    function fetchProducts(query, page) {
-        listEl.innerHTML = '<div class="mv-picker-empty">Yuklanmoqda...</div>';
-        footerEl.innerHTML = '';
-        if (abortCtrl) abortCtrl.abort();
-        abortCtrl = new AbortController();
+    function fetchGrid(query, page) {
+        gridEl.innerHTML = '<div class="mv-empty">Yuklanmoqda...</div>';
+        paginationEl.innerHTML = '';
+        if (gridAbort) gridAbort.abort();
+        gridAbort = new AbortController();
         const url = `${productsUrl}?data_format=json&q=${encodeURIComponent(query)}&page=${page}`;
-        fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}, signal: abortCtrl.signal})
+        fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}, signal: gridAbort.signal})
             .then((r) => r.json())
-            .then((data) => renderResults(data, query))
+            .then((data) => renderGrid(data, query))
             .catch((err) => {
                 if (err.name !== 'AbortError') {
-                    listEl.innerHTML = '<div class="mv-picker-empty">Xatolik yuz berdi.</div>';
+                    gridEl.innerHTML = '<div class="mv-empty">Xatolik yuz berdi.</div>';
                 }
             });
     }
 
-    function renderResults(data, query) {
-        currentPage = data.page;
-        listEl.innerHTML = '';
+    function renderGrid(data, query) {
+        gridEl.innerHTML = '';
         if (!data.results.length) {
-            listEl.innerHTML = '<div class="mv-picker-empty">Mahsulot topilmadi.</div>';
+            gridEl.innerHTML = '<div class="mv-empty">Mahsulot topilmadi.</div>';
         } else {
             data.results.forEach((p) => {
-                const item = document.createElement('div');
-                item.className = 'mv-picker-item';
+                const card = document.createElement('div');
+                card.className = 'mv-card';
                 const img = p.rasmi_url
                     ? `<img src="${p.rasmi_url}" alt="">`
-                    : `<span class="mv-picker-noimg"><i class="fa-solid fa-image"></i></span>`;
-                item.innerHTML = `
-                    ${img}
-                    <div>
-                        <div class="mv-picker-item-name">${p.nomi}</div>
-                        <div class="mv-picker-item-sub">${p.turi} — ${Number(p.miqdori).toFixed(2)} qoldiq</div>
+                    : `<i class="fa-solid fa-image"></i>`;
+                card.innerHTML = `
+                    <div class="mv-card-img-wrap">${img}</div>
+                    <div class="mv-card-body">
+                        <div class="mv-card-name">${p.nomi}</div>
+                        <div class="mv-card-sub">${Number(p.miqdori).toFixed(2)} ${p.turi}</div>
                     </div>
-                    <div class="mv-picker-item-price">${Math.round(p.tannarx).toLocaleString('fr-FR').replace(/,/g, ' ')} so'm</div>
                 `;
-                item.addEventListener('click', () => selectProduct(p));
-                listEl.appendChild(item);
+                card.addEventListener('click', () => openModal(p));
+                gridEl.appendChild(card);
             });
         }
 
@@ -304,10 +287,10 @@
             prevBtn.className = 'btn';
             prevBtn.innerHTML = '<i class="fa-solid fa-chevron-left"></i>';
             prevBtn.disabled = !data.has_prev;
-            prevBtn.addEventListener('click', () => fetchProducts(query, data.page - 1));
+            prevBtn.addEventListener('click', () => fetchGrid(query, data.page - 1));
 
             const label = document.createElement('span');
-            label.style.cssText = 'font-size:13px; font-weight:700; color:var(--text-light);';
+            label.style.cssText = 'font-size:13px; font-weight:700; color:var(--muted);';
             label.textContent = `${data.page} / ${data.num_pages}-sahifa (${data.total} ta)`;
 
             const nextBtn = document.createElement('button');
@@ -315,33 +298,46 @@
             nextBtn.className = 'btn';
             nextBtn.innerHTML = '<i class="fa-solid fa-chevron-right"></i>';
             nextBtn.disabled = !data.has_next;
-            nextBtn.addEventListener('click', () => fetchProducts(query, data.page + 1));
+            nextBtn.addEventListener('click', () => fetchGrid(query, data.page + 1));
 
-            footerEl.appendChild(prevBtn);
-            footerEl.appendChild(label);
-            footerEl.appendChild(nextBtn);
+            paginationEl.appendChild(prevBtn);
+            paginationEl.appendChild(label);
+            paginationEl.appendChild(nextBtn);
         }
     }
 
-    function selectProduct(p) {
+    gridSearch.addEventListener('input', () => {
+        clearTimeout(gridDebounce);
+        gridDebounce = setTimeout(() => fetchGrid(gridSearch.value.trim(), 1), 250);
+    });
+
+    fetchGrid('', 1);
+
+    function openModal(p) {
         selectedProduct = p;
         productIdInput.value = p.id;
         priceInput.value = p.tannarx;
-        triggerText.textContent = p.nomi;
-        triggerText.classList.remove('mv-product-placeholder');
-        triggerImgWrap.outerHTML = p.rasmi_url
-            ? `<img id="movementTriggerImgWrap" src="${p.rasmi_url}" alt="">`
-            : `<span id="movementTriggerImgWrap" class="mv-picker-noimg"><i class="fa-solid fa-image"></i></span>`;
-        closePicker();
+        modalProductName.textContent = p.nomi;
+        modalProductSub.textContent = `${p.turi} — joriy qoldiq: ${Number(p.miqdori).toFixed(2)}`;
+        modalProductImgWrap.outerHTML = p.rasmi_url
+            ? `<img id="mvModalProductImgWrap" src="${p.rasmi_url}" alt="">`
+            : `<span id="mvModalProductImgWrap" class="mv-picker-noimg"><i class="fa-solid fa-image"></i></span>`;
+        document.getElementById('movementQty').value = '';
+        document.getElementById('movementOmbor').value = '';
+        document.getElementById('movementFeedback').style.display = 'none';
+        modalOverlay.classList.add('open');
     }
 
-    searchInput.addEventListener('input', () => {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => fetchProducts(searchInput.value.trim(), 1), 250);
-    });
+    function closeModal() {
+        modalOverlay.classList.remove('open');
+    }
 
+    modalClose.addEventListener('click', closeModal);
+    modalOverlay.addEventListener('click', (ev) => {
+        if (ev.target === modalOverlay) closeModal();
+    });
     document.addEventListener('keydown', (ev) => {
-        if (ev.key === 'Escape' && overlay.classList.contains('open')) closePicker();
+        if (ev.key === 'Escape' && modalOverlay.classList.contains('open')) closeModal();
     });
 
     // ── AJAX yuborish — sahifa qayta yuklanmaydi, "So'nggi harakatlar"
@@ -369,12 +365,12 @@
     form.addEventListener('submit', function (e) {
         e.preventDefault();
         if (!productIdInput.value) {
-            showFeedback("Mahsulotni ro'yxatdan tanlang.", false);
+            showFeedback("Mahsulot tanlanmagan.", false);
             return;
         }
         const fd = new FormData(form);
         const xhr = new XMLHttpRequest();
-        xhr.open('POST', window.location.href, true);
+        xhr.open('POST', window.location.pathname, true);
         xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
         submitBtn.disabled = true;
         feedback.style.display = 'none';
@@ -385,11 +381,6 @@
             try { data = JSON.parse(xhr.responseText); } catch (err) { /* ignore */ }
             if (xhr.status >= 200 && xhr.status < 300 && data.ok) {
                 showFeedback(data.message, true);
-
-                if (selectedProduct && String(selectedProduct.id) === String(productIdInput.value)) {
-                    selectedProduct.tannarx = data.product.tannarx;
-                    selectedProduct.miqdori = data.product.miqdori;
-                }
 
                 const emptyRow = document.getElementById('movementHistoryEmpty');
                 if (emptyRow) emptyRow.remove();
@@ -403,8 +394,8 @@
                 `;
                 historyBody.insertBefore(tr, historyBody.firstChild);
 
-                document.getElementById('movementQty').value = '';
-                priceInput.value = data.product.tannarx;
+                fetchGrid(gridSearch.value.trim(), 1);
+                setTimeout(closeModal, 700);
             } else {
                 showFeedback(data.error || 'Xatolik yuz berdi.', false);
             }

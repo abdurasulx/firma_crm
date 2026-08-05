@@ -281,6 +281,10 @@ def warehouse_movements(request):
             if incoming_price < 0:
                 return _fail("Kirim narxi manfiy bo'lishi mumkin emas.")
 
+        ombor_id = request.POST.get('ombor_id')
+        if Ombor.objects.filter(company=request.company).exists() and not ombor_id:
+            return _fail("Omborni tanlash majburiy.")
+
         with transaction.atomic():
             product_qs = Mahsulot.objects.select_for_update().select_related('turi').filter(company=request.company)
             if _is_warehouse_operator(request):
@@ -307,7 +311,6 @@ def warehouse_movements(request):
             recompute_tannarx(product)
             cascade_recompute_tannarx(product)
 
-            ombor_id = request.POST.get('ombor_id')
             if ombor_id and product.warehouse_type == 'semi_finished':
                 ombor = Ombor.objects.filter(id=ombor_id, company=request.company).first()
                 if ombor:
