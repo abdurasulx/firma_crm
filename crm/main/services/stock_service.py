@@ -60,6 +60,18 @@ def recompute_tannarx(mahsulot):
     sifatida ko'paytiriladi). Har doim shu funksiya orqali chaqiriladi —
     tannarx hech qayerda to'g'ridan-to'g'ri qo'lda o'rnatilmaydi.
 
+    `ishlab_chiqariladigan` (retsept asosidagi) mahsulotlar uchun baza_tannarx
+    HAR SAFAR joriy retsept (BOM) qatorlaridan JONLI hisoblanadi — alohida
+    saqlanadigan "curzatma" sifatida emas. Sabab (real production bug):
+    avval bu faqat retsept qatori qo'shilgan/o'chirilgan paytda yangilanardi;
+    boshqa har qanday keyingi `recompute_tannarx` chaqiruvi (masalan
+    qo'shimcha xarajat qo'shilganda) uni ESKI holicha qoldirar edi — agar
+    o'sha snapshot biror sababdan 0 bo'lib qolgan bo'lsa (masalan mahsulot
+    turi keyinroq o'zgartirilgan), xom ashyo narxi tannarxdan butunlay
+    tushib qolardi, foyda haqiqatdan ancha katta ko'rsatilardi.
+    Distributor mahsulotlarda baza_tannarx hamon alohida (kirim narxi)
+    saqlanadi — bu yerda tegilmaydi.
+
     `ishlab_chiqarish_narxi` — real xarajat (ishchi haqiqatan shuncha pul
     oladi 1 dona uchun), shuning uchun tannarxga qo'shilmasa, tannarx
     haqiqiy xarajatdan kam ko'rsatilib, foyda noto'g'ri (shishirilgan)
@@ -73,7 +85,19 @@ def recompute_tannarx(mahsulot):
     (faqat tannarxdan yuqori bo'lishi talab qilinadi, tekshiruv view
     darajasida amalga oshiriladi).
     """
-    baza = Decimal(str(mahsulot.baza_tannarx or 0))
+    update_fields = ['tannarx']
+    if mahsulot.mahsulot_turi == 'ishlab_chiqariladigan':
+        rows = MahsulotRetsept.objects.filter(mahsulot=mahsulot).select_related('komponent')
+        baza = sum(
+            (Decimal(str(r.komponent.tannarx)) * Decimal(str(r.norma_miqdor)) for r in rows),
+            Decimal('0'),
+        )
+        if baza != Decimal(str(mahsulot.baza_tannarx or 0)):
+            mahsulot.baza_tannarx = baza
+            update_fields.append('baza_tannarx')
+    else:
+        baza = Decimal(str(mahsulot.baza_tannarx or 0))
+
     ish_haqi = Decimal(str(mahsulot.ishlab_chiqarish_narxi or 0))
 
     extra_miqdor = mahsulot.qoshimcha_xarajatlar.filter(turi='miqdor').aggregate(t=Sum('summa'))['t'] or 0
@@ -83,7 +107,7 @@ def recompute_tannarx(mahsulot):
     subtotal = baza + ish_haqi + Decimal(str(extra_miqdor)) + extra_foiz
     foiz = Decimal(str(mahsulot.amortizatsiya_foizi or 0))
     mahsulot.tannarx = subtotal * (1 + foiz / Decimal('100'))
-    mahsulot.save(update_fields=['tannarx'])
+    mahsulot.save(update_fields=update_fields)
     return mahsulot.tannarx
 
 
