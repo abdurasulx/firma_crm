@@ -8,6 +8,7 @@ host (asosiy domen yoki `localhost`) orqali chaqirilishi mumkin.
 from urllib.parse import urlparse
 from uuid import uuid4
 
+from django.conf import settings
 from django.core import signing
 from django.db import transaction
 from django.utils import timezone
@@ -55,6 +56,18 @@ def _extract_token(request):
     if auth_header.startswith('Token '):
         return auth_header[len('Token '):].strip()
     return request.headers.get('X-Agent-Token', '').strip()
+
+
+def _public_scan_url(company, kod):
+    """QR-yorliqqa jismonan chop etiladigan (mahsulotga yopishtiriladigan)
+    manzil — atayin `request.build_absolute_uri()` ISHLATILMAYDI, chunki
+    Desktop Agent'ning so'rovi qaysi host orqali serverga yetib kelgani
+    (test/lokal tunnel, IP va h.k.) tasodifiy bo'lishi mumkin. Mahsulotga
+    bosib chiqariladigan QR har doim haqiqiy, xaridor telefonidan
+    ochadigan PUBLIC domenga (`https://<firma>.stockfirm.uz/p/<kod>/`)
+    ishora qilishi shart — aks holda chop etilgandan keyin QR ishlamay
+    qoladi."""
+    return f"https://{company.subdomain}.{settings.BASE_DOMAIN}/p/{kod}/"
 
 
 def _company_from_token(request):
@@ -778,7 +791,7 @@ def agent_pending_print_batch(request):
             'serial_soni': len(serial_kodlar),
             'print_url': print_url,
             'serials': [
-                {'kod': kod, 'url': request.build_absolute_uri(f'/p/{kod}/')}
+                {'kod': kod, 'url': _public_scan_url(company, kod)}
                 for kod in serial_kodlar
             ],
         },
@@ -908,7 +921,7 @@ def agent_approve_miqdor_qoshish(request, request_id):
     # uchun — brauzer/PDF (`print_url`) o'rniga, sozlangan bo'lsa, agent
     # o'zi har bir serial uchun QR-yorliq chop etadi (`label_printer_service.py`).
     serials = [
-        {'kod': kod, 'url': request.build_absolute_uri(f'/p/{kod}/')}
+        {'kod': kod, 'url': _public_scan_url(company, kod)}
         for kod in serial_kodlar
     ]
 

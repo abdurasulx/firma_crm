@@ -13,6 +13,24 @@ from ..models import BillingPaymentLink, Company, PlanRequest
 from ..plan_utils import get_plan_duration_months
 
 
+def lifecycle_cache_key(company_id):
+    return f'company_lifecycle:{company_id}'
+
+
+def invalidate_lifecycle_cache(company):
+    """Firmaning to'lov/holat maydonlari (`is_active`, `payment_status`,
+    `next_payment_date`, `setup_mode`, `is_on_trial` va h.k.) qo'lda —
+    admin panel orqali — o'zgartirilgan har bir joyda chaqirilishi kerak.
+
+    Sabab (real production bug): `CompanyMiddleware` `sync_company_
+    lifecycle()` natijasini 5 daqiqaga keshlaydi (`LIFECYCLE_SYNC_CACHE_
+    SECONDS`). Admin firmani "to'landi" deb belgilasa-yu, shu keshni
+    bekor qilmasa — tashrifchilar hali eski (masalan "to'xtatilgan")
+    holatni ko'raveradi, DB'da allaqachon to'g'irlangan bo'lsa ham, toki
+    5 daqiqa TTL o'z-o'zidan tugamaguncha."""
+    cache.delete(lifecycle_cache_key(company.id))
+
+
 def get_company_host(company, base_domain):
     base_domain = (base_domain or "localhost:8000").strip()
     return f"{company.subdomain}.{base_domain}"
@@ -415,6 +433,7 @@ def apply_plan_request(plan_request, now=None):
         company.trial_expires_at = None
 
     company.save()
+    invalidate_lifecycle_cache(company)
 
     plan_request.status = "approved"
     plan_request.reviewed_at = now
@@ -450,10 +469,12 @@ def mark_company_paid(company, now=None, days=None, payment_link=None):
     company.is_on_trial = False
     company.trial_expires_at = None
     company.save()
+    invalidate_lifecycle_cache(company)
     return company
 
 
 def mark_company_unpaid(company):
     company.payment_status = "unpaid"
     company.save(update_fields=["payment_status"])
+    invalidate_lifecycle_cache(company)
     return company

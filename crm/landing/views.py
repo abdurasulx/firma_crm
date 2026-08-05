@@ -16,6 +16,7 @@ from main.services.billing_service import (
     get_billing_period_start,
     get_prorated_billing,
     get_company_login_url,
+    invalidate_lifecycle_cache,
     mark_company_paid,
     mark_company_unpaid,
     reject_plan_request as reject_plan_request_service,
@@ -390,6 +391,7 @@ def super_company_edit(request, pk):
             else:
                 company.plan = None
             company.save()
+            invalidate_lifecycle_cache(company)
             messages.success(request, "Firma ma'lumotlari yangilandi.")
             broadcast_superadmin_update()
             return redirect('super_companies')
@@ -763,6 +765,7 @@ def update_billing_status(request, company_id):
             status_text = "faollashtirildi" if company.is_active else "to'xtatildi"
             messages.success(request, f"🏢 {company.name} tizimi {status_text}.")
             company.save(update_fields=['is_active'])
+            invalidate_lifecycle_cache(company)
             broadcast_superadmin_update()
             
         elif action == 'mark_paid':

@@ -1,5 +1,5 @@
 """
-Mahalliy SQLite qatlami — hozircha CRM backend bilan bog'lanmagan
+Mahalliy SQLite qatlami — hozircha ERP backend bilan bog'lanmagan
 (birinchi bosqich). Omborlar va ularga biriktirilgan kameralar shu yerda
 saqlanadi.
 """
@@ -208,9 +208,9 @@ def delete_warehouse(warehouse_id: int):
 
 
 def sync_warehouses_from_remote(remote_omborlar: list):
-    """CRM'dan kelgan omborlar ro'yxatini (`[{'id','nomi','manzil'}, ...]`)
+    """ERP'dan kelgan omborlar ro'yxatini (`[{'id','nomi','manzil'}, ...]`)
     mahalliy bazaga `remote_id` bo'yicha upsert qiladi. Qo'lda (remote_id'siz)
-    qo'shilgan omborlarga tegilmaydi. CRM'da o'chirilgan (endi ro'yxatda
+    qo'shilgan omborlarga tegilmaydi. ERP'da o'chirilgan (endi ro'yxatda
     yo'q) omborlar ham mahalliy bazadan o'chiriladi (kamerasi bilan birga)."""
     with get_conn() as conn:
         remote_ids = [o["id"] for o in remote_omborlar]

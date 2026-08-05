@@ -83,7 +83,9 @@ def end_setup(request):
     company.setup_mode = False
     company.setup_expires_at = None
     company.save()
-    
+    from .services.billing_service import invalidate_lifecycle_cache
+    invalidate_lifecycle_cache(company)
+
     messages.success(request, "Tizim sozlash rejimi muvaffaqiyatli yakunlandi. Endi barcha xodimlar tizimdan foydalana oladi.")
     return redirect('main')
 

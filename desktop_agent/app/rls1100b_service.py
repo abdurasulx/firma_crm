@@ -8,10 +8,10 @@ bermadi — protokol Rongta'dan olinishi yoki RS232 orqali kuzatilishi
 kerak.
 
 Protokol aniqlangach, faqat pastdagi ikkita funksiyani (`connect`,
-`parse_response`) to'ldirish kifoya — qolgan qism (fon oqimi, CRM'ga
+`parse_response`) to'ldirish kifoya — qolgan qism (fon oqimi, ERP'ga
 yuborish) allaqachon loyihadagi mavjud naqshlarga mos qurilgan.
 
-**Muhim**: CRM backend'ni o'zgartirish SHART EMAS — `agent_weigh_
+**Muhim**: ERP backend'ni o'zgartirish SHART EMAS — `agent_weigh_
 material_request`/`agent_weigh_task_pickup` allaqachon oddiy
 `measured_qty` (float) qabul qiladi, u qo'lda kiritilganmi yoki
 haqiqiy tarozidanmi — farqi yo'q. `send_to_crm()` shu mavjud
@@ -122,7 +122,7 @@ class ScaleReaderWorker(QThread):
 
 
 def send_to_crm(server_url: str, token: str, request_id: int, session_token: str, weight: float, kind: str = "material"):
-    """Real tarozidan o'qilgan vaznni CRM'ga yuboradi — **yangi endpoint
+    """Real tarozidan o'qilgan vaznni ERP'ga yuboradi — **yangi endpoint
     emas**, mavjud `api_client.weigh_material_request`/
     `api_client.weigh_task_pickup` funksiyalarini shunchaki qayta
     ishlatadi (backend allaqachon tayyor, farqi yo'q qo'lda kiritilganmi

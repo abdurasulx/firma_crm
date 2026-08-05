@@ -1,10 +1,10 @@
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox,
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QMessageBox,
 )
 from PyQt6.QtCore import QThread, QTimer, pyqtSignal
 
 from .. import db
-from ..api_client import station_login, station_login_by_qr, fetch_omborlar, parse_server_input, ApiError
+from ..api_client import station_login, station_login_by_qr, fetch_omborlar, parse_server_input, ApiError, send_logout
 from ..label_printer_service import list_printers, LabelPrintWorker
 from .camera_config_dialog import CameraConfigDialog
 
@@ -39,20 +39,22 @@ class _ApiCallWorker(QThread):
 
 class SettingsPage(QWidget):
     """Har bir Desktop Agent o'rnatilishi (stansiya) o'zining shaxsiy
-    login/paroli bilan CRM'ga kiradi — CRM'dagi "Hodimlar" bo'limida
+    login/paroli bilan ERP'ga kiradi — ERP'dagi "Hodimlar" bo'limida
     "Desktop Agent" turida yaratilgan hisob orqali. Bitta firma bir nechta
     stansiyani shu tarzda alohida-alohida boshqarishi mumkin."""
 
     def __init__(self, on_synced=None, on_scanner_changed=None, on_login_succeeded=None, on_scale_changed=None,
-                 on_recheck_devices=None, parent=None):
+                 on_recheck_devices=None, on_logout=None, parent=None):
         super().__init__(parent)
         self.on_synced = on_synced
         self.on_scanner_changed = on_scanner_changed
         self.on_scale_changed = on_scale_changed
         self.on_login_succeeded = on_login_succeeded
         self.on_recheck_devices = on_recheck_devices
+        self.on_logout = on_logout
         self._login_worker: _ApiCallWorker | None = None
         self._sync_worker: _ApiCallWorker | None = None
+        self._logout_worker: _ApiCallWorker | None = None
         self._connecting_timer = QTimer(self)
         self._connecting_timer.setInterval(400)
         self._connecting_timer.timeout.connect(self._tick_connecting_animation)
@@ -60,7 +62,7 @@ class SettingsPage(QWidget):
         layout = QVBoxLayout(self)
 
         title_row = QHBoxLayout()
-        title = QLabel("Sozlamalar — CRM bilan bog'lash")
+        title = QLabel("Sozlamalar — ERP bilan bog'lash")
         title.setStyleSheet("font-size:18px; font-weight:700;")
         title_row.addWidget(title)
         title_row.addStretch(1)
@@ -80,7 +82,7 @@ class SettingsPage(QWidget):
         # skanerlanishi mumkin.
         self.qr_prompt_label = QLabel(
             "📷 Qurilmani ro'yxatdan o'tkazish uchun administratordan "
-            "so'rang: CRM'da Profil sahifasida \"Desktop Agent QR-login\" "
+            "so'rang: ERP'da Profil sahifasida \"Desktop Agent QR-login\" "
             "kartasidagi QR kodni shu stansiya kamerasiga (yoki HID "
             "skaneriga) ko'rsating — avtomatik tizimga kirasiz."
         )
@@ -103,7 +105,7 @@ class SettingsPage(QWidget):
 
         desc = QLabel(
             "Firmangiz nomini (do'kon yaratilganda tanlangan manzil qismi, "
-            "masalan \"birzumda\") va CRM'da (Hodimlar > Yangi hodim "
+            "masalan \"birzumda\") va ERP'da (Hodimlar > Yangi hodim "
             "qo'shish > \"Desktop Agent\") yaratilgan login/parolni "
             "kiriting. (Test/lokal server — IP yoki localhost — uchun "
             "\"<firma nomi>@<manzil>\" formatida kiriting, masalan "
@@ -142,6 +144,14 @@ class SettingsPage(QWidget):
         self.sync_btn.clicked.connect(self._sync)
         sync_row.addWidget(self.sync_btn)
         sync_row.addStretch(1)
+        # Faqat login qilingan holatda ko'rinadi (`_show_synced_view`/
+        # `show_login_required` shu ko'rinishni boshqaradi) — stansiyani
+        # boshqa xodim/firma uchun qayta ishlatish uchun.
+        self.logout_btn = QPushButton("🚪 Chiqish")
+        self.logout_btn.setStyleSheet("color:#b91c1c;")
+        self.logout_btn.clicked.connect(self._logout)
+        self.logout_btn.setVisible(False)
+        sync_row.addWidget(self.logout_btn)
         layout.addLayout(sync_row)
 
         self.status_label = QLabel("")
@@ -283,6 +293,7 @@ class SettingsPage(QWidget):
         logged_in = bool(db.get_setting("agent_token", ""))
         self.qr_prompt_label.setVisible(not logged_in)
         self.manual_toggle_btn.setVisible(not logged_in)
+        self.logout_btn.setVisible(logged_in)
         if logged_in:
             self.manual_login_container.setVisible(False)
             self.manual_toggle_btn.setText("Qo'lda login/parol bilan kirish")
@@ -365,6 +376,44 @@ class SettingsPage(QWidget):
         self.password_input.clear()
         self.status_label.setStyleSheet("color:#b91c1c;")
         self.status_label.setText("Sessiya yopildi — qaytadan kiring.")
+        self._update_login_ui_state()
+
+    def _logout(self):
+        """Foydalanuvchi o'zi "Chiqish"ni bosganda — stansiya boshqa
+        xodim/firma uchun qayta ishlatilishi kerak bo'lganda (masalan
+        smena almashinuvi). Serverga "oflayn" xabari best-effort
+        yuboriladi (`send_logout`) — natijasidan qat'i nazar mahalliy
+        token darhol tozalanadi, chunki xodim uchun asosiysi shu
+        qurilmada endi hech kim uning nomidan ish qila olmasligi."""
+        if not db.get_setting("agent_token", ""):
+            return
+        reply = QMessageBox.question(
+            self, "Chiqish",
+            "Rostdan ham tizimdan chiqmoqchimisiz? Keyingi ishlatishda "
+            "qaytadan login qilish kerak bo'ladi.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        server_url = db.get_setting("server_url", "")
+        token = db.get_setting("agent_token", "")
+        self.logout_btn.setEnabled(False)
+        worker = _ApiCallWorker(send_logout, server_url, token)
+        worker.succeeded.connect(self._on_logout_finished)
+        worker.failed.connect(lambda _msg: self._on_logout_finished(None))
+        self._logout_worker = worker
+        worker.start()
+
+    def _on_logout_finished(self, _result):
+        self.logout_btn.setEnabled(True)
+        db.set_setting("agent_token", "")
+        db.set_setting("station_name", "")
+        db.set_setting("company_name", "")
+        if self.on_logout:
+            self.on_logout()
+        self.status_label.setStyleSheet("color:#666;")
+        self.status_label.setText("Tizimdan chiqdingiz.")
         self._update_login_ui_state()
 
     def _sync(self):

@@ -1,4 +1,4 @@
-"""CRM REST API bilan aloqa."""
+"""ERP REST API bilan aloqa."""
 from urllib.parse import urlparse
 
 import requests
@@ -31,7 +31,7 @@ def normalize_server_url(raw: str) -> str:
 
 def subdomain_from_server_url(server_url: str) -> str:
     """Server manzilidan firma subdomenini ajratib oladi (masalan
-    `https://birzumda.stockfirm.uz` -> `birzumda`) — xuddi CRM'ning o'zi
+    `https://birzumda.stockfirm.uz` -> `birzumda`) — xuddi ERP'ning o'zi
     (`CompanyMiddleware`, `host.split('.')[0]`) qanday aniqlasa, xuddi
     shunday. Foydalanuvchi buni alohida maydonga qo'lda kiritmasligi
     uchun — server manzilining o'zida allaqachon bor."""
@@ -165,7 +165,7 @@ def station_login(server_url: str, subdomain: str, username: str, password: str)
 def station_login_by_qr(server_url: str, subdomain: str, qr_payload: str):
     """Desktop Agent stansiyasi shifrlangan QR kod orqali (145-qadam)
     login qiladi — `station_login`ning QR-variant. `qr_payload` —
-    veb CRM'da ko'rsatilgan `AGENTQR|<subdomain>|<shifrlangan_qism>`
+    veb ERP'da ko'rsatilgan `AGENTQR|<subdomain>|<shifrlangan_qism>`
     matnining uchinchi qismi (klient uni o'zgartirmasdan serverga
     yuboradi, dekriptlash faqat serverda bo'ladi)."""
     if not server_url:
@@ -238,7 +238,7 @@ def verify_kiosk_unlock(server_url: str, subdomain: str, qr_payload: str):
 
 
 def fetch_omborlar(server_url: str, token: str):
-    """CRM'dan omborlar ro'yxatini oladi. Xato bo'lsa `ApiError` ko'taradi."""
+    """ERP'dan omborlar ro'yxatini oladi. Xato bo'lsa `ApiError` ko'taradi."""
     data = _get(server_url, token, "/api/agent/omborlar/")
     return data.get("omborlar", []), data.get("company", "")
 

@@ -3,7 +3,7 @@ from django.core.cache import cache
 from django.shortcuts import redirect, render
 from django.conf import settings
 from .models import Company
-from .services.billing_service import sync_company_lifecycle
+from .services.billing_service import sync_company_lifecycle, lifecycle_cache_key
 
 SESSION_CHECK_EXEMPT_PATHS = ('/login/', '/logout/', '/static/', '/media/')
 
@@ -57,11 +57,11 @@ class CompanyMiddleware:
             subdomain = parts[0]
             try:
                 company = Company.objects.get(subdomain=subdomain)
-                lifecycle_cache_key = f'company_lifecycle:{company.id}'
-                lifecycle_state = cache.get(lifecycle_cache_key)
+                cache_key = lifecycle_cache_key(company.id)
+                lifecycle_state = cache.get(cache_key)
                 if lifecycle_state is None:
                     lifecycle_state = sync_company_lifecycle(company)
-                    cache.set(lifecycle_cache_key, lifecycle_state, LIFECYCLE_SYNC_CACHE_SECONDS)
+                    cache.set(cache_key, lifecycle_state, LIFECYCLE_SYNC_CACHE_SECONDS)
                 payment_reason = lifecycle_state['payment_reason']
 
                 if not company.is_active:

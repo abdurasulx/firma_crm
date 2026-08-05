@@ -46,7 +46,7 @@ class WarehouseListPage(QWidget):
     o'zgarganda (`MainWindow`ning WebSocket xizmati orqali, real-vaqtda)
     yana avtomatik qayta tekshiriladi va faqat HAQIQIY o'zgarish bo'lsagina
     jadval yangilanadi (keraksiz miltillashning oldini olish uchun). Bu
-    yerda yangi ombor yaratish/tahrirlash yo'q — ombor nomi/manzili CRM
+    yerda yangi ombor yaratish/tahrirlash yo'q — ombor nomi/manzili ERP
     tomonida boshqariladi, mahalliy dastur faqat har bir ombor uchun
     kamera(lar)ni biriktiradi."""
 
@@ -113,7 +113,7 @@ class WarehouseListPage(QWidget):
         self.table.setVisible(bool(warehouses))
         self.empty_label.setVisible(not warehouses)
         for row, wh in enumerate(warehouses):
-            nomi_display = f"{wh.nomi}  [CRM]" if wh.remote_id else wh.nomi
+            nomi_display = f"{wh.nomi}  [ERP]" if wh.remote_id else wh.nomi
             self.table.setItem(row, 0, QTableWidgetItem(nomi_display))
             self.table.setItem(row, 1, QTableWidgetItem(wh.manzil))
 

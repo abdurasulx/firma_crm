@@ -1,6 +1,6 @@
 """Desktop Agent uchun real-vaqtli WebSocket xizmati.
 
-CRM'da allaqachon mavjud `/ws/notifications/` kanaliga ulanadi — xuddi
+ERP'da allaqachon mavjud `/ws/notifications/` kanaliga ulanadi — xuddi
 brauzer dashboardi ulanadigani kabi, faqat Django sessiyasi o'rniga
 stansiya tokeni (`?token=...` query-param) orqali autentifikatsiya
 qiladi (`main/consumers.py::NotificationConsumer`, 91-qadam). Server

@@ -164,6 +164,7 @@ class MainWindow(QMainWindow):
             on_login_succeeded=self._on_login_succeeded,
             on_scale_changed=self._reload_scale,
             on_recheck_devices=self._on_recheck_devices_requested,
+            on_logout=self._stop_session_workers,
         )
         self.stack.addWidget(self.warehouse_page)
         self.stack.addWidget(self.settings_page)
@@ -338,6 +339,16 @@ class MainWindow(QMainWindow):
         self._heartbeat_worker.token_invalid.connect(self._handle_token_invalid)
         self._heartbeat_worker.start()
 
+    def _stop_session_workers(self):
+        """Faol sessiyaga bog'liq fon jarayonlarini (heartbeat, WS ulanish)
+        to'xtatadi — token bekor qilinganda (`_handle_token_invalid`) ham,
+        foydalanuvchi qo'lda "Chiqish"ni bosganda (`SettingsPage`) ham
+        chaqiriladi."""
+        self._heartbeat_timer.stop()
+        if self._socket_worker is not None:
+            self._socket_worker.stop()
+            self._socket_worker = None
+
     def _handle_token_invalid(self):
         """Boshqa kompyuterda/qurilmada shu hisob bilan qayta login
         qilingani uchun bu stansiyaning tokeni server tomonda bekor
@@ -346,10 +357,7 @@ class MainWindow(QMainWindow):
         (login) sahifasiga qaytaramiz."""
         if not db.get_setting("agent_token", ""):
             return  # allaqachon logout qilingan (masalan foydalanuvchi o'zi chiqqan)
-        self._heartbeat_timer.stop()
-        if self._socket_worker is not None:
-            self._socket_worker.stop()
-            self._socket_worker = None
+        self._stop_session_workers()
         db.set_setting("agent_token", "")
         QMessageBox.warning(
             self, "Sessiya yopildi",
@@ -379,7 +387,7 @@ class MainWindow(QMainWindow):
         self._play_scan_fade_in()
 
     def _handle_agent_login_qr(self, kod: str):
-        """CRM profilida ko'rsatilgan shifrlangan "Desktop Agent QR-login"
+        """ERP profilida ko'rsatilgan shifrlangan "Desktop Agent QR-login"
         kodi skanerlandi (145-qadam) — `AGENTQR|<subdomain>|<shifrlangan_qism>`
         formatida. Login holatidan qat'i nazar qayta skanerlash orqali
         boshqa hisobga o'tish ham mumkin (masalan stansiyani boshqa

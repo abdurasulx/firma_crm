@@ -54,10 +54,16 @@ def recompute_tannarx(mahsulot):
     """
     Mahsulotning yakuniy tannarxini qayta hisoblaydi:
     (baza_tannarx (distributor uchun kirim narxi, ishlab chiqaruvchi uchun
-    retsept bo'yicha hisoblangan qism) + mahsulotga bog'langan qo'shimcha
+    retsept bo'yicha hisoblangan qism) + 1 dona uchun ishchiga to'lanadigan
+    ish haqi (`ishlab_chiqarish_narxi`) + mahsulotga bog'langan qo'shimcha
     xarajatlar yig'indisi) ustiga amortizatsiya foizi qo'shiladi (ustama
     sifatida ko'paytiriladi). Har doim shu funksiya orqali chaqiriladi —
     tannarx hech qayerda to'g'ridan-to'g'ri qo'lda o'rnatilmaydi.
+
+    `ishlab_chiqarish_narxi` — real xarajat (ishchi haqiqatan shuncha pul
+    oladi 1 dona uchun), shuning uchun tannarxga qo'shilmasa, tannarx
+    haqiqiy xarajatdan kam ko'rsatilib, foyda noto'g'ri (shishirilgan)
+    hisoblanardi (real bug: bu yerda unutilgan edi).
 
     Qo'shimcha xarajatlar ikki turda bo'lishi mumkin (har bir firma har xil
     ishlaydi): `turi='miqdor'` — aniq summa (to'g'ridan-to'g'ri qo'shiladi);
@@ -68,12 +74,13 @@ def recompute_tannarx(mahsulot):
     darajasida amalga oshiriladi).
     """
     baza = Decimal(str(mahsulot.baza_tannarx or 0))
+    ish_haqi = Decimal(str(mahsulot.ishlab_chiqarish_narxi or 0))
 
     extra_miqdor = mahsulot.qoshimcha_xarajatlar.filter(turi='miqdor').aggregate(t=Sum('summa'))['t'] or 0
     extra_foiz_yigindisi = mahsulot.qoshimcha_xarajatlar.filter(turi='foiz').aggregate(t=Sum('summa'))['t'] or 0
     extra_foiz = baza * (Decimal(str(extra_foiz_yigindisi)) / Decimal('100'))
 
-    subtotal = baza + Decimal(str(extra_miqdor)) + extra_foiz
+    subtotal = baza + ish_haqi + Decimal(str(extra_miqdor)) + extra_foiz
     foiz = Decimal(str(mahsulot.amortizatsiya_foizi or 0))
     mahsulot.tannarx = subtotal * (1 + foiz / Decimal('100'))
     mahsulot.save(update_fields=['tannarx'])
