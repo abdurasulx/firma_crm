@@ -17,7 +17,7 @@
             <i class="fa-solid fa-upload" style="margin-right: 8px; color: var(--primary-dark);"></i>
             Yangi versiya yuklash
         </h3>
-        <form method="POST" enctype="multipart/form-data">
+        <form method="POST" enctype="multipart/form-data" id="agentUploadForm">
             {% csrf_token %}
             <label style="display:block; font-size:13px; font-weight:700; margin-bottom:6px;">Versiya raqami</label>
             <input type="text" name="version" placeholder="Masalan: 1.4.0" required
@@ -31,11 +31,70 @@
             <input type="file" name="file" accept=".exe" required
                    style="width: 100%; padding: 8px; border-radius: 10px; border: 1px solid var(--glass-border); margin-bottom: 18px;">
 
-            <button type="submit" class="btn btn-primary" style="width: 100%;">
+            <div id="agentUploadMsg" style="display:none; margin-bottom:14px; padding:10px 14px; border-radius:10px; font-size:13px; font-weight:600;"></div>
+
+            <button type="submit" id="agentUploadBtn" class="btn btn-primary" style="width: 100%;">
                 <i class="fa-solid fa-cloud-arrow-up"></i> Yuklash
             </button>
         </form>
     </div>
+
+    <script>
+        (function () {
+            const form = document.getElementById('agentUploadForm');
+            const btn = document.getElementById('agentUploadBtn');
+            const msgBox = document.getElementById('agentUploadMsg');
+
+            function showMsg(text, ok) {
+                msgBox.style.display = 'block';
+                msgBox.style.background = ok ? '#dcfce7' : '#fee2e2';
+                msgBox.style.color = ok ? '#166534' : '#991b1b';
+                msgBox.textContent = text;
+            }
+
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                const fd = new FormData(form);
+                const versionVal = fd.get('version') || '';
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', window.location.href, true);
+                xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+                btn.disabled = true;
+                msgBox.style.display = 'none';
+                window.superUpload.start('Agent v' + versionVal + ' yuklanmoqda...');
+
+                xhr.upload.onprogress = function (ev) {
+                    if (ev.lengthComputable) {
+                        const pct = Math.round((ev.loaded / ev.total) * 100);
+                        window.superUpload.progress(pct, 'Agent v' + versionVal + ' yuklanmoqda...');
+                    }
+                };
+
+                xhr.onload = function () {
+                    btn.disabled = false;
+                    window.superUpload.done();
+                    let data = {};
+                    try { data = JSON.parse(xhr.responseText); } catch (err) { /* ignore */ }
+                    if (xhr.status >= 200 && xhr.status < 300 && data.ok) {
+                        showMsg(data.message || 'Yuklandi.', true);
+                        form.reset();
+                        setTimeout(() => window.location.reload(), 900);
+                    } else {
+                        showMsg(data.error || 'Xatolik yuz berdi.', false);
+                    }
+                };
+
+                xhr.onerror = function () {
+                    btn.disabled = false;
+                    window.superUpload.done();
+                    showMsg('Tarmoq xatosi — internetni tekshiring.', false);
+                };
+
+                xhr.send(fd);
+            });
+        })();
+    </script>
 
     <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 12px;">Tarix</h3>
     <div style="overflow-x: auto;">

@@ -863,17 +863,24 @@ def super_agent_releases(request):
     """Superadmin — Desktop Agent (StockFirmAgent.exe) yangi versiyasini
     yuklaydi. Firma egalari eng oxirgi yozuvni o'z profilidan yuklab
     oladi (`download_desktop_agent`, main/views.py)."""
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     if request.method == 'POST':
         version = (request.POST.get('version') or '').strip()
         izoh = (request.POST.get('izoh') or '').strip()
         file = request.FILES.get('file')
         if not version or not file:
-            messages.error(request, "Versiya raqami va .exe fayl majburiy.")
+            error = "Versiya raqami va .exe fayl majburiy."
+            if is_ajax:
+                return JsonResponse({'ok': False, 'error': error}, status=400)
+            messages.error(request, error)
         else:
             AgentRelease.objects.create(
                 version=version, file=file, izoh=izoh, uploaded_by=request.user,
             )
-            messages.success(request, f"Agent v{version} yuklandi — endi firmalar shu versiyani olishadi.")
+            success_msg = f"Agent v{version} yuklandi — endi firmalar shu versiyani olishadi."
+            if is_ajax:
+                return JsonResponse({'ok': True, 'message': success_msg})
+            messages.success(request, success_msg)
         return redirect('super_agent_releases')
 
     releases = AgentRelease.objects.order_by('-created_at')[:20]

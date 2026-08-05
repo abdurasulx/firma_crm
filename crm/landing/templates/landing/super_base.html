@@ -328,6 +328,8 @@
 <body>
     <div class="glass-bg"></div>
 
+    <div id="superUploadBar" style="position:fixed; top:0; left:0; height:3px; width:0%; background:var(--primary); z-index:5000; transition:width .2s ease; box-shadow:0 0 8px var(--primary-glow);"></div>
+
     <aside class="sidebar">
         <div class="sidebar-header">
             <div class="logo-box">
@@ -415,6 +417,11 @@
             </div>
 
             <div style="display: flex; align-items: center; gap: 20px;">
+                <div id="superUploadPill" class="live-pill" style="display:none; border-color: var(--primary);">
+                    <i class="fa-solid fa-cloud-arrow-up" style="color: var(--primary);"></i>
+                    <span id="superUploadText">Yuklanmoqda... 0%</span>
+                </div>
+
                 <div id="superLiveStatus" class="live-pill">
                     <span class="live-dot"></span>
                     <span id="superLiveText">Ulanmoqda</span>
@@ -598,6 +605,40 @@
 
             connectSuperAdminSocket();
         })();
+
+        // Sahifalar orasida umumiy fayl-yuklash progress indikatori (navbar
+        // pill + yuqori chiziq). Sahifa qayta yuklanmagani uchun foydalanuvchi
+        // yuklash davomida boshqa menyu bo'limlariga bemalol o'ta oladi;
+        // agar u haqiqatan boshqa sahifaga o'tsa (link bosilsa), brauzer
+        // navigatsiyasi tarmoq so'rovini bekor qiladi — shuning uchun
+        // `beforeunload` orqali ogohlantiramiz.
+        window.superUpload = {
+            start(label) {
+                const pill = document.getElementById('superUploadPill');
+                const bar = document.getElementById('superUploadBar');
+                if (!pill || !bar) return;
+                pill.style.display = 'inline-flex';
+                document.getElementById('superUploadText').textContent = (label || 'Yuklanmoqda...') + ' 0%';
+                bar.style.width = '2%';
+                window.onbeforeunload = () => 'Fayl yuklash davom etyapti. Sahifadan chiqsangiz, yuklash bekor bo\'ladi.';
+            },
+            progress(pct, label) {
+                const text = document.getElementById('superUploadText');
+                const bar = document.getElementById('superUploadBar');
+                if (text) text.textContent = (label || 'Yuklanmoqda...') + ' ' + pct + '%';
+                if (bar) bar.style.width = Math.max(2, pct) + '%';
+            },
+            done() {
+                const pill = document.getElementById('superUploadPill');
+                const bar = document.getElementById('superUploadBar');
+                window.onbeforeunload = null;
+                if (bar) bar.style.width = '100%';
+                setTimeout(() => {
+                    if (pill) pill.style.display = 'none';
+                    if (bar) bar.style.width = '0%';
+                }, 500);
+            },
+        };
     </script>
     {% block extra_js %}{% endblock %}
 </body>
