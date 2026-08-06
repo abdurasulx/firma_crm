@@ -1045,9 +1045,18 @@ class EmployeeScanWidget(QWidget):
         worker.start()
 
     def _on_my_task_pickups_loaded(self, pickups: list):
-        for p in pickups:
+        # Sanoq/hajm (dona/litr) komponentlar — kioskda sichqoncha
+        # ishlatilmagani va avtomatik 600ms tasdiq o'qishga ulgurmasdan
+        # g'oyib bo'lgani uchun (real ishlab chiqarishda aniqlangan xato) —
+        # endi bunday komponentlar Desktop Agent'da UMUMAN ko'rsatilmaydi,
+        # pazanda ularni veb dashboardda ("Mening vazifalarim" > "Olib
+        # qo'yish kerak") bitta "Oldim ✓" tugmasi bilan tasdiqlaydi.
+        # Agent faqat HAQIQATAN tarozida o'lchanadigan (kg/g) komponentlarni
+        # ko'rsatadi.
+        weighable_pickups = [p for p in pickups if _is_weighable_birlik(p.get("birlik"))]
+        for p in weighable_pickups:
             p["_kind"] = "task_pickup"
-        self._pending_requests.extend(pickups)
+        self._pending_requests.extend(weighable_pickups)
         self._advance_queue()
 
     # ── Kutilayotgan QR-yorliq chop etish (159-qadam) ────────────────────

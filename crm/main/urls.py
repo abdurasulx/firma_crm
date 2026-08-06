@@ -40,7 +40,7 @@ from .warehouse_views import (
 )
 from .production_views import (
     serial_list_page, vazifalar_page, vazifa_qr_image, pz_create_task, pz_finish_task,
-    pz_confirm_task_finished,
+    pz_confirm_task_finished, pz_ack_task_pickup,
 )
 from .finance_views import qoshimcha_chiqimlar_page, moliya_dashboard
 from .badge_views import xodim_badge_page, xodim_badge_image, agent_login_qr_image, regenerate_agent_qr
@@ -120,6 +120,7 @@ urlpatterns = [
     path('vazifa/yaratish/', pz_create_task, name='pz_create_task'),
     path('vazifa/<int:task_id>/tugatish/', pz_finish_task, name='pz_finish_task'),
     path('vazifa/<int:task_id>/ish-bitdi/', pz_confirm_task_finished, name='pz_confirm_task_finished'),
+    path('vazifa/pickup/<int:pickup_id>/oldim/', pz_ack_task_pickup, name='pz_ack_task_pickup'),
 
     # Moliya
     path('moliya/chiqimlar/', qoshimcha_chiqimlar_page, name='qoshimcha_chiqimlar'),

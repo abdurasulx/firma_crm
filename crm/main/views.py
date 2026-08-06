@@ -7,7 +7,7 @@ from django.core.paginator import Paginator
 from django.http import HttpResponse
 from django.utils import timezone
 from django.shortcuts import redirect
-from .models import BACKUP_CHOICES, BillingPaymentLink, Company, Plan, HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri, Savdo, YuklamaSorov, MiqdorQoshish, HaridorDukon, AmalLog, qaytarilgan_mahsulotlar, PlanRequest, NasiyaTolov, ProductionMaterialRequest, StockHistory, Serial, Ombor, MahsulotQoshimchaXarajat, PazandaMahsulot, MahsulotRetsept, DESKTOP_AGENT_UNIT_PRICE, XodimBadge, ProductionTask, XodimMaosh, XodimTolov, XodimOyYopish, QoshimchaChiqim, AgentRelease
+from .models import BACKUP_CHOICES, BillingPaymentLink, Company, Plan, HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri, Savdo, YuklamaSorov, MiqdorQoshish, HaridorDukon, AmalLog, qaytarilgan_mahsulotlar, PlanRequest, NasiyaTolov, ProductionMaterialRequest, StockHistory, Serial, Ombor, MahsulotQoshimchaXarajat, PazandaMahsulot, MahsulotRetsept, DESKTOP_AGENT_UNIT_PRICE, XodimBadge, ProductionTask, XodimMaosh, XodimTolov, XodimOyYopish, QoshimchaChiqim, AgentRelease, TaskMaterialPickup
 from .functions import mahsulotlar_miqdori, makenewform, yuklama_maker, accptyuk, sotishm, sotuv_new_form ,yetkazuvchi_mahsulot_filter, get_bugungi_savdo_summ, add_spctoint, format_compact_money
 from .plan_utils import (
     company_has_access, get_feature_flags,
@@ -1116,6 +1116,20 @@ def main(request):
                 mq = t.miqdor_qoshishlar.first() if t.status == 'producing' else None
                 t.labels_printed = bool(mq and mq.labels_printed)
             payload['my_tasks'] = my_tasks
+            # Sanoq/hajm (dona/litr) komponentlar — Desktop Agent'da EMAS,
+            # shu yerda bitta tugma bilan tasdiqlanadi (kioskda sichqoncha
+            # yo'q, avtomatik 600ms tasdiq esa o'qishga ulgurmasdan
+            # g'oyib bo'lardi — real ishlab chiqarishda aniqlangan xato).
+            pending_pickups = list(
+                TaskMaterialPickup.objects.filter(
+                    task__company=request.company, task__pazanda=pz,
+                    task__status='claimed', tasdiqlangan=False,
+                ).select_related('komponent', 'komponent__turi', 'task', 'task__mahsulot')
+            )
+            payload['pending_pickups'] = [
+                p for p in pending_pickups
+                if not task_service.is_weighable_birlik(p.komponent.turi.nomi if p.komponent.turi else '')
+            ]
             # Ishlab chiqaruvchi o'zi vazifa yaratishi uchun — faqat BOM
             # (retsept) kiritilgan mahsulotlar tanlanishi mumkin.
             bom_mahsulot_ids = MahsulotRetsept.objects.filter(

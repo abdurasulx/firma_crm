@@ -17,6 +17,18 @@ from .stock_service import recompute_tannarx, log_stock_change
 # masshtablash olib tashlandi, katta miqdorlarda ham 50gdan oshmaydi).
 TASK_WEIGH_TOLERANCE_FIXED = 0.05
 
+# Desktop Agent'dagi `WEIGHABLE_BIRLIKLAR` bilan bir xil ro'yxat — faqat
+# massa birliklari tarozida o'lchanadi. "dona"/"litr" kabi sanoq/hajm
+# komponentlar (masalan qadoq etiketkasi, moy) endi Desktop Agent'da EMAS,
+# veb dashboardda ("Mening vazifalarim" — pazanda_dashboard.html) bitta
+# "Oldim ✓" tugmasi bilan tasdiqlanadi — kioskda sichqoncha ishlatilmagani
+# uchun, foydalanuvchi bilan kelishilgan qaror.
+WEIGHABLE_BIRLIKLAR = {"kg", "g", "gr", "gramm", "kilogramm"}
+
+
+def is_weighable_birlik(birlik):
+    return (birlik or "").strip().lower() in WEIGHABLE_BIRLIKLAR
+
 
 def create_production_task(
     company, mahsulot, rejalashtirilgan_miqdor, sana, created_by, pazanda=None,

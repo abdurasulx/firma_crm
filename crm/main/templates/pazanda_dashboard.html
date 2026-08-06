@@ -632,6 +632,32 @@
     </div>
 </div>
 
+{% if pending_pickups %}
+<div class="content-card" style="margin-top:20px;">
+    <div class="card-head">
+        <h3><i class="fa-solid fa-hand-holding-box" style="color:#0f766e;margin-right:8px;"></i>Olib qo'yish kerak</h3>
+        <span class="card-badge" style="background:#ccfbf1;color:#0f766e;">{{ pending_pickups|length }}</span>
+    </div>
+    <div class="card-body">
+        {% for pickup in pending_pickups %}
+        <div class="act-item">
+            <div class="act-dot send"><i class="fa-solid fa-box"></i></div>
+            <div class="act-info">
+                <div class="act-title">{{ pickup.komponent.nomi }} ({{ pickup.task.mahsulot.nomi }} uchun)</div>
+                <div class="act-sub">{{ pickup.expected_qty|floatformat:0 }} {{ pickup.komponent.turi.nomi }}</div>
+            </div>
+            <form method="post" action="{% url 'pz_ack_task_pickup' pickup.id %}" style="margin-left:auto;">
+                {% csrf_token %}
+                <button type="submit" style="border:1px solid #86efac; background:#f0fdf4; color:#15803d; padding:6px 14px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:700; white-space:nowrap;">
+                    Oldim ✓
+                </button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
 <div class="content-card" style="margin-top:20px;">
     <div class="card-head">
         <h3><i class="fa-solid fa-list-check" style="color:#0f766e;margin-right:8px;"></i>Ochiq vazifalar</h3>

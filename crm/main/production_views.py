@@ -9,7 +9,7 @@ from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from .models import Mahsulot, Serial, ProductionTask, MahsulotRetsept, Pazanda
+from .models import Mahsulot, Serial, ProductionTask, MahsulotRetsept, Pazanda, TaskMaterialPickup
 from .services import task_service
 
 
@@ -259,6 +259,39 @@ def pz_confirm_task_finished(request, task_id):
             "Ish bitdi qayd etildi — endi Desktop Agent'da badge'ingizni skanerlang, "
             "QR-yorliqlar avtomatik chop etiladi.",
         )
+    return redirect('main')
+
+
+@login_required(login_url='login')
+def pz_ack_task_pickup(request, pickup_id):
+    """Veb dashboard ("Mening vazifalarim") — sanoq/hajm (dona/litr) xom
+    ashyo/qadoq komponentini "Oldim ✓" tugmasi bilan tasdiqlash.
+    Desktop Agent'dagi bilan bir xil `task_service.weigh_task_pickup`ni
+    chaqiradi (`measured_qty=expected_qty` — sanoq komponentlarda tortish
+    yo'q, "kerakligicha oldim" degani), lekin bu yerda kioskdagi
+    sichqonchasiz UI muammosi yo'q."""
+    if request.user.type not in ('pazanda', 'ishlab_chiqaruvchi'):
+        return redirect('main')
+    if request.method != 'POST':
+        return redirect('main')
+
+    try:
+        pazanda = Pazanda.objects.get(user=request.user, company=request.company)
+    except Pazanda.DoesNotExist:
+        return redirect('main')
+
+    pickup = TaskMaterialPickup.objects.filter(
+        id=pickup_id, task__company=request.company, task__pazanda=pazanda,
+    ).first()
+    if not pickup:
+        messages.error(request, "So'rov topilmadi yoki allaqachon ko'rib chiqilgan.")
+        return redirect('main')
+
+    result = task_service.weigh_task_pickup(pickup_id, pazanda, pickup.expected_qty)
+    if not result.get('approved'):
+        messages.error(request, result.get('detail', "Noma'lum xato."))
+    else:
+        messages.success(request, f"{pickup.komponent.nomi} — oldingiz deb belgilandi.")
     return redirect('main')
 
 
