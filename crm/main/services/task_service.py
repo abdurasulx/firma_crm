@@ -7,7 +7,7 @@ from ..models import (
     Mahsulot, MahsulotRetsept, MiqdorQoshish, ProductionTask, TaskMaterialPickup, StockHistory, Serial,
 )
 from . import qr_service
-from .stock_service import recompute_tannarx, log_stock_change
+from .stock_service import recompute_tannarx, log_stock_change, effective_ish_haqi_turi
 
 # `agent_api_views.MATERIAL_WEIGH_TOLERANCE_FIXED` bilan bir xil qiymat —
 # eski xom ashyo so'rovi tarozi tekshiruvi bilan tajriba/UX izchil qolishi
@@ -383,7 +383,7 @@ def finish_production_task_service(task, actor=None, actual_count=None):
     mq.jarima_summasi = mq.jarima_summasi + penalty
 
     ish_haqi_summasi = Decimal('0')
-    if task.company and task.company.ish_haqi_turi == 'per_unit':
+    if task.company and task.pazanda and effective_ish_haqi_turi(task.pazanda.user, task.company) == 'per_unit':
         ish_haqi_summasi = Decimal(str(actual_count)) * mahsulot.ishlab_chiqarish_narxi - mq.jarima_summasi
 
     mq.miqdor = actual_count

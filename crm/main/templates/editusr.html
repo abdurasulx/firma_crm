@@ -444,6 +444,26 @@
     {% if user_edit.type == 'pazanda' or user_edit.type == 'ishlab_chiqaruvchi' %}
     <div class="edit-grid" style="margin-top:0;">
         <div class="edit-card" style="grid-column: 1 / -1;">
+            <h3 class="card-title"><i class="fa-solid fa-sack-dollar"></i> Ish haqi turi</h3>
+            <p style="color:var(--text-light); font-size:13px; margin-bottom:14px;">
+                Firma standarti: <strong>{{ company_ish_haqi_turi_display }}</strong>.
+                Kerak bo'lsa, faqat shu xodim uchun boshqacha to'lov turi tanlashingiz mumkin.
+            </p>
+            <form method="post" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="set_ish_haqi_turi_override">
+                <select name="ish_haqi_turi_override" class="form-control" style="flex:1; min-width:220px;">
+                    {% for value, label in ish_haqi_turi_override_choices %}
+                    <option value="{{ value }}" {% if user_edit.ish_haqi_turi_override == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="submit-btn" style="width:auto; padding:10px 20px;">
+                    <i class="fa-solid fa-floppy-disk"></i> Saqlash
+                </button>
+            </form>
+        </div>
+
+        <div class="edit-card" style="grid-column: 1 / -1;">
             <h3 class="card-title"><i class="fa-solid fa-flask"></i> Biriktirilgan mahsulotlar</h3>
             <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px;">
                 {% for pm in assigned_products %}

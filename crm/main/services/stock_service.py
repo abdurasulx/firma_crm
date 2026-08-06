@@ -12,6 +12,16 @@ from ..models import (
 from . import qr_service
 
 
+def effective_ish_haqi_turi(user, company):
+    """Ish haqi turi endi individual (har bir xodim uchun alohida)
+    sozlanishi mumkin — `User.ish_haqi_turi_override`. Bo'sh bo'lsa
+    (standart) firma umumiy sozlamasi (`Company.ish_haqi_turi`) ishlatiladi
+    — eski xatti-harakat o'zgarmaydi, faqat kerak bo'lganda bitta xodim
+    uchun bekor qilish (override) imkoniyati qo'shildi."""
+    override = getattr(user, 'ish_haqi_turi_override', '') or ''
+    return override or company.ish_haqi_turi
+
+
 def get_pazanda_month_stats(pazanda, company, yil=None, oy=None):
     """
     Ishlab chiqaruvchi (pazanda/ishlab_chiqaruvchi) uchun oy statistikasi
@@ -329,7 +339,7 @@ def _apply_retsept_hisobkitob(req, mahsulot):
         tannarx_ulushi += Decimal(str(row.komponent.tannarx)) * Decimal(str(row.norma_miqdor))
 
     req.jarima_summasi = jarima_summasi
-    if req.company and req.company.ish_haqi_turi == 'per_unit':
+    if req.company and req.pazanda and effective_ish_haqi_turi(req.pazanda.user, req.company) == 'per_unit':
         req.ish_haqi_summasi = Decimal(str(req.miqdor)) * mahsulot.ishlab_chiqarish_narxi - jarima_summasi
 
     mahsulot.baza_tannarx = tannarx_ulushi

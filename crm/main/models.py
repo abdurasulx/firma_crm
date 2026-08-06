@@ -200,6 +200,16 @@ class User(AbstractUser):
                    "'Yangilash' bosilganda o'zgaradi, shu orqali eski ko'rsatilgan/chop "
                    "etilgan QR kod bekor bo'ladi.",
     )
+    ISH_HAQI_TURI_OVERRIDE_CHOICES = (
+        ('', "Firma standarti"),
+        ('fixed', "Oylik (fiksval)"),
+        ('per_unit', "Ishlab chiqarilgan mahsulotga qarab"),
+    )
+    ish_haqi_turi_override = models.CharField(
+        max_length=20, choices=ISH_HAQI_TURI_OVERRIDE_CHOICES, blank=True, default='',
+        help_text="Bo'sh bo'lsa Company.ish_haqi_turi (firma standarti) ishlatiladi — "
+                   "faqat shu xodim uchun boshqacha to'lov turi kerak bo'lsa to'ldiriladi.",
+    )
 
     class Meta:
         constraints = [

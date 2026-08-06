@@ -11,7 +11,7 @@ from django.db.models import Sum
 from django.utils import timezone
 
 from ..models import User, Pazanda, XodimMaosh, XodimTolov, XodimOyYopish
-from .stock_service import get_pazanda_month_stats
+from .stock_service import get_pazanda_month_stats, effective_ish_haqi_turi
 
 
 def get_month_bounds(yil, oy):
@@ -35,7 +35,7 @@ def compute_oylik_ish_haqi(user, company, yil=None, oy=None):
     if yil is None or oy is None:
         yil, oy = now.year, now.month
 
-    if company.ish_haqi_turi == 'per_unit':
+    if effective_ish_haqi_turi(user, company) == 'per_unit':
         pazanda = Pazanda.objects.filter(user=user, company=company).first()
         if pazanda:
             stats = get_pazanda_month_stats(pazanda, company, yil=yil, oy=oy)

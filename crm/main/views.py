@@ -97,6 +97,7 @@ from .services.stock_service import (
     get_pazanda_month_stats,
     get_mahsulot_statistika,
     recompute_tannarx,
+    effective_ish_haqi_turi,
 )
 from .services.retsept_service import add_retsept_row, delete_retsept_row
 from .services import qr_service, task_service, payroll_service
@@ -1586,7 +1587,7 @@ def _payroll_context(user, company, can_edit):
         # oylar). Har biriga alohida "Shu oyni yopish" tugmasi chiqadi.
         'payroll_outstanding_months': payroll_service.get_user_outstanding_months(user, company),
         'payroll_is_per_unit_pazanda': (
-            company.ish_haqi_turi == 'per_unit'
+            effective_ish_haqi_turi(user, company) == 'per_unit'
             and Pazanda.objects.filter(user=user, company=company).exists()
         ),
         'can_edit_payroll': can_edit,
@@ -1951,6 +1952,15 @@ def editusr(request, username):
                 messages.success(request, "Mahsulot biriktirilishi bekor qilindi.")
             return redirect('edituser', username=username)
 
+        if request.POST.get('action') == 'set_ish_haqi_turi_override' and user_edit.type in ['pazanda', 'ishlab_chiqaruvchi']:
+            override = request.POST.get('ish_haqi_turi_override', '')
+            if override not in dict(User.ISH_HAQI_TURI_OVERRIDE_CHOICES):
+                override = ''
+            user_edit.ish_haqi_turi_override = override
+            user_edit.save(update_fields=['ish_haqi_turi_override'])
+            messages.success(request, "Ish haqi turi saqlandi.")
+            return redirect('edituser', username=username)
+
         # Refactored to Auth Service
         user, message = update_user_service(
             user=user_edit,
@@ -1977,6 +1987,8 @@ def editusr(request, username):
         'mr': mr,
         'all_mahsulotlar': all_mahsulotlar,
         'current_yuklamalar': current_yuklamalar_dict,
+        'ish_haqi_turi_override_choices': User.ISH_HAQI_TURI_OVERRIDE_CHOICES,
+        'company_ish_haqi_turi_display': dict(request.company.ISH_HAQI_TURI_CHOICES).get(request.company.ish_haqi_turi),
     }
     if user_edit.type in ['pazanda', 'ishlab_chiqaruvchi']:
         pz = Pazanda.objects.filter(user=user_edit, company=request.company).first()
@@ -3164,8 +3176,9 @@ def pazanda_hisobot(request, username):
     bugun_miqdor = MiqdorQoshish.objects.filter(company=request.company, pazanda=pz, vaqt_sana__gte=today_start).aggregate(t=DSum('miqdor'))['t'] or 0
     bugun_yuklama = YuklamaSorov.objects.filter(pazanda=pz, sana__gte=today_start).aggregate(t=DSum('miqdor'))['t'] or 0
 
-    # Ish haqi (mahsulot soniga qarab) — faqat company shunday sozlangan bo'lsa ko'rsatiladi
-    ish_haqi_turi_per_unit = request.company.ish_haqi_turi == 'per_unit'
+    # Ish haqi (mahsulot soniga qarab) — shu xodim uchun individual sozlangan
+    # bo'lsa o'shani, aks holda firma standartini hisobga oladi.
+    ish_haqi_turi_per_unit = effective_ish_haqi_turi(target_user, request.company) == 'per_unit'
     davr_ish_haqi = 0
     davr_jarima = 0
     if ish_haqi_turi_per_unit:
