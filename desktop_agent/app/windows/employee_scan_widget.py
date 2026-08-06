@@ -436,6 +436,20 @@ class EmployeeScanWidget(QWidget):
         weigh_input_row.addWidget(self.weigh_submit_btn)
         weigh_outer.addWidget(self.weigh_input_container)
 
+        # "dona"/"litr" kabi sanoq/hajm birligidagi (tarozida o'lchab
+        # bo'lmaydigan) so'rovlar uchun — oldin bu holatda karta 600ms'da
+        # OVOZSIZ o'zi tasdiqlanib ketardi, pazanda "necha dona qadoq/
+        # necha litr yog' oling" degan matnni o'qishga ulgurmasdi (real
+        # ishlab chiqarishda aniqlangan xato). Endi alohida, aniq ko'rinadigan
+        # tugma orqali — xodim o'zi o'qib, o'zi bosib tasdiqlaydi.
+        self.weigh_ack_btn = QPushButton("Oldim ✓")
+        self.weigh_ack_btn.setStyleSheet(
+            "font-size:15px; font-weight:800; padding:12px; border-radius:10px; "
+            "background:#16a34a; color:#fff; border:none;"
+        )
+        self.weigh_ack_btn.clicked.connect(self._submit_weigh)
+        weigh_outer.addWidget(self.weigh_ack_btn)
+
         self.weigh_feedback_label = QLabel("")
         self.weigh_feedback_label.setWordWrap(True)
         self.weigh_feedback_label.setStyleSheet("font-size:13px; font-weight:700; color:#9a3412;")
@@ -1313,6 +1327,7 @@ class EmployeeScanWidget(QWidget):
         else:
             self.weigh_expected_label.setText(f"Kerakli miqdor: {req['qty']:g} {req['birlik']} — tasdiqlanmoqda...")
         self.weigh_input_container.setVisible(weighable)
+        self.weigh_ack_btn.setVisible(not weighable)
         self.weigh_input.clear()
         # Yangi so'rov — standart holatda qo'lda kiritish mumkin (tarozi
         # sozlanmagan bo'lsa fallback); jonli tarozi qiymati kelishi bilan
@@ -1320,6 +1335,7 @@ class EmployeeScanWidget(QWidget):
         self.weigh_input.setReadOnly(False)
         self.weigh_feedback_label.setText("")
         self.weigh_submit_btn.setEnabled(True)
+        self.weigh_ack_btn.setEnabled(True)
 
         self.weigh_photo_label.setPixmap(QPixmap())
         self.weigh_photo_label.setText("Rasm yo'q")
@@ -1334,11 +1350,11 @@ class EmployeeScanWidget(QWidget):
 
         if not weighable:
             # "dona"/"litr" kabi tarozida o'lchab bo'lmaydigan birlik —
-            # kartochka faqat ma'lumot uchun ko'rsatiladi, xodim hech
-            # narsa kiritmasdan avtomatik tasdiqlanadi ("vazifada
-            # ko'ringani yetarli" — foydalanuvchi bilan kelishilgan qaror).
+            # avval kartochka o'zi 600ms'da OVOZSIZ tasdiqlanib, pazanda
+            # "necha dona qadoq/litr yog' oling" matnini o'qishga
+            # ulgurmasdi. Endi kartochka XODIM "Oldim ✓" tugmasini
+            # bosmaguncha ochiq turadi — avtomatik yo'q.
             self.weigh_input.setText(f"{req['qty']:g}")
-            QTimer.singleShot(600, self._submit_weigh)
             return
 
         self.weigh_input.setFocus()
@@ -1427,6 +1443,7 @@ class EmployeeScanWidget(QWidget):
         server_url = db.get_setting("server_url", "")
         token = db.get_setting("agent_token", "")
         self.weigh_submit_btn.setEnabled(False)
+        self.weigh_ack_btn.setEnabled(False)
         self._set_weigh_feedback("Tekshirilmoqda...", error=False)
 
         kind = self._current_weigh_request.get("_kind", "material")
@@ -1447,11 +1464,13 @@ class EmployeeScanWidget(QWidget):
 
     def _on_weigh_failed(self, message: str):
         self._auto_submit_pending = False
+        self.weigh_ack_btn.setEnabled(True)
         self._set_weigh_feedback(message, error=True)
 
     def _on_weigh_resolved(self, result: dict):
         self._extend_session()
         self.weigh_submit_btn.setEnabled(True)
+        self.weigh_ack_btn.setEnabled(True)
         self._auto_submit_pending = False
         if result.get("approved"):
             if not result.get("pickup_completed", True):
