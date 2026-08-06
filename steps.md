@@ -8496,3 +8496,38 @@ uchun alohida tanlash kartasi.
 ### Tekshirildi
 `manage.py check`/`test` (33 test, hammasi o'tdi), `.exe` qayta build.
 Commitlar: `31f49d7e`, `71f0b986`, `4d14d207`, `dfb129d5`.
+
+---
+
+## 196-qadam: Desktop Agent — token eskirsa ISTALGAN so'rovdan avtomatik logout
+
+**Holat: DONE**
+
+### Muammo
+Faqat heartbeat 401 qaytarsa avtomatik logout (`_handle_token_invalid`)
+ishga tushardi. Boshqa so'rovlar (badge/vazifa QR skanerlash, tortish,
+sinxronlash) 401 qaytarsa shunchaki oddiy xato matni ko'rsatardi —
+foydalanuvchi "QR kod topilmadi" kabi chalkash xabar bilan qolib,
+haqiqiy sabab (token eskirgan) yashirin qolardi (safiya firmasida
+aynan shu holat kuzatilgan va diagnostika qilingan).
+
+### Yechim
+`_ApiCallWorker`ga (ikkala nusxasi — `employee_scan_widget.py` va
+`settings_page.py`) `token_invalid` signali qo'shildi (`ApiError.
+status_code == 401` bo'lsa emit qilinadi, mavjud `failed` signali ham
+baribir yuboriladi — orqaga moslik saqlanadi). `EmployeeScanWidget.
+_replace_worker` ENDI HAR BIR workerni avtomatik ulaydi (`hasattr`
+tekshiruvi bilan) — barcha ko'plab chaqiruv joylarini birma-bir
+o'zgartirish shart bo'lmadi. `SettingsPage`da faqat `_sync_worker`
+(mavjud tokendan foydalanadigan `fetch_omborlar`) ulandi — login
+urinishidagi 401 ("parol xato") bilan aralashtirilmasligi uchun.
+Ikkalasi ham `MainWindow._handle_token_invalid`ga ulanadi (heartbeat
+bilan bir xil "Sessiya yopildi" dialogi + login sahifasiga qaytarish).
+
+### O'zgargan fayllar
+`desktop_agent/app/windows/employee_scan_widget.py`,
+`desktop_agent/app/windows/settings_page.py`,
+`desktop_agent/app/windows/main_window.py`
+
+### Tekshirildi
+Kompilyatsiya tekshiruvi, `.exe` qayta build. Commit: `3f619169`.
