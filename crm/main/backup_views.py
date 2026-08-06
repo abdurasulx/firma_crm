@@ -8,6 +8,9 @@ from .models import Company, Plan
 from .backup_utils import generate_backup, restore_backup, get_backup_dates
 from .plan_utils import company_has_access
 import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 @login_required(login_url='login')
 def prepare_backup_page(request):
@@ -197,8 +200,8 @@ def restore_view(request):
                     # Tozalash
                     try:
                         os.remove(temp_path)
-                    except:
-                        pass
+                    except Exception as e:
+                        logger.warning(f"Vaqtinchalik faylni o'chirib bo'lmadi: {temp_path}, xato: {e}")
                 else:
                     messages.error(request, "Ma'lumotlarni tiklashda xato yuz berdi.")
             except Exception as e:

@@ -5,8 +5,11 @@ from .models import Savdo, User, YetkazibBeruvchi, Pazanda, Mahsulot, NasiyaTolo
 from django.db.models import Sum, Count, Q
 import datetime as dt
 import json
+import logging
 from .functions import add_spctoint
 import calendar
+
+logger = logging.getLogger(__name__)
 
 
 @login_required(login_url='login')
@@ -159,8 +162,8 @@ def hisobotlar_view(request):
                 yetkazuvchi = YetkazibBeruvchi.objects.get(user=employee)
                 savdolar = savdolar.filter(yetkazib_beruvchi=yetkazuvchi)
             employee_name = employee.tuliq_ismi
-        except:
-            pass
+        except Exception as e:
+            logger.warning(f"Hisobot xodim filtri hisoblanmadi: employee_id={employee_id}, xato: {e}")
     
     # Excel Export Logic
     if request.GET.get('export') == 'xlsx':
@@ -302,15 +305,15 @@ def hisobotlar_view(request):
             try:
                 if s.yetkazib_beruvchi.rasmi:
                     dev_pic = s.yetkazib_beruvchi.rasmi.url
-            except:
-                pass
+            except Exception as e:
+                logger.warning(f"Yetkazuvchi rasmi olinmadi: savdo_id={s.id}, xato: {e}")
 
             shop_pic = ""
             try:
                 if s.haridor_dukon.dukon_rasmi:
                     shop_pic = s.haridor_dukon.dukon_rasmi.url
-            except:
-                pass
+            except Exception as e:
+                logger.warning(f"Do'kon rasmi olinmadi: savdo_id={s.id}, xato: {e}")
 
             customer_name = s.haridor_dukon.nomi if s.haridor_dukon else s.oluvchining_ismi
             map_data.append({
