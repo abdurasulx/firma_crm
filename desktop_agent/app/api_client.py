@@ -17,15 +17,29 @@ class ApiError(Exception):
         self.status_code = status_code
 
 
+def _enforce_https_for_production(url: str) -> str:
+    """Faqat production subdomen (`*.stockfirm.uz`) uchun HTTPS majburlaydi
+    — mahalliy/test server (`127.0.0.1`, `localhost`) uchun HTTP
+    o'zgarishsiz qoldiriladi (lokal dev rejimi buzilmasligi kerak).
+    Xato konfiguratsiya bilan (masalan qo'lda `http://firma.stockfirm.uz`
+    kiritilsa) ishlab chiqarish serveriga shifrlanmagan ulanish
+    (token ochiq tarmoqda yuborilishi) oldini oladi."""
+    if "127.0.0.1" in url or "localhost" in url:
+        return url
+    if url.startswith("http://"):
+        return "https://" + url[len("http://"):]
+    return url
+
+
 def normalize_server_url(raw: str) -> str:
     """Foydalanuvchi kiritgan qiymatni to'liq server manziliga aylantiradi.
     Oddiy holatda faqat firma nomi/subdomeni kiritiladi (masalan
     "birzumda") — shundan `https://birzumda.stockfirm.uz` avtomatik
     quriladi. Agar allaqachon to'liq manzil kiritilgan bo'lsa (`://` bor —
-    masalan mahalliy/test server uchun) — o'zgarishsiz qoldiriladi."""
+    masalan mahalliy/test server uchun) — faqat HTTPS majburlanadi."""
     raw = (raw or "").strip()
     if "://" in raw:
-        return raw.rstrip("/")
+        return _enforce_https_for_production(raw.rstrip("/"))
     return f"https://{raw}.{BASE_DOMAIN}"
 
 
@@ -58,7 +72,7 @@ def parse_server_input(raw: str) -> tuple[str, str]:
         url_part = url_part.strip()
         if "://" not in url_part:
             url_part = "http://" + url_part
-        return url_part.rstrip("/"), subdomain_part.strip()
+        return _enforce_https_for_production(url_part.rstrip("/")), subdomain_part.strip()
 
     server_url = normalize_server_url(raw)
     return server_url, subdomain_from_server_url(server_url)
