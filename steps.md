@@ -8250,3 +8250,249 @@ e'tiborsiz qoldiriladi. Ro'yxat har badge-sessiya oxirida
   qoladi (boshqa, haqiqiy tarmoq-uzilishi holatlari uchun) — u olib
   tashlanmadi, faqat bu YANGI, ASOSIY sababga qo'shimcha ekanligi
   aniqlandi.
+
+---
+
+## 180-qadam: Vazifalar sana filtri — bitta kalendar maydonga soddalashtirildi
+
+**Holat: DONE**
+
+### Muammo
+"Bitta kun / Oraliq" tugma-almashtirish UI + alohida kun-tanlash
+dropdown foydalanuvchi tomonidan keraksiz murakkab deb topildi.
+
+### Yechim
+Bitta `<input>` maydon + Airbnb uslubidagi click-kalendar: bitta
+bosish — bitta kun, ikkinchi (boshqa) kunga bosish — oraliq,
+tanlangan kunni **qayta bosish** — o'sha kunga qaytaradi (reset).
+Vazifa bor kunlar (`active_days`) nuqta bilan belgilanadi.
+
+### O'zgargan fayllar
+- `main/production_views.py` — `vazifalar_page`: `mode`/`sana` GET
+  parametrlari olib tashlandi, `from`/`to` + `active_days_json`
+- `main/templates/vazifalar.html` — eski mode-toggle JS o'chirildi,
+  yangi kalendar widget
+
+### Tekshirildi
+`manage.py check`/`test` — xatosiz. Commit: `1db8c944`.
+
+---
+
+## 181-qadam: `super_agent_releases` URL admin.stockfirm.uz'da yo'q edi (500/NoReverseMatch)
+
+**Holat: DONE**
+
+### Muammo
+`admin.stockfirm.uz` (`CompanyMiddleware`) aslida `crm.admin_urls`ni
+ishlatadi, `landing.urls`ni emas — yangi qo'shilgan
+`super_agent_releases`/`super_agent_release_delete` faqat
+`landing/urls.py`ga qo'shilgan edi, shuning uchun superadmin panel
+butunlay 500 bilan yiqilib turardi.
+
+### Yechim
+`crm/crm/admin_urls.py`ga shu ikki route qo'shildi.
+
+### Tekshirildi
+`manage.py check` — xatosiz. Commit: `ac6dfa10`.
+
+---
+
+## 182-qadam: Agent .exe yuklash — AJAX progress-bar (sahifa qotib qolmasin)
+
+**Holat: DONE**
+
+### Muammo
+Katta `.exe` fayl yuklanganda oddiy form-submit butun sahifani
+bloklab, brauzer tabini "qotgan" holatga keltirardi.
+
+### Yechim
+XHR (`XMLHttpRequest.upload.onprogress`) orqali fon jarayonida
+yuklash, `super_base.html`da umumiy navbar progress-pill + yuqori
+chiziq (`window.superUpload` global API). `landing/views.py`
+`super_agent_releases` endi `X-Requested-With` bo'lsa JSON qaytaradi.
+
+### O'zgargan fayllar
+`landing/views.py`, `landing/templates/landing/super_base.html`,
+`landing/templates/landing/super_agent_releases.html`
+
+### Tekshirildi
+`manage.py check`/`test` — xatosiz. Commit: `e4f8fd04`.
+
+---
+
+## 183-qadam: Tarozi sig'imi cheklangan stansiyalar — vazifa tortish ketma-ket porsiyalarga bo'linadi
+
+**Holat: DONE**
+
+### Muammo
+Tarozilar turlicha (20/30/60 kg) sig'imga ega — kerakli xom ashyo
+miqdori bitta tortishga sig'masa, oldin bitta martalik tortish
+so'ralardi.
+
+### Yechim
+- Server: `TaskMaterialPickup.poured_qty` (yig'ilgan tortish) yangi
+  maydon (migratsiya `0093`). `task_service.weigh_task_pickup` endi
+  ketma-ket porsiyalarni qo'llab-quvvatlaydi — server tarozi
+  sig'imini bilishi shart emas, faqat yig'indini kuzatadi.
+- Desktop Agent: Sozlamalar > Tarozi'ga "Tarozining maksimal sig'imi
+  (kg)" maydoni qo'shildi (har stansiyada alohida). Kerakli miqdor
+  sig'imdan oshsa, "1/2-qism", "2/2-qism" tarzida ketma-ket
+  ko'rsatiladi.
+
+### O'zgargan fayllar
+`main/models.py`, `main/migrations/0093_*`, `main/services/task_service.py`,
+`main/agent_api_views.py`, `desktop_agent/app/windows/employee_scan_widget.py`,
+`desktop_agent/app/windows/settings_page.py`
+
+### Tekshirildi
+`manage.py check`/`test` — xatosiz, `.exe` qayta build qilindi.
+Commit: `f872d230`.
+
+---
+
+## 184–191-qadam: Ombor sahifalari — raqam formati, pagination, AJAX, qidiruv UX, rasmli grid+modal
+
+**Holat: DONE**
+
+### Muammo (bir nechta alohida shikoyat, bitta mavzu ostida)
+- Narx/miqdor raqamlarida ming-guruhlash (probel) yo'q edi.
+- Ombor mahsulotlari pagination server tomonda bor edi, shablonda
+  ko'rinmasdi.
+- Kirim-chiqim sahifasida mahsulot tanlash oddiy `<select>` —
+  100+ mahsulotda qidirib topish qiyin, rasm yo'q.
+- Qidiruv avval oddiy GET-form (Filter bosilmaguncha ishlamas edi),
+  keyin noto'g'ri tuzatilib to'liq sahifa qayta yuklanishiga
+  (`form.submit()`) sabab bo'ldi — "chayqalish" hissi berardi.
+- Kirim modali `.warehouse-page` konteynеridan tashqarida joylashib,
+  sayt uslubi (`.btn`, `.field`) unga qo'llanmagan edi.
+- Ombor tanlash ixtiyoriy edi, majburiy bo'lishi kerak edi.
+
+### Yechim
+- Yangi `main/templatetags/spc_filters.py` — `spc` filter (1 250 000
+  formatida probel-guruhlash).
+- `warehouse_products.html` — pagination UI + keyinchalik to'liq
+  AJAX (server-tomon qidiruv/sahifalash, sahifa reload'siz).
+- `warehouse_movements.html` — butunlay qayta qurildi: rasm-kartochka
+  grid (hover-animatsiyali), bosilganda "Yangi kirim" MODAL ichida
+  ochiladi, ombor tanlash majburiy (server+client tekshiruv), mahsulot
+  qidiruvi hodimlar/mahsulotlar sahifasidagi kabi suzuvchi dropdown
+  (AJAX debounce, grid'ni qayta chizmaydi).
+- `warehouse_views.py` — `warehouse_products`ga `data_format=json`
+  filiali (`page_size` parametrik, picker va to'liq ro'yxat uchun
+  qayta ishlatiladi), `warehouse_movements`da `ombor_id` majburiy
+  tekshiruvi + AJAX javob (`is_ajax`).
+
+### O'zgargan fayllar
+`main/templatetags/__init__.py`, `main/templatetags/spc_filters.py`,
+`main/warehouse_views.py`, `main/templates/warehouse_products.html`,
+`main/templates/warehouse_movements.html`, `main/templates/warehouse_styles.html`
+
+### Tekshirildi
+Har bosqichda `manage.py check`/`test` — xatosiz.
+Commitlar: `fd236662`, `4deb3098`, `0bbe21b7`, `5f147a67`, `ee8e8a9d`,
+`2b3c8f3e`, `1b5d6f89`, `d2346047`.
+
+---
+
+## 192-qadam: Dona/litr birlikdagi vazifa xom ashyo ko'rsatmasi 600ms'da ovozsiz avtomatik tasdiqlanib ketardi
+
+**Holat: DONE**
+
+### Muammo
+Pazanda badge skanidan keyin "necha dona qadoq/litr yog' oling"
+ko'rsatmasi chiqar edi, lekin 600ms ichida o'zi tasdiqlanib g'oyib
+bo'lardi — o'qishga ulgurmasdi.
+
+### Yechim
+Bunday so'rovlar uchun `weigh_ack_btn` ("Oldim ✓") — aniq bosilmasdan
+avtomatik davom etmaydi.
+
+### O'zgargan fayllar
+`desktop_agent/app/windows/employee_scan_widget.py`
+
+### Tekshirildi
+Kompilyatsiya tekshiruvi, `.exe` qayta build. Commit: `b8801625`.
+
+---
+
+## 193-qadam: Dona/litr xom ashyo tasdig'i Desktop Agent'dan veb dashboardga ko'chirildi
+
+**Holat: DONE**
+
+### Muammo
+Kioskda sichqoncha ishlatilmaydi — 192-qadamdagi tugma yechimi ham
+"So'rov topilmadi" xatosiga olib kelgan holatlar kuzatildi (real
+foydalanishda ikki marta tasdiqlash urinishi).
+
+### Yechim
+Sanoq/hajm (dona/litr) `TaskMaterialPickup`lar endi Desktop Agent'da
+UMUMAN ko'rsatilmaydi (`_on_my_task_pickups_loaded` filtrlaydi).
+Buning o'rniga veb dashboard (`pazanda_dashboard.html`) — "Mening
+vazifalarim" > yangi "Olib qo'yish kerak" bo'limi, bitta "Oldim ✓"
+tugmasi (`pz_ack_task_pickup` view, xuddi "Ish bitdi" kabi).
+
+### O'zgargan fayllar
+`main/services/task_service.py` (`WEIGHABLE_BIRLIKLAR`/`is_weighable_birlik`),
+`main/views.py`, `main/production_views.py`, `main/urls.py`,
+`main/templates/pazanda_dashboard.html`,
+`desktop_agent/app/windows/employee_scan_widget.py`
+
+### Tekshirildi
+`manage.py check`/`test` — xatosiz, `.exe` qayta build.
+Commit: `80239f54`.
+
+---
+
+## 194-qadam: Ish haqi turi endi individual (har bir xodim uchun alohida) sozlanadi
+
+**Holat: DONE**
+
+### Muammo
+`Company.ish_haqi_turi` faqat firma bo'yicha umumiy edi — "Oylik"
+tanlangan firmada mahsulot soniga qarab to'lanishi kerak bo'lgan
+xodim bo'lsa, uning ishlab chiqargani hisobga olinmasdi (real holat:
+10 dona x 1500 so'm o'rniga 0 so'm chiqqan, faqat tortish og'ishi
+shtrafi ko'rsatilgan).
+
+### Yechim
+`User.ish_haqi_turi_override` (bo'sh/`fixed`/`per_unit`, bo'sh bo'lsa
+firma standarti). Yangi `stock_service.effective_ish_haqi_turi(user,
+company)` — barcha eski `company.ish_haqi_turi == 'per_unit'`
+tekshiruvlari shu funksiyaga almashtirildi. `editusr.html`da xodim
+uchun alohida tanlash kartasi.
+
+### O'zgargan fayllar
+`main/models.py`, `main/migrations/0094_*`, `main/services/stock_service.py`,
+`main/services/task_service.py`, `main/services/payroll_service.py`,
+`main/views.py`, `main/templates/editusr.html`
+
+### Tekshirildi
+`manage.py check`/`test` — xatosiz. Commit: `103cabe5`.
+
+---
+
+## 195-qadam: MUAMMOLAR_VA_TAVSIYALAR.md — xavfsizlik/sifat tuzatishlari
+
+**Holat: DONE**
+
+### Nima qilindi
+1. Savdogar shartnoma fayllariga (`contract_pdf`, `signed_contract_scan`)
+   kengaytma/hajm tekshiruvi (`main/utils.py::validate_uploaded_file`)
+   — `ImageField`lardan farqli avval umuman tekshirilmasdi.
+2. Yalang'och `except:` → `except Exception:` + `logging`
+   (`backup_views.py`, `hisobot_views.py`) — xatti-harakat
+   o'zgarmaydi, faqat diagnostika imkoni paydo bo'ladi.
+3. Desktop Agent — production (`*.stockfirm.uz`) manzillar uchun
+   HTTPS majburlash (`api_client.py::_enforce_https_for_production`),
+   lokal (`127.0.0.1`/`localhost`) o'zgarishsiz.
+4. `main/tests_warehouse.py` — ombor kirim/o'rtacha narx stsenariylari
+   uchun boshlang'ich testlar.
+
+### O'zgargan fayllar
+`main/utils.py`, `main/views.py`, `main/backup_views.py`,
+`main/hisobot_views.py`, `desktop_agent/app/api_client.py`,
+`main/tests_warehouse.py`, `MUAMMOLAR_VA_TAVSIYALAR.md`
+
+### Tekshirildi
+`manage.py check`/`test` (33 test, hammasi o'tdi), `.exe` qayta build.
+Commitlar: `31f49d7e`, `71f0b986`, `4d14d207`, `dfb129d5`.
