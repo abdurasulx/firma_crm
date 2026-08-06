@@ -1,9 +1,23 @@
+import os
 import pandas as pd
 import io
+from django.core.exceptions import ValidationError
 from django.http import HttpResponse
 from django.utils import timezone
 from openpyxl.styles import Border, Side, Alignment, Font
 from openpyxl.utils import get_column_letter
+
+
+def validate_uploaded_file(f, allowed_ext=('.pdf', '.jpg', '.jpeg', '.png'), max_mb=10):
+    """Oddiy `FileField`lar (masalan shartnoma PDF'i) uchun — `ImageField`
+    kabi Pillow orqali avtomatik tekshirilmaydi, shuning uchun kengaytma va
+    hajmni qo'lda tekshirish kerak. Fayl noto'g'ri bo'lsa `ValidationError`
+    ko'taradi, chaqiruvchi buni forma xatosi sifatida ko'rsatishi kerak."""
+    ext = os.path.splitext(f.name)[1].lower()
+    if ext not in allowed_ext:
+        raise ValidationError(f"Ruxsat etilmagan fayl turi: {ext}")
+    if f.size > max_mb * 1024 * 1024:
+        raise ValidationError(f"Fayl hajmi {max_mb}MB dan katta")
 
 def format_product_string(smm_str, company=None):
     """

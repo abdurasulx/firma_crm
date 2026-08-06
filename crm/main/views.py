@@ -2583,6 +2583,16 @@ def sotish(request):
                     messages.error(request, "Savdogar har bir savdoda PDF shartnoma, imzolangan skan va ID karta/pasport rasmini biriktirishi shart.")
                     return redirect('sotish')
 
+                if request.user.type == 'savdogar':
+                    from django.core.exceptions import ValidationError
+                    from .utils import validate_uploaded_file
+                    try:
+                        validate_uploaded_file(contract_pdf, allowed_ext=('.pdf',))
+                        validate_uploaded_file(signed_contract_scan, allowed_ext=('.pdf', '.jpg', '.jpeg', '.png'))
+                    except ValidationError as e:
+                        messages.error(request, str(e.message) if hasattr(e, 'message') else str(e))
+                        return redirect('sotish')
+
                 credit_months = None
                 credit_markup = 0
                 credit_total = None
