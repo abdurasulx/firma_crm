@@ -126,6 +126,12 @@ class _ApiCallWorker(QThread):
     holatini (race condition) yopadi."""
     succeeded = pyqtSignal(object)
     failed = pyqtSignal(str)
+    # Token eskirgan/bekor qilingan (401) — `heartbeat`dagi kabi, lekin
+    # endi ISTALGAN so'rov (skanerlash, tortish, yetkazib berish va h.k.)
+    # shu holatni sezishi mumkin, faqat heartbeatni kutib o'tirmasdan.
+    # `failed` signali ham baribir yuboriladi (orqaga moslik — mavjud
+    # xato ko'rsatish kodi o'zgarishsiz ishlayveradi), bu qo'shimcha.
+    token_invalid = pyqtSignal()
 
     def __init__(self, func, *args, **kwargs):
         super().__init__()
@@ -138,6 +144,8 @@ class _ApiCallWorker(QThread):
         try:
             result = self._func(*self._args, **self._kwargs)
         except ApiError as exc:
+            if exc.status_code == 401:
+                self.token_invalid.emit()
             self.failed.emit(str(exc))
         except Exception as exc:  # noqa: BLE001 — pastdagi izohga qarang
             self.failed.emit(f"Kutilmagan xato: {exc}")
@@ -185,6 +193,10 @@ class EmployeeScanWidget(QWidget):
     """
 
     close_requested = pyqtSignal()
+    # `_ApiCallWorker.token_invalid` (401) — istalgan so'rovdan kelishi
+    # mumkin, `MainWindow._handle_token_invalid`ga (avtomatik logout)
+    # ulanadi (heartbeatdagi bilan bir xil oqim).
+    session_expired = pyqtSignal()
 
     def __init__(self, camera_recorder=None, parent=None):
         super().__init__(parent)
@@ -554,6 +566,8 @@ class EmployeeScanWidget(QWidget):
         old = getattr(self, attr_name, None)
         if old is not None and old.isRunning():
             old.wait()
+        if hasattr(worker, 'token_invalid'):
+            worker.token_invalid.connect(self.session_expired.emit)
         setattr(self, attr_name, worker)
 
     # ── Ombor kamerasi — voqea atrofida video yozish ─────────────────────

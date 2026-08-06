@@ -166,6 +166,7 @@ class MainWindow(QMainWindow):
             on_recheck_devices=self._on_recheck_devices_requested,
             on_logout=self._stop_session_workers,
         )
+        self.settings_page.session_expired.connect(self._handle_token_invalid)
         self.stack.addWidget(self.warehouse_page)
         self.stack.addWidget(self.settings_page)
         root_layout.addWidget(self.stack, 1)
@@ -198,6 +199,10 @@ class MainWindow(QMainWindow):
 
         self._scan_widget = EmployeeScanWidget(camera_recorder=self.camera_recorder_service, parent=card)
         self._scan_widget.close_requested.connect(self._hide_scan_overlay)
+        # Skanerlash/tortish/yetkazib berish kabi ISTALGAN so'rov token
+        # eskirganini (401) sezishi mumkin, faqat heartbeatni kutmasdan —
+        # heartbeatdagi bilan bir xil avtomatik logout oqimi ishlatiladi.
+        self._scan_widget.session_expired.connect(self._handle_token_invalid)
         card_layout.addWidget(self._scan_widget)
 
         center_row.addWidget(card)

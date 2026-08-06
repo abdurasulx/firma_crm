@@ -16,6 +16,12 @@ class _ApiCallWorker(QThread):
     skanerlash muammosi bilan bir xil turkumdagi xavf)."""
     succeeded = pyqtSignal(object)
     failed = pyqtSignal(str)
+    # Token eskirgan/bekor qilingan (401) — faqat MAVJUD tokendan
+    # foydalanadigan so'rovlar (masalan `fetch_omborlar` sinxronlash)
+    # uchun ma'noli; login urinishidagi 401 ("parol xato") bilan
+    # aralashtirilmasligi kerak — shu sabab chaqiruvchi tomon o'zi
+    # tanlab ulaydi (barcha worker'larga avtomatik emas).
+    token_invalid = pyqtSignal()
 
     def __init__(self, func, *args, **kwargs):
         super().__init__()
@@ -30,6 +36,8 @@ class _ApiCallWorker(QThread):
         try:
             result = self._func(*self._args, **self._kwargs)
         except ApiError as exc:
+            if exc.status_code == 401:
+                self.token_invalid.emit()
             self.failed.emit(str(exc))
         except Exception as exc:  # noqa: BLE001 — kutilmagan xato butun ilovani yiqitmasin
             self.failed.emit(f"Kutilmagan xato: {exc}")
@@ -42,6 +50,11 @@ class SettingsPage(QWidget):
     login/paroli bilan ERP'ga kiradi — ERP'dagi "Hodimlar" bo'limida
     "Desktop Agent" turida yaratilgan hisob orqali. Bitta firma bir nechta
     stansiyani shu tarzda alohida-alohida boshqarishi mumkin."""
+
+    # `_sync_worker` (mavjud tokendan foydalanadigan `fetch_omborlar`)
+    # 401 qaytarsa — token boshqa joyda bekor qilingan, `MainWindow`
+    # heartbeatdagi bilan bir xil avtomatik logout oqimini ishga tushiradi.
+    session_expired = pyqtSignal()
 
     def __init__(self, on_synced=None, on_scanner_changed=None, on_login_succeeded=None, on_scale_changed=None,
                  on_recheck_devices=None, on_logout=None, parent=None):
@@ -453,6 +466,7 @@ class SettingsPage(QWidget):
         self._sync_worker = _ApiCallWorker(fetch_omborlar, server_url, token)
         self._sync_worker.succeeded.connect(self._on_sync_succeeded)
         self._sync_worker.failed.connect(self._on_sync_failed)
+        self._sync_worker.token_invalid.connect(self.session_expired.emit)
         self._sync_worker.start()
 
     def _on_sync_succeeded(self, result: tuple):
