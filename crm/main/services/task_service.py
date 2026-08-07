@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django.db import transaction, IntegrityError
+from django.db.models import Sum
 from django.utils import timezone
 
 from ..models import (
@@ -286,11 +287,15 @@ def _start_producing(task):
     necha dona haqiqatda tayyor bo'lgani shu skanerlar orqali kuzatiladi
     (`finish_production_task_service`).
 
-    Faqat `serial_granularity == 'unit'` bo'lgan mahsulotlarda shu
-    "dona-dona kuzatish" imkoni bor (har biriga alohida QR bo'lgani
-    uchun) — boshqa mahsulotlarda buni kuzatib bo'lmaydi, shuning uchun
-    eski xatti-harakat saqlanadi: darhol, to'liq reja miqdori bilan
-    yakunlanadi (shtrafsiz)."""
+    `serial_granularity == 'unit'` (har biriga alohida QR) VA `'batch'`
+    (partiya/qadoq QR, `Serial.dona_soni` orqali necha donani
+    ifodalashi belgilanadi) — ikkalasida ham shu "skanerlash orqali
+    kuzatish" ishlaydi, faqat progress `Serial.dona_soni` yig'indisi
+    bilan hisoblanadi (`unit`da har doim 1, `batch`da qadoq hajmiga
+    teng). Faqat `serial_granularity == 'none'` (chop etiladigan QR
+    umuman yo'q) holatida eski xatti-harakat saqlanadi: darhol, to'liq
+    reja miqdori bilan yakunlanadi (shtrafsiz) — chunki kutish uchun
+    hech qanday QR mavjud emas."""
     mahsulot = Mahsulot.objects.select_for_update().get(id=task.mahsulot_id)
     pickups = list(task.material_pickups.select_related('komponent').all())
 
@@ -333,7 +338,7 @@ def _start_producing(task):
         miqdor_qoshish.labels_printed = True
         miqdor_qoshish.save(update_fields=['labels_printed'])
 
-    if mahsulot.serial_granularity == 'unit':
+    if mahsulot.serial_granularity != 'none':
         task.status = 'producing'
         task.save(update_fields=['status'])
     else:
@@ -362,7 +367,13 @@ def finish_production_task_service(task, actor=None, actual_count=None):
     mahsulot = Mahsulot.objects.select_for_update().get(id=mq.mahsulot_id)
 
     if actual_count is None:
-        actual_count = Serial.objects.filter(batch=mq, scan_soni__gte=1).count()
+        # `dona_soni` yig'indisi ishlatiladi (shunchaki qator soni emas) —
+        # `unit` granularityda har bir Serial 1 donani anglatadi, `batch`da
+        # esa har bir skanerlangan QR o'zining qadoq hajmicha (masalan 3
+        # yoki qoldiq uchun 1) qo'shadi.
+        actual_count = Serial.objects.filter(batch=mq, scan_soni__gte=1).aggregate(
+            t=Sum('dona_soni'),
+        )['t'] or 0
 
     shortfall = max(task.rejalashtirilgan_miqdor - actual_count, 0)
     penalty = Decimal(str(shortfall)) * Decimal(str(mahsulot.baza_tannarx))
@@ -412,4 +423,4 @@ def task_progress(task):
         return 0
     if task.status == 'done':
         return int(mq.miqdor)
-    return Serial.objects.filter(batch=mq, scan_soni__gte=1).count()
+    return Serial.objects.filter(batch=mq, scan_soni__gte=1).aggregate(t=Sum('dona_soni'))['t'] or 0

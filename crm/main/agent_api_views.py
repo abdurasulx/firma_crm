@@ -11,6 +11,7 @@ from uuid import uuid4
 from django.conf import settings
 from django.core import signing
 from django.db import transaction
+from django.db.models import Sum
 from django.utils import timezone
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -404,7 +405,13 @@ def _maybe_finish_task_on_scan(serial):
         with transaction.atomic():
             task_locked = ProductionTask.objects.select_for_update().get(id=task.id)
             if task_locked.status == 'producing':
-                count = Serial.objects.filter(batch=mq, scan_soni__gte=1).count()
+                # `dona_soni` yig'indisi — `batch` turida har bir skanerlangan
+                # QR o'zining qadoq hajmicha (masalan 3) qo'shadi, shunchaki
+                # QR soni emas (110/183-qadam: partiyalarda ham QR orqali
+                # kuzatish ta'minlandi).
+                count = Serial.objects.filter(batch=mq, scan_soni__gte=1).aggregate(
+                    t=Sum('dona_soni'),
+                )['t'] or 0
                 if count >= task_locked.rejalashtirilgan_miqdor:
                     task_service.finish_production_task_service(task_locked)
                     try:
