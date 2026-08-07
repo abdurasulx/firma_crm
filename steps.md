@@ -8531,3 +8531,85 @@ bilan bir xil "Sessiya yopildi" dialogi + login sahifasiga qaytarish).
 
 ### Tekshirildi
 Kompilyatsiya tekshiruvi, `.exe` qayta build. Commit: `3f619169`.
+
+---
+
+## 197-qadam: Public mahsulot QR sahifasi firma subdomenida 404 berardi
+
+**Holat: DONE**
+
+### Muammo
+QR yorliqda ATAYLAB `https://<firma>.stockfirm.uz/p/<kod>/` manziliga
+ishora qilinadi (`agent_api_views._public_scan_url`), lekin bu route
+faqat `landing/urls.py`da bor edi. Subdomen so'rovlari `main.urls`
+orqali ishlaydi (`CompanyMiddleware`) — shu sabab HAR BIR firmaning
+HAR BIR mahsulot QR kodi xaridor tomonidan skanerlanganda 404
+qaytarardi (real xaridor tomonidan aniqlangan, keng qamrovli bug).
+
+### Yechim
+`p/<kod>/` va `api/p/<kod>/status/` route'lari `main/urls.py`ga ham
+qo'shildi (bir xil `landing.views.product_scan_view`/
+`product_scan_status_api` funksiyalari qayta ishlatiladi).
+
+### O'zgargan fayllar
+`main/urls.py`
+
+### Tekshirildi
+`manage.py check`/`test` — xatosiz. Commit: `0d9737bf`.
+
+---
+
+## 198-qadam: Etiketka chop etishga DENSITY/SPEED buyruqlari
+
+**Holat: DONE**
+
+### Muammo
+"Sinov chop etish" bosilganda bitta bo'sh (issiqlik izsiz) yorliq
+chiqishi haqida shikoyat — ehtimoliy sabab: ba'zi TSPL printerlarda
+drayver qayta o'rnatilgandan keyin bosim zichligi (DENSITY) 0'ga
+tushib qolishi.
+
+### Yechim
+`build_tspl_label`ga har chop etishda aniq `DENSITY 8`/`SPEED 4`
+buyruqlari qo'shildi (avval kalibrlanmagan/standart holatga tayanardi).
+
+### O'zgargan fayllar
+`desktop_agent/app/label_printer_service.py`
+
+### Tekshirildi
+Kompilyatsiya tekshiruvi, `.exe` qayta build. Commit: `111e72a7`.
+**Eslatma**: agar shundan keyin ham bo'sh chiqsa, sabab dasturiy emas
+— termal qog'oz yo'nalishi (issiqlikka sezgir tomon) yoki printerning
+o'zidagi jismoniy self-test bilan tekshirilishi kerak.
+
+---
+
+## 199-qadam: Partiya (batch) turidagi mahsulotlarda ham vazifa faqat QR skanerlangach yakunlanadi
+
+**Holat: DONE**
+
+### Muammo
+"Ish bitdi" bosilgan zahoti (hech qanday QR skanerlanmasdan) `batch`
+turidagi vazifa darhol to'liq reja miqdori bilan yopilib qolardi —
+faqat `unit` granularityda "dona-dona kuzatish" ishlar edi. Foydalanuvchi
+buni "QR kod orqali qo'shilish ishlamayapti" deb xato deb topdi va
+partiyalarda ham QR orqali kuzatishni talab qildi.
+
+### Yechim
+- `task_service._start_producing`: shart `serial_granularity == 'unit'`
+  dan `!= 'none'`ga o'zgardi — endi `batch` ham skanerlashni kutadi
+  (`task.status = 'producing'`), faqat `none` (QR umuman yo'q) holatda
+  eski (darhol yakunlash) xatti-harakat saqlandi.
+- `finish_production_task_service`, `task_progress`,
+  `agent_api_views._maybe_finish_task_on_scan`: progress hisoblash
+  `Serial.objects.count()` o'rniga `Sum('dona_soni')` bilan almashtirildi
+  — `batch`da har bir skanerlangan QR o'z qadoq hajmicha (masalan 3)
+  qo'shadi, `unit`da har doim 1 (o'zgarishsiz).
+
+### O'zgargan fayllar
+`main/services/task_service.py`, `main/agent_api_views.py`,
+`main/tests_production.py` (yangi — 2 ta test: batch bosqichma-bosqich
+yakunlanishi, `none` granularity eski xatti-harakati saqlanishi)
+
+### Tekshirildi
+`manage.py check`/`test` (35 test, hammasi o'tdi). Commit: `4aa6cf5d`.
