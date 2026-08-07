@@ -58,6 +58,16 @@ def build_tspl_label(
         f"SIZE {width_mm:g} mm,{height_mm:g} mm",
         f"GAP {gap_mm:g} mm,0",
         "DIRECTION 0",
+        # Ba'zi printerlarda drayver/firmware qayta o'rnatilgandan yoki
+        # fabrika sozlamalariga qaytarilgandan keyin bosim zichligi
+        # (DENSITY) 0'ga tushib qolishi mumkin — bu holda TSPL
+        # buyruqlari to'g'ri qabul qilinsa ham, termal qog'oz
+        # "isitilmaydi" va chin BO'SH yorliq chiqadi (real shikoyat:
+        # "sinov chop etsam bo'm-bo'sh qog'oz chiqdi"). Shu sabab
+        # zichlik/tezlik har safar aniq (0/kalibrlanmagan holatga
+        # tayanmasdan) o'rnatiladi.
+        "DENSITY 8",
+        "SPEED 4",
         "CLS",
         f'QRCODE {margin_dots},{margin_dots},L,{qr_cell_size},A,0,"{_escape(qr_data)}"',
         "PRINT 1,1",
