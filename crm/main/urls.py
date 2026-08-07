@@ -13,6 +13,7 @@ from .views import (
     savdogar_my_sales, savdogar_my_credit, savdogar_my_products, savdogar_analytics_page,
     offline_page, service_worker_js, download_desktop_agent,
 )
+from landing.views import product_scan_view, product_scan_status_api
 from .hisobot_views import hisobotlar_view
 from .list_views import hodimlar_list, mahsulotlar_list
 from .nasiya_views import nasiya_savdolar_view, add_nasiya_payment
@@ -105,6 +106,16 @@ urlpatterns = [
     path('ombor/sorovlar/qr/<str:kod>/', material_request_qr_image, name='material_request_qr_image'),
     path('ombor/tarix/', warehouse_history, name='warehouse_history'),
     path('omborlar/', ombor_list_page, name='ombor_list'),
+
+    # Public mahsulot skan sahifasi — QR yorliqda ATAYLAB firma
+    # subdomeniga (`https://<firma>.stockfirm.uz/p/<kod>/`) ishora
+    # qiladi (`agent_api_views._public_scan_url`), lekin bu route avval
+    # faqat `landing/urls.py`da bor edi — subdomen so'rovlari esa shu
+    # (`main.urls`) urlconf orqali ishlaydi (`CompanyMiddleware`), shu
+    # sabab har bir mijoz QR skanerlaganda 404 chiqargan (real bug,
+    # xaridor tomonidan aniqlangan).
+    path('p/<str:kod>/', product_scan_view, name='product_scan'),
+    path('api/p/<str:kod>/status/', product_scan_status_api, name='product_scan_status_api'),
 
     # Xodim shaxsiy QR badge
     path('xodim/badge/', xodim_badge_page, name='xodim_badge'),
