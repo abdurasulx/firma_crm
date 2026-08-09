@@ -251,6 +251,13 @@ class EmployeeScanWidget(QWidget):
 
         self.result_label = QLabel("")
         self.result_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # Bu label butun modul bo'ylab (badge, serial-skan, xato xabarlari
+        # va h.k.) o'nlab turli xabarlar uchun qayta ishlatiladi —
+        # `setWordWrap` yo'qligi tufayli uzun matn kartochka chegarasidan
+        # chiqib, o'rtasida kesilib qolardi (masalan "...allaqachon
+        # skanerlangan (2-marta) — Ho[...]"). Endi hammasi avtomatik
+        # ko'p qatorga o'tadi.
+        self.result_label.setWordWrap(True)
         self.result_label.setStyleSheet(
             "font-size:16px; font-weight:800; padding:16px; border-radius:10px; "
             "background:#f1f5f9; color:#475569;"
@@ -316,6 +323,7 @@ class EmployeeScanWidget(QWidget):
         self.mr_detail_label.setWordWrap(True)
         self.mr_detail_label.setStyleSheet("font-size:13px; color:#64748b;")
         self.mr_status_label = QLabel("")
+        self.mr_status_label.setWordWrap(True)
         self.mr_status_label.setStyleSheet("font-size:13px; font-weight:700;")
         mr_layout.addWidget(self.mr_title_label)
         mr_layout.addWidget(self.mr_detail_label)

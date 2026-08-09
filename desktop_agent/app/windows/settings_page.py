@@ -168,6 +168,7 @@ class SettingsPage(QWidget):
         layout.addLayout(sync_row)
 
         self.status_label = QLabel("")
+        self.status_label.setWordWrap(True)
         layout.addWidget(self.status_label)
 
         scanner_title = QLabel("Skaner")
@@ -186,6 +187,7 @@ class SettingsPage(QWidget):
         layout.addWidget(scanner_desc)
 
         self.scanner_status_label = QLabel("")
+        self.scanner_status_label.setWordWrap(True)
         self.scanner_status_label.setStyleSheet("font-weight:600;")
         layout.addWidget(self.scanner_status_label)
 
@@ -291,6 +293,7 @@ class SettingsPage(QWidget):
         layout.addLayout(printer_btn_row)
 
         self.printer_status_label = QLabel("")
+        self.printer_status_label.setWordWrap(True)
         layout.addWidget(self.printer_status_label)
 
         self._print_worker: LabelPrintWorker | None = None

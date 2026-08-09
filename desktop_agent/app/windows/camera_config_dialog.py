@@ -137,6 +137,7 @@ class CameraConfigDialog(QDialog):
             layout.addWidget(self.mic_box)
 
         self.status_label = QLabel("")
+        self.status_label.setWordWrap(True)
         self.status_label.setStyleSheet("color:#b91c1c;")
         layout.addWidget(self.status_label)
 

@@ -78,6 +78,7 @@ class WarehouseListPage(QWidget):
         layout.addLayout(header_row)
 
         self.status_label = QLabel("")
+        self.status_label.setWordWrap(True)
         self.status_label.setStyleSheet("color:#666; margin-bottom:6px;")
         layout.addWidget(self.status_label)
 
