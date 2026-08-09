@@ -70,6 +70,12 @@ SCALE_EMPTY_THRESHOLD_KG = 0.005
 # ko'rinib, chalg'itmasligi uchun.
 SCALE_EMPTY_STABLE_SECONDS = 1.5
 
+# Jonli tarozi o'qish maydoni (`weigh_input`) shu chegaradan kichik
+# o'zgarishlarda YANGILANMAYDI — tarozi shovqini (masalan 4.781/4.783
+# kabi milligrammlik tebranish) har safar matnni qayta yozib, ekranni
+# tinimsiz "chayqalayotgandek" ko'rsatishining oldini oladi.
+SCALE_DISPLAY_THRESHOLD_KG = 0.01
+
 # Faqat shu birliklar tarozida (massa asosida) o'lchanadi. Boshqa hamma
 # narsa (dona, litr, metr va h.k.) — sanoq/hajm, tarozida o'lchab
 # bo'lmaydi (tarozi faqat kilogramm/gramm o'qiydi) — bunday so'rovlar
@@ -235,6 +241,12 @@ class EmployeeScanWidget(QWidget):
         self._scale_stable_since = 0.0
         self._auto_submit_pending = False
         self._awaiting_scale_clear = False
+        # Ekranga chiqarilgan oxirgi qiymat — jonli o'qish HAR safar
+        # (millisekundlarda, tarozi shovqini bilan) kelaveradi, lekin
+        # matnni har safar yangilash ekranni tinimsiz "chayqalgan" holda
+        # ko'rsatardi. Endi faqat sezilarli o'zgarishda (`SCALE_DISPLAY_
+        # THRESHOLD_KG`dan katta) matn qayta yoziladi.
+        self._scale_last_displayed: float | None = None
         self._delivery_cart: dict = {}
         # Dashboardda so'ralgan (zayavka) mahsulotlar: {mahsulot_id: {'mahsulot', 'miqdor'}}
         # — skanerlashda limit shu yerdan tekshiriladi (so'ralganidan ortiq
@@ -1331,6 +1343,7 @@ class EmployeeScanWidget(QWidget):
         self._scale_stable_since = 0.0
         self._auto_submit_pending = False
         self._awaiting_scale_clear = False
+        self._scale_last_displayed = None
 
         if not self._pending_requests:
             self._current_weigh_request = None
@@ -1447,7 +1460,9 @@ class EmployeeScanWidget(QWidget):
         if self._current_weigh_request is not None and not _is_weighable_birlik(self._current_weigh_request.get("birlik")):
             return
         self.weigh_input.setReadOnly(True)
-        self.weigh_input.setText(f"{value:.2f}")
+        if self._scale_last_displayed is None or abs(value - self._scale_last_displayed) >= SCALE_DISPLAY_THRESHOLD_KG:
+            self.weigh_input.setText(f"{value:.2f}")
+            self._scale_last_displayed = value
 
         now = time.monotonic()
         if self._scale_last_value is None or abs(value - self._scale_last_value) > SCALE_STABLE_THRESHOLD_KG:
@@ -1813,6 +1828,7 @@ class EmployeeScanWidget(QWidget):
         self._scale_stable_since = 0.0
         self._auto_submit_pending = False
         self._awaiting_scale_clear = False
+        self._scale_last_displayed = None
         self._pending_print_batch = None
         self._own_batch_kods = set()
         self.session_banner.setVisible(False)
