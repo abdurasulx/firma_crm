@@ -603,7 +603,7 @@
                         {% else %}
                         <span class="status-badge status-inactive"><span class="status-dot"></span> Inactive</span>
                         {% endif %}
-                        {% if x.type == 'desktop_agent' %}
+                        {% if x.last_agent_heartbeat %}
                         {% if x.is_agent_online %}
                         <span class="status-badge" style="background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; margin-left:4px;">
                             <span class="status-dot" style="background:#059669;"></span> Onlayn

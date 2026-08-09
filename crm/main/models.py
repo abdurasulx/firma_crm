@@ -226,7 +226,9 @@ class User(AbstractUser):
 
     @property
     def is_agent_online(self):
-        """Faqat `type='desktop_agent'` uchun ma'noli — stansiya oxirgi
+        """Istalgan turdagi foydalanuvchi uchun ishlaydi — Desktop Agent
+        stansiyasiga shaxsiy hisob bilan kirilganda ham heartbeat shu
+        foydalanuvchiga yoziladi (72-qadam). Stansiya oxirgi
         `AGENT_ONLINE_THRESHOLD_SECONDS` ichida heartbeat yuborganmi."""
         if not self.last_agent_heartbeat:
             return False
