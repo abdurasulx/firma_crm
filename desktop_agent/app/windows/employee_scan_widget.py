@@ -6,7 +6,7 @@ import requests
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFrame, QLineEdit,
-    QScrollArea, QGridLayout,
+    QScrollArea, QGridLayout, QSizePolicy,
 )
 from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal
 from PyQt6.QtGui import QPixmap
@@ -324,15 +324,21 @@ class EmployeeScanWidget(QWidget):
         layout.addWidget(self.material_request_card)
 
         self.session_banner = QFrame()
-        self.session_banner.setStyleSheet("background:#0f172a; border-radius:10px; padding:4px;")
+        self.session_banner.setStyleSheet("background:#0f172a; border-radius:10px; padding:8px;")
         session_layout = QHBoxLayout(self.session_banner)
         self.session_label = QLabel("")
         self.session_label.setStyleSheet("color:white; font-weight:700; font-size:14px;")
-        session_layout.addWidget(self.session_label)
-        session_layout.addStretch(1)
+        # Uzun ism/lavozim + hisoblagich matni tor kartochkada "Chiqish"
+        # tugmasi ustiga chiqib, bir-biriga ustma-ust tushib qolardi
+        # (real skrinshotda kuzatilgan) — endi matn ikkinchi qatorga
+        # o'tadi, tugma esa doim o'zining minimal (siqilmaydigan)
+        # o'lchamida, matn bilan bosilib qolmasdan turadi.
+        self.session_label.setWordWrap(True)
+        session_layout.addWidget(self.session_label, 1)
         logout_btn = QPushButton("Chiqish")
+        logout_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         logout_btn.clicked.connect(self._end_session)
-        session_layout.addWidget(logout_btn)
+        session_layout.addWidget(logout_btn, 0, Qt.AlignmentFlag.AlignTop)
         self.session_banner.setVisible(False)
         layout.addWidget(self.session_banner)
 
