@@ -29,9 +29,13 @@ from .services.stock_service import approve_miqdor_qoshish_service, approve_yukl
 from .services import qr_service, task_service
 
 # Xom ashyo so'rovini Desktop Agent orqali (tarozi) tekshirishda ruxsat
-# etiladigan chetlashish — tadbirkor bilan kelishilgan qat'iy chegara:
-# miqdordan qat'i nazar doim 50g (foizli masshtablash yo'q).
-MATERIAL_WEIGH_TOLERANCE_FIXED = 0.05
+# etiladigan chetlashish — tadbirkor bilan kelishilgan qat'iy qoida:
+# ASIMMETRIK. KAM tortish deyarli umuman ruxsat etilmaydi (faqat tarozi/
+# float noaniqligi uchun kichik zaxira), ORTIQCHA tortish esa 50g gacha
+# normal hisoblanadi (`task_service.TASK_WEIGH_SHORTFALL_TOLERANCE`/
+# `TASK_WEIGH_OVERAGE_TOLERANCE` bilan bir xil qiymatlar).
+MATERIAL_WEIGH_SHORTFALL_TOLERANCE = 0.002
+MATERIAL_WEIGH_OVERAGE_TOLERANCE = 0.05
 
 # Badge skanerlangandan keyin beriladigan sessiya-tokeni uchun. Avval 90
 # soniya edi (Desktop Agent'dagi 60 soniyalik UI-hisoblagichdan biroz
@@ -639,8 +643,9 @@ def agent_weigh_material_request(request, request_id):
     """Xom ashyo so'rovini Desktop Agent orqali tarozi bilan tekshiradi.
     Foydalanuvchi bilan kelishilgan qaror: Desktop Agent ishlatilayotgan
     firmalarda bu qadam omborchining web-sahifadagi qo'lda "Tasdiqlash"
-    bosishini butunlay almashtiradi — norma (`MATERIAL_WEIGH_TOLERANCE_FIXED`,
-    50g) ichida bo'lsa so'rov shu yerning o'zida avtomatik tasdiqlanadi
+    bosishini butunlay almashtiradi — norma (kam tortish deyarli ruxsat
+    etilmaydi, 50g gacha ortiqcha normal) ichida bo'lsa so'rov shu yerning
+    o'zida avtomatik tasdiqlanadi
     (zaxiradan HAQIQIY tortilgan miqdor ayiriladi, `RAW_APPROVED` yozuvi
     qo'shiladi)."""
     company = _company_from_token(request)
@@ -667,10 +672,9 @@ def agent_weigh_material_request(request, request_id):
             return Response({'detail': "So'rov topilmadi yoki allaqachon ko'rib chiqilgan."}, status=status.HTTP_404_NOT_FOUND)
 
         expected = material_request.qty
-        tolerance = MATERIAL_WEIGH_TOLERANCE_FIXED
         deviation = measured_qty - expected
 
-        if abs(deviation) > tolerance:
+        if deviation > MATERIAL_WEIGH_OVERAGE_TOLERANCE or deviation < -MATERIAL_WEIGH_SHORTFALL_TOLERANCE:
             direction = "ko'p" if deviation > 0 else "kam"
             return Response({
                 'approved': False,

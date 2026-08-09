@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from main.agent_api_views import _maybe_finish_task_on_scan
-from main.models import Company, Mahsulot, MahsulotRetsept, MahsulotTuri, Pazanda, ProductionTask, User
+from main.models import Company, Mahsulot, MahsulotRetsept, MahsulotTuri, Pazanda, ProductionTask, TaskMaterialPickup, User
 from main.services import qr_service, task_service
 
 
@@ -88,3 +88,70 @@ class BatchQrTrackingTests(TestCase):
         # QR umuman yo'q — eski xatti-harakat (darhol yakunlanish) saqlanishi kerak.
         self.assertEqual(task.status, "done")
         self.assertEqual(task_service.task_progress(task), 5)
+
+
+class AsymmetricWeighToleranceTests(TestCase):
+    """Kam tortish deyarli umuman ruxsat etilmaydi, lekin 50g gacha
+    ortiqcha normal hisoblanadi — foydalanuvchi bilan kelishilgan
+    asimmetrik qoida (avval ikkalasi ham bir xil ±50g edi)."""
+
+    def setUp(self):
+        self.company = Company.objects.create(name="Test Firma", subdomain="testtol", setup_mode=False)
+        self.ega = User.objects.create_user(username="ega1", password="secret123", type="ega", company=self.company)
+        self.pz_user = User.objects.create_user(
+            username="pz1", password="secret123", type="ishlab_chiqaruvchi", company=self.company,
+        )
+        self.pazanda = Pazanda.objects.create(user=self.pz_user, company=self.company)
+        self.turi = MahsulotTuri.objects.create(nomi="kg")
+        self.komponent = Mahsulot.objects.create(
+            company=self.company, nomi="Un", narxi=0, turi=self.turi,
+            warehouse_type="semi_finished", ombor_turi="xom_ashyo",
+            miqdori=1000, baza_tannarx=1000, tannarx=1000,
+        )
+        self.mahsulot = Mahsulot.objects.create(
+            company=self.company, nomi="Non", narxi=5000, turi=self.turi,
+            warehouse_type="finished", mahsulot_turi="ishlab_chiqariladigan",
+            serial_granularity="none",
+        )
+        MahsulotRetsept.objects.create(
+            company=self.company, mahsulot=self.mahsulot, komponent=self.komponent, norma_miqdor=1,
+        )
+        task, err, _ = task_service.create_production_task(
+            self.company, self.mahsulot, 1, timezone.localdate(), self.ega, pazanda=self.pazanda,
+        )
+        self.assertIsNone(err, err)
+        self.pickup = task.material_pickups.get()
+        # `expected_qty` = norma_miqdor(1) * miqdor(1) = 1 kg
+
+    def test_small_shortfall_does_not_finalize_pickup(self):
+        # 10g kam — "xato" deb rad etilmaydi, balki pickup OCHIQ qoladi
+        # (porsiyalab tortish mexanizmi orqali "hali N kg kerak" deb
+        # kutadi) — shu bilan yakuniy tasdiqlangan summa hech qachon
+        # kerakligidan kam bo'lib qolmaydi ("kam bo'lmasin" qoidasi
+        # PICKUP darajasida ta'minlanadi, har bir alohida o'lchashda emas).
+        result = task_service.weigh_task_pickup(self.pickup.id, self.pazanda, 0.99)
+        self.assertTrue(result["approved"], result)
+        self.assertFalse(result["pickup_completed"])
+        self.assertAlmostEqual(result["remaining"], 0.01, places=3)
+
+        # Qolganini to'ldirsa — endi yakunlanadi.
+        result2 = task_service.weigh_task_pickup(self.pickup.id, self.pazanda, 0.01)
+        self.assertTrue(result2["approved"], result2)
+        self.assertTrue(result2["pickup_completed"])
+
+    def test_overage_up_to_50g_is_accepted(self):
+        # 40g ortiqcha — normal, tasdiqlanishi kerak.
+        result = task_service.weigh_task_pickup(self.pickup.id, self.pazanda, 1.04)
+        self.assertTrue(result["approved"], result)
+        self.assertTrue(result["pickup_completed"])
+
+    def test_overage_beyond_50g_is_rejected(self):
+        # 60g ortiqcha — 50g chegaradan oshgani uchun rad etiladi.
+        result = task_service.weigh_task_pickup(self.pickup.id, self.pazanda, 1.06)
+        self.assertFalse(result["approved"])
+        self.assertIn("ko'p", result["detail"])
+
+    def test_exact_match_is_accepted(self):
+        result = task_service.weigh_task_pickup(self.pickup.id, self.pazanda, 1.0)
+        self.assertTrue(result["approved"], result)
+        self.assertTrue(result["pickup_completed"])

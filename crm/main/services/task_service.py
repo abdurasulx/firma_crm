@@ -10,13 +10,17 @@ from ..models import (
 from . import qr_service
 from .stock_service import recompute_tannarx, log_stock_change, effective_ish_haqi_turi
 
-# `agent_api_views.MATERIAL_WEIGH_TOLERANCE_FIXED` bilan bir xil qiymat —
+# `agent_api_views.MATERIAL_WEIGH_*_TOLERANCE` bilan bir xil qiymatlar —
 # eski xom ashyo so'rovi tarozi tekshiruvi bilan tajriba/UX izchil qolishi
 # uchun ataylab takrorlangan (services qatlami agent_api_views'ga
 # bog'lanmasligi kerak, aks holda aylanma import bo'ladi). Tadbirkor bilan
-# kelishilgan qat'iy chegara — miqdordan qat'i nazar doim 50g (foizli
-# masshtablash olib tashlandi, katta miqdorlarda ham 50gdan oshmaydi).
-TASK_WEIGH_TOLERANCE_FIXED = 0.05
+# kelishilgan qat'iy chegara — ASIMMETRIK: KAM tortish umuman ruxsat
+# etilmaydi (retsept normasi buzilmasligi kerak — faqat tarozi/float
+# noaniqligi uchun bir necha grammlik zaxira bor), ORTIQCHA tortish esa
+# 50g gacha normal hisoblanadi (xom ashyo isrofi qabul qilinadigan
+# darajada, lekin undan ko'pi qayta tortishga majburlaydi).
+TASK_WEIGH_SHORTFALL_TOLERANCE = 0.002  # 2g — faqat tarozi/float noaniqligi uchun, "kam" deb hisoblanmaydi
+TASK_WEIGH_OVERAGE_TOLERANCE = 0.05  # 50g — shu miqdorgacha ortiqcha ruxsat etiladi
 
 # Desktop Agent'dagi `WEIGHABLE_BIRLIKLAR` bilan bir xil ro'yxat — faqat
 # massa birliklari tarozida o'lchanadi. "dona"/"litr" kabi sanoq/hajm
@@ -115,11 +119,15 @@ def claim_task(kod, pazanda, company):
 def weigh_task_pickup(pickup_id, pazanda, measured_qty):
     """Vazifaning bitta BOM-komponentini (xom ashyo/yarim tayyor) tarozi
     orqali tekshiradi va tasdiqlaydi — `agent_weigh_material_request`dagi
-    bilan bir xil tolerantlik formulasi. Muvaffaqiyatli bo'lsa zaxiradan
-    shu zahoti ayiriladi. Agar bu vazifaning oxirgi tasdiqlanmagan
-    komponenti bo'lsa — darhol `approve_production_task_service`ni
-    chaqiradi, alohida "ishlab chiqarishni tasdiqlash" bosqichi kerak
-    emas.
+    bilan bir xil ASIMMETRIK tolerantlik formulasi (foydalanuvchi bilan
+    kelishilgan qat'iy qoida): KAM tortish deyarli umuman ruxsat
+    etilmaydi (`TASK_WEIGH_SHORTFALL_TOLERANCE` — atigi ~2g, faqat
+    tarozi/float noaniqligi uchun zaxira, retsept normasi buzilmasligi
+    kerak), ORTIQCHA tortish esa `TASK_WEIGH_OVERAGE_TOLERANCE` (50g)
+    gacha normal hisoblanadi. Muvaffaqiyatli bo'lsa zaxiradan shu zahoti
+    ayiriladi. Agar bu vazifaning oxirgi tasdiqlanmagan komponenti bo'lsa
+    — darhol `approve_production_task_service`ni chaqiradi, alohida
+    "ishlab chiqarishni tasdiqlash" bosqichi kerak emas.
 
     Kerakli miqdor (`expected_qty`) bitta tarozida sig'maydigan darajada
     katta bo'lishi mumkin (tarozilar 20/30/60 kg kabi turlicha sig'imga
@@ -141,11 +149,10 @@ def weigh_task_pickup(pickup_id, pazanda, measured_qty):
             return {'approved': False, 'detail': "So'rov topilmadi yoki allaqachon ko'rib chiqilgan."}
 
         expected = pickup.expected_qty
-        tolerance = TASK_WEIGH_TOLERANCE_FIXED
         new_poured = pickup.poured_qty + measured_qty
         remaining_after = expected - new_poured
 
-        if remaining_after < -tolerance:
+        if remaining_after < -TASK_WEIGH_OVERAGE_TOLERANCE:
             # Bu tortish (avvalgi tortishlar bilan birga) kerakligidan
             # ko'p bo'lib ketdi — hali hech narsa saqlanmadi, pazanda
             # qayta tortishi kerak.
@@ -180,7 +187,7 @@ def weigh_task_pickup(pickup_id, pazanda, measured_qty):
 
         pickup.poured_qty = new_poured
 
-        if abs(remaining_after) > tolerance:
+        if remaining_after > TASK_WEIGH_SHORTFALL_TOLERANCE:
             # Hali navbatdagi tortish(lar) bor — pickup ochiq qoladi,
             # Desktop Agent keyingi porsiyani (qolgan miqdor va tarozi
             # sig'imidan kichigini) so'raydi.
