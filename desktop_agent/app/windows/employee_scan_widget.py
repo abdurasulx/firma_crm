@@ -1517,30 +1517,59 @@ class EmployeeScanWidget(QWidget):
                 # kartochka navbatdagi porsiya bilan qayta ko'rsatiladi.
                 req = self._pending_requests[0] if self._pending_requests else self._current_weigh_request
                 remaining = result.get("remaining", 0)
+                # Bu bosqich IKKI xil sababdan kelib chiqishi mumkin —
+                # ular jismonan BUTUNLAY BOSHQACHA harakatni talab qiladi:
+                #   (1) Tarozi SIG'IMIGA yetib to'xtatilgan (`_pour_target`
+                #       haqiqatda `remaining`dan kichik edi) — tarozi
+                #       to'lgan, xodim JISMONAN OLIB TASHLASHI shart, yangi
+                #       porsiya uchun joy yo'q.
+                #   (2) Server "asimmetrik tolerantlik" qoidasi bo'yicha
+                #       ozroq tortilgan deb hisobladi (kam tortish
+                #       tasdiqlanmaydi, lekin xato ham emas — "hali N kg
+                #       kerak" deb ochiq qoladi), LEKIN tarozi sig'imiga
+                #       yetmagan (masalan 4.78 kg so'ralib, 3.5 kg
+                #       tortilgan) — bu holda tarozida hali JOY BOR,
+                #       xodim shunchaki USTIGA QO'SHISHI kerak, OLIB
+                #       TASHLASH SHART EMAS. Buni "tarozini bo'shating"
+                #       deb talab qilish — real ishlab chiqarishda
+                #       "tarozi real-time ishlamayapti, tarozi bo'shashini
+                #       kutib qotib qolyapti" shikoyatiga sabab bo'lgan
+                #       (chunki xodim hech qachon tarozini bo'shatmaydi,
+                #       shunchaki ustiga solaveradi).
+                pre_remaining = req.get("remaining", remaining) if req is not None else remaining
+                pour_target = req.get("_pour_target", pre_remaining) if req is not None else pre_remaining
+                capacity_hit = pour_target < pre_remaining - 0.001
                 if req is not None:
                     req["remaining"] = remaining
                     req["poured"] = result.get("poured", 0)
                     req["_pour_index"] = req.get("_pour_index", 1) + 1
-                # `_show_next_weigh_request` tarozi bo'shashini kutib
-                # qayta chaqirilgunicha, "Kerakli miqdor" yorlig'i ESKI
-                # (to'liq, allaqachon qisman tortilgan) qiymatni
-                # ko'rsatib turardi — operator hali ham eski to'liq
-                # miqdorni tortishi kerak deb o'ylab, ortiqcha tortib
-                # "Miqdor normadan ko'p" xatosiga duch kelardi (real
-                # ishlab chiqarishda kuzatilgan xato). Endi shu yorliq
-                # DARHOL, aniq ko'rsatma bilan yangilanadi.
-                self.weigh_expected_label.setText(
-                    f"✓ Bu porsiya qabul qilindi — TAROZINI BO'SHATING, "
-                    f"keyin yana {remaining:g} kg qo'shib o'lchang."
-                )
-                self._set_weigh_feedback(
-                    f"Porsiya qabul qilindi ✓ — yana {remaining:g} qoldi, tarozini bo'shating.",
-                    error=False,
-                )
-                if db.get_setting("scale_com_port", "").strip():
-                    self._awaiting_scale_clear = True
+                    req["_pour_target"] = remaining
+                if capacity_hit:
+                    self.weigh_expected_label.setText(
+                        f"✓ Bu porsiya qabul qilindi — TAROZINI BO'SHATING, "
+                        f"keyin yana {remaining:g} kg qo'shib o'lchang."
+                    )
+                    self._set_weigh_feedback(
+                        f"Porsiya qabul qilindi ✓ — yana {remaining:g} qoldi, tarozini bo'shating.",
+                        error=False,
+                    )
+                    if db.get_setting("scale_com_port", "").strip():
+                        self._awaiting_scale_clear = True
+                    else:
+                        QTimer.singleShot(1200, self._show_next_weigh_request)
                 else:
-                    QTimer.singleShot(1200, self._show_next_weigh_request)
+                    # Tarozi hali to'lmagan — xodim OLIB TASHLAMASDAN,
+                    # to'g'ridan-to'g'ri USTIGA qo'shishi kerak. Shu
+                    # sabab `_awaiting_scale_clear`ga o'TILMAYDI — tarozi
+                    # jonli o'qishni davom ettiradi, xodim yetarli
+                    # miqdorga yetkazgach avtomatik qayta yuboriladi.
+                    self.weigh_expected_label.setText(
+                        f"Hali kam — yana {remaining:g} kg qo'shing (olib tashlash shart emas)."
+                    )
+                    self._set_weigh_feedback(
+                        f"Qabul qilindi, lekin yetarli emas — yana {remaining:g} kg qo'shing.",
+                        error=True,
+                    )
                 return
 
             self._set_weigh_feedback("Norma bo'yicha to'g'ri — oling! ✓", error=False)
