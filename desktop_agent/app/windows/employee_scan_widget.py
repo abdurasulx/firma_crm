@@ -57,7 +57,18 @@ SCALE_STABLE_SECONDS = 0.8
 SCALE_STABLE_THRESHOLD_KG = 0.01
 # Shundan past qiymat — mahsulot hali tarozi ustiga qo'yilmagan yoki
 # (tasdiqlangandan keyin) tarozidan olib tashlangan deb hisoblanadi.
-SCALE_EMPTY_THRESHOLD_KG = 0.02
+# Real ishlab chiqarishda 20g juda "yumshoq" chiqdi — xodim materialni
+# hali TO'LIQ olib ulgurmasdan (masalan idishda ozgina qolgan, yoki
+# tarozi noldan sal chetga chiqib turgan holatda) allaqachon "bo'sh" deb
+# hisoblanib, keyingi mahsulotni tortish so'ralib qolardi ("shoshib
+# qolyapti" shikoyati). Chegara qattiqlashtirildi.
+SCALE_EMPTY_THRESHOLD_KG = 0.005
+# Bo'shashni tasdiqlashda oddiy tortish-barqarorligidan (0.8s) ko'ra
+# UZOQROQ barqarorlik talab qilinadi — xodim materialni olib
+# tashlayotganda tarozi bir necha soniya davomida turli oraliq
+# qiymatlardan o'tadi, shulardan biri tasodifan bir lahzaga barqaror
+# ko'rinib, chalg'itmasligi uchun.
+SCALE_EMPTY_STABLE_SECONDS = 1.5
 
 # Faqat shu birliklar tarozida (massa asosida) o'lchanadi. Boshqa hamma
 # narsa (dona, litr, metr va h.k.) — sanoq/hajm, tarozida o'lchab
@@ -1444,15 +1455,23 @@ class EmployeeScanWidget(QWidget):
             self._scale_stable_since = now
             return
         self._scale_last_value = value
-
-        if (now - self._scale_stable_since) < SCALE_STABLE_SECONDS:
-            return  # hali barqaror deb hisoblanmaydi
+        stable_for = now - self._scale_stable_since
 
         if self._awaiting_scale_clear:
-            if value <= SCALE_EMPTY_THRESHOLD_KG:
+            # Materialni OLIB TASHLASH jarayonida tarozi bir necha
+            # soniya davomida turli oraliq qiymatlardan (masalan idishda
+            # ozgina qolgan) o'tadi — oddiy tortish-barqarorligi (0.8s)
+            # bunday oraliq holatni ham "bo'sh" deb noto'g'ri qabul qilib,
+            # keyingi mahsulotni SHOSHILIB so'rab qolardi. Shu sabab bu
+            # yerda ANCHA UZOQROQ (`SCALE_EMPTY_STABLE_SECONDS`)
+            # barqarorlik talab qilinadi.
+            if value <= SCALE_EMPTY_THRESHOLD_KG and stable_for >= SCALE_EMPTY_STABLE_SECONDS:
                 self._awaiting_scale_clear = False
                 self._show_next_weigh_request()
             return
+
+        if stable_for < SCALE_STABLE_SECONDS:
+            return  # hali barqaror deb hisoblanmaydi
 
         if value <= SCALE_EMPTY_THRESHOLD_KG:
             return  # tarozida hali hech narsa yo'q
