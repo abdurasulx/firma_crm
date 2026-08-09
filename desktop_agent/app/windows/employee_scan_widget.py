@@ -1508,12 +1508,25 @@ class EmployeeScanWidget(QWidget):
                 # OLIB TASHLANMAYDI, faqat "qolgan miqdor" yangilanadi va
                 # kartochka navbatdagi porsiya bilan qayta ko'rsatiladi.
                 req = self._pending_requests[0] if self._pending_requests else self._current_weigh_request
+                remaining = result.get("remaining", 0)
                 if req is not None:
-                    req["remaining"] = result.get("remaining", 0)
+                    req["remaining"] = remaining
                     req["poured"] = result.get("poured", 0)
                     req["_pour_index"] = req.get("_pour_index", 1) + 1
+                # `_show_next_weigh_request` tarozi bo'shashini kutib
+                # qayta chaqirilgunicha, "Kerakli miqdor" yorlig'i ESKI
+                # (to'liq, allaqachon qisman tortilgan) qiymatni
+                # ko'rsatib turardi — operator hali ham eski to'liq
+                # miqdorni tortishi kerak deb o'ylab, ortiqcha tortib
+                # "Miqdor normadan ko'p" xatosiga duch kelardi (real
+                # ishlab chiqarishda kuzatilgan xato). Endi shu yorliq
+                # DARHOL, aniq ko'rsatma bilan yangilanadi.
+                self.weigh_expected_label.setText(
+                    f"✓ Bu porsiya qabul qilindi — TAROZINI BO'SHATING, "
+                    f"keyin yana {remaining:g} kg qo'shib o'lchang."
+                )
                 self._set_weigh_feedback(
-                    f"Porsiya qabul qilindi ✓ — yana {result.get('remaining', 0):g} qoldi, davom eting.",
+                    f"Porsiya qabul qilindi ✓ — yana {remaining:g} qoldi, tarozini bo'shating.",
                     error=False,
                 )
                 if db.get_setting("scale_com_port", "").strip():
