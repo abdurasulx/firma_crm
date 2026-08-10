@@ -8613,3 +8613,55 @@ yakunlanishi, `none` granularity eski xatti-harakati saqlanishi)
 
 ### Tekshirildi
 `manage.py check`/`test` (35 test, hammasi o'tdi). Commit: `4aa6cf5d`.
+
+---
+
+## 200-qadam: Ishlab chiqarish vaqti (muddat) + Qaytarish (Utilizatsiya/Qayta ishlash) + KPI tizimi
+
+**Holat: DONE**
+
+### Nima qilindi
+Uch qismli funksiya (foydalanuvchi bilan bitta so'rovda kelishilgan):
+
+1. **Ishlab chiqarish vaqti** — `Mahsulot.kutilgan_ishlab_chiqarish_soat`
+   (ixtiyoriy, mahsulot sahifasida belgilanadi). Vazifa OLINGANDA
+   (`claim_task`/`create_production_task` pazanda bilan) shu asosda
+   `ProductionTask.muddat` avtomatik hisoblanadi (`claimed_at` + soat).
+   `ProductionTask.kechikdi` property — muddat o'tganmi.
+
+2. **Qaytarish — Utilizatsiya/Qayta ishlash** — `qaytarish_tasdiq` endi
+   ikki harakatni qo'llab-quvvatlaydi: Utilizatsiya (ombor qoldig'iga
+   qo'shilmaydi, chiqim) yoki Qayta ishlash (ega tanlagan xom ashyoga
+   belgilangan miqdorda qo'shiladi). Ikkalasida ham javobgar
+   (savdogar/yetkazib beruvchi) tanlansa, mahsulot tannarxi asosida
+   qarz yoziladi (`qaytarilgan_mahsulotlar.qarz_summasi`/`javobgar`).
+   `Company.qaytarish_javobgarligi` — standart javobgar turi (faqat
+   UI'da oldindan tanlash uchun, majburiy emas).
+
+3. **KPI tizimi** — yangi `services/kpi_service.py::get_employee_kpi`
+   — egadan boshqa har bir rol uchun joriy oy ko'rsatkichlari:
+   ishlab chiqaruvchi (bajarilgan vazifalar, kechikkan, o'z vaqtida %),
+   omborchi (ko'rib chiqilgan so'rovlar, o'rtacha javob vaqti daqiqada),
+   savdogar/yetkazib beruvchi (sotuvlar soni/summasi, qaytarish
+   nisbati). Profil sahifalarida (`egaprofile.html`, `pzprofile.html`,
+   `ytprofile.html`, `egayt.html`) ko'rsatiladi.
+
+### O'zgargan fayllar
+`main/models.py`, `main/migrations/0095_*`, `main/qaytarish_views.py`,
+`main/urls.py`, `main/templates/qaytarishlar.html`,
+`main/templates/seemahsulot.html`, `main/templates/pazanda_dashboard.html`,
+`main/templates/egaprofile.html`, `main/templates/pzprofile.html`,
+`main/templates/ytprofile.html`, `main/templates/egayt.html`,
+`main/services/task_service.py`, `main/services/kpi_service.py` (yangi),
+`main/views.py`, `main/tests_kpi_returns.py` (yangi — 8 test)
+
+### Tekshirildi
+`manage.py check`/`test` — 49 test, hammasi o'tdi. Commit: `f3d42b8e`.
+
+### Cheklovlar (keyingi qadamlarda kengaytirilishi mumkin)
+- Qarz (`qarz_summasi`) faqat KO'RSATISH uchun — alohida to'lov/hisob-kitob
+  oqimi hozircha yo'q.
+- Qaytarish hozircha faqat yetkazib beruvchidan qabul qilinadi
+  (`qaytarish_view` shu turga cheklangan) — savdogardan qaytarish
+  yuborish alohida ishlab chiqilmagan, faqat TASDIQLASHDA javobgar
+  sifatida savdogar tanlanishi mumkin.
