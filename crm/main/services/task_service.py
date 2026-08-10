@@ -148,6 +148,31 @@ def weigh_task_pickup(pickup_id, pazanda, measured_qty):
         if not pickup:
             return {'approved': False, 'detail': "So'rov topilmadi yoki allaqachon ko'rib chiqilgan."}
 
+        # "Hammasi yoki hech narsa" qoidasi (foydalanuvchi bilan
+        # kelishilgan) — vazifadagi ISTALGAN komponent omborda yetarli
+        # bo'lmasa, shu vazifadan HECH QANDAY xom ashyo tortib
+        # bo'lmaydi (faqat yetishmagan komponent emas). Sabab: agar
+        # boshqa komponentlarni oldindan tortib olishga ruxsat berilsa,
+        # ular ombordan ayirilib, keyin yetishmagan komponent tufayli
+        # vazifa baribir davom eta olmasa — o'sha tortib olingan xom
+        # ashyo "muallaq" qolib, qo'lda qaytarishga majbur qiladi.
+        sibling_pickups = TaskMaterialPickup.objects.select_for_update().select_related(
+            'komponent', 'komponent__turi',
+        ).filter(task_id=pickup.task_id, tasdiqlangan=False)
+        insufficient = [
+            p for p in sibling_pickups
+            if p.komponent.miqdori < (p.expected_qty - p.poured_qty)
+        ]
+        if insufficient:
+            names = ", ".join(
+                f"{p.komponent.nomi} (kerak: {p.expected_qty - p.poured_qty:g}, qoldiq: {p.komponent.miqdori:g})"
+                for p in insufficient
+            )
+            return {
+                'approved': False,
+                'detail': f"Vazifada omborda yetishmayotgan komponent(lar) bor, shuning uchun hech qanday xom ashyo tortib bo'lmaydi: {names}.",
+            }
+
         expected = pickup.expected_qty
         new_poured = pickup.poured_qty + measured_qty
         remaining_after = expected - new_poured

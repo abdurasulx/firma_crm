@@ -155,3 +155,64 @@ class AsymmetricWeighToleranceTests(TestCase):
         result = task_service.weigh_task_pickup(self.pickup.id, self.pazanda, 1.0)
         self.assertTrue(result["approved"], result)
         self.assertTrue(result["pickup_completed"])
+
+
+class AllOrNothingStockTests(TestCase):
+    """Vazifada ISTALGAN komponent omborda yetishmasa, hech qanday xom
+    ashyo (hatto yetarli bo'lganlari ham) tortib bo'lmasligi kerak —
+    foydalanuvchi bilan kelishilgan qat'iy qoida (aks holda boshqa
+    komponentlar oldindan tortib olinib, keyin vazifa baribir davom
+    eta olmasa, ular "muallaq" qolib ketardi)."""
+
+    def setUp(self):
+        self.company = Company.objects.create(name="Test Firma", subdomain="testallnone", setup_mode=False)
+        self.ega = User.objects.create_user(username="ega1", password="secret123", type="ega", company=self.company)
+        self.pz_user = User.objects.create_user(
+            username="pz1", password="secret123", type="ishlab_chiqaruvchi", company=self.company,
+        )
+        self.pazanda = Pazanda.objects.create(user=self.pz_user, company=self.company)
+        self.turi = MahsulotTuri.objects.create(nomi="kg")
+
+        # Yetarli komponent.
+        self.un = Mahsulot.objects.create(
+            company=self.company, nomi="Un", narxi=0, turi=self.turi,
+            warehouse_type="semi_finished", ombor_turi="xom_ashyo",
+            miqdori=1000, baza_tannarx=1000, tannarx=1000,
+        )
+        # Yetishmaydigan komponent (kerak: 2kg, qoldiq: atigi 0.5kg).
+        self.yog = Mahsulot.objects.create(
+            company=self.company, nomi="Yog'", narxi=0, turi=self.turi,
+            warehouse_type="semi_finished", ombor_turi="xom_ashyo",
+            miqdori=0.5, baza_tannarx=1000, tannarx=1000,
+        )
+        self.mahsulot = Mahsulot.objects.create(
+            company=self.company, nomi="Non", narxi=5000, turi=self.turi,
+            warehouse_type="finished", mahsulot_turi="ishlab_chiqariladigan",
+            serial_granularity="none",
+        )
+        MahsulotRetsept.objects.create(company=self.company, mahsulot=self.mahsulot, komponent=self.un, norma_miqdor=1)
+        MahsulotRetsept.objects.create(company=self.company, mahsulot=self.mahsulot, komponent=self.yog, norma_miqdor=2)
+
+        task, err, _ = task_service.create_production_task(
+            self.company, self.mahsulot, 1, timezone.localdate(), self.ega, pazanda=self.pazanda,
+        )
+        self.assertIsNone(err, err)
+        self.un_pickup = task.material_pickups.get(komponent=self.un)
+        self.yog_pickup = task.material_pickups.get(komponent=self.yog)
+
+    def test_sufficient_component_is_still_blocked_if_sibling_is_short(self):
+        # "Un" yetarli (1000kg bor, 1kg kerak) — lekin "Yog'" yetishmaydi
+        # (2kg kerak, 0.5kg bor) — shu sabab "Un"ni ham tortib bo'lmaydi.
+        result = task_service.weigh_task_pickup(self.un_pickup.id, self.pazanda, 1.0)
+        self.assertFalse(result["approved"], result)
+        self.assertIn("Yog'", result["detail"])
+
+        self.un.refresh_from_db()
+        self.assertEqual(self.un.miqdori, 1000)  # ombordan hech narsa ayirilmagan
+
+    def test_works_normally_once_all_components_are_sufficient(self):
+        self.yog.miqdori = 5
+        self.yog.save(update_fields=["miqdori"])
+
+        result = task_service.weigh_task_pickup(self.un_pickup.id, self.pazanda, 1.0)
+        self.assertTrue(result["approved"], result)
