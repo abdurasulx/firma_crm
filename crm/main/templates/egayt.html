@@ -100,6 +100,18 @@
         <span class="profile-label">Turi:</span> {{ user.type|title }}
     </div>
 
+    {% if kpi %}
+    <div class="products-container" style="text-align:left;">
+        <h3>KPI — bu oy</h3>
+        <div class="profile-info" style="text-align:left;"><span class="profile-label">Sotuvlar soni:</span> {{ kpi.jami_savdo_soni }}</div>
+        <div class="profile-info" style="text-align:left;"><span class="profile-label">Sotuvlar summasi:</span> {{ kpi.jami_savdo_summa|floatformat:0 }} so'm</div>
+        {% if kpi.turi == 'yetkazib_beruvchi' %}
+        <div class="profile-info" style="text-align:left;"><span class="profile-label">Qaytarishlar soni:</span> {{ kpi.qaytarish_soni }}</div>
+        <div class="profile-info" style="text-align:left;"><span class="profile-label">Qaytarish nisbati:</span> {% if kpi.qaytarish_nisbati_foiz != None %}{{ kpi.qaytarish_nisbati_foiz }}%{% else %}—{% endif %}</div>
+        {% endif %}
+    </div>
+    {% endif %}
+
     <div class="products-container" style="text-align:left;">
         <h3>Oylik maosh</h3>
         {% if payroll_is_per_unit_pazanda %}

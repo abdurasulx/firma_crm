@@ -100,7 +100,7 @@ from .services.stock_service import (
     effective_ish_haqi_turi,
 )
 from .services.retsept_service import add_retsept_row, delete_retsept_row
-from .services import qr_service, task_service, payroll_service
+from .services import qr_service, task_service, payroll_service, kpi_service
 from .services.auth_service import create_user_service, update_user_service
 from .services.billing_service import (
     consume_billing_payment_link,
@@ -1622,6 +1622,7 @@ def profile_view(request, username):
         if request.user.type in ['yetkazib_beruvchi', 'savdogar']:
             base_template = 'sgbase.html' if request.user.type == 'savdogar' else 'ytbase.html'
             context = {'user': user, 'base_template': base_template}
+            context['kpi'] = kpi_service.get_employee_kpi(user, request.company)
             context.update(_payroll_context(user, request.company, can_edit=False))
             if request.user.pk == user.pk:
                 context['own_badge'], _ = XodimBadge.objects.get_or_create(
@@ -1630,6 +1631,7 @@ def profile_view(request, username):
             return render(request, 'ytprofile.html', context)
         elif request.user.type in ['pazanda', 'ishlab_chiqaruvchi']:
             context = {'user': user}
+            context['kpi'] = kpi_service.get_employee_kpi(user, request.company)
             pz = Pazanda.objects.filter(user=user, company=request.company).first()
             if pz:
                 context['pazanda_month_stats'] = get_pazanda_month_stats(pz, request.company)
@@ -1644,6 +1646,7 @@ def profile_view(request, username):
             return render(request, 'pzprofile.html', context)
         elif request.user.type == 'omborchi':
             context = {'user': user, 'profile_stats': None}
+            context['kpi'] = kpi_service.get_employee_kpi(user, request.company)
             context.update(_payroll_context(user, request.company, can_edit=False))
             if request.user.pk == user.pk:
                 context['own_badge'], _ = XodimBadge.objects.get_or_create(
@@ -1654,6 +1657,7 @@ def profile_view(request, username):
             if user.type in ['yetkazib_beruvchi', 'savdogar']:
                 yuklamalar = mahsulotlar_miqdori( YetkazibBeruvchi.objects.get(user=user).mahsulotlar) or []
                 context = {'user': user, 'yuklamalar': yuklamalar}
+                context['kpi'] = kpi_service.get_employee_kpi(user, request.company)
                 context.update(_payroll_context(user, request.company, can_edit=True))
                 return render(request, 'egayt.html', context)
             company = request.company
@@ -1672,6 +1676,7 @@ def profile_view(request, username):
                 'savdogar_contract_ready': bool((company.savdogar_contract_text or '').strip()),
             }
             context = {'user': user, 'profile_stats': profile_stats}
+            context['kpi'] = kpi_service.get_employee_kpi(user, company)
             if user.username == request.user.username and company.custom_desktop_agent_stations:
                 context['agent_release'] = AgentRelease.objects.order_by('-created_at').first()
             if user.type in ['pazanda', 'ishlab_chiqaruvchi']:
@@ -2072,6 +2077,11 @@ def seemahsulot(request, mahsulot_id):
         mahsulot.ishlab_chiqarish_narxi = request.POST.get('ishlab_chiqarish_narxi') or 0
         mahsulot.amortizatsiya_foizi = request.POST.get('amortizatsiya_foizi') or 0
         mahsulot.mahsulot_turi = request.POST.get('mahsulot_turi', mahsulot.mahsulot_turi)
+        kutilgan_soat = (request.POST.get('kutilgan_ishlab_chiqarish_soat') or '').strip()
+        try:
+            mahsulot.kutilgan_ishlab_chiqarish_soat = float(kutilgan_soat) if kutilgan_soat else None
+        except ValueError:
+            mahsulot.kutilgan_ishlab_chiqarish_soat = None
 
         serial_granularity = request.POST.get('serial_granularity')
         if serial_granularity in dict(Mahsulot.SERIAL_GRANULARITY_CHOICES):

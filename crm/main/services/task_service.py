@@ -31,6 +31,17 @@ TASK_WEIGH_OVERAGE_TOLERANCE = 0.05  # 50g — shu miqdorgacha ortiqcha ruxsat e
 WEIGHABLE_BIRLIKLAR = {"kg", "g", "gr", "gramm", "kilogramm"}
 
 
+def _compute_muddat(mahsulot, claimed_at):
+    """Vazifa "olingan" (band qilingan) paytda chaqiriladi — mahsulotda
+    `kutilgan_ishlab_chiqarish_soat` belgilangan bo'lsa, shu soatga qarab
+    muddat hisoblanadi. Belgilanmagan bo'lsa `None` (vazifa muddatsiz —
+    KPI'da hisobga olinmaydi)."""
+    if mahsulot.kutilgan_ishlab_chiqarish_soat is None:
+        return None
+    from datetime import timedelta
+    return claimed_at + timedelta(hours=float(mahsulot.kutilgan_ishlab_chiqarish_soat))
+
+
 def is_weighable_birlik(birlik):
     return (birlik or "").strip().lower() in WEIGHABLE_BIRLIKLAR
 
@@ -80,11 +91,13 @@ def create_production_task(
         qadoq_hajmi = None
 
     with transaction.atomic():
+        claimed_at = timezone.now() if pazanda else None
         task = ProductionTask.objects.create(
             company=company, mahsulot=mahsulot, rejalashtirilgan_miqdor=rejalashtirilgan_miqdor,
             sana=sana, created_by=created_by, qadoq_hajmi=qadoq_hajmi,
             status='claimed' if pazanda else 'open',
-            pazanda=pazanda, claimed_at=timezone.now() if pazanda else None,
+            pazanda=pazanda, claimed_at=claimed_at,
+            muddat=_compute_muddat(mahsulot, claimed_at) if claimed_at else None,
         )
         for row in bom_rows:
             TaskMaterialPickup.objects.create(
@@ -112,7 +125,8 @@ def claim_task(kod, pazanda, company):
         task.status = 'claimed'
         task.pazanda = pazanda
         task.claimed_at = timezone.now()
-        task.save(update_fields=['status', 'pazanda', 'claimed_at'])
+        task.muddat = _compute_muddat(task.mahsulot, task.claimed_at)
+        task.save(update_fields=['status', 'pazanda', 'claimed_at', 'muddat'])
     return task, None
 
 

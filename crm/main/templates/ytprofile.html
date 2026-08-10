@@ -207,6 +207,28 @@
                 </div>
             </div>
 
+            {% if kpi %}
+            <div class="info-section" style="margin-top:20px;">
+                <span class="info-label"><i class="fas fa-chart-line"></i> KPI — bu oy</span>
+                <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:10px;">
+                    <div class="info-box">
+                        <span class="info-label">Sotuvlar soni</span>
+                        <span class="info-value">{{ kpi.jami_savdo_soni }}</span>
+                    </div>
+                    <div class="info-box">
+                        <span class="info-label">Sotuvlar summasi</span>
+                        <span class="info-value">{{ kpi.jami_savdo_summa|floatformat:0 }} so'm</span>
+                    </div>
+                    {% if kpi.turi == 'yetkazib_beruvchi' %}
+                    <div class="info-box">
+                        <span class="info-label">Qaytarish nisbati</span>
+                        <span class="info-value">{% if kpi.qaytarish_nisbati_foiz != None %}{{ kpi.qaytarish_nisbati_foiz }}%{% else %}—{% endif %}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
             {% if own_badge %}
             <div class="info-section" style="margin-top:20px; text-align:center;">
                 <span class="info-label"><i class="fas fa-qrcode"></i> Mening shaxsiy QR badge'im</span>

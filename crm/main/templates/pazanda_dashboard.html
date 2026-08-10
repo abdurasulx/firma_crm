@@ -692,6 +692,12 @@
             <div class="act-dot send"><i class="fa-solid fa-industry"></i></div>
             <div class="act-info">
                 <div class="act-title">{{ task.mahsulot.nomi }}</div>
+                {% if task.muddat %}
+                <div class="act-sub" style="{% if task.kechikdi %}color:#b91c1c;{% else %}color:var(--text-light);{% endif %} font-weight:700;">
+                    <i class="fa-solid fa-clock"></i> Muddat: {{ task.muddat|date:"d.m H:i" }}
+                    {% if task.kechikdi %} — kechikdi{% endif %}
+                </div>
+                {% endif %}
                 <div class="act-sub">
                     {{ task.rejalashtirilgan_miqdor|floatformat:0 }} dona
                     &nbsp;·&nbsp;

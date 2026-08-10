@@ -19,7 +19,7 @@ from .list_views import hodimlar_list, mahsulotlar_list
 from .nasiya_views import nasiya_savdolar_view, add_nasiya_payment
 from .mijoz_views import mijozlar_list, mijoz_detail, set_mijoz_turi
 from .log_views import amallog_view, savdo_chek
-from .qaytarish_views import qaytarish_view, qaytarishlar_view, qaytarish_tasdiq, qaytarish_rad
+from .qaytarish_views import qaytarish_view, qaytarishlar_view, qaytarish_tasdiq, qaytarish_rad, qaytarish_sozlash
 from . import analytics
 from .analytics_views import analytics_dashboard
 from .map_views import map_dashboard, route_history_page, api_map_data, api_route_history, api_route_active_days, api_location_batch
@@ -97,6 +97,7 @@ urlpatterns = [
     path('qaytarishlar/', qaytarishlar_view, name='qaytarishlar'),
     path('qaytarish/tasdiq/<int:qaytarish_id>/', qaytarish_tasdiq, name='qaytarish_tasdiq'),
     path('qaytarish/rad/<int:qaytarish_id>/', qaytarish_rad, name='qaytarish_rad'),
+    path('qaytarish/sozlash/', qaytarish_sozlash, name='qaytarish_sozlash'),
     path('ombor/mahsulotlar/', warehouse_products, name='warehouse_products'),
     path('ombor/mahsulotlar/create/', warehouse_product_create, name='warehouse_product_create'),
     path('ombor/mahsulotlar/<int:product_id>/edit/', warehouse_product_edit, name='warehouse_product_edit'),

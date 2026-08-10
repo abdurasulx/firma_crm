@@ -115,6 +115,24 @@
         color: white;
     }
 
+    .btn-qayta {
+        padding: 6px 14px;
+        background: #dbeafe;
+        color: #1d4ed8;
+        border: 1.5px solid #93c5fd;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        font-family: inherit;
+        transition: all 0.2s;
+    }
+
+    .btn-qayta:hover {
+        background: #2563eb;
+        color: white;
+    }
+
     .btn-rad {
         padding: 6px 14px;
         background: #fee2e2;
@@ -145,6 +163,24 @@
     .badge-pending {
         background: #fef3c7;
         color: #b45309;
+        padding: 3px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    .badge-util {
+        background: #fee2e2;
+        color: #b91c1c;
+        padding: 3px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    .badge-qayta {
+        background: #dbeafe;
+        color: #1d4ed8;
         padding: 3px 10px;
         border-radius: 999px;
         font-size: 11px;
@@ -192,6 +228,42 @@
         color: #92400e;
         border-left: 4px solid #f59e0b;
     }
+
+    /* Hal qilish modal */
+    .qm-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, .5);
+        z-index: 2000;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+    }
+    .qm-overlay.open { display: flex; }
+    .qm-modal {
+        background: #fff;
+        border-radius: 16px;
+        width: 100%;
+        max-width: 420px;
+        max-height: 90vh;
+        overflow-y: auto;
+        padding: 22px;
+    }
+    .qm-modal label {
+        display: block;
+        font-size: 12px;
+        font-weight: 700;
+        color: #6b7280;
+        margin: 12px 0 6px;
+    }
+    .qm-modal select, .qm-modal input {
+        width: 100%;
+        padding: 9px 12px;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        font: inherit;
+    }
 </style>
 
 <!-- Messages -->
@@ -213,6 +285,25 @@
     </div>
 </div>
 
+<!-- Standart javobgarlik sozlamasi -->
+<div class="section-card">
+    <div class="section-head">
+        <h3>⚙️ Standart javobgarlik</h3>
+    </div>
+    <div style="padding:18px 22px;">
+        <form method="POST" action="{% url 'qaytarish_sozlash' %}" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            {% csrf_token %}
+            <select name="qaytarish_javobgarligi" style="padding:9px 12px; border-radius:8px; border:1px solid #e5e7eb;">
+                {% for value, label in qaytarish_javobgarligi_choices %}
+                <option value="{{ value }}" {% if value == company_qaytarish_javobgarligi %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn-tasdiq">Saqlash</button>
+            <span style="font-size:12px; color:#6b7280;">Hal qilishda shu tur oldindan tanlab qo'yiladi — har safar o'zgartirish mumkin.</span>
+        </form>
+    </div>
+</div>
+
 <!-- Pending Returns -->
 <div class="section-card">
     <div class="section-head">
@@ -229,6 +320,7 @@
                     <th>Sana</th>
                     <th>Mahsulot</th>
                     <th>Miqdor</th>
+                    <th>Yetkazib beruvchi</th>
                     <th style="text-align:right;">Amal</th>
                 </tr>
             </thead>
@@ -239,12 +331,17 @@
                     <td style="white-space:nowrap;">{{ q.sana|date:"d.m.Y H:i" }}</td>
                     <td><strong>{{ q.mahsulot.nomi }}</strong></td>
                     <td>{{ q.miqdor|floatformat:1 }} {{ q.mahsulot.turi }}</td>
+                    <td>{{ q.yetkazib_beruvchi.tuliq_ismi|default:"—" }}</td>
                     <td>
                         <div class="action-wrap" style="justify-content:flex-end;">
-                            <form method="POST" action="{% url 'qaytarish_tasdiq' q.id %}">
-                                {% csrf_token %}
-                                <button type="submit" class="btn-tasdiq">✅ Tasdiqlash</button>
-                            </form>
+                            <button type="button" class="btn-tasdiq"
+                                    onclick="openQaytarishModal({{ q.id }}, 'utilizatsiya', '{{ q.mahsulot.nomi|escapejs }}', {{ q.yetkazib_beruvchi.user_id|default:'null' }})">
+                                🗑 Utilizatsiya
+                            </button>
+                            <button type="button" class="btn-qayta"
+                                    onclick="openQaytarishModal({{ q.id }}, 'qayta_ishlash', '{{ q.mahsulot.nomi|escapejs }}', {{ q.yetkazib_beruvchi.user_id|default:'null' }})">
+                                ♻ Qayta ishlash
+                            </button>
                             <form method="POST" action="{% url 'qaytarish_rad' q.id %}">
                                 {% csrf_token %}
                                 <button type="submit" class="btn-rad">❌ Rad</button>
@@ -277,6 +374,8 @@
                     <th>Sana</th>
                     <th>Mahsulot</th>
                     <th>Miqdor</th>
+                    <th>Harakat</th>
+                    <th>Javobgar / Qarz</th>
                     <th>Holat</th>
                 </tr>
             </thead>
@@ -286,7 +385,29 @@
                     <td style="white-space:nowrap; color:#6b7280;">{{ q.sana|date:"d.m.Y" }}</td>
                     <td>{{ q.mahsulot.nomi }}</td>
                     <td>{{ q.miqdor|floatformat:1 }} {{ q.mahsulot.turi }}</td>
-                    <td><span class="badge-done">✓ Yopilgan</span></td>
+                    <td>
+                        {% if q.harakat_turi == 'utilizatsiya' %}
+                        <span class="badge-util">🗑 Utilizatsiya</span>
+                        {% elif q.harakat_turi == 'qayta_ishlash' %}
+                        <span class="badge-qayta">♻ {{ q.komponent.nomi }} (+{{ q.komponent_miqdor|floatformat:1 }})</span>
+                        {% else %}
+                        —
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if q.javobgar %}
+                        {{ q.javobgar.tuliq_ismi|default:q.javobgar.username }} — <strong>{{ q.qarz_summasi|floatformat:0 }} so'm</strong>
+                        {% else %}
+                        —
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if q.status == 'approved' %}
+                        <span class="badge-done">✓ Yopilgan</span>
+                        {% else %}
+                        <span class="badge-pending" style="background:#fee2e2; color:#b91c1c;">❌ Rad etilgan</span>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -299,4 +420,73 @@
     </div>
     {% endif %}
 </div>
+
+<!-- Hal qilish modali -->
+<div class="qm-overlay" id="qmOverlay">
+    <div class="qm-modal">
+        <h3 id="qmTitle" style="margin-bottom:4px;"></h3>
+        <p id="qmSubtitle" style="font-size:12px; color:#6b7280;"></p>
+        <form method="POST" id="qmForm">
+            {% csrf_token %}
+            <input type="hidden" name="harakat_turi" id="qmHarakatTuri">
+
+            <div id="qmKomponentBlock" style="display:none;">
+                <label>Qaysi xom ashyoga aylantiriladi?</label>
+                <select name="komponent_id" id="qmKomponentSelect">
+                    <option value="">— tanlang —</option>
+                    {% for k in komponent_nomzodlar %}
+                    <option value="{{ k.id }}">{{ k.nomi }} ({{ k.turi }})</option>
+                    {% endfor %}
+                </select>
+                <label>Necha {{ "birlik" }} qo'shiladi?</label>
+                <input type="number" name="komponent_miqdor" id="qmKomponentMiqdor" step="0.01" min="0.01" placeholder="Masalan: 2">
+            </div>
+
+            <label>Javobgar (ixtiyoriy — tanlansa qarz yoziladi)</label>
+            <select name="javobgar_id" id="qmJavobgarSelect">
+                <option value="">— yo'q —</option>
+                {% for u in javobgar_nomzodlar %}
+                <option value="{{ u.id }}">{{ u.tuliq_ismi|default:u.username }} ({{ u.get_type_display }})</option>
+                {% endfor %}
+            </select>
+
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button type="button" class="btn-rad" onclick="closeQaytarishModal()">Bekor qilish</button>
+                <button type="submit" class="btn-tasdiq" style="flex:1;">Tasdiqlash</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    const QM_URLS = {};
+    {% for q in pending %}
+    QM_URLS[{{ q.id }}] = "{% url 'qaytarish_tasdiq' q.id %}";
+    {% endfor %}
+    const QM_DEFAULT_JAVOBGARLIGI = "{{ company_qaytarish_javobgarligi }}";
+
+    function openQaytarishModal(qId, harakatTuri, mahsulotNomi, yetkazibBeruvchiUserId) {
+        document.getElementById('qmForm').action = QM_URLS[qId];
+        document.getElementById('qmHarakatTuri').value = harakatTuri;
+        document.getElementById('qmKomponentBlock').style.display = harakatTuri === 'qayta_ishlash' ? 'block' : 'none';
+        document.getElementById('qmTitle').textContent = harakatTuri === 'utilizatsiya' ? 'Utilizatsiya qilish' : 'Qayta ishlash';
+        document.getElementById('qmSubtitle').textContent = mahsulotNomi;
+
+        const javobgarSelect = document.getElementById('qmJavobgarSelect');
+        javobgarSelect.value = '';
+        if (QM_DEFAULT_JAVOBGARLIGI === 'yetkazib_beruvchi' && yetkazibBeruvchiUserId) {
+            javobgarSelect.value = String(yetkazibBeruvchiUserId);
+        }
+
+        document.getElementById('qmOverlay').classList.add('open');
+    }
+
+    function closeQaytarishModal() {
+        document.getElementById('qmOverlay').classList.remove('open');
+    }
+
+    document.getElementById('qmOverlay').addEventListener('click', (ev) => {
+        if (ev.target.id === 'qmOverlay') closeQaytarishModal();
+    });
+</script>
 {% endblock %}

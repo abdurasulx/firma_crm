@@ -147,6 +147,33 @@
         </div>
         {% endif %}
 
+        {% if kpi %}
+        <div class="owner-card">
+            <div class="owner-label">KPI — bu oy</div>
+            {% if kpi.turi == 'ishlab_chiqaruvchi' %}
+            <div class="info-row"><span class="muted">Bajarilgan vazifalar</span><span>{{ kpi.jami_vazifa }}</span></div>
+            {% if kpi.muddatli_vazifa %}
+            <div class="info-row"><span class="muted">Muddatli vazifalar</span><span>{{ kpi.muddatli_vazifa }}</span></div>
+            <div class="info-row"><span class="muted">Kechikkan</span><span style="color:#b91c1c;">{{ kpi.kechikkan_vazifa }}</span></div>
+            <div class="info-row"><span class="muted">O'z vaqtida bajarish</span><span style="font-weight:900; color:#166534;">{{ kpi.ozvaqtida_foiz }}%</span></div>
+            {% else %}
+            <div class="muted" style="font-size:12px; margin-top:6px;">Bu oy muddat belgilangan vazifa bo'lmagan.</div>
+            {% endif %}
+            {% elif kpi.turi == 'omborchi' %}
+            <div class="info-row"><span class="muted">Ko'rib chiqilgan so'rovlar</span><span>{{ kpi.jami_korib_chiqilgan }}</span></div>
+            <div class="info-row"><span class="muted">Tasdiqlangan</span><span>{{ kpi.tasdiqlangan }}</span></div>
+            <div class="info-row"><span class="muted">O'rtacha javob vaqti</span><span>{% if kpi.orta_javob_daqiqa %}{{ kpi.orta_javob_daqiqa }} daqiqa{% else %}—{% endif %}</span></div>
+            {% elif kpi.turi == 'savdogar' or kpi.turi == 'yetkazib_beruvchi' %}
+            <div class="info-row"><span class="muted">Sotuvlar soni</span><span>{{ kpi.jami_savdo_soni }}</span></div>
+            <div class="info-row"><span class="muted">Sotuvlar summasi</span><span>{{ kpi.jami_savdo_summa|floatformat:0 }} so'm</span></div>
+            {% if kpi.turi == 'yetkazib_beruvchi' %}
+            <div class="info-row"><span class="muted">Qaytarishlar soni</span><span>{{ kpi.qaytarish_soni }}</span></div>
+            <div class="info-row"><span class="muted">Qaytarish nisbati</span><span>{% if kpi.qaytarish_nisbati_foiz != None %}{{ kpi.qaytarish_nisbati_foiz }}%{% else %}—{% endif %}</span></div>
+            {% endif %}
+            {% endif %}
+        </div>
+        {% endif %}
+
         {% if user.type != 'ega' %}
         <div class="owner-card">
             <div class="owner-label">Oylik maosh</div>

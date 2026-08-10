@@ -86,6 +86,19 @@ class Company(models.Model):
     )
     ish_haqi_turi = models.CharField(max_length=20, choices=ISH_HAQI_TURI_CHOICES, default='fixed')
 
+    # Qaytarilgan mahsulot (utilizatsiya/qayta ishlash) uchun standart
+    # javobgar rol — "Qaytarilgan Mahsulotlar" sahifasida tasdiqlashda
+    # shu tur oldindan tanlab qo'yiladi (ega baribir har safar kerakli
+    # aniq xodimni tanlaydi/o'zgartiradi).
+    QAYTARISH_JAVOBGARLIGI_CHOICES = (
+        ('yoq', "Yo'q — shunchaki chiqim (hech kimga qarz yozilmaydi)"),
+        ('yetkazib_beruvchi', "Yetkazib beruvchiga qarz"),
+        ('savdogar', "Savdogarga qarz"),
+    )
+    qaytarish_javobgarligi = models.CharField(
+        max_length=20, choices=QAYTARISH_JAVOBGARLIGI_CHOICES, default='yoq',
+    )
+
     last_backup_at = models.DateTimeField(null=True, blank=True)
     
     # Billing fields
@@ -311,6 +324,12 @@ class Mahsulot(models.Model):
     amortizatsiya_foizi = models.DecimalField(
         max_digits=5, decimal_places=2, default=0,
         help_text="Foizda (masalan 10 = 10%) — baza tannarx + qo'shimcha xarajatlar yig'indisiga ustama sifatida qo'shiladi",
+    )
+    kutilgan_ishlab_chiqarish_soat = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True,
+        help_text="Ixtiyoriy — shu mahsulot uchun vazifa qancha soatda tugatilishi kutiladi "
+                   "(masalan 2.5). Bo'sh qoldirilsa, vazifaga muddat belgilanmaydi (KPI'da "
+                   "muddatga rioya ko'rsatkichi hisoblanmaydi).",
     )
     turi = models.ForeignKey(MahsulotTuri, on_delete=models.CASCADE)
     miqdori = models.FloatField(default=0)
@@ -624,6 +643,45 @@ class qaytarilgan_mahsulotlar(models.Model):
     sana = models.DateTimeField(auto_now_add=True)
     yq = models.BooleanField(default=False)  # kept for backwards compat, use status
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+
+    # Kim yubordi — hozircha faqat yetkazib beruvchi qaytarish so'rovi
+    # yubora oladi (`qaytarish_view`), lekin javobgar (kim qarzdor
+    # bo'lishi) tasdiqlash paytida ALOHIDA tanlanadi — shu maydon faqat
+    # o'sha tanlovni oldindan to'ldirish uchun.
+    yetkazib_beruvchi = models.ForeignKey(
+        'YetkazibBeruvchi', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='qaytargan_mahsulotlar',
+    )
+
+    HARAKAT_TURI_CHOICES = (
+        ('utilizatsiya', "Utilizatsiya (chiqim, ombor qoldig'iga qo'shilmaydi)"),
+        ('qayta_ishlash', "Qayta ishlash (xom ashyoga aylantiriladi)"),
+    )
+    harakat_turi = models.CharField(
+        max_length=20, choices=HARAKAT_TURI_CHOICES, null=True, blank=True,
+        help_text="Faqat tasdiqlanganda (status=approved) to'ldiriladi.",
+    )
+    # Faqat harakat_turi='qayta_ishlash' bo'lganda ma'noli — mahsulot
+    # qaysi xom ashyoga va qancha miqdorda aylantirilgani.
+    komponent = models.ForeignKey(
+        Mahsulot, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='qayta_ishlangan_qaytarishlar',
+    )
+    komponent_miqdor = models.FloatField(null=True, blank=True)
+
+    # Javobgar (qarz yoziladigan) xodim — `Company.qaytarish_javobgarligi`
+    # sozlamasi bo'yicha oldindan tanlanadi, ega tasdiqlash paytida
+    # o'zgartirishi mumkin. Qarz — bu yerda faqat KO'RSATISH uchun
+    # saqlanadi (alohida to'lov/hisob-kitob oqimi hozircha yo'q, keyinroq
+    # kerak bo'lsa qo'shiladi).
+    javobgar = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='qaytarish_qarzlari',
+    )
+    qarz_summasi = models.DecimalField(
+        max_digits=12, decimal_places=2, default=0,
+        help_text="Javobgarga yozilgan qarz summasi (mahsulot tannarxi * miqdor).",
+    )
 
     def __str__(self):
         return f"{self.mahsulot} - {self.miqdor}"
@@ -952,6 +1010,24 @@ class ProductionTask(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='yaratgan_vazifalar')
     created_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
+    muddat = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Vazifa band qilingan (`claimed_at`) paytda, agar "
+                   "mahsulotda `kutilgan_ishlab_chiqarish_soat` belgilangan "
+                   "bo'lsa, avtomatik hisoblanadi — `claimed_at` + shu "
+                   "soat. Bo'sh bo'lsa vazifa muddatsiz (KPI'da hisobga "
+                   "olinmaydi).",
+    )
+
+    @property
+    def kechikdi(self):
+        """Vazifa muddatdan kech tugatilganmi (yoki hali tugamagan bo'lsa,
+        muddat allaqachon o'tib ketganmi) — KPI'da "muddatga rioya"
+        ko'rsatkichi shundan hisoblanadi."""
+        if not self.muddat:
+            return False
+        reference = self.completed_at or timezone.now()
+        return reference > self.muddat
 
     class Meta:
         verbose_name = "Ishlab chiqarish vazifasi"

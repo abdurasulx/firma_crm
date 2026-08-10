@@ -98,6 +98,26 @@
         {% endfor %}
     </div>
 
+    {% if kpi and kpi.turi == 'ishlab_chiqaruvchi' %}
+    <h3 style="margin-bottom:16px; color:#0f172a;">KPI — bu oy</h3>
+    <div style="margin-bottom:24px; display:flex; gap:14px; flex-wrap:wrap;">
+        <div style="display:inline-block; background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:16px 22px;">
+            <div style="font-size:12px; color:#475569; font-weight:700; text-transform:uppercase;">Bajarilgan vazifalar</div>
+            <div style="font-size:24px; font-weight:900; color:#1e293b;">{{ kpi.jami_vazifa }}</div>
+        </div>
+        {% if kpi.muddatli_vazifa %}
+        <div style="display:inline-block; background:#fee2e2; border:1px solid #fecaca; border-radius:14px; padding:16px 22px;">
+            <div style="font-size:12px; color:#991b1b; font-weight:700; text-transform:uppercase;">Kechikkan</div>
+            <div style="font-size:24px; font-weight:900; color:#b91c1c;">{{ kpi.kechikkan_vazifa }}</div>
+        </div>
+        <div style="display:inline-block; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:14px; padding:16px 22px;">
+            <div style="font-size:12px; color:#166534; font-weight:700; text-transform:uppercase;">O'z vaqtida bajarish</div>
+            <div style="font-size:24px; font-weight:900; color:#065f46;">{{ kpi.ozvaqtida_foiz }}%</div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
     <h3 style="margin-bottom:16px; color:#0f172a;">Bu oy statistikam</h3>
     <div style="margin-bottom:20px; display:flex; gap:14px; flex-wrap:wrap;">
         <div style="display:inline-block; background:#eff6ff; border:1px solid #bfdbfe; border-radius:14px; padding:16px 22px;">
