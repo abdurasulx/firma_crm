@@ -109,17 +109,28 @@
         <div class="profile-info" style="text-align:left;"><span class="profile-label">Qaytarishlar soni:</span> {{ kpi.qaytarish_soni }}</div>
         <div class="profile-info" style="text-align:left;"><span class="profile-label">Qaytarish nisbati:</span> {% if kpi.qaytarish_nisbati_foiz != None %}{{ kpi.qaytarish_nisbati_foiz }}%{% else %}—{% endif %}</div>
         {% endif %}
-        {% if kpi.bonus.qoidalar %}
+        {% if kpi.bonus.bosqichlar %}
         <div style="margin-top:14px;">
             <span class="profile-label">Bonus qoidalari (bu oy):</span>
-            {% for natija in kpi.bonus.qoidalar %}
-            <div style="margin:8px 0; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 14px;">
-                <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:700;">
-                    <span>{{ natija.qoida.mahsulot.nomi|default:"Jami" }} — {{ natija.qoida.chegara|floatformat:0 }} {{ natija.qoida.get_olchov_turi_display }}</span>
-                    <span style="{% if natija.yetdi %}color:#059669;{% endif %}">{{ natija.progress_foiz }}%{% if natija.yetdi %} ✓{% endif %}</span>
+            {% for b in kpi.bonus.bosqichlar %}
+            <div style="margin:10px 0; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px;">
+                <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:700; margin-bottom:8px;">
+                    <span>{{ b.label }}</span>
+                    <span>{{ b.amalda|floatformat:0 }} {{ b.olchov_turi_display }}</span>
                 </div>
-                <div style="height:6px; background:#e2e8f0; border-radius:999px; margin-top:6px; overflow:hidden;">
-                    <div style="height:100%; width:{{ natija.progress_foiz }}%; background:{% if natija.yetdi %}#10b981{% else %}#3b82f6{% endif %};"></div>
+                <div style="display:flex; gap:3px; height:8px;">
+                    {% for seg in b.segments %}
+                    <div style="flex:{{ seg.width_percent }}; background:#e2e8f0; border-radius:4px; overflow:hidden;">
+                        <div style="height:100%; width:{{ seg.segment_percent }}%; background:{% if seg.yetdi %}#10b981{% else %}#3b82f6{% endif %};"></div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div style="display:flex; gap:3px; margin-top:4px;">
+                    {% for seg in b.segments %}
+                    <div style="flex:{{ seg.width_percent }}; text-align:right; font-size:11px; font-weight:700; color:{% if seg.yetdi %}#059669{% else %}#94a3b8{% endif %};">
+                        {{ seg.qoida.chegara|floatformat:0 }}{% if seg.yetdi %} ✓{% endif %}
+                    </div>
+                    {% endfor %}
                 </div>
             </div>
             {% endfor %}

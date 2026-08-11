@@ -375,6 +375,41 @@ class KpiQoidaBonusTests(TestCase):
         result = kpi_service.compute_kpi_bonus(self.sd_user, self.company)
         self.assertEqual(result["bonus_summasi"], Decimal("30000"))  # ikkalasi ham yetgan
 
+        # Ikkala bosqich (5000 va 10000) BITTA guruhda (bir xil "Jami"/summa
+        # o'lchovi), navbat-navbat segment sifatida — ikkalasi ham to'liq
+        # yetgan (amalda=15000, ikkala chegaradan ham katta).
+        self.assertEqual(len(result["bosqichlar"]), 1)
+        segments = result["bosqichlar"][0]["segments"]
+        self.assertEqual(len(segments), 2)
+        self.assertTrue(segments[0]["yetdi"])
+        self.assertEqual(segments[0]["segment_percent"], 100)
+        self.assertTrue(segments[1]["yetdi"])
+        self.assertEqual(segments[1]["segment_percent"], 100)
+
+    def test_progressive_tiers_partial_segment(self):
+        # 300 va 500 dona qoidalari, hozircha 350 dona — birinchi segment
+        # TO'LIQ (300ga yetgan), ikkinchi segment esa 300-500 oralig'ida
+        # (350-300)/(500-300) = 25% to'lgan bo'lishi kerak.
+        KpiQoida.objects.create(
+            company=self.company, xodim_turi="savdogar", mahsulot=self.mahsulot, olchov_turi="dona",
+            chegara=Decimal("300"), bonus_turi="fiks", bonus_qiymati=Decimal("10000"),
+        )
+        KpiQoida.objects.create(
+            company=self.company, xodim_turi="savdogar", mahsulot=self.mahsulot, olchov_turi="dona",
+            chegara=Decimal("500"), bonus_turi="fiks", bonus_qiymati=Decimal("20000"),
+        )
+        Savdo.objects.create(
+            company=self.company, savdogar=self.sd_user, oluvchining_ismi="X", st="naqd",
+            summa=1, smm="Kola 350,",
+        )
+        result = kpi_service.compute_kpi_bonus(self.sd_user, self.company)
+        self.assertEqual(result["bonus_summasi"], Decimal("10000"))  # faqat 300 yetgan
+        segments = result["bosqichlar"][0]["segments"]
+        self.assertTrue(segments[0]["yetdi"])
+        self.assertEqual(segments[0]["segment_percent"], 100)
+        self.assertFalse(segments[1]["yetdi"])
+        self.assertEqual(segments[1]["segment_percent"], 25)  # (350-300)/(500-300)*100
+
     def test_inactive_rule_ignored(self):
         KpiQoida.objects.create(
             company=self.company, xodim_turi="savdogar", olchov_turi="summa",

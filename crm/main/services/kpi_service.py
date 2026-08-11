@@ -205,7 +205,56 @@ def compute_kpi_bonus(user, company, yil=None, oy=None):
             'progress_foiz': min(round(amalda / chegara * 100, 1), 100) if chegara > 0 else 0,
         })
 
-    return {'bonus_summasi': bonus_summasi, 'qoidalar': natijalar}
+    return {'bonus_summasi': bonus_summasi, 'qoidalar': natijalar, 'bosqichlar': _group_into_bosqichlar(natijalar)}
+
+
+def _group_into_bosqichlar(natijalar):
+    """Bir xil o'lchov (mahsulot + dona/summa) bo'yicha bosqichma-bosqich
+    qoidalarni BITTA umumiy progress-bar uchun guruhlaydi — har bir
+    bosqich chiziqning bir SEGMENTI bo'ladi (masalan 300 va 500 dona
+    qoidalari bir xil chiziqda ketma-ket to'ladi, ikkita alohida chiziq
+    emas). Segmentlar chegara oralig'iga PROPORSIONAL kenglikda
+    chiziladi (0-300 segmenti, 300-500 segmenti kabi)."""
+    groups = {}
+    order = []
+    for n in natijalar:
+        q = n['qoida']
+        key = (q.mahsulot_id, q.olchov_turi)
+        if key not in groups:
+            groups[key] = {
+                'label': q.mahsulot.nomi if q.mahsulot else "Jami",
+                'olchov_turi_display': q.get_olchov_turi_display(),
+                'amalda': n['amalda'],
+                'tiers': [],
+            }
+            order.append(key)
+        groups[key]['tiers'].append(n)
+
+    bosqichlar = []
+    for key in order:
+        g = groups[key]
+        tiers = sorted(g['tiers'], key=lambda n: float(n['qoida'].chegara))
+        prev_chegara = 0.0
+        amalda = g['amalda']
+        segments = []
+        for n in tiers:
+            chegara = float(n['qoida'].chegara)
+            span = chegara - prev_chegara
+            segment_percent = min(max((amalda - prev_chegara) / span * 100, 0), 100) if span > 0 else 100
+            segments.append({
+                'qoida': n['qoida'],
+                'yetdi': n['yetdi'],
+                'segment_percent': round(segment_percent, 1),
+                'width_percent': round(100 / len(tiers), 2),
+            })
+            prev_chegara = chegara
+        bosqichlar.append({
+            'label': g['label'],
+            'olchov_turi_display': g['olchov_turi_display'],
+            'amalda': amalda,
+            'segments': segments,
+        })
+    return bosqichlar
 
 
 def get_employee_kpi(user, company, yil=None, oy=None):

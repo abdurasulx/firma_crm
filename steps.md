@@ -8991,3 +8991,38 @@ belgi (✓) + jami bonus summasi ko'rsatiladi.
 
 ### Tekshirildi
 `manage.py check`/`test` — 65 test, hammasi o'tdi.
+
+---
+
+## 209-qadam: KPI bosqichlari — bitta umumiy progress-barda navbat-navbat (segmentli)
+
+**Holat: DONE**
+
+### Muammo
+208-qadamda har bir KPI bosqichi (masalan 300 dona va 500 dona) ALOHIDA
+progress-bar sifatida ko'rsatilardi. Ega so'radi: "300taga qo'ysa keyin
+500taga qo'ysa nima bo'ladi progressbarda current-300-500 turadimi?"
+va aniqlashtirdi: "bitta progressbarda ko'rinsin navbat navbat bo'lib".
+
+### Nima qilindi
+`kpi_service.compute_kpi_bonus` endi qo'shimcha `bosqichlar` (bitta
+umumiy progress-bar uchun guruhlangan) ma'lumot qaytaradi — yangi
+`_group_into_bosqichlar()`. Bir xil o'lchov (mahsulot + dona/summa)
+bo'yicha qoidalar chegara bo'yicha saralanib, BITTA chiziqda ketma-ket
+SEGMENTlarga bo'linadi (0-300 segmenti, 300-500 segmenti va h.k.),
+har bir segment o'z oralig'iga nisbatan mustaqil to'ladi (masalan
+amalda=350 bo'lsa: 0-300 segmenti 100% ✓, 300-500 segmenti (350-300)/
+(500-300)=25%). Barcha profil sahifalari (`pzprofile.html`,
+`ytprofile.html`, `egayt.html`, `egaprofile.html`) yangilandi — endi
+har bir "chegara" segment tagida raqam bilan (va yetgan bo'lsa ✓ bilan)
+ko'rsatiladi, bitta flex-chiziqda ketma-ket.
+
+### O'zgargan fayllar
+`main/services/kpi_service.py` (`_group_into_bosqichlar`),
+`main/templates/pzprofile.html`, `main/templates/ytprofile.html`,
+`main/templates/egayt.html`, `main/templates/egaprofile.html`,
+`main/tests_kpi_returns.py` (+2 test — segment guruhlash va qisman
+to'lgan segment)
+
+### Tekshirildi
+`manage.py check`/`test` — 66 test, hammasi o'tdi.
