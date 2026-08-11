@@ -9060,3 +9060,35 @@ kodlari uchun ENDI har biriga ALOHIDA, aniq sabab ko'rsatiladi:
 
 ### Tekshirildi
 `manage.py check`/`test` — 68 test, hammasi o'tdi.
+
+---
+
+## 211-qadam: Yuklama so'rovi — omborda 0 qoldiq bo'lsa ham "+" tugmasi ishlayotgan edi (BUG FIX)
+
+**Holat: DONE**
+
+### Muammo
+Yetkazib beruvchi dashboardida "Yuklama olish" bo'limida (skrinshotda
+"Somsa hamir 30", omborda 0 dona) "+" tugmasi hamon bosilar edi va
+cheksiz miqdor so'rash mumkin edi — na frontendda (`sorovStep` JS
+funksiyasi faqat 0dan pastga tushmaslikni tekshirar edi, YUQORI
+chegara — omborda mavjud miqdor — umuman tekshirilmasdi), na backendda
+(`views.py`dagi `sorov_submit` handler ham `sorov_miqdor > m.miqdori`
+holatini tekshirmasdi).
+
+### Nima qilindi
+- `yetkazuvchi_dashboard.html`: input'ga `max`/`data-max` (mahsulot
+  qoldig'i) qo'shildi, `sorovStep()` endi shu chegaradan oshirmaydi.
+  Qoldiq 0 bo'lsa "+" tugmasi `disabled` va vizual xiralashtirilgan.
+- `views.py` (`sorov_submit` handler): server tomonida ham
+  `sorov_miqdor > m.miqdori` tekshiruvi qo'shildi — chegaradan oshgan
+  so'rov o'tkazib yuboriladi, aniq xabar bilan (frontend JS
+  aylanib o'tilsa ham himoyalangan).
+
+### O'zgargan fayllar
+`main/views.py`, `main/templates/yetkazuvchi_dashboard.html`
+
+### Tekshirildi
+`manage.py check`/`test` — 68 test, hammasi o'tdi (backend tekshiruv
+mavjud avtomatlashtirilgan testlar bilan qamrab olinmagan — soddaligi
+tufayli qo'lda tasdiqlash tavsiya etiladi).

@@ -492,10 +492,10 @@
                                 style="width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--slate-200, #e2e8f0); background: #fff; color: var(--slate-600, #475569); font-weight: 800; cursor: pointer;">
                             <i class="fas fa-minus"></i>
                         </button>
-                        <input type="number" id="sorov_inp_{{ m.id }}" name="sorov_miqdor_{{ m.id }}" step="any" min="0" value="0"
+                        <input type="number" id="sorov_inp_{{ m.id }}" name="sorov_miqdor_{{ m.id }}" step="any" min="0" max="{{ m.miqdori|floatformat:'-2' }}" value="0" data-max="{{ m.miqdori|floatformat:'-2' }}"
                                style="width: 64px; padding: 0.45rem 0; border: none; background: transparent; text-align: center; font-weight: 800; font-size: 1.05rem; color: var(--slate-900, #0f172a); -moz-appearance: textfield;">
-                        <button type="button" onclick="sorovStep('{{ m.id }}', 1)"
-                                style="width: 34px; height: 34px; border-radius: 10px; border: none; background: var(--primary, #10b981); color: #fff; font-weight: 800; cursor: pointer;">
+                        <button type="button" onclick="sorovStep('{{ m.id }}', 1)" {% if m.miqdori <= 0 %}disabled title="Omborda qoldiq yo'q"{% endif %}
+                                style="width: 34px; height: 34px; border-radius: 10px; border: none; background: var(--primary, #10b981); color: #fff; font-weight: 800; cursor: pointer;{% if m.miqdori <= 0 %} opacity:.4; cursor:not-allowed;{% endif %}">
                             <i class="fas fa-plus"></i>
                         </button>
                     </div>
@@ -514,7 +514,8 @@
         <script>
             function sorovStep(id, delta) {
                 const inp = document.getElementById('sorov_inp_' + id);
-                const val = Math.max(0, (parseFloat(inp.value) || 0) + delta);
+                const max = parseFloat(inp.dataset.max) || 0;
+                const val = Math.min(max, Math.max(0, (parseFloat(inp.value) || 0) + delta));
                 inp.value = val;
             }
         </script>

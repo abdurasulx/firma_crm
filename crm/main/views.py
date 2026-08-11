@@ -1289,6 +1289,9 @@ def main(request):
                         continue
                     if sorov_miqdor <= 0:
                         continue
+                    if sorov_miqdor > m.miqdori:
+                        messages.error(request, f"{m.nomi} uchun omborda faqat {m.miqdori:g} {m.turi} bor — so'rov o'tkazib yuborildi.")
+                        continue
                     if YuklamaSorov.objects.filter(
                         company=request.company, user=yt_obj, mahsulot=m, mode='waiting',
                     ).exists():
