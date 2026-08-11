@@ -9179,3 +9179,36 @@ ko'chirildi, duplikat import olib tashlandi; `main` view),
 ### Keyingi nomzod
 Yoqsa — pazandaning material so'rovini bekor qilish tugmasi
 (`pazanda_dashboard.html`) xuddi shu naqsh bilan AJAX'ga o'tkaziladi.
+
+---
+
+## 214-qadam: Pazanda "Oldim ✓" tugmasi — haqiqiy AJAX
+
+**Holat: DONE**
+
+### Muammo
+Ega yana sinab ko'rib, "Oldim" tugmasi bosilganda sahifa hamon qayta
+yuklanayotganini aniqladi — bu 213-qadamda AJAX'ga o'tkazilgan
+"Yuklama so'rovi" formasidan FARQLI, alohida forma edi ("Olib qo'yish
+kerak" bo'limi, `pz_ack_task_pickup`).
+
+### Nima qilindi
+`production_views.py` (`pz_ack_task_pickup`): xuddi 213-qadamdagi
+naqsh — `X-Requested-With: XMLHttpRequest` header bilan kelsa
+`JsonResponse({'ok','message','pickup_id'})` qaytaradi, aks holda
+eski redirect+messages yo'li saqlanadi.
+
+`pazanda_dashboard.html`: forma `.ack-pickup-form` klassi bilan
+belgilandi, hujjat darajasidagi (event delegation) submit listener
+`fetch()` orqali yuboradi. Muvaffaqiyatli bo'lsa: qator (`.act-item`)
+DOM'dan olib tashlanadi, "Olib qo'yish kerak" badge soni kamayadi,
+`showNotification()` orqali toast ko'rsatiladi — SAHIFA QAYTA
+YUKLANMAYDI.
+
+### O'zgargan fayllar
+`main/production_views.py` (`pz_ack_task_pickup`),
+`main/templates/pazanda_dashboard.html`,
+`main/tests_pz_ack_pickup.py` (yangi — 2 test)
+
+### Tekshirildi
+`manage.py check`/`test` — 73 test, hammasi o'tdi.

@@ -636,17 +636,17 @@
 <div class="content-card" style="margin-top:20px;">
     <div class="card-head">
         <h3><i class="fa-solid fa-hand-holding-box" style="color:#0f766e;margin-right:8px;"></i>Olib qo'yish kerak</h3>
-        <span class="card-badge" style="background:#ccfbf1;color:#0f766e;">{{ pending_pickups|length }}</span>
+        <span class="card-badge" id="pendingPickupsBadge" style="background:#ccfbf1;color:#0f766e;">{{ pending_pickups|length }}</span>
     </div>
     <div class="card-body">
         {% for pickup in pending_pickups %}
-        <div class="act-item">
+        <div class="act-item" id="pickup-row-{{ pickup.id }}">
             <div class="act-dot send"><i class="fa-solid fa-box"></i></div>
             <div class="act-info">
                 <div class="act-title">{{ pickup.komponent.nomi }} ({{ pickup.task.mahsulot.nomi }} uchun)</div>
                 <div class="act-sub">{{ pickup.expected_qty|floatformat:0 }} {{ pickup.komponent.turi.nomi }}</div>
             </div>
-            <form method="post" action="{% url 'pz_ack_task_pickup' pickup.id %}" style="margin-left:auto;">
+            <form method="post" action="{% url 'pz_ack_task_pickup' pickup.id %}" class="ack-pickup-form" style="margin-left:auto;">
                 {% csrf_token %}
                 <button type="submit" style="border:1px solid #86efac; background:#f0fdf4; color:#15803d; padding:6px 14px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:700; white-space:nowrap;">
                     Oldim ✓
@@ -656,6 +656,49 @@
         {% endfor %}
     </div>
 </div>
+<script>
+    // Haqiqiy AJAX: "Oldim ✓" bosilganda sahifa umuman qayta
+    // yuklanmaydi — muvaffaqiyatli bo'lsa shu qator DOM'dan olib
+    // tashlanadi va badge soni yangilanadi, toast bildirishnoma
+    // ko'rsatiladi.
+    document.addEventListener('submit', function (e) {
+        var form = e.target;
+        if (!form.classList || !form.classList.contains('ack-pickup-form')) return;
+        e.preventDefault();
+        var row = form.closest('.act-item');
+        var btn = form.querySelector('button[type="submit"]');
+        var origHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+        fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (window.showNotification) {
+                    window.showNotification(data.ok ? 'Olindi' : 'Xato', data.message, data.ok ? 'success' : 'warning');
+                }
+                if (data.ok && row) {
+                    row.remove();
+                    var badge = document.getElementById('pendingPickupsBadge');
+                    if (badge) {
+                        badge.textContent = Math.max(0, (parseInt(badge.textContent) || 0) - 1);
+                    }
+                } else {
+                    btn.disabled = false;
+                    btn.innerHTML = origHtml;
+                }
+            })
+            .catch(() => {
+                if (window.showNotification) window.showNotification('Xato', 'Tarmoq xatosi — qayta urinib ko\'ring.', 'warning');
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+            });
+    }, true);
+</script>
 {% endif %}
 
 <div class="content-card" style="margin-top:20px;">

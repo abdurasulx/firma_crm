@@ -5,7 +5,7 @@ import qrcode
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -275,23 +275,36 @@ def pz_ack_task_pickup(request, pickup_id):
     if request.method != 'POST':
         return redirect('main')
 
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
     try:
         pazanda = Pazanda.objects.get(user=request.user, company=request.company)
     except Pazanda.DoesNotExist:
+        if is_ajax:
+            return JsonResponse({'ok': False, 'message': "Profil topilmadi."}, status=400)
         return redirect('main')
 
     pickup = TaskMaterialPickup.objects.filter(
         id=pickup_id, task__company=request.company, task__pazanda=pazanda,
     ).first()
     if not pickup:
-        messages.error(request, "So'rov topilmadi yoki allaqachon ko'rib chiqilgan.")
+        msg = "So'rov topilmadi yoki allaqachon ko'rib chiqilgan."
+        if is_ajax:
+            return JsonResponse({'ok': False, 'message': msg}, status=404)
+        messages.error(request, msg)
         return redirect('main')
 
     result = task_service.weigh_task_pickup(pickup_id, pazanda, pickup.expected_qty)
-    if not result.get('approved'):
-        messages.error(request, result.get('detail', "Noma'lum xato."))
+    ok = bool(result.get('approved'))
+    msg = f"{pickup.komponent.nomi} — oldingiz deb belgilandi." if ok else result.get('detail', "Noma'lum xato.")
+
+    if is_ajax:
+        return JsonResponse({'ok': ok, 'message': msg, 'pickup_id': pickup_id})
+
+    if ok:
+        messages.success(request, msg)
     else:
-        messages.success(request, f"{pickup.komponent.nomi} — oldingiz deb belgilandi.")
+        messages.error(request, msg)
     return redirect('main')
 
 
