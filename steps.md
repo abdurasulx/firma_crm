@@ -8790,3 +8790,51 @@ ko'rsatiladi), 500 o'rniga.
 
 ### Tekshirildi
 `manage.py check`/`test` — 55 test, hammasi o'tdi.
+
+---
+
+## 204-qadam: 0096-migratsiya serverda bajarilmagan edi (ProgrammingError: Unknown column)
+
+**Holat: DONE (server tomon, kod o'zgarishi yo'q)**
+
+### Muammo
+201-qadamdan (`savdo_birlik_narxi` maydoni) keyin serverda faqat
+`git pull` qilingan, `python manage.py migrate` unutilgan edi —
+butun sayt (`demo.stockfirm.uz`) 500 bera boshladi:
+`django.db.utils.ProgrammingError: (1054, "Unknown column
+'main_user.savdo_birlik_narxi' in 'field list'")`.
+
+### Nima qilindi
+Foydalanuvchiga `venv/bin/python crm/manage.py migrate` +
+`systemctl restart stockfirm` buyruqlari berildi. Eslatma: HAR safar
+yangi migratsiya bilan commit qilinganda, deploy qadamlarida
+`git pull` dan keyin ALBATTA `migrate` ham bajarilishi kerakligi
+takidlandi.
+
+---
+
+## 205-qadam: Hodimlar ro'yxati sahifasidan firma-bo'yicha "Ish haqi turi" kartasi olib tashlandi
+
+**Holat: DONE**
+
+### Muammo
+`hodimlar_list.html`ning yuqorisida firma bo'yicha umumiy "Ish haqi
+turi" dropdown (`Oylik (fiksval)` / `Ishlab chiqarilgan mahsulotga
+qarab`) ko'rsatilar edi. Endi (200/201-qadamlardan buyon) ish haqi turi
+har bir xodim uchun ALOHIDA (`editusr.html`) sozlanadi — bu global
+tanlov endi chalkashtiruvchi/keraksiz, ega "buni bu yerda
+ko'rinmaydigon qilaylik" deb so'radi.
+
+### Nima qilindi
+`hodimlar_list.html`dan shu kartani butunlay olib tashlandi. Backend
+(`list_views.py`dagi `set_ish_haqi_turi` POST handler, `Company.
+ish_haqi_turi` maydoni) tegilmadi — faqat UI'dan yashirildi, chunki
+`effective_ish_haqi_turi` hamon "firma standarti" fallback sifatida
+shu qiymatdan foydalanadi (individual override bo'lmagan xodimlar
+uchun).
+
+### O'zgargan fayllar
+`main/templates/hodimlar_list.html`
+
+### Tekshirildi
+`manage.py check` toza (test kerak emas — faqat shablon o'zgarishi).
