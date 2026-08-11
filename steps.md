@@ -9026,3 +9026,37 @@ to'lgan segment)
 
 ### Tekshirildi
 `manage.py check`/`test` — 66 test, hammasi o'tdi.
+
+---
+
+## 210-qadam: Sotuv paytida QR skanerlash — Desktop Agent orqali ro'yxatdan o'tkazilmagan (omborda) kod uchun aniq ogohlantirish
+
+**Holat: DONE**
+
+### Muammo
+Production oldidan ega yetkazib beruvchi/sotuvchi dashboardlarini
+tekshirishni so'radi. Kamchilik: yetkazib beruvchi Desktop Agent orqali
+hali "yuklamaga olmagan" (Serial.holati hamon `omborda`, hech qachon
+`chiqarilgan`ga o'tmagan) QR kodni to'g'ridan-to'g'ri `/sotish/`
+sahifasida kiritsa/skanerlasa, tizim buni ALLAQACHON rad etardi
+(`weigh`/serial filtri `holati=chiqarilgan` talab qiladi) — lekin
+xabar umumiy edi: "yaroqsiz yoki allaqachon ishlatilgan", sababi aniq
+ko'rinmasdi (nega aynan rad etilgani noaniq qolardi).
+
+### Nima qilindi
+`sotish` view'ida (`views.py`) rad etilgan (`missing`) serial
+kodlari uchun ENDI har biriga ALOHIDA, aniq sabab ko'rsatiladi:
+- kod umuman topilmasa — "topilmadi"
+- allaqachon biror savdoga bog'langan bo'lsa — "allaqachon sotilgan"
+- yetkazib beruvchi uchun holati hamon `omborda` bo'lsa — **"hali
+  agentda ro'yxatdan o'tkazilmagan (yuklamaga olinmagan, omborda
+  turibdi)"** — aynan ega so'ragan holat
+- yetkazib beruvchi uchun `chiqarilgan` lekin boshqa yetkazib
+  beruvchiga tegishli bo'lsa — "boshqa yetkazib beruvchiga tegishli"
+- boshqa har qanday mos kelmagan holat — aniq holat nomi bilan
+
+### O'zgargan fayllar
+`main/views.py` (`sotish`), `main/tests_sotish_qr.py` (yangi — 2 test)
+
+### Tekshirildi
+`manage.py check`/`test` — 68 test, hammasi o'tdi.

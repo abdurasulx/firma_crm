@@ -2692,9 +2692,34 @@ def sotish(request):
                     found_kodlar = set(serials_qs.values_list('kod', flat=True))
                     missing = [k for k in kodlar if k not in found_kodlar]
                     if missing:
+                        # Har bir "yaroqsiz" kod uchun ANIQ sababini topib
+                        # ko'rsatamiz — ayniqsa yetkazib beruvchi hali
+                        # Desktop Agent orqali yuklamaga olmagan (holati
+                        # hamon "omborda") mahsulotni to'g'ridan-to'g'ri
+                        # sotishga urinsa, oldingi umumiy "yaroqsiz yoki
+                        # ishlatilgan" xabari chalkashtirar edi — ega bilan
+                        # kelishilgan aniqlashtirish.
+                        real_serials = {
+                            s.kod: s for s in Serial.objects.filter(
+                                company=request.company, mahsulot=mahsulot_for_check, kod__in=missing,
+                            ).select_related('yetkazib_beruvchi')
+                        }
+                        sabablar = []
+                        for kod in missing[:5]:
+                            s = real_serials.get(kod)
+                            if not s:
+                                sabablar.append(f"{kod} — topilmadi")
+                            elif s.savdo_id:
+                                sabablar.append(f"{kod} — allaqachon sotilgan")
+                            elif s.holati == 'omborda' and request.user.type == 'yetkazib_beruvchi':
+                                sabablar.append(f"{kod} — hali agentda ro'yxatdan o'tkazilmagan (yuklamaga olinmagan, omborda turibdi)")
+                            elif s.holati == 'chiqarilgan' and request.user.type == 'yetkazib_beruvchi':
+                                sabablar.append(f"{kod} — boshqa yetkazib beruvchiga tegishli")
+                            else:
+                                sabablar.append(f"{kod} — noto'g'ri holatda ({s.get_holati_display()})")
                         messages.error(
                             request,
-                            f"{nom} uchun quyidagi serial kodlari yaroqsiz yoki allaqachon ishlatilgan: {', '.join(missing[:5])}.",
+                            f"{nom} uchun quyidagi serial kodlari qabul qilinmadi: {'; '.join(sabablar)}.",
                         )
                         return redirect('sotish')
                     if len(found_kodlar) != len(set(kodlar)):
