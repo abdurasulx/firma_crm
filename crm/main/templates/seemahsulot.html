@@ -607,7 +607,20 @@
                 {% for row in retsept_rows %}
                 <tr style="border-bottom:1px solid var(--border-color,#e2e8f0);">
                     <td style="padding:8px 4px;">{{ row.komponent.nomi }}</td>
-                    <td style="padding:8px 4px;">{{ row.norma_miqdor }} {{ row.komponent.turi.nomi }}</td>
+                    <td style="padding:8px 4px;">
+                        <!-- To'g'ridan-to'g'ri tahrirlash — mavjud komponentni qayta
+                             tanlash shart emas, xuddi shu `add_retsept_row` amali
+                             (`update_or_create`) yangi miqdor bilan qayta yuboriladi. -->
+                        <form method="post" style="display:flex; align-items:center; gap:6px;">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="add_retsept_row">
+                            <input type="hidden" name="komponent" value="{{ row.komponent.id }}">
+                            <input type="number" name="norma_miqdor" value="{{ row.norma_miqdor|unlocalize }}" step="0.0001" min="0.0001"
+                                   style="width:90px; padding:5px 8px; border:1px solid var(--border-color,#e2e8f0); border-radius:6px;">
+                            <span style="color:var(--text-light); font-size:13px;">{{ row.komponent.turi.nomi }}</span>
+                            <button type="submit" title="Saqlash" style="border:1px solid #a7f3d0; background:#ecfdf5; color:#047857; padding:5px 9px; border-radius:6px; cursor:pointer;"><i class="fa-solid fa-check"></i></button>
+                        </form>
+                    </td>
                     <td style="padding:8px 4px; font-weight:800;">{{ row.komponent.tannarx|floatformat:0 }} so'm/{{ row.komponent.turi.nomi }}</td>
                     <td style="padding:8px 4px; text-align:right;">
                         <form method="post" style="display:inline;">

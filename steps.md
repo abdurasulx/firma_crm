@@ -9279,3 +9279,32 @@ shuning uchun aynan shu himoya ishlamagan edi).
 
 ### Tekshirildi
 `manage.py check` toza (faqat CSS, backend/test o'zgarmadi).
+
+---
+
+## 217-qadam: Retsept qatorini to'g'ridan-to'g'ri tahrirlash imkoniyati qo'shildi
+
+**Holat: DONE**
+
+### Muammo
+Ega: "retseptni edit qilish imkoniyati yo'q". Backend (`retsept_service.
+add_retsept_row`) aslida `update_or_create` ishlatadi — texnik jihatdan
+mavjud komponentni qayta tanlab, yangi miqdor kiritish orqali "tahrirlash"
+mumkin edi, lekin UI'da (`seemahsulot.html`) faqat "Retseptga qo'shish"
+(yangi komponent qidirish) modali va "o'chirish" tugmasi bor edi — mavjud
+qatorni to'g'ridan-to'g'ri tahrirlash imkoniyati YO'Q edi, foydalanuvchi
+buni sezmasdi.
+
+### Nima qilindi
+`seemahsulot.html`dagi retsept jadvali qatorida endi miqdor ustuni
+to'g'ridan-to'g'ri tahrirlanadigan input + "✓" (saqlash) tugmasi bilan
+almashtirildi — mavjud `add_retsept_row` amalini (komponent + yangi
+miqdor) qayta yuboradi, backend o'zgarishsiz (`update_or_create`
+allaqachon to'g'ri ishlagan).
+
+### O'zgargan fayllar
+`main/templates/seemahsulot.html`, `main/tests_retsept_edit.py`
+(yangi — 2 test)
+
+### Tekshirildi
+`manage.py check`/`test` — 75 test, hammasi o'tdi.
