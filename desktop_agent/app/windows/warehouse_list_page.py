@@ -16,7 +16,7 @@ class _SyncWorker(QThread):
     to'g'ridan-to'g'ri chaqirilsa, server sekin javob bersa yoki umuman
     ulanmasa, butun ilova muzlab qolardi (xuddi 68-qadamda tuzatilgan
     skanerlash muammosi kabi)."""
-    succeeded = pyqtSignal(list, str)
+    succeeded = pyqtSignal(list, str, bool)
     failed = pyqtSignal(str)
 
     def __init__(self, server_url: str, token: str):
@@ -29,13 +29,13 @@ class _SyncWorker(QThread):
 
     def run(self):
         try:
-            omborlar, company_name = fetch_omborlar(self._server_url, self._token)
+            omborlar, company_name, tarozi_majburiy = fetch_omborlar(self._server_url, self._token)
         except ApiError as exc:
             self.failed.emit(str(exc))
         except Exception as exc:  # noqa: BLE001 — kutilmagan xato butun ilovani yiqitmasin
             self.failed.emit(f"Kutilmagan xato: {exc}")
         else:
-            self.succeeded.emit(omborlar, company_name)
+            self.succeeded.emit(omborlar, company_name, bool(tarozi_majburiy))
 
 
 class WarehouseListPage(QWidget):
@@ -184,13 +184,16 @@ class WarehouseListPage(QWidget):
         if old is not None and old.isRunning():
             old.wait()
         self._sync_worker = _SyncWorker(server_url, token)
-        self._sync_worker.succeeded.connect(lambda omborlar, name: self._on_sync_succeeded(omborlar, name, silent))
+        self._sync_worker.succeeded.connect(
+            lambda omborlar, name, tarozi_majburiy: self._on_sync_succeeded(omborlar, name, tarozi_majburiy, silent),
+        )
         self._sync_worker.failed.connect(lambda msg: self._on_sync_failed(msg, silent))
         self._sync_worker.start()
 
-    def _on_sync_succeeded(self, omborlar: list, company_name: str, silent: bool):
+    def _on_sync_succeeded(self, omborlar: list, company_name: str, tarozi_majburiy: bool, silent: bool):
         before = {(w.remote_id, w.nomi, w.manzil) for w in db.list_warehouses()}
         db.sync_warehouses_from_remote(omborlar)
+        db.set_setting("tarozi_majburiy", "1" if tarozi_majburiy else "")
         after = {(w.remote_id, w.nomi, w.manzil) for w in db.list_warehouses()}
 
         if before != after:

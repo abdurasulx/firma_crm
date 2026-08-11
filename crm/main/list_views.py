@@ -18,6 +18,12 @@ def hodimlar_list(request):
             messages.success(request, "Ish haqi turi saqlandi.")
         return redirect('hodimlar_list')
 
+    if request.method == 'POST' and request.POST.get('action') == 'set_tarozi_majburiy':
+        request.company.tarozi_majburiy = request.POST.get('tarozi_majburiy') == '1'
+        request.company.save(update_fields=['tarozi_majburiy'])
+        messages.success(request, "Tarozi sozlamasi saqlandi.")
+        return redirect('hodimlar_list')
+
     hodimlar = User.objects.filter(company=request.company).exclude(type='ega').order_by('-date_joined')
 
     # Qidiruv
@@ -85,6 +91,8 @@ def hodimlar_list(request):
         'sort_order': sort_order,
         'ish_haqi_turi_choices': request.company.ISH_HAQI_TURI_CHOICES,
         'current_ish_haqi_turi': request.company.ish_haqi_turi,
+        'is_agent_company': bool(request.company.custom_desktop_agent_stations),
+        'tarozi_majburiy': request.company.tarozi_majburiy,
     }
 
     return render(request, 'hodimlar_list.html', context)

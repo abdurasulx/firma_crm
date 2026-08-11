@@ -79,6 +79,17 @@ class Company(models.Model):
     savdogar_contract_text = models.TextField(blank=True, default="")
     savdogar_contract_next_number = models.PositiveIntegerField(default=1)
 
+    # Desktop Agent — tarozi (og'irlik) o'lchamli xom ashyolar uchun
+    # tarozi ulanishi majburiymi. `False` bo'lsa — agent ishga tushishida
+    # tarozini qidirmaydi/talab qilmaydi (startup tekshiruvidan chetlab
+    # o'tadi), tortish ekranida esa haqiqiy vazn o'rniga oddiy "Oldim ✓"
+    # tugmasi chiqadi (`measured_qty = expected_qty`).
+    tarozi_majburiy = models.BooleanField(
+        default=True,
+        help_text="O'chirilsa, Desktop Agent tarozini qidirmaydi va tortish "
+                   "ekranida shunchaki 'Oldim' tugmasi ko'rsatiladi.",
+    )
+
     # Ishlab chiqarish — ish haqi turi
     ISH_HAQI_TURI_CHOICES = (
         ('fixed', "Oylik (fiksval)"),

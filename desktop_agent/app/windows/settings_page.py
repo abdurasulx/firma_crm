@@ -391,6 +391,10 @@ class SettingsPage(QWidget):
         db.set_setting("agent_token", result["token"])
         db.set_setting("station_name", result["station_name"])
         db.set_setting("company_name", result["company"])
+        # Firma ERP sozlamasida tarozi "shart emas" deb belgilangan bo'lsa —
+        # startup tekshiruvi tarozini talab qilmaydi, tortish ekranida esa
+        # oddiy "Oldim" tugmasi chiqadi (`employee_scan_widget.py`).
+        db.set_setting("tarozi_majburiy", "1" if result.get("tarozi_majburiy", True) else "")
         self.password_input.clear()
 
         self.status_label.setStyleSheet("color:#059669;")
@@ -474,8 +478,9 @@ class SettingsPage(QWidget):
 
     def _on_sync_succeeded(self, result: tuple):
         self.sync_btn.setEnabled(True)
-        omborlar, company_name = result
+        omborlar, company_name, tarozi_majburiy = result
         db.sync_warehouses_from_remote(omborlar)
+        db.set_setting("tarozi_majburiy", "1" if tarozi_majburiy else "")
         self.status_label.setStyleSheet("color:#059669;")
         self.status_label.setText(f"'{company_name}' — {len(omborlar)} ta ombor sinxronlandi.")
         if self.on_synced:

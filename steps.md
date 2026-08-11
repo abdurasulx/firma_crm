@@ -9308,3 +9308,66 @@ allaqachon to'g'ri ishlagan).
 
 ### Tekshirildi
 `manage.py check`/`test` — 75 test, hammasi o'tdi.
+
+---
+
+## 218-qadam: Tarozi majburiyligi firma darajasida ERP'da sozlanadigan qilindi (Desktop Agent)
+
+**Holat: DONE**
+
+### Muammo
+Ega: "agent sozlamasida tarozini hohlasa shartmas deb belgilash
+imkoniyati kerak (desktop agentni erpdagi sozlamasida shunga qarab
+loading vaqtida agent tarozi shartmas bo'lsa tarozini qidirmasa ham
+bo'ladi) agar tarozi bog'lanmagan bo'lsa shunchaki oldim tugmasi
+chiqadigon bo'lsin". Avval tarozi ulanishi HAR DOIM startup
+tekshiruvida majburiy edi (COM port sozlanmagan/javob bermasa —
+"Davom etish" bloklanardi), va tortish ekranida kg/g birlikdagi
+komponentlar HAR DOIM haqiqiy tarozi o'qishini talab qilardi.
+
+### Nima qilindi
+**Backend (Django/ERP):**
+- Yangi `Company.tarozi_majburiy` (`BooleanField`, default `True`).
+- `/api/agent/omborlar/` va `/api/agent/login/` (`/login-by-qr/`)
+  javoblariga `tarozi_majburiy` qo'shildi — agent login/sinxronlashda
+  darhol biladi.
+- `hodimlar_list.html`ga (faqat `is_agent_company` bo'lsa ko'rinadigan)
+  yangi "Desktop Agent — Tarozi" kartasi qo'shildi — ega
+  "Majburiy"/"Shart emas" tanlab saqlaydi (`list_views.py`,
+  `set_tarozi_majburiy` action).
+
+**Desktop Agent (PyQt6):**
+- Login (`settings_page.py::_on_login_succeeded`) va sinxronlash
+  (`settings_page.py::_on_sync_succeeded`, `warehouse_list_page.py::
+  _on_sync_succeeded`) natijalarida `tarozi_majburiy` mahalliy
+  (`db.set_setting`) saqlanadi.
+- `startup_check_page.py::_check_scale_live` — sozlama o'chirilgan
+  bo'lsa, COM portni umuman qidirmasdan darhol "OK" (shart emas) deb
+  hisoblaydi — startup bloklanmaydi.
+- `employee_scan_widget.py` — yangi `_scale_required()` helper. Tortish
+  kartasidagi "weighable" (kg/g, haqiqiy tarozi talab qiladi) holati
+  endi `_is_weighable_birlik(...) and _scale_required()` — sozlama
+  o'chirilgan bo'lsa, kg/g komponentlar ham xuddi dona/litr kabi
+  oddiy "Oldim ✓" tugmasi bilan (`measured_qty = expected_qty`)
+  tasdiqlanadi, haqiqiy tortish talab qilinmaydi. Jonli vazn callback
+  (`update_live_weight`) ham shu holatda e'tiborsiz qoldiriladi.
+
+Exe qayta yig'ildi (`StockFirmAgent.exe`) — Super Admin → "Agent
+versiyalari" orqali yuklab qo'yish kerak, stansiyalar yangi versiyani
+oladi.
+
+### O'zgargan fayllar
+`main/models.py` (`Company.tarozi_majburiy`), `main/migrations/0099_*`,
+`main/agent_api_views.py` (`agent_omborlar`, `_issue_station_token`),
+`main/list_views.py` (`hodimlar_list`), `main/templates/hodimlar_list.html`,
+`main/tests_tarozi_majburiy.py` (yangi — 4 test);
+`desktop_agent/app/api_client.py` (`fetch_omborlar`),
+`desktop_agent/app/windows/settings_page.py`,
+`desktop_agent/app/windows/warehouse_list_page.py`,
+`desktop_agent/app/windows/startup_check_page.py`,
+`desktop_agent/app/windows/employee_scan_widget.py`
+
+### Tekshirildi
+`manage.py check`/`test` — 79 test, hammasi o'tdi. Desktop Agent
+fayllari sintaksis tekshiruvidan o'tdi (`py_compile`), exe muvaffaqiyatli
+qayta yig'ildi.

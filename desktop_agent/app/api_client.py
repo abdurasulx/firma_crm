@@ -252,9 +252,10 @@ def verify_kiosk_unlock(server_url: str, subdomain: str, qr_payload: str):
 
 
 def fetch_omborlar(server_url: str, token: str):
-    """ERP'dan omborlar ro'yxatini oladi. Xato bo'lsa `ApiError` ko'taradi."""
+    """ERP'dan omborlar ro'yxatini (va firma darajasidagi `tarozi_majburiy`
+    sozlamasini) oladi. Xato bo'lsa `ApiError` ko'taradi."""
     data = _get(server_url, token, "/api/agent/omborlar/")
-    return data.get("omborlar", []), data.get("company", "")
+    return data.get("omborlar", []), data.get("company", ""), data.get("tarozi_majburiy", True)
 
 
 def resolve_badge(server_url: str, token: str, kod: str):

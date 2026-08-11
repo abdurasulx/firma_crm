@@ -73,6 +73,12 @@ def _check_printer_live():
 
 
 def _check_scale_live(scale_checker):
+    # Firma ERP sozlamasida "tarozi shart emas" deb belgilangan bo'lsa —
+    # ulanish umuman qidirilmaydi/talab qilinmaydi, startup darhol "OK"
+    # deb hisoblaydi (`Company.tarozi_majburiy`, login/sinxronlashda
+    # mahalliy sozlamaga yoziladi).
+    if not db.get_setting("tarozi_majburiy", "1"):
+        return True, "Tarozi shart emas (firma sozlamasida o'chirilgan)."
     port = (db.get_setting("scale_com_port", "") or "").strip()
     if not port:
         return False, "Sozlanmagan — Sozlamalar sahifasida COM portni tanlang."

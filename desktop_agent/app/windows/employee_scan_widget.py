@@ -87,6 +87,14 @@ def _is_weighable_birlik(birlik: str) -> bool:
     return (birlik or "").strip().lower() in WEIGHABLE_BIRLIKLAR
 
 
+def _scale_required() -> bool:
+    """Firma ERP sozlamasida (`Company.tarozi_majburiy`) tarozi shart
+    emas deb belgilangan bo'lsa — kg/g birlikdagi komponentlar ham
+    xuddi dona/litr kabi, oddiy "Oldim ✓" tugmasi bilan tasdiqlanadi
+    (haqiqiy tortish talab qilinmaydi)."""
+    return bool(db.get_setting("tarozi_majburiy", "1"))
+
+
 _GRAM_BIRLIKLAR = {"g", "gr", "gramm"}
 
 
@@ -1359,7 +1367,7 @@ class EmployeeScanWidget(QWidget):
 
         target_text = f" ({req['target_product']} uchun)" if req.get("target_product") else ""
         self.weigh_material_label.setText(f"{req['material']}{target_text}")
-        weighable = _is_weighable_birlik(req.get("birlik"))
+        weighable = _is_weighable_birlik(req.get("birlik")) and _scale_required()
 
         # Tarozi sig'imi cheklangan bo'lsa (Sozlamalar > Tarozi) va bu
         # xom ashyoning qolgan (hali tortilmagan) miqdori sig'imdan katta
@@ -1457,7 +1465,9 @@ class EmployeeScanWidget(QWidget):
         kuzatilgan xato)."""
         if not self.weigh_card.isVisible():
             return
-        if self._current_weigh_request is not None and not _is_weighable_birlik(self._current_weigh_request.get("birlik")):
+        if self._current_weigh_request is not None and not (
+            _is_weighable_birlik(self._current_weigh_request.get("birlik")) and _scale_required()
+        ):
             return
         self.weigh_input.setReadOnly(True)
         if self._scale_last_displayed is None or abs(value - self._scale_last_displayed) >= SCALE_DISPLAY_THRESHOLD_KG:

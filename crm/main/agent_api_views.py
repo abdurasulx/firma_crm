@@ -148,6 +148,7 @@ def _issue_station_token(station, company):
         'token': station.token,
         'company': company.name,
         'station_name': station.tuliq_ismi or station.username,
+        'tarozi_majburiy': company.tarozi_majburiy,
     }
 
 
@@ -286,6 +287,7 @@ def agent_omborlar(request):
     return Response({
         'company': company.name,
         'omborlar': list(omborlar),
+        'tarozi_majburiy': company.tarozi_majburiy,
     })
 
 
