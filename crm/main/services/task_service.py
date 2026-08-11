@@ -348,8 +348,25 @@ def _start_producing(task):
     jarima_summasi = Decimal('0')
     tannarx_ulushi = Decimal('0')
     for pickup in pickups:
+        # Muammo (real ishlab chiqarishda topilgan): shtraf ilgari xom
+        # ashyo og'ishini (`measured_qty - expected_qty`, komponent o'z
+        # birligida — masalan kg) tayyor mahsulotning ISH HAQI narxiga
+        # (`ishlab_chiqarish_narxi`, so'm/dona — butunlay boshqa birlik,
+        # odatda ancha katta summa) ko'paytirar edi. Natijada hatto
+        # tortishdagi qabul qilingan tolerantlik (shortfall/overage)
+        # doirasidagi arzimas og'ish ham noo'rin katta shtrafga aylanardi
+        # — garchi pazanda rejani TO'LIQ topshirgan bo'lsa ham. Endi:
+        # (1) og'ishning faqat tolerantlikdan OSHGAN qismi hisobga
+        # olinadi, (2) shtraf xuddi shu KOMPONENTNING o'z narxida
+        # (tannarx yoki narxi) hisoblanadi — isrof qilingani aynan shu
+        # xom ashyo, tayyor mahsulot emas.
         deviation = pickup.measured_qty - pickup.expected_qty
-        jarima_summasi += abs(Decimal(str(deviation))) * mahsulot.ishlab_chiqarish_narxi
+        if deviation > 0:
+            oshiqcha = max(deviation - TASK_WEIGH_OVERAGE_TOLERANCE, 0)
+        else:
+            oshiqcha = max(abs(deviation) - TASK_WEIGH_SHORTFALL_TOLERANCE, 0)
+        komponent_narxi = pickup.komponent.tannarx or pickup.komponent.narxi or 0
+        jarima_summasi += Decimal(str(oshiqcha)) * Decimal(str(komponent_narxi))
         bom_row = MahsulotRetsept.objects.filter(
             company=task.company, mahsulot=mahsulot, komponent=pickup.komponent,
         ).first()

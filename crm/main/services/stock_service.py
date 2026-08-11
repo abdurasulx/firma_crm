@@ -333,9 +333,14 @@ def _apply_retsept_hisobkitob(req, mahsulot):
         matched_qs.update(consumed_in=req)
 
         deviation = actual_qty - expected_qty
-        # Jarima narxi alohida kiritilmaydi — ishlab chiqarishga berilgan narx
-        # (ishlab_chiqarish_narxi) bilan bir xil ishlatiladi.
-        jarima_summasi += abs(Decimal(str(deviation))) * mahsulot.ishlab_chiqarish_narxi
+        # Shtraf KOMPONENTNING o'z narxida hisoblanadi (tannarx yoki
+        # narxi) — avval xato bilan tayyor mahsulotning ish haqi narxiga
+        # (`ishlab_chiqarish_narxi`, butunlay boshqa birlik/summa)
+        # ko'paytirilardi, bu arzimas og'ishlarni ham noo'rin katta
+        # shtrafga aylantirardi (bu 201-qadamda `task_service._start_producing`da
+        # ham xuddi shu xato topilib tuzatilgan).
+        komponent_narxi = row.komponent.tannarx or row.komponent.narxi or 0
+        jarima_summasi += abs(Decimal(str(deviation))) * Decimal(str(komponent_narxi))
         tannarx_ulushi += Decimal(str(row.komponent.tannarx)) * Decimal(str(row.norma_miqdor))
 
     req.jarima_summasi = jarima_summasi

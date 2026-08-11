@@ -8710,4 +8710,57 @@ turlarini ham qabul qiladi, `per_unit`ni faqat ishlab chiqaruvchiga,
 `main/tests_kpi_returns.py` (+3 test — `PerSaleIshHaqiTests`)
 
 ### Tekshirildi
-`manage.py check`/`test` — 52 test, hammasi o'tdi. Commit: keyingi.
+`manage.py check`/`test` — 52 test, hammasi o'tdi. Commit: `05ed6789`.
+
+---
+
+## 202-qadam: Xom ashyo tortish shtrafi — noto'g'ri narx + tolerantlik hisobga olinmagani tuzatildi (BUG FIX)
+
+**Holat: DONE**
+
+### Muammo
+Foydalanuvchi skrinshot bilan xabar berdi: pazanda rejani TO'LIQ
+topshirsa ham ("Somsa hamir 24", 4 ta partiya), ba'zi partiyalarda
+kutilmaganda katta shtraf (masalan 6507 so'm, ish haqining ~48%i)
+yozilgan edi. Sabab ikkita bog'liq xato:
+
+1. **Noto'g'ri narx**: shtraf (`jarima_summasi`) xom ashyo tortish
+   og'ishini (`measured_qty - expected_qty`, komponentning O'Z birligida
+   — masalan kg) tayyor mahsulotning ISH HAQI narxiga
+   (`Mahsulot.ishlab_chiqarish_narxi`, so'm/dona — butunlay boshqa
+   birlik, odatda ancha katta summa) ko'paytirar edi — komponentning
+   haqiqiy (odatda ancha arzon) narxi umuman ishlatilmasdi.
+2. **Tolerantlik hisobga olinmagan**: Desktop Agent tarozida tortishda
+   allaqachon qabul qilinadigan tolerantlik bor (`TASK_WEIGH_SHORTFALL_
+   TOLERANCE`=2g, `TASK_WEIGH_OVERAGE_TOLERANCE`=50g — `weigh_task_pickup`
+   ichida), lekin `_start_producing`dagi shtraf hisobi bu tolerantlikni
+   butunlay e'tiborsiz qoldirib, ISTALGAN (hatto 1-2 grammlik) og'ish
+   uchun ham shtraf yozardi.
+
+Natijada: tarozi "normal" deb qabul qilgan arzimas og'ish ham (masalan
+40g ortiqcha, tolerantlik ichida) qimmat ish haqi narxiga ko'paytirilib,
+haqiqatda hech qanday isrof bo'lmasa ham noo'rin katta shtrafga
+aylanardi. Eski `ProductionMaterialRequest` oqimida
+(`stock_service._apply_retsept_hisobkitob`) ham xuddi shu narx-birlik
+xatosi bor edi (bu yerda tolerantlik tushunchasi umuman yo'q edi,
+chunki bu tarozi orqali emas, alohida so'rov-tasdiqlash orqali ishlaydi).
+
+### Nima qilindi
+`task_service._start_producing`: shtraf endi (1) faqat qabul qilingan
+tortish tolerantligidan (shortfall/overage) OSHGAN qismi uchun
+hisoblanadi, (2) komponentning O'Z narxida (`tannarx` yoki `narxi`)
+hisoblanadi — tayyor mahsulot narxi emas.
+
+`stock_service._apply_retsept_hisobkitob` (eski oqim): xuddi shu
+narx-birlik xatosi tuzatildi — endi komponentning o'z narxi ishlatiladi
+(tolerantlik bu yerda mavjud emas, chunki bu funksiya tarozi orqali
+emas ishlaydi).
+
+### O'zgargan fayllar
+`main/services/task_service.py` (`_start_producing`),
+`main/services/stock_service.py` (`_apply_retsept_hisobkitob`),
+`main/tests_kpi_returns.py` (+3 test — `MaterialDeviationJarimaTests`,
+`LegacyMaterialRequestJarimaTests`)
+
+### Tekshirildi
+`manage.py check`/`test` — 55 test, hammasi o'tdi.
