@@ -9092,3 +9092,46 @@ holatini tekshirmasdi).
 `manage.py check`/`test` — 68 test, hammasi o'tdi (backend tekshiruv
 mavjud avtomatlashtirilgan testlar bilan qamrab olinmagan — soddaligi
 tufayli qo'lda tasdiqlash tavsiya etiladi).
+
+---
+
+## 212-qadam: POST forma yuborilganda "kutish sezilarli" muammosi — birinchi (xavfsiz) qadam: darhol vizual feedback
+
+**Holat: DONE (qisman — pilot)**
+
+### Muammo
+Ega ta'kidladi: ishlab chiqaruvchi, savdogar, yetkazib beruvchi
+sahifalarida ko'plab tugmalar oddiy POST forma orqali ishlaydi —
+bosilgach sahifa to'liq qayta yuklanguncha hech qanday feedback
+yo'q, foydalanuvchi "hech narsa bo'lmayapti" deb qayta-qayta bosishi
+mumkin. WebSocket bor-yo'qligi so'raldi — WebSocket bizda faqat BIR
+TOMONLAMA push (bildirishnoma) uchun, forma yuborish uchun emas.
+
+Bu ko'p sahifaga tegishli keng qamrovli muammo — production oldidan
+hammasini birdan to'liq AJAX'ga o'tkazish xavfli deb topildi. Ega
+bilan kelishilgan yondashuv: bir nechta eng muhim joydan boshlab,
+xavfsiz birinchi qadam bilan.
+
+### Nima qilindi
+Uchala rol bazasiga (`pzbase.html` — ishlab chiqaruvchi, `ytbase.html`
+— yetkazib beruvchi, `sgbase.html` — savdogar/omborchi) umumiy
+JS qo'shildi: har qanday `method="post"` forma yuborilganda submit
+tugmasi DARHOL o'chiriladi va "⏳ Yuborilmoqda..." matniga almashadi
+— server javob qaytarib, sahifa qayta yuklangunicha foydalanuvchi
+aniq vizual feedback ko'radi va qayta-qayta bosolmaydi (dublikat
+so'rovlar oldini oladi). Bu TO'LIQ AJAX emas (sahifa hamon qayta
+yuklanadi) — birinchi, kam xatarli qadam; natija yoqsa, keyingi
+bosqichda muayyan formalarni haqiqiy fetch()ga o'tkazish mumkin.
+
+### O'zgargan fayllar
+`main/templates/pzbase.html`, `main/templates/ytbase.html`,
+`main/templates/sgbase.html`
+
+### Tekshirildi
+`manage.py check` toza (faqat frontend JS, backend o'zgarmadi).
+
+### Keyingi qadam (kelishilgan, hali qilinmagan)
+Agar bu yondashuv yoqsa — eng ko'p ishlatiladigan 2-3 ta forma (masalan
+pazandaning material so'rovini bekor qilish, yuklama so'rovi) haqiqiy
+fetch()ga o'tkaziladi (sahifa umuman qayta yuklanmaydi, faqat natija
+DOM'da yangilanadi).

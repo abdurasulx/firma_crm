@@ -1111,6 +1111,23 @@
     })();
     </script>
     {% endif %}
+    <script>
+        // Forma yuborilganda tugma DARHOL o'chirilib, "..." holati
+        // ko'rsatiladi — server javob qaytargunicha (sahifa qayta
+        // yuklanguncha) foydalanuvchi qayta-qayta bosmasligi va kutish
+        // sezilarli bo'lmasligi uchun (birinchi, xavfsiz qadam).
+        document.addEventListener('submit', function (e) {
+            var form = e.target;
+            if (!form || form.method !== 'post') return;
+            var btn = form.querySelector('button[type="submit"], input[type="submit"]');
+            if (!btn || btn.disabled) return;
+            btn.dataset.origHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.style.opacity = '0.6';
+            btn.style.cursor = 'wait';
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Yuborilmoqda...';
+        }, true);
+    </script>
 </body>
 
 </html>
