@@ -543,22 +543,19 @@
             <p style="color:var(--text-light); font-size:13px; margin-bottom:14px;">
                 Firma standarti: <strong>{{ company_ish_haqi_turi_display }}</strong>.
                 Kerak bo'lsa, faqat shu xodim uchun boshqacha to'lov turi tanlashingiz mumkin —
-                masalan har bir {% if user_edit.type == 'savdogar' %}sotgan{% else %}yetkazgan{% endif %}
-                savdo uchun belgilangan komissiya.
+                "Sotilgan/yetkazilgan mahsulotga qarab" tanlansa, har bir mahsulot sahifasida
+                belgilangan "Sotuv uchun ish haqi" narxi asosida, shu xodim
+                {% if user_edit.type == 'savdogar' %}sotgan{% else %}yetkazgan{% endif %}
+                savdolardan avtomatik hisoblanadi.
             </p>
             <form method="post" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="set_ish_haqi_turi_override">
-                <select name="ish_haqi_turi_override" id="savdoIshHaqiTuri" class="form-control" style="flex:1; min-width:220px;" onchange="document.getElementById('savdoKomissiyaWrap').style.display = this.value === 'per_sale' ? 'flex' : 'none';">
+                <select name="ish_haqi_turi_override" class="form-control" style="flex:1; min-width:220px;">
                     {% for value, label in savdo_ish_haqi_choices %}
                     <option value="{{ value }}" {% if user_edit.ish_haqi_turi_override == value %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}
                 </select>
-                <div id="savdoKomissiyaWrap" style="display:{% if user_edit.ish_haqi_turi_override == 'per_sale' %}flex{% else %}none{% endif %}; align-items:center; gap:8px;">
-                    <input type="number" name="savdo_birlik_narxi" class="form-control" step="0.01" min="0"
-                           value="{{ user_edit.savdo_birlik_narxi|default_if_none:'0' }}" placeholder="Har bir savdo uchun summa" style="min-width:180px;">
-                    <span style="font-size:13px; color:var(--text-light);">so'm / savdo</span>
-                </div>
                 <button type="submit" class="submit-btn" style="width:auto; padding:10px 20px;">
                     <i class="fa-solid fa-floppy-disk"></i> Saqlash
                 </button>

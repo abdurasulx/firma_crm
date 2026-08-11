@@ -217,19 +217,15 @@ class User(AbstractUser):
         ('', "Firma standarti"),
         ('fixed', "Oylik (fiksval)"),
         ('per_unit', "Ishlab chiqarilgan mahsulotga qarab"),
-        ('per_sale', "Sotilgan/yetkazilgan mahsulotga qarab (komissiya)"),
+        ('per_sale', "Sotilgan/yetkazilgan mahsulotga qarab"),
     )
     ish_haqi_turi_override = models.CharField(
         max_length=20, choices=ISH_HAQI_TURI_OVERRIDE_CHOICES, blank=True, default='',
         help_text="Bo'sh bo'lsa Company.ish_haqi_turi (firma standarti) ishlatiladi — "
                    "faqat shu xodim uchun boshqacha to'lov turi kerak bo'lsa to'ldiriladi. "
-                   "'per_sale' faqat savdogar/yetkazib_beruvchi uchun ma'noli.",
-    )
-    savdo_birlik_narxi = models.DecimalField(
-        max_digits=12, decimal_places=2, default=0,
-        help_text="Har bir sotuv uchun to'lanadigan komissiya summasi (ish_haqi_turi_override="
-                   "'per_sale' bo'lsa ishlatiladi) — savdogarga o'zi sotgan, yetkazib beruvchiga "
-                   "o'zi yetkazgan har bir savdo uchun.",
+                   "'per_sale' faqat savdogar/yetkazib_beruvchi uchun ma'noli — shu oyda amalga "
+                   "oshirgan savdolaridagi Savdo.ish_haqi_summasi (mahsulotning sotuv_ish_haqi_narxi "
+                   "asosida) yig'indisidan hisoblanadi.",
     )
 
     class Meta:
@@ -328,6 +324,12 @@ class Mahsulot(models.Model):
     ishlab_chiqarish_narxi = models.DecimalField(
         max_digits=10, decimal_places=2, default=0,
         help_text="1 dona ishlab chiqargani uchun ishchiga to'lanadigan summa (ish_haqi_turi=per_unit bo'lsa ishlatiladi)",
+    )
+    sotuv_ish_haqi_narxi = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0,
+        help_text="1 dona sotilgani/yetkazilgani uchun savdogar/yetkazib beruvchiga to'lanadigan summa — "
+                   "tannarxga qo'shiladi (ishlab_chiqarish_narxi kabi), sotuv sodir bo'lganda "
+                   "Savdo.ish_haqi_summasi'ga yig'iladi.",
     )
     amortizatsiya_foizi = models.DecimalField(
         max_digits=5, decimal_places=2, default=0,
@@ -594,6 +596,12 @@ class Savdo(models.Model):
         default=0,
         help_text="Sof foyda snapshoti: sotuv paytidagi (narx - tannarx) * miqdor yig'indisi. "
                    "Kredit ustamasini o'z ichiga olmaydi — faqat mahsulot sotuvidan kelgan foyda.",
+    )
+    ish_haqi_summasi = models.DecimalField(
+        max_digits=12, decimal_places=2, default=0,
+        help_text="Shu savdo bo'yicha savdogar/yetkazib beruvchiga tegishli ish haqi yig'indisi "
+                   "(sotilgan mahsulotlarning sotuv_ish_haqi_narxi asosida) — informatsion snapshot, "
+                   "foyda hisobida allaqachon ayirilgan (tannarx orqali).",
     )
     credit_down_payment = models.FloatField(default=0)
     credit_term_months = models.PositiveSmallIntegerField(null=True, blank=True)

@@ -231,12 +231,13 @@ def recompute_tannarx(mahsulot):
         baza = Decimal(str(mahsulot.baza_tannarx or 0))
 
     ish_haqi = Decimal(str(mahsulot.ishlab_chiqarish_narxi or 0))
+    sotuv_ish_haqi = Decimal(str(mahsulot.sotuv_ish_haqi_narxi or 0))
 
     extra_miqdor = mahsulot.qoshimcha_xarajatlar.filter(turi='miqdor').aggregate(t=Sum('summa'))['t'] or 0
     extra_foiz_yigindisi = mahsulot.qoshimcha_xarajatlar.filter(turi='foiz').aggregate(t=Sum('summa'))['t'] or 0
     extra_foiz = baza * (Decimal(str(extra_foiz_yigindisi)) / Decimal('100'))
 
-    subtotal = baza + ish_haqi + Decimal(str(extra_miqdor)) + extra_foiz
+    subtotal = baza + ish_haqi + sotuv_ish_haqi + Decimal(str(extra_miqdor)) + extra_foiz
     foiz = Decimal(str(mahsulot.amortizatsiya_foizi or 0))
     mahsulot.tannarx = subtotal * (1 + foiz / Decimal('100'))
     mahsulot.save(update_fields=update_fields)

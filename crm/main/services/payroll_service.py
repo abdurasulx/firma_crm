@@ -23,22 +23,22 @@ def get_month_bounds(yil, oy):
     return month_start, month_end
 
 
-def get_savdogar_month_sales_count(user, company, yil, oy):
+def _month_savdolar_for_user(user, company, yil, oy):
     """Savdogar/yetkazib beruvchi shu oyda amalga oshirgan (yaratgan)
-    savdolar soni. `Savdo.savdogar` — `User`ga to'g'ridan-to'g'ri FK,
-    lekin `Savdo.yetkazib_beruvchi` — `YetkazibBeruvchi`ga FK (`User`ga
-    emas), shuning uchun avval shu profilni topish kerak."""
+    savdolari. `Savdo.savdogar` — `User`ga to'g'ridan-to'g'ri FK, lekin
+    `Savdo.yetkazib_beruvchi` — `YetkazibBeruvchi`ga FK (`User`ga emas),
+    shuning uchun avval shu profilni topish kerak."""
     month_start, month_end = get_month_bounds(yil, oy)
     if user.type == 'yetkazib_beruvchi':
         yb = YetkazibBeruvchi.objects.filter(user=user, company=company).first()
         if not yb:
-            return 0
+            return Savdo.objects.none()
         return Savdo.objects.filter(
             yetkazib_beruvchi=yb, company=company, vaqt_sana__gte=month_start, vaqt_sana__lt=month_end,
-        ).count()
+        )
     return Savdo.objects.filter(
         savdogar=user, company=company, vaqt_sana__gte=month_start, vaqt_sana__lt=month_end,
-    ).count()
+    )
 
 
 def compute_oylik_ish_haqi(user, company, yil=None, oy=None):
@@ -48,7 +48,8 @@ def compute_oylik_ish_haqi(user, company, yil=None, oy=None):
     `Pazanda` profili mavjud bo'lsa — `MiqdorQoshish.ish_haqi_summasi`
     yig'indisidan (jarima allaqachon ichida ayirilgan) hisoblanadi.
     `per_sale` bo'lsa (faqat savdogar/yetkazib_beruvchi uchun ma'noli) —
-    shu oydagi savdolar soni * `User.savdo_birlik_narxi`.
+    shu oydagi savdolaridagi `Savdo.ish_haqi_summasi` yig'indisidan
+    (mahsulotning `sotuv_ish_haqi_narxi`si asosida hisoblangan).
     Aks holda — `XodimMaosh.oylik_maosh` (belgilanmagan bo'lsa 0).
     """
     now = timezone.localtime()
@@ -64,9 +65,13 @@ def compute_oylik_ish_haqi(user, company, yil=None, oy=None):
             return {'summa': Decimal(str(stats['earnings'])), 'manba': 'per_unit'}
 
     if turi == 'per_sale' and user.type in ('savdogar', 'yetkazib_beruvchi'):
-        count = get_savdogar_month_sales_count(user, company, yil, oy)
-        summa = Decimal(str(count)) * (user.savdo_birlik_narxi or Decimal('0'))
-        return {'summa': summa, 'manba': 'per_sale'}
+        # Mahsulotning o'z sahifasida belgilangan `sotuv_ish_haqi_narxi`
+        # asosida — har bir savdoda hisoblanib `Savdo.ish_haqi_summasi`ga
+        # yozib qo'yilgan yig'indi (production'dagi `per_unit`ga o'xshab).
+        summa = _month_savdolar_for_user(user, company, yil, oy).aggregate(
+            t=Sum('ish_haqi_summasi'),
+        )['t'] or Decimal('0')
+        return {'summa': Decimal(str(summa)), 'manba': 'per_sale'}
 
     maosh = XodimMaosh.objects.filter(user=user, company=company).first()
     summa = maosh.oylik_maosh if maosh else Decimal('0')

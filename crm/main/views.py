@@ -1968,18 +1968,7 @@ def editusr(request, username):
             if override == 'per_sale' and user_edit.type not in ['savdogar', 'yetkazib_beruvchi']:
                 override = ''
             user_edit.ish_haqi_turi_override = override
-            update_fields = ['ish_haqi_turi_override']
-            if override == 'per_sale':
-                try:
-                    narx = Decimal(request.POST.get('savdo_birlik_narxi') or '0')
-                    if narx < 0:
-                        raise InvalidOperation
-                except InvalidOperation:
-                    messages.error(request, "Komissiya summasi noto'g'ri kiritildi.")
-                    return redirect('edituser', username=username)
-                user_edit.savdo_birlik_narxi = narx
-                update_fields.append('savdo_birlik_narxi')
-            user_edit.save(update_fields=update_fields)
+            user_edit.save(update_fields=['ish_haqi_turi_override'])
             messages.success(request, "Ish haqi turi saqlandi.")
             return redirect('edituser', username=username)
 
@@ -2097,6 +2086,7 @@ def seemahsulot(request, mahsulot_id):
         if mahsulot.mahsulot_turi == 'distributor':
             mahsulot.miqdori = request.POST.get('miqdori')
         mahsulot.ishlab_chiqarish_narxi = request.POST.get('ishlab_chiqarish_narxi') or 0
+        mahsulot.sotuv_ish_haqi_narxi = request.POST.get('sotuv_ish_haqi_narxi') or 0
         mahsulot.amortizatsiya_foizi = request.POST.get('amortizatsiya_foizi') or 0
         mahsulot.mahsulot_turi = request.POST.get('mahsulot_turi', mahsulot.mahsulot_turi)
         kutilgan_soat = (request.POST.get('kutilgan_ishlab_chiqarish_soat') or '').strip()
@@ -2710,6 +2700,7 @@ def sotish(request):
                     txt=''
                     summa=0
                     foyda=0
+                    ish_haqi_summasi=0
                     sale_items = []
                     for s in sotilganlar:
                         mxs = Mahsulot.objects.filter(nomi=s[0], company=request.company).first()
@@ -2722,6 +2713,11 @@ def sotish(request):
                         cost = float(mxs.tannarx or 0)
                         summa+=qty*price
                         foyda+=qty*(price-cost)
+                        # Savdogar/yetkazib beruvchiga tegishli ish haqi — mahsulotning
+                        # sotuv_ish_haqi_narxi'siga qarab (allaqachon tannarx orqali
+                        # foydadan ayirilgan, bu shunchaki KIMGA qancha tegishli
+                        # ekanini ko'rsatuvchi alohida yig'indi).
+                        ish_haqi_summasi += qty * float(mxs.sotuv_ish_haqi_narxi or 0)
                         sale_items.append({
                             'name': mxs.nomi,
                             'qty': qty,
@@ -2766,6 +2762,7 @@ def sotish(request):
                             base_summa=summa,
                             summa=sale_summa,
                             foyda=foyda,
+                            ish_haqi_summasi=ish_haqi_summasi,
                             credit_down_payment=down_payment,
                             credit_term_months=credit_months,
                             credit_markup_percent=credit_markup,
@@ -2801,6 +2798,7 @@ def sotish(request):
                             base_summa=summa,
                             summa=summa,
                             foyda=foyda,
+                            ish_haqi_summasi=ish_haqi_summasi,
                             contract_pdf=contract_pdf,
                             signed_contract_scan=signed_contract_scan,
                             customer_passport_image=customer_passport_image,

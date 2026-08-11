@@ -248,34 +248,43 @@ class KpiServiceSmokeTests(TestCase):
 
 class PerSaleIshHaqiTests(TestCase):
     """Savdogar/yetkazib beruvchi uchun 'per_sale' ish haqi turi — shu
-    oyda amalga oshirgan har bir savdo uchun belgilangan komissiya."""
+    oyda amalga oshirgan savdolaridagi `Savdo.ish_haqi_summasi`
+    (mahsulotning `sotuv_ish_haqi_narxi`si asosida hisoblangan)
+    yig'indisidan hisoblanadi."""
 
     def setUp(self):
         self.company = Company.objects.create(name="Test", subdomain="testpersale", setup_mode=False)
         self.turi = MahsulotTuri.objects.create(nomi="dona")
         self.mahsulot = Mahsulot.objects.create(
             company=self.company, nomi="Non", narxi=5000, turi=self.turi, warehouse_type="finished",
+            sotuv_ish_haqi_narxi=2000,
         )
         self.sd_user = User.objects.create_user(
             username="sd1", password="secret123", type="savdogar", company=self.company,
-            ish_haqi_turi_override="per_sale", savdo_birlik_narxi=Decimal("2000"),
+            ish_haqi_turi_override="per_sale",
         )
         self.yb_user = User.objects.create_user(
             username="yb1", password="secret123", type="yetkazib_beruvchi", company=self.company,
-            ish_haqi_turi_override="per_sale", savdo_birlik_narxi=Decimal("1500"),
+            ish_haqi_turi_override="per_sale",
         )
         self.yb = YetkazibBeruvchi.objects.create(user=self.yb_user, company=self.company, tuliq_ismi="YB Test")
 
     def test_savdogar_komissiya(self):
         for _ in range(3):
-            Savdo.objects.create(company=self.company, savdogar=self.sd_user, oluvchining_ismi="X", st="naqd", summa=10000)
+            Savdo.objects.create(
+                company=self.company, savdogar=self.sd_user, oluvchining_ismi="X", st="naqd",
+                summa=10000, ish_haqi_summasi=2000,
+            )
         earned = payroll_service.compute_oylik_ish_haqi(self.sd_user, self.company)
         self.assertEqual(earned["manba"], "per_sale")
         self.assertEqual(earned["summa"], Decimal("6000"))  # 3 * 2000
 
     def test_yetkazib_beruvchi_komissiya(self):
         for _ in range(2):
-            Savdo.objects.create(company=self.company, yetkazib_beruvchi=self.yb, oluvchining_ismi="X", st="naqd", summa=10000)
+            Savdo.objects.create(
+                company=self.company, yetkazib_beruvchi=self.yb, oluvchining_ismi="X", st="naqd",
+                summa=10000, ish_haqi_summasi=1500,
+            )
         earned = payroll_service.compute_oylik_ish_haqi(self.yb_user, self.company)
         self.assertEqual(earned["manba"], "per_sale")
         self.assertEqual(earned["summa"], Decimal("3000"))  # 2 * 1500
@@ -283,3 +292,21 @@ class PerSaleIshHaqiTests(TestCase):
     def test_no_sales_zero(self):
         earned = payroll_service.compute_oylik_ish_haqi(self.sd_user, self.company)
         self.assertEqual(earned["summa"], Decimal("0"))
+
+
+class SotuvIshHaqiTannarxTests(TestCase):
+    """Mahsulotning `sotuv_ish_haqi_narxi`si tannarxga qo'shilishi va
+    savdo yaratilganda `Savdo.ish_haqi_summasi`ga to'g'ri yozilishi
+    kerak (ega tanlagan "mahsulot narxiga qo'shiladi" yondashuvi)."""
+
+    def test_sotuv_ish_haqi_narxi_added_to_tannarx(self):
+        from main.services.stock_service import recompute_tannarx
+
+        company = Company.objects.create(name="Test", subdomain="testsotuvth", setup_mode=False)
+        turi = MahsulotTuri.objects.create(nomi="dona")
+        mahsulot = Mahsulot.objects.create(
+            company=company, nomi="Kola", narxi=10000, turi=turi, warehouse_type="finished",
+            mahsulot_turi="distributor", baza_tannarx=5000, sotuv_ish_haqi_narxi=300,
+        )
+        unit_cost = recompute_tannarx(mahsulot)
+        self.assertEqual(unit_cost, Decimal("5300"))  # 5000 (baza) + 300 (sotuv ish haqi)

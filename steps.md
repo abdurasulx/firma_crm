@@ -8838,3 +8838,50 @@ uchun).
 
 ### Tekshirildi
 `manage.py check` toza (test kerak emas — faqat shablon o'zgarishi).
+
+---
+
+## 206-qadam: Savdogar/yetkazib beruvchi ish haqi — flat komissiya o'rniga mahsulot narxiga (tannarxga) qo'shiladigan "sotuv ish haqi"
+
+**Holat: DONE**
+
+### Muammo
+201-qadamda qurilgan "har bir savdo uchun belgilangan FIKS summa"
+(`User.savdo_birlik_narxi`) mexanizmi ega bilan aniqlashtirilgach
+noto'g'ri model bo'lib chiqdi. Ega tushuntirdi: bu "mantiqsiz" —
+kerakli narsa mahsulotning O'ZIDA "sotuv uchun ish haqi" narxi
+belgilash (xuddi `ishlab_chiqarish_narxi` ishlab chiqaruvchi uchun
+ishlagani kabi), bu summa mahsulot TANNARXIGA qo'shilishi va sotgan/
+yetkazgan xodimga shu asosda hisoblanishi kerak.
+
+### Nima qilindi
+- Yangi `Mahsulot.sotuv_ish_haqi_narxi` — 1 dona sotilgani/yetkazilgani
+  uchun to'lanadigan summa, mahsulot sahifasida (`seemahsulot.html`)
+  belgilanadi.
+- `stock_service.recompute_tannarx` — bu summa endi `baza_tannarx` va
+  `ishlab_chiqarish_narxi` qatorida tannarxga qo'shiladi (foyda
+  avtomatik shuncha kamayadi).
+- Yangi `Savdo.ish_haqi_summasi` — savdo yaratilganda (`views.py`,
+  sotish oqimi) har bir sotilgan mahsulot qatori bo'yicha
+  `qty * sotuv_ish_haqi_narxi` yig'indisi sifatida hisoblab yoziladi —
+  "bu aniq savdo bo'yicha kimga qancha tegishli" degan alohida
+  (informatsion) yozuv, foyda esa allaqachon tannarx orqali kamaygan.
+- `payroll_service.compute_oylik_ish_haqi`: `per_sale` turi endi FIKS
+  komissiya emas, shu oydagi savdolaridagi `Savdo.ish_haqi_summasi`
+  yig'indisidan hisoblanadi (`per_unit`ning savdo versiyasi).
+- Eski `User.savdo_birlik_narxi` maydoni va unga bog'liq
+  `editusr.html`dagi qo'lda summa kiritish maydoni OLIB TASHLANDI —
+  endi faqat "Ish haqi turi" tanlanadi, summa mahsulot sahifasidan
+  avtomatik keladi.
+
+### O'zgargan fayllar
+`main/models.py` (`Mahsulot.sotuv_ish_haqi_narxi`, `Savdo.ish_haqi_summasi`,
+`User.savdo_birlik_narxi` olib tashlandi), `main/migrations/0097_*`,
+`main/services/stock_service.py` (`recompute_tannarx`),
+`main/services/payroll_service.py`, `main/views.py` (`editusr`, sotish
+oqimi, `seemahsulot`), `main/templates/editusr.html`,
+`main/templates/seemahsulot.html`, `main/tests_kpi_returns.py`
+(`PerSaleIshHaqiTests` yangilandi, +1 test — `SotuvIshHaqiTannarxTests`)
+
+### Tekshirildi
+`manage.py check`/`test` — 56 test, hammasi o'tdi.
