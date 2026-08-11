@@ -8885,3 +8885,44 @@ oqimi, `seemahsulot`), `main/templates/editusr.html`,
 
 ### Tekshirildi
 `manage.py check`/`test` — 56 test, hammasi o'tdi.
+
+---
+
+## 207-qadam: Ish haqi turi kartasi — noto'g'ri tanlovlar + "amalda" holat ko'rinmasligi + oylik summasi kiritish joyi yo'qligi (UX FIX)
+
+**Holat: DONE**
+
+### Muammo
+Ega skrinshot bilan ko'rsatdi: (1) ishlab chiqaruvchi (pazanda)ning
+"Ish haqi turi" dropdown'ida unga aloqasi yo'q "Sotilgan/yetkazilgan
+mahsulotga qarab" varianti ham chiqib turardi; (2) sahifada faqat
+"Firma standarti" (Company darajasidagi) ko'rsatilardi, shu xodimga
+HOZIR AMALDA bo'lgan turi (override yoki fallback natijasi) hech qayerda
+aniq ko'rinmasdi — shuning uchun "nega tizim ishlab chiqarganiga
+to'layapti-yu, dropdown 'firma standarti' deb turibdi" degan
+tushunarsizlik paydo bo'ldi; (3) "Oylik (fiksval)" tanlansa ham,
+summani kiritish uchun ALOHIDA sahifaga (profil) o'tish kerak edi —
+shu joyning o'zida kiritish maydoni yo'q edi.
+
+### Nima qilindi
+- Har ikkala kartada (pazanda va savdogar/yetkazib beruvchi) dropdown
+  endi faqat o'sha xodim turiga tegishli variantlarni ko'rsatadi
+  (`per_sale` ishlab chiqaruvchiga, `per_unit` savdo xodimlariga
+  chiqmaydi).
+- "Firma standarti: X" qatoridan keyin "Hozir amalda: Y" qo'shildi —
+  `effective_ish_haqi_turi()` orqali HAQIQIY qo'llanilayotgan turni
+  aniq ko'rsatadi (override bo'lsa — o'sha, bo'lmasa — firma
+  standarti).
+- "Oylik (fiksval)" (yoki "Firma standarti", agar u fiksval bo'lsa)
+  tanlanganda, xuddi shu formada "Oylik maosh summasi" input paydo
+  bo'ladi (JS orqali ko'rsatish/yashirish) — saqlash bosilganda
+  `set_ish_haqi_turi_override` handler endi shu summani ham
+  (berilgan bo'lsa) `payroll_service.set_fixed_salary` orqali saqlaydi.
+  Joriy qiymat oldindan to'ldirilgan holda ko'rsatiladi.
+
+### O'zgargan fayllar
+`main/views.py` (`editusr` — GET context va POST handler),
+`main/templates/editusr.html`
+
+### Tekshirildi
+`manage.py check`/`test` — 56 test, hammasi o'tdi.

@@ -1969,6 +1969,22 @@ def editusr(request, username):
                 override = ''
             user_edit.ish_haqi_turi_override = override
             user_edit.save(update_fields=['ish_haqi_turi_override'])
+
+            # "Oylik (fiksval)" tanlanganda summani ham SHU YERDA kiritish
+            # imkoni — avval alohida profil sahifasiga o'tish kerak edi,
+            # bu chalkashtirar edi ("fiksval belgilasa nega kiritadigan
+            # maydon yo'q" — ega bilan kelishilgan tuzatish).
+            oylik_maosh_raw = (request.POST.get('oylik_maosh') or '').strip()
+            if oylik_maosh_raw:
+                try:
+                    oylik_maosh = Decimal(oylik_maosh_raw)
+                    if oylik_maosh < 0:
+                        raise InvalidOperation
+                    payroll_service.set_fixed_salary(user_edit, request.company, oylik_maosh, request.user)
+                except (InvalidOperation, ValueError):
+                    messages.error(request, "Oylik maosh summasi noto'g'ri kiritildi.")
+                    return redirect('edituser', username=username)
+
             messages.success(request, "Ish haqi turi saqlandi.")
             return redirect('edituser', username=username)
 
@@ -1992,14 +2008,23 @@ def editusr(request, username):
         messages.success(request, message)
         return redirect('hodimlar_list')
 
+    company_ish_haqi_turi_display = dict(request.company.ISH_HAQI_TURI_CHOICES).get(request.company.ish_haqi_turi)
+    effective_turi = effective_ish_haqi_turi(user_edit, request.company)
+    effective_turi_display = dict(User.ISH_HAQI_TURI_OVERRIDE_CHOICES).get(effective_turi) or company_ish_haqi_turi_display
+    maosh_obj = XodimMaosh.objects.filter(user=user_edit, company=request.company).first()
+
     context = {
         'user_edit': user_edit,
         'mn': mn,
         'mr': mr,
         'all_mahsulotlar': all_mahsulotlar,
         'current_yuklamalar': current_yuklamalar_dict,
-        'ish_haqi_turi_override_choices': User.ISH_HAQI_TURI_OVERRIDE_CHOICES,
-        'company_ish_haqi_turi_display': dict(request.company.ISH_HAQI_TURI_CHOICES).get(request.company.ish_haqi_turi),
+        'ish_haqi_turi_override_choices': [
+            (v, l) for v, l in User.ISH_HAQI_TURI_OVERRIDE_CHOICES if v != 'per_sale'
+        ],
+        'company_ish_haqi_turi_display': company_ish_haqi_turi_display,
+        'effective_ish_haqi_turi_display': effective_turi_display,
+        'oylik_maosh': maosh_obj.oylik_maosh if maosh_obj else None,
     }
     if user_edit.type in ['pazanda', 'ishlab_chiqaruvchi']:
         pz = Pazanda.objects.filter(user=user_edit, company=request.company).first()

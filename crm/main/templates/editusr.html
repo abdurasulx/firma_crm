@@ -447,16 +447,22 @@
             <h3 class="card-title"><i class="fa-solid fa-sack-dollar"></i> Ish haqi turi</h3>
             <p style="color:var(--text-light); font-size:13px; margin-bottom:14px;">
                 Firma standarti: <strong>{{ company_ish_haqi_turi_display }}</strong>.
+                Hozir amalda: <strong>{{ effective_ish_haqi_turi_display }}</strong>.
                 Kerak bo'lsa, faqat shu xodim uchun boshqacha to'lov turi tanlashingiz mumkin.
             </p>
             <form method="post" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="set_ish_haqi_turi_override">
-                <select name="ish_haqi_turi_override" class="form-control" style="flex:1; min-width:220px;">
+                <select name="ish_haqi_turi_override" id="pzIshHaqiTuri" class="form-control" style="flex:1; min-width:220px;" onchange="document.getElementById('pzOylikWrap').style.display = (this.value === '' || this.value === 'fixed') ? 'flex' : 'none';">
                     {% for value, label in ish_haqi_turi_override_choices %}
                     <option value="{{ value }}" {% if user_edit.ish_haqi_turi_override == value %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}
                 </select>
+                <div id="pzOylikWrap" style="display:{% if user_edit.ish_haqi_turi_override == '' or user_edit.ish_haqi_turi_override == 'fixed' %}flex{% else %}none{% endif %}; align-items:center; gap:8px;">
+                    <input type="number" name="oylik_maosh" class="form-control" step="0.01" min="0"
+                           value="{{ oylik_maosh|default_if_none:'' }}" placeholder="Oylik maosh summasi" style="min-width:180px;">
+                    <span style="font-size:13px; color:var(--text-light);">so'm/oy</span>
+                </div>
                 <button type="submit" class="submit-btn" style="width:auto; padding:10px 20px;">
                     <i class="fa-solid fa-floppy-disk"></i> Saqlash
                 </button>
@@ -542,6 +548,7 @@
             <h3 class="card-title"><i class="fa-solid fa-sack-dollar"></i> Ish haqi turi</h3>
             <p style="color:var(--text-light); font-size:13px; margin-bottom:14px;">
                 Firma standarti: <strong>{{ company_ish_haqi_turi_display }}</strong>.
+                Hozir amalda: <strong>{{ effective_ish_haqi_turi_display }}</strong>.
                 Kerak bo'lsa, faqat shu xodim uchun boshqacha to'lov turi tanlashingiz mumkin —
                 "Sotilgan/yetkazilgan mahsulotga qarab" tanlansa, har bir mahsulot sahifasida
                 belgilangan "Sotuv uchun ish haqi" narxi asosida, shu xodim
@@ -551,11 +558,16 @@
             <form method="post" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="set_ish_haqi_turi_override">
-                <select name="ish_haqi_turi_override" class="form-control" style="flex:1; min-width:220px;">
+                <select name="ish_haqi_turi_override" id="sdIshHaqiTuri" class="form-control" style="flex:1; min-width:220px;" onchange="document.getElementById('sdOylikWrap').style.display = (this.value === '' || this.value === 'fixed') ? 'flex' : 'none';">
                     {% for value, label in savdo_ish_haqi_choices %}
                     <option value="{{ value }}" {% if user_edit.ish_haqi_turi_override == value %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}
                 </select>
+                <div id="sdOylikWrap" style="display:{% if user_edit.ish_haqi_turi_override == '' or user_edit.ish_haqi_turi_override == 'fixed' %}flex{% else %}none{% endif %}; align-items:center; gap:8px;">
+                    <input type="number" name="oylik_maosh" class="form-control" step="0.01" min="0"
+                           value="{{ oylik_maosh|default_if_none:'' }}" placeholder="Oylik maosh summasi" style="min-width:180px;">
+                    <span style="font-size:13px; color:var(--text-light);">so'm/oy</span>
+                </div>
                 <button type="submit" class="submit-btn" style="width:auto; padding:10px 20px;">
                     <i class="fa-solid fa-floppy-disk"></i> Saqlash
                 </button>
