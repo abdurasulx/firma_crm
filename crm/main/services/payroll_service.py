@@ -10,7 +10,7 @@ from django.db import transaction, IntegrityError
 from django.db.models import Sum
 from django.utils import timezone
 
-from ..models import User, Pazanda, XodimMaosh, XodimTolov, XodimOyYopish
+from ..models import User, Pazanda, Savdo, YetkazibBeruvchi, XodimMaosh, XodimTolov, XodimOyYopish
 from .stock_service import get_pazanda_month_stats, effective_ish_haqi_turi
 
 
@@ -23,23 +23,50 @@ def get_month_bounds(yil, oy):
     return month_start, month_end
 
 
+def get_savdogar_month_sales_count(user, company, yil, oy):
+    """Savdogar/yetkazib beruvchi shu oyda amalga oshirgan (yaratgan)
+    savdolar soni. `Savdo.savdogar` — `User`ga to'g'ridan-to'g'ri FK,
+    lekin `Savdo.yetkazib_beruvchi` — `YetkazibBeruvchi`ga FK (`User`ga
+    emas), shuning uchun avval shu profilni topish kerak."""
+    month_start, month_end = get_month_bounds(yil, oy)
+    if user.type == 'yetkazib_beruvchi':
+        yb = YetkazibBeruvchi.objects.filter(user=user, company=company).first()
+        if not yb:
+            return 0
+        return Savdo.objects.filter(
+            yetkazib_beruvchi=yb, company=company, vaqt_sana__gte=month_start, vaqt_sana__lt=month_end,
+        ).count()
+    return Savdo.objects.filter(
+        savdogar=user, company=company, vaqt_sana__gte=month_start, vaqt_sana__lt=month_end,
+    ).count()
+
+
 def compute_oylik_ish_haqi(user, company, yil=None, oy=None):
     """Xodimning shu oy uchun "ishlab topgan" summasini hisoblaydi.
 
     Firma `ish_haqi_turi == 'per_unit'` bo'lsa va xodimga bog'langan
     `Pazanda` profili mavjud bo'lsa — `MiqdorQoshish.ish_haqi_summasi`
     yig'indisidan (jarima allaqachon ichida ayirilgan) hisoblanadi.
+    `per_sale` bo'lsa (faqat savdogar/yetkazib_beruvchi uchun ma'noli) —
+    shu oydagi savdolar soni * `User.savdo_birlik_narxi`.
     Aks holda — `XodimMaosh.oylik_maosh` (belgilanmagan bo'lsa 0).
     """
     now = timezone.localtime()
     if yil is None or oy is None:
         yil, oy = now.year, now.month
 
-    if effective_ish_haqi_turi(user, company) == 'per_unit':
+    turi = effective_ish_haqi_turi(user, company)
+
+    if turi == 'per_unit':
         pazanda = Pazanda.objects.filter(user=user, company=company).first()
         if pazanda:
             stats = get_pazanda_month_stats(pazanda, company, yil=yil, oy=oy)
             return {'summa': Decimal(str(stats['earnings'])), 'manba': 'per_unit'}
+
+    if turi == 'per_sale' and user.type in ('savdogar', 'yetkazib_beruvchi'):
+        count = get_savdogar_month_sales_count(user, company, yil, oy)
+        summa = Decimal(str(count)) * (user.savdo_birlik_narxi or Decimal('0'))
+        return {'summa': summa, 'manba': 'per_sale'}
 
     maosh = XodimMaosh.objects.filter(user=user, company=company).first()
     summa = maosh.oylik_maosh if maosh else Decimal('0')

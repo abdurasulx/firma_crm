@@ -6,9 +6,9 @@ from django.utils import timezone
 
 from main.models import (
     Company, DeliveryStock, Mahsulot, MahsulotRetsept, MahsulotTuri,
-    Pazanda, ProductionTask, User, YetkazibBeruvchi, qaytarilgan_mahsulotlar,
+    Pazanda, ProductionTask, Savdo, User, YetkazibBeruvchi, qaytarilgan_mahsulotlar,
 )
-from main.services import kpi_service, task_service
+from main.services import kpi_service, payroll_service, task_service
 
 
 class ProductionMuddatTests(TestCase):
@@ -147,3 +147,42 @@ class KpiServiceSmokeTests(TestCase):
         self.assertIsNotNone(kpi)
         self.assertEqual(kpi["turi"], "omborchi")
         self.assertEqual(kpi["jami_korib_chiqilgan"], 0)
+
+
+class PerSaleIshHaqiTests(TestCase):
+    """Savdogar/yetkazib beruvchi uchun 'per_sale' ish haqi turi — shu
+    oyda amalga oshirgan har bir savdo uchun belgilangan komissiya."""
+
+    def setUp(self):
+        self.company = Company.objects.create(name="Test", subdomain="testpersale", setup_mode=False)
+        self.turi = MahsulotTuri.objects.create(nomi="dona")
+        self.mahsulot = Mahsulot.objects.create(
+            company=self.company, nomi="Non", narxi=5000, turi=self.turi, warehouse_type="finished",
+        )
+        self.sd_user = User.objects.create_user(
+            username="sd1", password="secret123", type="savdogar", company=self.company,
+            ish_haqi_turi_override="per_sale", savdo_birlik_narxi=Decimal("2000"),
+        )
+        self.yb_user = User.objects.create_user(
+            username="yb1", password="secret123", type="yetkazib_beruvchi", company=self.company,
+            ish_haqi_turi_override="per_sale", savdo_birlik_narxi=Decimal("1500"),
+        )
+        self.yb = YetkazibBeruvchi.objects.create(user=self.yb_user, company=self.company, tuliq_ismi="YB Test")
+
+    def test_savdogar_komissiya(self):
+        for _ in range(3):
+            Savdo.objects.create(company=self.company, savdogar=self.sd_user, oluvchining_ismi="X", st="naqd", summa=10000)
+        earned = payroll_service.compute_oylik_ish_haqi(self.sd_user, self.company)
+        self.assertEqual(earned["manba"], "per_sale")
+        self.assertEqual(earned["summa"], Decimal("6000"))  # 3 * 2000
+
+    def test_yetkazib_beruvchi_komissiya(self):
+        for _ in range(2):
+            Savdo.objects.create(company=self.company, yetkazib_beruvchi=self.yb, oluvchining_ismi="X", st="naqd", summa=10000)
+        earned = payroll_service.compute_oylik_ish_haqi(self.yb_user, self.company)
+        self.assertEqual(earned["manba"], "per_sale")
+        self.assertEqual(earned["summa"], Decimal("3000"))  # 2 * 1500
+
+    def test_no_sales_zero(self):
+        earned = payroll_service.compute_oylik_ish_haqi(self.sd_user, self.company)
+        self.assertEqual(earned["summa"], Decimal("0"))

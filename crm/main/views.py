@@ -1957,12 +1957,28 @@ def editusr(request, username):
                 messages.success(request, "Mahsulot biriktirilishi bekor qilindi.")
             return redirect('edituser', username=username)
 
-        if request.POST.get('action') == 'set_ish_haqi_turi_override' and user_edit.type in ['pazanda', 'ishlab_chiqaruvchi']:
+        if request.POST.get('action') == 'set_ish_haqi_turi_override' and user_edit.type in ['pazanda', 'ishlab_chiqaruvchi', 'savdogar', 'yetkazib_beruvchi']:
             override = request.POST.get('ish_haqi_turi_override', '')
             if override not in dict(User.ISH_HAQI_TURI_OVERRIDE_CHOICES):
                 override = ''
+            # 'per_unit' faqat ishlab chiqaruvchi uchun, 'per_sale' faqat savdogar/yetkazib beruvchi uchun ma'noli
+            if override == 'per_unit' and user_edit.type not in ['pazanda', 'ishlab_chiqaruvchi']:
+                override = ''
+            if override == 'per_sale' and user_edit.type not in ['savdogar', 'yetkazib_beruvchi']:
+                override = ''
             user_edit.ish_haqi_turi_override = override
-            user_edit.save(update_fields=['ish_haqi_turi_override'])
+            update_fields = ['ish_haqi_turi_override']
+            if override == 'per_sale':
+                try:
+                    narx = Decimal(request.POST.get('savdo_birlik_narxi') or '0')
+                    if narx < 0:
+                        raise InvalidOperation
+                except InvalidOperation:
+                    messages.error(request, "Komissiya summasi noto'g'ri kiritildi.")
+                    return redirect('edituser', username=username)
+                user_edit.savdo_birlik_narxi = narx
+                update_fields.append('savdo_birlik_narxi')
+            user_edit.save(update_fields=update_fields)
             messages.success(request, "Ish haqi turi saqlandi.")
             return redirect('edituser', username=username)
 
@@ -1999,6 +2015,11 @@ def editusr(request, username):
         pz = Pazanda.objects.filter(user=user_edit, company=request.company).first()
         if pz:
             context.update(_pazanda_assignment_context(pz, request.company))
+
+    if user_edit.type in ['savdogar', 'yetkazib_beruvchi']:
+        context['savdo_ish_haqi_choices'] = [
+            (v, l) for v, l in User.ISH_HAQI_TURI_OVERRIDE_CHOICES if v in ('', 'fixed', 'per_sale')
+        ]
 
     return render(request, 'editusr.html', context)
 @login_required(login_url='login')

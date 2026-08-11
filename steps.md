@@ -8665,3 +8665,49 @@ Uch qismli funksiya (foydalanuvchi bilan bitta so'rovda kelishilgan):
   (`qaytarish_view` shu turga cheklangan) — savdogardan qaytarish
   yuborish alohida ishlab chiqilmagan, faqat TASDIQLASHDA javobgar
   sifatida savdogar tanlanishi mumkin.
+
+---
+
+## 201-qadam: Savdogar/yetkazib beruvchi uchun individual "sotuvga qarab" ish haqi (komissiya)
+
+**Holat: DONE**
+
+### Muammo
+Ish haqi turi individual sozlash (`User.ish_haqi_turi_override`) faqat
+ishlab chiqaruvchi (pazanda) uchun ishlar edi (`fixed`/`per_unit`).
+Savdogar va yetkazib beruvchi uchun faqat "Oylik (fiksval)" mavjud edi —
+ega ularga har bir sotuv/yetkazish uchun alohida komissiya belgilay
+olmasdi.
+
+### Nima qilindi
+`ISH_HAQI_TURI_OVERRIDE_CHOICES`ga yangi variant qo'shildi: `per_sale`
+("Sotilgan/yetkazilgan mahsulotga qarab (komissiya)") — faqat
+savdogar/yetkazib_beruvchi turlariga tegishli. Yangi `User.savdo_birlik_narxi`
+maydoni — har bir savdo uchun to'lanadigan summa.
+
+`payroll_service.compute_oylik_ish_haqi` kengaytirildi: `per_sale`
+tanlangan bo'lsa, shu oydagi savdolar sonini hisoblaydi (yangi
+`get_savdogar_month_sales_count` — savdogar uchun `Savdo.savdogar=user`,
+yetkazib beruvchi uchun avval `YetkazibBeruvchi` profilini topib
+`Savdo.yetkazib_beruvchi=yb` bo'yicha) va `savdo_birlik_narxi`ga
+ko'paytiradi. Natija `XodimTolov`/`XodimOyYopish` orqali mavjud
+oylik yopish/avans oqimiga avtomatik integratsiya qilinadi (mavjud
+`compute_oylik_ish_haqi` chaqiruvchilari o'zgarishsiz ishlaydi).
+
+`editusr.html`da (xodimni tahrirlash sahifasi) savdogar/yetkazib
+beruvchi uchun alohida "Ish haqi turi" kartasi qo'shildi (avval faqat
+pazanda uchun ko'rinardi) — dropdown (`Firma standarti`/`Oylik`/
+`Komissiya`) va `per_sale` tanlanganda ko'rinadigan "so'm/savdo" input
+(JS orqali ko'rsatish/yashirish). `editusr` view'idagi
+`set_ish_haqi_turi_override` handler endi savdogar/yetkazib_beruvchi
+turlarini ham qabul qiladi, `per_unit`ni faqat ishlab chiqaruvchiga,
+`per_sale`ni faqat savdogar/yetkazib beruvchiga cheklaydi.
+
+### O'zgargan fayllar
+`main/models.py` (yangi `savdo_birlik_narxi` maydoni + `per_sale` choice),
+`main/migrations/0096_*`, `main/services/payroll_service.py`,
+`main/views.py` (`editusr`), `main/templates/editusr.html`,
+`main/tests_kpi_returns.py` (+3 test — `PerSaleIshHaqiTests`)
+
+### Tekshirildi
+`manage.py check`/`test` — 52 test, hammasi o'tdi. Commit: keyingi.

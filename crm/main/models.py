@@ -217,11 +217,19 @@ class User(AbstractUser):
         ('', "Firma standarti"),
         ('fixed', "Oylik (fiksval)"),
         ('per_unit', "Ishlab chiqarilgan mahsulotga qarab"),
+        ('per_sale', "Sotilgan/yetkazilgan mahsulotga qarab (komissiya)"),
     )
     ish_haqi_turi_override = models.CharField(
         max_length=20, choices=ISH_HAQI_TURI_OVERRIDE_CHOICES, blank=True, default='',
         help_text="Bo'sh bo'lsa Company.ish_haqi_turi (firma standarti) ishlatiladi — "
-                   "faqat shu xodim uchun boshqacha to'lov turi kerak bo'lsa to'ldiriladi.",
+                   "faqat shu xodim uchun boshqacha to'lov turi kerak bo'lsa to'ldiriladi. "
+                   "'per_sale' faqat savdogar/yetkazib_beruvchi uchun ma'noli.",
+    )
+    savdo_birlik_narxi = models.DecimalField(
+        max_digits=12, decimal_places=2, default=0,
+        help_text="Har bir sotuv uchun to'lanadigan komissiya summasi (ish_haqi_turi_override="
+                   "'per_sale' bo'lsa ishlatiladi) — savdogarga o'zi sotgan, yetkazib beruvchiga "
+                   "o'zi yetkazgan har bir savdo uchun.",
     )
 
     class Meta:
