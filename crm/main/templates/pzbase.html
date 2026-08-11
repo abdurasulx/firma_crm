@@ -385,8 +385,33 @@
         .notif-panel-empty i { font-size: 32px; opacity: 0.3; display: block; margin-bottom: 8px; }
         .notif-panel-empty p { font-size: 12px; }
 
+        /* `position: fixed` YO'Q edi — shuning uchun toast bildirishnoma
+           oddiy hujjat oqimida (normal flow) 320px joy egallardi va
+           translateX(120%) orqali ekrandan tashqariga chiqarilganda ham
+           sahifaning umumiy kengligini (scrollWidth) oshirib yuborardi —
+           mobil brauzer butun sahifani "siqib" (zoom-out) ko'rsatib
+           qo'yardi, bildirishnoma yopilgach asl holatiga qaytardi. */
+        #notification-container {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            pointer-events: none;
+        }
+        @media (max-width: 640px) {
+            #notification-container {
+                bottom: 1rem;
+                right: 1rem;
+                left: 1rem;
+            }
+        }
+
         .notification {
             width: 320px;
+            max-width: 100%;
             background: rgba(255, 255, 255, 1);
             border-radius: 12px;
             padding: 16px;

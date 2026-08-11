@@ -9212,3 +9212,36 @@ YUKLANMAYDI.
 
 ### Tekshirildi
 `manage.py check`/`test` — 73 test, hammasi o'tdi.
+
+---
+
+## 215-qadam: Pazanda sahifasida bildirishnoma chiqqanda sahifa vaqtincha "siqilib" ko'rinardi (BUG FIX)
+
+**Holat: DONE**
+
+### Muammo
+Ega skrinshot bilan ko'rsatdi: pazanda dashboardida toast bildirishnoma
+chiqqanda (~1.8 soniya, bildirishnoma yopilguncha) butun sahifa
+mobil ekranda chapga siqilib, o'ng tomonda katta bo'sh joy paydo
+bo'lardi, keyin o'ziga kelardi.
+
+Sabab: `pzbase.html`da `#notification-container` uchun `position:
+fixed` CSS qoidasi UMUMAN YO'Q EDI (`ytbase.html`da bor edi, lekin
+`pzbase.html`ga o'sha safar qo'shilmagan). Natijada toast (320px kenglik)
+oddiy hujjat oqimida joy egallardi va `translateX(120%)` orqali
+ekrandan tashqariga chiqarilganda ham sahifaning umumiy scrollWidth'ini
+oshirib yuborardi — mobil brauzer butun sahifani shu kengaygan
+o'lchamga moslab avtomatik kichraytirib (zoom-out) ko'rsatardi.
+
+### Nima qilindi
+`pzbase.html`ga `#notification-container { position: fixed; bottom:
+2rem; right: 2rem; ... }` qo'shildi (mobil uchun `@media` bilan
+moslashtirilgan) — `ytbase.html`dagi bilan bir xil naqsh. Endi toast
+hujjat oqimidan butunlay chiqarilgan, sahifa kengligiga ta'sir
+qilmaydi.
+
+### O'zgargan fayllar
+`main/templates/pzbase.html`
+
+### Tekshirildi
+`manage.py check` toza (faqat CSS, backend/test o'zgarmadi).
