@@ -8763,4 +8763,30 @@ emas ishlaydi).
 `LegacyMaterialRequestJarimaTests`)
 
 ### Tekshirildi
+`manage.py check`/`test` — 55 test, hammasi o'tdi. Commit: `f491b432`.
+
+---
+
+## 203-qadam: Xodimni tahrirlash (editusr) — yetkazib beruvchi profili yo'q bo'lsa 500 xato (BUG FIX)
+
+**Holat: DONE**
+
+### Muammo
+Foydalanuvchi demo.stockfirm.uz'da `/edituser/<username>` sahifasiga
+kirganda "Server Error (500)" oldi. Sabab: `editusr` view'i
+`user_edit.type == 'yetkazib_beruvchi'` bo'lsa
+`YetkazibBeruvchi.objects.get(user=user_edit)` chaqirar edi — agar shu
+foydalanuvchiga bog'langan `YetkazibBeruvchi` profili biror sababdan
+mavjud bo'lmasa (masalan, buzilgan/yarim yaratilgan hisob), `.get()`
+`DoesNotExist` bilan qulab tushardi.
+
+### Nima qilindi
+`.get()` → `.filter(user=user_edit).first()` — profil topilmasa,
+sahifa baribir ochiladi (mashina ma'lumotlari maydonlari bo'sh
+ko'rsatiladi), 500 o'rniga.
+
+### O'zgargan fayllar
+`main/views.py` (`editusr`)
+
+### Tekshirildi
 `manage.py check`/`test` — 55 test, hammasi o'tdi.

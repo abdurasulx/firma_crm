@@ -1921,9 +1921,10 @@ def editusr(request, username):
     current_yuklamalar_dict = {}
 
     if user_edit.type == 'yetkazib_beruvchi':
-        yb = YetkazibBeruvchi.objects.get(user=user_edit)
-        mn = yb.bmh
-        mr = yb.bmr.url if yb.bmr else ''
+        yb = YetkazibBeruvchi.objects.filter(user=user_edit).first()
+        if yb:
+            mn = yb.bmh
+            mr = yb.bmr.url if yb.bmr else ''
         all_mahsulotlar = Mahsulot.objects.filter(company=request.company).order_by('nomi')
         
         # Parse current stock string into dict {nom: miqdor}
