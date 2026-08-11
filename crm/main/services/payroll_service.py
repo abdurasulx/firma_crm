@@ -51,31 +51,43 @@ def compute_oylik_ish_haqi(user, company, yil=None, oy=None):
     shu oydagi savdolaridagi `Savdo.ish_haqi_summasi` yig'indisidan
     (mahsulotning `sotuv_ish_haqi_narxi`si asosida hisoblangan).
     Aks holda — `XodimMaosh.oylik_maosh` (belgilanmagan bo'lsa 0).
+
+    Bazaviy summaga qo'shimcha, ega firma sozlamalarida belgilagan `KpiQoida`
+    bonuslari (chegaraga yetsa) HAR DOIM qo'shiladi — ish haqi turidan
+    qat'i nazar (bu alohida rag'batlantirish, asosiy to'lov turini
+    almashtirmaydi).
     """
     now = timezone.localtime()
     if yil is None or oy is None:
         yil, oy = now.year, now.month
 
     turi = effective_ish_haqi_turi(user, company)
+    base = None
 
     if turi == 'per_unit':
         pazanda = Pazanda.objects.filter(user=user, company=company).first()
         if pazanda:
             stats = get_pazanda_month_stats(pazanda, company, yil=yil, oy=oy)
-            return {'summa': Decimal(str(stats['earnings'])), 'manba': 'per_unit'}
+            base = {'summa': Decimal(str(stats['earnings'])), 'manba': 'per_unit'}
 
-    if turi == 'per_sale' and user.type in ('savdogar', 'yetkazib_beruvchi'):
+    if base is None and turi == 'per_sale' and user.type in ('savdogar', 'yetkazib_beruvchi'):
         # Mahsulotning o'z sahifasida belgilangan `sotuv_ish_haqi_narxi`
         # asosida — har bir savdoda hisoblanib `Savdo.ish_haqi_summasi`ga
         # yozib qo'yilgan yig'indi (production'dagi `per_unit`ga o'xshab).
         summa = _month_savdolar_for_user(user, company, yil, oy).aggregate(
             t=Sum('ish_haqi_summasi'),
         )['t'] or Decimal('0')
-        return {'summa': Decimal(str(summa)), 'manba': 'per_sale'}
+        base = {'summa': Decimal(str(summa)), 'manba': 'per_sale'}
 
-    maosh = XodimMaosh.objects.filter(user=user, company=company).first()
-    summa = maosh.oylik_maosh if maosh else Decimal('0')
-    return {'summa': summa, 'manba': 'fixed'}
+    if base is None:
+        maosh = XodimMaosh.objects.filter(user=user, company=company).first()
+        base = {'summa': maosh.oylik_maosh if maosh else Decimal('0'), 'manba': 'fixed'}
+
+    from .kpi_service import compute_kpi_bonus
+    kpi_bonus = compute_kpi_bonus(user, company, yil=yil, oy=oy)['bonus_summasi']
+    base['summa'] = base['summa'] + kpi_bonus
+    base['kpi_bonus'] = kpi_bonus
+    return base
 
 
 def set_fixed_salary(user, company, oylik_maosh, updated_by):

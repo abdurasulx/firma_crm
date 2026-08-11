@@ -227,6 +227,29 @@
                     {% endif %}
                 </div>
             </div>
+            {% if kpi.bonus.qoidalar %}
+            <div class="info-section" style="margin-top:16px; display:block;">
+                <span class="info-label"><i class="fas fa-bullseye"></i> Bonus qoidalari (bu oy)</span>
+                <div style="margin-top:10px;">
+                    {% for natija in kpi.bonus.qoidalar %}
+                    <div style="margin-bottom:8px; background:var(--slate-50); border:1px solid var(--slate-200); border-radius:10px; padding:10px 14px;">
+                        <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:700; color:var(--slate-900);">
+                            <span>{{ natija.qoida.mahsulot.nomi|default:"Jami" }} — {{ natija.qoida.chegara|floatformat:0 }} {{ natija.qoida.get_olchov_turi_display }}</span>
+                            <span style="{% if natija.yetdi %}color:#059669;{% endif %}">{{ natija.progress_foiz }}%{% if natija.yetdi %} ✓{% endif %}</span>
+                        </div>
+                        <div style="height:6px; background:var(--slate-200); border-radius:999px; margin-top:6px; overflow:hidden;">
+                            <div style="height:100%; width:{{ natija.progress_foiz }}%; background:{% if natija.yetdi %}#10b981{% else %}#3b82f6{% endif %};"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% if kpi.bonus.bonus_summasi %}
+                    <div style="font-size:13px; font-weight:800; color:#059669;">
+                        Jami bonus (shu oy): {{ kpi.bonus.bonus_summasi|floatformat:0 }} so'm
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
             {% endif %}
 
             {% if own_badge %}

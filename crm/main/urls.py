@@ -26,7 +26,7 @@ from .map_views import map_dashboard, route_history_page, api_map_data, api_rout
 from .api import dashboard_stats_api
 from .backup_views import download_backup, restore_view, prepare_backup_page
 from .export_views import export_savdolar, export_nasiya, export_mahsulotlar, export_xodimlar
-from .kpi_views import set_daily_target, kpi_today, trend_30
+from .kpi_views import set_daily_target, kpi_today, trend_30, kpi_qoidalari_view
 from .click_views import click_prepare, click_complete, click_pay_redirect
 from .warehouse_views import (
     warehouse_history,
@@ -98,6 +98,7 @@ urlpatterns = [
     path('qaytarish/tasdiq/<int:qaytarish_id>/', qaytarish_tasdiq, name='qaytarish_tasdiq'),
     path('qaytarish/rad/<int:qaytarish_id>/', qaytarish_rad, name='qaytarish_rad'),
     path('qaytarish/sozlash/', qaytarish_sozlash, name='qaytarish_sozlash'),
+    path('kpi/qoidalar/', kpi_qoidalari_view, name='kpi_qoidalari'),
     path('ombor/mahsulotlar/', warehouse_products, name='warehouse_products'),
     path('ombor/mahsulotlar/create/', warehouse_product_create, name='warehouse_product_create'),
     path('ombor/mahsulotlar/<int:product_id>/edit/', warehouse_product_edit, name='warehouse_product_edit'),

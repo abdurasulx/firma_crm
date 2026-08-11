@@ -1,8 +1,12 @@
 """
-KPI — Kunlik maqsad va trend grafigi uchun viewlar
+KPI — Kunlik maqsad, trend grafigi va rag'batlantirish (bonus)
+qoidalari uchun viewlar
 """
 import datetime as dt
 import json
+from decimal import Decimal, InvalidOperation
+
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
@@ -10,7 +14,7 @@ from django.utils import timezone
 from django.db.models import Sum
 from django.views.decorators.http import require_POST
 
-from .models import DailyTarget, Savdo, User
+from .models import DailyTarget, KpiQoida, Mahsulot, Savdo, User
 
 
 @login_required(login_url='login')
@@ -101,3 +105,62 @@ def trend_30(request):
         'soni_data':  soni_data,
         'foyda_data': foyda_data,
     })
+
+
+@login_required(login_url='login')
+def kpi_qoidalari_view(request):
+    """Ega firma sozlamalarida KPI (rag'batlantirish/bonus) qoidalarini
+    boshqaradi — xodim TURI bo'yicha (individual emas), bir turga
+    bir nechta bosqich (qoida) qo'shish mumkin."""
+    if request.user.type != 'ega':
+        return redirect('main')
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'add':
+            try:
+                xodim_turi = request.POST.get('xodim_turi')
+                if xodim_turi not in dict(KpiQoida.XODIM_TURI_CHOICES):
+                    raise ValueError("Noto'g'ri xodim turi")
+                olchov_turi = request.POST.get('olchov_turi')
+                bonus_turi = request.POST.get('bonus_turi')
+                mahsulot_id = request.POST.get('mahsulot_id') or None
+                mahsulot = None
+                if mahsulot_id:
+                    mahsulot = Mahsulot.objects.filter(id=mahsulot_id, company=request.company).first()
+                chegara = Decimal(request.POST.get('chegara') or '0')
+                bonus_qiymati = Decimal(request.POST.get('bonus_qiymati') or '0')
+                if chegara <= 0 or bonus_qiymati <= 0:
+                    raise ValueError("Chegara va bonus 0 dan katta bo'lishi kerak")
+                KpiQoida.objects.create(
+                    company=request.company, xodim_turi=xodim_turi, mahsulot=mahsulot,
+                    olchov_turi=olchov_turi, chegara=chegara,
+                    bonus_turi=bonus_turi, bonus_qiymati=bonus_qiymati,
+                )
+                messages.success(request, "KPI qoidasi qo'shildi.")
+            except (InvalidOperation, ValueError):
+                messages.error(request, "Ma'lumotlar noto'g'ri kiritildi.")
+            return redirect('kpi_qoidalari')
+
+        if action == 'delete':
+            KpiQoida.objects.filter(id=request.POST.get('qoida_id'), company=request.company).delete()
+            messages.success(request, "KPI qoidasi o'chirildi.")
+            return redirect('kpi_qoidalari')
+
+        if action == 'toggle':
+            qoida = KpiQoida.objects.filter(id=request.POST.get('qoida_id'), company=request.company).first()
+            if qoida:
+                qoida.faol = not qoida.faol
+                qoida.save(update_fields=['faol'])
+            return redirect('kpi_qoidalari')
+
+    qoidalar = KpiQoida.objects.filter(company=request.company).select_related('mahsulot')
+    context = {
+        'qoidalar': qoidalar,
+        'xodim_turi_choices': KpiQoida.XODIM_TURI_CHOICES,
+        'olchov_turi_choices': KpiQoida.OLCHOV_TURI_CHOICES,
+        'bonus_turi_choices': KpiQoida.BONUS_TURI_CHOICES,
+        'mahsulotlar': Mahsulot.objects.filter(company=request.company, warehouse_type='finished').order_by('nomi'),
+    }
+    return render(request, 'kpi_qoidalari.html', context)

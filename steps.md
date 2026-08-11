@@ -8926,3 +8926,68 @@ shu joyning o'zida kiritish maydoni yo'q edi.
 
 ### Tekshirildi
 `manage.py check`/`test` — 56 test, hammasi o'tdi.
+
+---
+
+## 208-qadam: KPI qoidalari — ega tomonidan xodim TURI bo'yicha (individual emas) rag'batlantirish/bonus tizimi
+
+**Holat: DONE**
+
+### Talab
+Ega: "kpi sisemani firma egasi sozlasin bu umumiy yetkazib beruvchilar
+uchun ishlab chiqaruvchilar uchun bir xil bo'lsin bir hodimga bohsqacha
+ikkkinchisiga boshqacha emas. birinchi turi ishlab chiqargan yoki
+sotgan donasiga yoki qiymatiga qarab. aytaylik bazi mahuslotni mingta
+sotsa qo'shimcha summa yoki sotuvdan foizi belgilanadi yoki 10 million
+so'mlik savdo qilsa (ko'proq savdo qilsa ham) aytaylik bu holatda
+nechadir foiz yoki summa belgilanadi ega tomonidan va dashboardda
+kpiga qarab progress ko'rinadigon qilsak". Keyin aniqlashtirdi: "kpi
+sistema uchun firma sozlamalarida alohida sozlansin yetkazib
+beruvchilar turi uchun alohida ishlab chiqaruvchi sotuvchilar uchun
+alohida".
+
+### Nima qilindi
+Yangi `KpiQoida` modeli — firma sozlamalarida (`/kpi/qoidalar/`, yangi
+sahifa, sidebar'da "Boshqaruv" bo'limida) ega tomonidan yaratiladi.
+Har bir qoida: **xodim turi** (ishlab chiqaruvchi/savdogar/yetkazib
+beruvchi — TUR bo'yicha, individual emas), **mahsulot** (ixtiyoriy —
+bo'sh bo'lsa jami/barcha mahsulotlar bo'yicha), **o'lchov turi** (dona
+yoki summa), **chegara**, **bonus turi** (fiks summa yoki foiz — foiz
+faqat 'summa' o'lchovida ma'noli) va **bonus qiymati**dan iborat. Bir
+turga bir nechta qoida (bosqich) qo'shish mumkin — barchasi mustaqil
+tekshiriladi, chegaraga yetganlari QO'SHILADI (progressiv: masalan
+5 mln uchun 1%, 10 mln uchun 2% — ikkalasi ham bir vaqtda hisoblanadi).
+
+`kpi_service.compute_kpi_bonus(user, company, yil, oy)` — shu oy uchun
+xodimning haqiqiy ko'rsatkichini (ishlab chiqaruvchi: `MiqdorQoshish`
+orqali tasdiqlangan miqdor/qiymat; savdogar/yetkazib beruvchi: `Savdo`
+orqali sotilgan miqdor/qiymat, mahsulot-bo'yicha filtrlash `Savdo.smm`
+matnini `mahsulotlar_miqdori()` bilan parse qilib amalga oshiriladi)
+har bir faol qoidaning chegarasi bilan solishtiradi, bonus yig'indisini
+va har bir qoida bo'yicha progress foizini qaytaradi.
+
+`payroll_service.compute_oylik_ish_haqi` — hisoblangan bonus HAR DOIM
+bazaviy ish haqiga (fixed/per_unit/per_sale turidan qat'i nazar)
+QO'SHILADI — bu alohida rag'batlantirish, asosiy to'lov turini
+almashtirmaydi.
+
+Dashboard: profil sahifalarida (`pzprofile.html`, `ytprofile.html`,
+`egayt.html`, `egaprofile.html`) "KPI — bu oy" bo'limi ostida har bir
+faol qoida uchun progress-bar (amalda/chegara %) va yetilgan bo'lsa
+belgi (✓) + jami bonus summasi ko'rsatiladi.
+
+### O'zgargan fayllar
+`main/models.py` (`KpiQoida`), `main/migrations/0098_kpiqoida.py`,
+`main/services/kpi_service.py` (`compute_kpi_bonus`,
+`_month_ishlab_chiqarish_stats`, `_month_savdo_stats`),
+`main/services/payroll_service.py`, `main/kpi_views.py`
+(`kpi_qoidalari_view`), `main/urls.py`,
+`main/templates/kpi_qoidalari.html` (yangi),
+`main/templates/egabase.html` (sidebar havolasi),
+`main/templates/pzprofile.html`, `main/templates/ytprofile.html`,
+`main/templates/egayt.html`, `main/templates/egaprofile.html`,
+`main/tests_kpi_returns.py` (+9 test — `KpiQoidaBonusTests`,
+`KpiQoidalariViewTests`)
+
+### Tekshirildi
+`manage.py check`/`test` — 65 test, hammasi o'tdi.

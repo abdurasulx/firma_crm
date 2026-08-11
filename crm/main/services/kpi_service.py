@@ -3,12 +3,14 @@ turlari uchun, joriy oy bo'yicha. Har bir rol o'ziga xos ko'rsatkichga
 ega (masalan ishlab chiqaruvchida "muddatga rioya", omborchida "so'rovga
 javob tezligi", savdogar/yetkazib beruvchida "qaytarish nisbati")."""
 import datetime as dt
+from decimal import Decimal
 
 from django.db.models import Avg, Count, F, Sum
 from django.utils import timezone
 
 from ..models import (
-    Pazanda, ProductionTask, ProductionMaterialRequest, Savdo,
+    KpiQoida, Mahsulot, MiqdorQoshish, Pazanda, ProductionTask,
+    ProductionMaterialRequest, Savdo, YetkazibBeruvchi,
     qaytarilgan_mahsulotlar,
 )
 
@@ -97,6 +99,115 @@ def _savdo_qaytarish_kpi(user, company, start, end, filter_field):
     }
 
 
+def _month_ishlab_chiqarish_stats(user, company, start, end, mahsulot=None):
+    """Ishlab chiqaruvchi shu oyda tasdiqlangan (ombor qoldig'iga
+    qo'shilgan) ishlab chiqarish miqdori — dona (soni) va summa
+    (mahsulot sotuv narxi asosidagi qiymat)."""
+    pazanda = Pazanda.objects.filter(user=user, company=company).first()
+    if not pazanda:
+        return {'dona': 0.0, 'summa': 0.0}
+    qs = MiqdorQoshish.objects.filter(
+        company=company, pazanda=pazanda, tasdiqlangan=True, vaqt_sana__gte=start, vaqt_sana__lt=end,
+    )
+    if mahsulot:
+        qs = qs.filter(mahsulot=mahsulot)
+    dona = qs.aggregate(t=Sum('miqdor'))['t'] or 0.0
+    summa = 0.0
+    for row in qs.values('mahsulot').annotate(q=Sum('miqdor')):
+        m = Mahsulot.objects.filter(id=row['mahsulot']).first()
+        if m:
+            summa += float(row['q']) * float(m.narxi)
+    return {'dona': float(dona), 'summa': summa}
+
+
+def _month_savdo_stats(user, company, start, end, mahsulot=None):
+    """Savdogar/yetkazib beruvchi shu oyda amalga oshirgan savdolari —
+    dona (sotilgan mahsulot soni) va summa (savdo qiymati). `Savdo.smm`
+    erkin matn ("nomi soni, nomi soni") sifatida saqlanadi, shuning
+    uchun mahsulot-bo'yicha filtrlash uchun parse qilish kerak."""
+    from ..functions import mahsulotlar_miqdori
+
+    if user.type == 'yetkazib_beruvchi':
+        yb = YetkazibBeruvchi.objects.filter(user=user, company=company).first()
+        if not yb:
+            return {'dona': 0.0, 'summa': 0.0}
+        savdolar = Savdo.objects.filter(
+            yetkazib_beruvchi=yb, company=company, vaqt_sana__gte=start, vaqt_sana__lt=end,
+        )
+    else:
+        savdolar = Savdo.objects.filter(
+            savdogar=user, company=company, vaqt_sana__gte=start, vaqt_sana__lt=end,
+        )
+
+    if mahsulot is None:
+        summa = float(savdolar.aggregate(t=Sum('summa'))['t'] or 0)
+        dona = 0.0
+        for s in savdolar:
+            for item in mahsulotlar_miqdori(s.smm, company):
+                dona += float(item.miqdor)
+        return {'dona': dona, 'summa': summa}
+
+    dona = 0.0
+    summa = 0.0
+    for s in savdolar:
+        for item in mahsulotlar_miqdori(s.smm, company):
+            if item.nom == mahsulot.nomi:
+                dona += float(item.miqdor)
+                summa += float(item.miqdor) * float(mahsulot.narxi)
+    return {'dona': dona, 'summa': summa}
+
+
+def compute_kpi_bonus(user, company, yil=None, oy=None):
+    """Ega firma sozlamalarida belgilagan `KpiQoida`larni (xodim TURI
+    bo'yicha, individual emas) tekshiradi. Bir turga bir nechta qoida
+    (bosqich) bo'lishi mumkin — barchasi mustaqil tekshiriladi, chegaraga
+    yetganlari qo'shiladi (progressiv — bir vaqtda bir nechtasi faol
+    bo'lishi mumkin). `bonus_turi='foiz'` faqat `olchov_turi='summa'`da
+    ma'noli — 'dona'da har doim 'fiks' kabi ishlaydi (foiz % qiymatga
+    emas, songa nisbatan ma'nosiz bo'lardi)."""
+    xodim_turi = None
+    if user.type in ('pazanda', 'ishlab_chiqaruvchi'):
+        xodim_turi = 'ishlab_chiqaruvchi'
+    elif user.type in ('savdogar', 'yetkazib_beruvchi'):
+        xodim_turi = user.type
+
+    if not xodim_turi:
+        return {'bonus_summasi': Decimal('0'), 'qoidalar': []}
+
+    start, end = _month_bounds(yil, oy)
+    qoidalar = KpiQoida.objects.filter(company=company, xodim_turi=xodim_turi, faol=True).select_related('mahsulot')
+
+    bonus_summasi = Decimal('0')
+    natijalar = []
+    cache = {}
+    for q in qoidalar:
+        key = q.mahsulot_id
+        if key not in cache:
+            if xodim_turi == 'ishlab_chiqaruvchi':
+                cache[key] = _month_ishlab_chiqarish_stats(user, company, start, end, mahsulot=q.mahsulot)
+            else:
+                cache[key] = _month_savdo_stats(user, company, start, end, mahsulot=q.mahsulot)
+        stats = cache[key]
+        amalda = stats['dona'] if q.olchov_turi == 'dona' else stats['summa']
+        chegara = float(q.chegara)
+        yetdi = amalda >= chegara and chegara > 0
+
+        if yetdi:
+            if q.bonus_turi == 'foiz' and q.olchov_turi == 'summa':
+                bonus_summasi += Decimal(str(amalda)) * q.bonus_qiymati / Decimal('100')
+            else:
+                bonus_summasi += q.bonus_qiymati
+
+        natijalar.append({
+            'qoida': q,
+            'amalda': amalda,
+            'yetdi': yetdi,
+            'progress_foiz': min(round(amalda / chegara * 100, 1), 100) if chegara > 0 else 0,
+        })
+
+    return {'bonus_summasi': bonus_summasi, 'qoidalar': natijalar}
+
+
 def get_employee_kpi(user, company, yil=None, oy=None):
     """Xodim turiga qarab mos KPI to'plamini qaytaradi — `ega` uchun
     `None` (KPI faqat egadan boshqa xodimlar uchun mo'ljallangan)."""
@@ -104,12 +215,17 @@ def get_employee_kpi(user, company, yil=None, oy=None):
         return None
     start, end = _month_bounds(yil, oy)
 
+    result = None
     if user.type in ('pazanda', 'ishlab_chiqaruvchi'):
-        return _pazanda_kpi(user, company, start, end)
-    if user.type == 'omborchi':
-        return _omborchi_kpi(user, company, start, end)
-    if user.type == 'savdogar':
-        return _savdo_qaytarish_kpi(user, company, start, end, 'savdogar')
-    if user.type == 'yetkazib_beruvchi':
-        return _savdo_qaytarish_kpi(user, company, start, end, 'yetkazib_beruvchi')
-    return None
+        result = _pazanda_kpi(user, company, start, end)
+    elif user.type == 'omborchi':
+        result = _omborchi_kpi(user, company, start, end)
+    elif user.type == 'savdogar':
+        result = _savdo_qaytarish_kpi(user, company, start, end, 'savdogar')
+    elif user.type == 'yetkazib_beruvchi':
+        result = _savdo_qaytarish_kpi(user, company, start, end, 'yetkazib_beruvchi')
+
+    if result and user.type in ('pazanda', 'ishlab_chiqaruvchi', 'savdogar', 'yetkazib_beruvchi'):
+        result['bonus'] = compute_kpi_bonus(user, company, yil=yil, oy=oy)
+
+    return result

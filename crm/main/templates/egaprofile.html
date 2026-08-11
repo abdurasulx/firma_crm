@@ -171,6 +171,25 @@
             <div class="info-row"><span class="muted">Qaytarish nisbati</span><span>{% if kpi.qaytarish_nisbati_foiz != None %}{{ kpi.qaytarish_nisbati_foiz }}%{% else %}—{% endif %}</span></div>
             {% endif %}
             {% endif %}
+            {% if kpi.bonus.qoidalar %}
+            <div style="margin-top:14px;">
+                <div class="muted" style="font-size:12px; font-weight:700; margin-bottom:8px;">Bonus qoidalari (bu oy)</div>
+                {% for natija in kpi.bonus.qoidalar %}
+                <div style="margin-bottom:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 14px;">
+                    <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:700; color:#1e293b;">
+                        <span>{{ natija.qoida.mahsulot.nomi|default:"Jami" }} — {{ natija.qoida.chegara|floatformat:0 }} {{ natija.qoida.get_olchov_turi_display }}</span>
+                        <span style="{% if natija.yetdi %}color:#059669;{% endif %}">{{ natija.progress_foiz }}%{% if natija.yetdi %} ✓{% endif %}</span>
+                    </div>
+                    <div style="height:6px; background:#e2e8f0; border-radius:999px; margin-top:6px; overflow:hidden;">
+                        <div style="height:100%; width:{{ natija.progress_foiz }}%; background:{% if natija.yetdi %}#10b981{% else %}#3b82f6{% endif %};"></div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% if kpi.bonus.bonus_summasi %}
+                <div style="font-size:13px; font-weight:800; color:#059669;">Jami bonus (shu oy): {{ kpi.bonus.bonus_summasi|floatformat:0 }} so'm</div>
+                {% endif %}
+            </div>
+            {% endif %}
         </div>
         {% endif %}
 

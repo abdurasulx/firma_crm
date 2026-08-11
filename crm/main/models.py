@@ -1155,6 +1155,51 @@ class DailyTarget(models.Model):
         return f"{self.user} — {self.sana}: {self.maqsad:,.0f} so'm"
 
 
+# --- KPI QOIDALARI (rag'batlantirish/bonus tizimi) ---
+class KpiQoida(models.Model):
+    """Ega firma sozlamalarida belgilaydigan, xodim TURI bo'yicha
+    umumiy (bir xil, individual emas) rag'batlantirish qoidasi —
+    ishlab chiqaruvchi/savdogar/yetkazib beruvchi uchun alohida.
+    Bir turga bir nechta qoida (bosqich/pog'ona) qo'shilishi mumkin —
+    hammasi mustaqil tekshiriladi va chegaraga yetganlari yig'iladi
+    (progressiv: masalan 5 mln uchun 1%, 10 mln uchun 2% — ikkalasi
+    ham qo'shilishi mumkin)."""
+    XODIM_TURI_CHOICES = (
+        ('ishlab_chiqaruvchi', "Ishlab chiqaruvchi"),
+        ('savdogar', "Savdogar"),
+        ('yetkazib_beruvchi', "Yetkazib beruvchi"),
+    )
+    OLCHOV_TURI_CHOICES = (
+        ('dona', "Dona (soni)"),
+        ('summa', "Summa (so'm)"),
+    )
+    BONUS_TURI_CHOICES = (
+        ('fiks', "Fiks summa (chegaraga yetsa, bir martalik)"),
+        ('foiz', "Foiz (erishilgan summadan) — faqat 'Summa' o'lchovida"),
+    )
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='kpi_qoidalari')
+    xodim_turi = models.CharField(max_length=25, choices=XODIM_TURI_CHOICES)
+    mahsulot = models.ForeignKey(
+        Mahsulot, on_delete=models.CASCADE, null=True, blank=True,
+        help_text="Bo'sh bo'lsa — jami (barcha mahsulotlar bo'yicha oylik jami) hisoblanadi.",
+    )
+    olchov_turi = models.CharField(max_length=10, choices=OLCHOV_TURI_CHOICES, default='summa')
+    chegara = models.DecimalField(max_digits=14, decimal_places=2, help_text="Shu songa (yoki undan ko'p) yetilsa, bonus ishga tushadi.")
+    bonus_turi = models.CharField(max_length=10, choices=BONUS_TURI_CHOICES, default='fiks')
+    bonus_qiymati = models.DecimalField(max_digits=14, decimal_places=2, help_text="'Fiks' bo'lsa — so'm, 'Foiz' bo'lsa — foiz (masalan 3 = 3%).")
+    faol = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['xodim_turi', 'chegara']
+        verbose_name = "KPI qoidasi"
+        verbose_name_plural = "KPI qoidalari"
+
+    def __str__(self):
+        nishon = self.mahsulot.nomi if self.mahsulot else "Jami"
+        return f"{self.get_xodim_turi_display()} — {nishon} — {self.chegara} {self.get_olchov_turi_display()}"
+
+
 # --- XODIM ISH HAQI (avans + oyni yopish) ---
 class XodimMaosh(models.Model):
     user = models.OneToOneField('User', on_delete=models.CASCADE, related_name='maosh_sozlamasi')

@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from main.models import (
-    Company, DeliveryStock, Mahsulot, MahsulotRetsept, MahsulotTuri, MiqdorQoshish,
+    Company, DeliveryStock, KpiQoida, Mahsulot, MahsulotRetsept, MahsulotTuri, MiqdorQoshish,
     Pazanda, ProductionTask, Savdo, User, YetkazibBeruvchi, qaytarilgan_mahsulotlar,
 )
 from main.services import kpi_service, payroll_service, task_service
@@ -310,3 +310,119 @@ class SotuvIshHaqiTannarxTests(TestCase):
         )
         unit_cost = recompute_tannarx(mahsulot)
         self.assertEqual(unit_cost, Decimal("5300"))  # 5000 (baza) + 300 (sotuv ish haqi)
+
+
+class KpiQoidaBonusTests(TestCase):
+    """Ega firma sozlamalarida belgilagan KPI qoidalari (xodim TURI
+    bo'yicha, individual emas) — chegaraga yetganda bonus qo'shilishi,
+    bir nechta bosqich (progressiv) bir vaqtda faol bo'lishi, faqat
+    'summa'da 'foiz' ishlashi kerak."""
+
+    def setUp(self):
+        self.company = Company.objects.create(name="Test", subdomain="testkpiqoida", setup_mode=False)
+        self.turi = MahsulotTuri.objects.create(nomi="dona")
+        self.mahsulot = Mahsulot.objects.create(
+            company=self.company, nomi="Kola", narxi=10000, turi=self.turi, warehouse_type="finished",
+        )
+        self.sd_user = User.objects.create_user(
+            username="sd1", password="secret123", type="savdogar", company=self.company,
+        )
+
+    def test_no_rules_zero_bonus(self):
+        result = kpi_service.compute_kpi_bonus(self.sd_user, self.company)
+        self.assertEqual(result["bonus_summasi"], Decimal("0"))
+        self.assertEqual(result["qoidalar"], [])
+
+    def test_fiks_bonus_when_threshold_reached(self):
+        KpiQoida.objects.create(
+            company=self.company, xodim_turi="savdogar", olchov_turi="summa",
+            chegara=Decimal("10000"), bonus_turi="fiks", bonus_qiymati=Decimal("50000"),
+        )
+        Savdo.objects.create(company=self.company, savdogar=self.sd_user, oluvchining_ismi="X", st="naqd", summa=15000)
+        result = kpi_service.compute_kpi_bonus(self.sd_user, self.company)
+        self.assertEqual(result["bonus_summasi"], Decimal("50000"))
+        self.assertTrue(result["qoidalar"][0]["yetdi"])
+
+    def test_foiz_bonus_scales_with_value(self):
+        KpiQoida.objects.create(
+            company=self.company, xodim_turi="savdogar", olchov_turi="summa",
+            chegara=Decimal("10000"), bonus_turi="foiz", bonus_qiymati=Decimal("5"),
+        )
+        Savdo.objects.create(company=self.company, savdogar=self.sd_user, oluvchining_ismi="X", st="naqd", summa=20000)
+        result = kpi_service.compute_kpi_bonus(self.sd_user, self.company)
+        self.assertEqual(result["bonus_summasi"], Decimal("1000"))  # 20000 * 5%
+
+    def test_below_threshold_no_bonus(self):
+        KpiQoida.objects.create(
+            company=self.company, xodim_turi="savdogar", olchov_turi="summa",
+            chegara=Decimal("100000"), bonus_turi="fiks", bonus_qiymati=Decimal("50000"),
+        )
+        Savdo.objects.create(company=self.company, savdogar=self.sd_user, oluvchining_ismi="X", st="naqd", summa=15000)
+        result = kpi_service.compute_kpi_bonus(self.sd_user, self.company)
+        self.assertEqual(result["bonus_summasi"], Decimal("0"))
+        self.assertFalse(result["qoidalar"][0]["yetdi"])
+
+    def test_progressive_tiers_both_apply(self):
+        KpiQoida.objects.create(
+            company=self.company, xodim_turi="savdogar", olchov_turi="summa",
+            chegara=Decimal("5000"), bonus_turi="fiks", bonus_qiymati=Decimal("10000"),
+        )
+        KpiQoida.objects.create(
+            company=self.company, xodim_turi="savdogar", olchov_turi="summa",
+            chegara=Decimal("10000"), bonus_turi="fiks", bonus_qiymati=Decimal("20000"),
+        )
+        Savdo.objects.create(company=self.company, savdogar=self.sd_user, oluvchining_ismi="X", st="naqd", summa=15000)
+        result = kpi_service.compute_kpi_bonus(self.sd_user, self.company)
+        self.assertEqual(result["bonus_summasi"], Decimal("30000"))  # ikkalasi ham yetgan
+
+    def test_inactive_rule_ignored(self):
+        KpiQoida.objects.create(
+            company=self.company, xodim_turi="savdogar", olchov_turi="summa",
+            chegara=Decimal("1000"), bonus_turi="fiks", bonus_qiymati=Decimal("50000"), faol=False,
+        )
+        Savdo.objects.create(company=self.company, savdogar=self.sd_user, oluvchining_ismi="X", st="naqd", summa=15000)
+        result = kpi_service.compute_kpi_bonus(self.sd_user, self.company)
+        self.assertEqual(result["bonus_summasi"], Decimal("0"))
+
+    def test_bonus_added_to_payroll(self):
+        KpiQoida.objects.create(
+            company=self.company, xodim_turi="savdogar", olchov_turi="summa",
+            chegara=Decimal("10000"), bonus_turi="fiks", bonus_qiymati=Decimal("50000"),
+        )
+        Savdo.objects.create(company=self.company, savdogar=self.sd_user, oluvchining_ismi="X", st="naqd", summa=15000)
+        earned = payroll_service.compute_oylik_ish_haqi(self.sd_user, self.company)
+        self.assertEqual(earned["kpi_bonus"], Decimal("50000"))
+        self.assertEqual(earned["summa"], Decimal("50000"))  # fixed maosh 0 + bonus
+
+    def test_product_specific_rule(self):
+        KpiQoida.objects.create(
+            company=self.company, xodim_turi="savdogar", mahsulot=self.mahsulot, olchov_turi="dona",
+            chegara=Decimal("2"), bonus_turi="fiks", bonus_qiymati=Decimal("30000"),
+        )
+        Savdo.objects.create(
+            company=self.company, savdogar=self.sd_user, oluvchining_ismi="X", st="naqd",
+            summa=20000, smm="Kola 2,",
+        )
+        result = kpi_service.compute_kpi_bonus(self.sd_user, self.company)
+        self.assertEqual(result["bonus_summasi"], Decimal("30000"))
+
+
+class KpiQoidalariViewTests(TestCase):
+    """Ega KPI qoidalari sahifasidan qoida qo'sha olishi kerak."""
+
+    def setUp(self):
+        self.company = Company.objects.create(name="Test", subdomain="testkpiview", setup_mode=False)
+        self.ega = User.objects.create_user(username="ega1", password="secret123", type="ega", company=self.company)
+        self.client.force_login(self.ega)
+
+    def test_ega_can_add_rule(self):
+        response = self.client.post(
+            "/kpi/qoidalar/",
+            {
+                "action": "add", "xodim_turi": "savdogar", "olchov_turi": "summa",
+                "chegara": "10000000", "bonus_turi": "foiz", "bonus_qiymati": "3",
+            },
+            SERVER_NAME="testkpiview.localhost",
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(KpiQoida.objects.filter(company=self.company).count(), 1)

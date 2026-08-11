@@ -1,0 +1,244 @@
+{% extends 'egabase.html' %}
+{% load static %}
+
+{% block page_title %}KPI Qoidalari{% endblock %}
+
+{% block content %}
+<style>
+    .kpi-intro {
+        color: var(--text-light, #6b7280);
+        font-size: 13px;
+        margin-bottom: 20px;
+        max-width: 760px;
+        line-height: 1.6;
+    }
+
+    .kpi-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+        padding: 24px;
+        margin-bottom: 24px;
+    }
+
+    .kpi-card h3 {
+        font-size: 16px;
+        font-weight: 800;
+        color: #1f2937;
+        margin-bottom: 14px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .kpi-form-row {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 10px;
+        align-items: end;
+    }
+
+    @media (max-width: 1100px) {
+        .kpi-form-row { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .kpi-form-row label {
+        font-size: 12px;
+        font-weight: 700;
+        color: #6b7280;
+        display: block;
+        margin-bottom: 5px;
+    }
+
+    .kpi-form-row .form-control {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        font-size: 14px;
+    }
+
+    .kpi-add-btn {
+        padding: 10px 16px;
+        background: #10b981;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-weight: 700;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+    .kpi-add-btn:hover { background: #059669; }
+
+    .kpi-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+    }
+
+    .kpi-table th {
+        text-align: left;
+        font-size: 11px;
+        text-transform: uppercase;
+        color: #9ca3af;
+        padding: 10px 8px;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .kpi-table td {
+        padding: 12px 8px;
+        border-bottom: 1px solid #f9fafb;
+        font-size: 14px;
+        color: #374151;
+    }
+
+    .kpi-badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .kpi-badge.faol { background: #ecfdf5; color: #059669; }
+    .kpi-badge.nofaol { background: #f3f4f6; color: #9ca3af; }
+
+    .kpi-row-btn {
+        border: none;
+        background: none;
+        cursor: pointer;
+        font-size: 13px;
+        padding: 6px 10px;
+        border-radius: 8px;
+        font-weight: 700;
+    }
+
+    .kpi-row-btn.toggle { color: #2563eb; }
+    .kpi-row-btn.toggle:hover { background: #eff6ff; }
+    .kpi-row-btn.del { color: #dc2626; }
+    .kpi-row-btn.del:hover { background: #fef2f2; }
+
+    .kpi-empty {
+        text-align: center;
+        color: #9ca3af;
+        padding: 30px;
+        font-size: 14px;
+    }
+</style>
+
+<p class="kpi-intro">
+    Xodim TURI bo'yicha (individual emas — bir turdagi barcha xodimlarga bir xil) rag'batlantirish
+    (bonus) qoidalari. Bir turga bir nechta bosqich qo'shish mumkin (masalan 5 mln so'mga — 1%,
+    10 mln so'mga — 2%) — hammasi mustaqil tekshiriladi va chegaraga yetganlari qo'shiladi.
+    Bonus har oy avtomatik hisoblanib, xodimning oylik ish haqiga qo'shiladi.
+</p>
+
+<div class="kpi-card">
+    <h3><i class="fa-solid fa-plus"></i> Yangi qoida qo'shish</h3>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add">
+        <div class="kpi-form-row">
+            <div>
+                <label>Xodim turi</label>
+                <select name="xodim_turi" class="form-control" required>
+                    {% for value, label in xodim_turi_choices %}
+                    <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label>Mahsulot (ixtiyoriy)</label>
+                <select name="mahsulot_id" class="form-control">
+                    <option value="">Jami (barchasi)</option>
+                    {% for m in mahsulotlar %}
+                    <option value="{{ m.id }}">{{ m.nomi }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label>O'lchov turi</label>
+                <select name="olchov_turi" class="form-control" required>
+                    {% for value, label in olchov_turi_choices %}
+                    <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label>Chegara</label>
+                <input type="number" name="chegara" class="form-control" step="0.01" min="0" placeholder="Masalan 10000000" required>
+            </div>
+            <div>
+                <label>Bonus turi</label>
+                <select name="bonus_turi" class="form-control" required>
+                    {% for value, label in bonus_turi_choices %}
+                    <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label>Bonus qiymati</label>
+                <input type="number" name="bonus_qiymati" class="form-control" step="0.01" min="0" placeholder="Summa yoki foiz" required>
+            </div>
+        </div>
+        <div style="margin-top:14px;">
+            <button type="submit" class="kpi-add-btn"><i class="fa-solid fa-floppy-disk"></i> Qo'shish</button>
+        </div>
+    </form>
+</div>
+
+<div class="kpi-card">
+    <h3><i class="fa-solid fa-list"></i> Mavjud qoidalar</h3>
+    {% if qoidalar %}
+    <table class="kpi-table">
+        <thead>
+            <tr>
+                <th>Xodim turi</th>
+                <th>Mahsulot</th>
+                <th>Chegara</th>
+                <th>Bonus</th>
+                <th>Holat</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for q in qoidalar %}
+            <tr>
+                <td><strong>{{ q.get_xodim_turi_display }}</strong></td>
+                <td>{{ q.mahsulot.nomi|default:"Jami" }}</td>
+                <td>{{ q.chegara|floatformat:0 }} {{ q.get_olchov_turi_display }}</td>
+                <td>
+                    {% if q.bonus_turi == 'foiz' %}{{ q.bonus_qiymati|floatformat:0 }}%
+                    {% else %}{{ q.bonus_qiymati|floatformat:0 }} so'm{% endif %}
+                </td>
+                <td>
+                    <span class="kpi-badge {% if q.faol %}faol{% else %}nofaol{% endif %}">
+                        {% if q.faol %}Faol{% else %}Nofaol{% endif %}
+                    </span>
+                </td>
+                <td style="text-align:right; white-space:nowrap;">
+                    <form method="post" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="toggle">
+                        <input type="hidden" name="qoida_id" value="{{ q.id }}">
+                        <button type="submit" class="kpi-row-btn toggle">
+                            {% if q.faol %}To'xtatish{% else %}Yoqish{% endif %}
+                        </button>
+                    </form>
+                    <form method="post" style="display:inline;" onsubmit="return confirm('Bu qoidani o\'chirishni tasdiqlaysizmi?');">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="qoida_id" value="{{ q.id }}">
+                        <button type="submit" class="kpi-row-btn del">O'chirish</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="kpi-empty">Hali hech qanday KPI qoidasi qo'shilmagan.</div>
+    {% endif %}
+</div>
+{% endblock %}
