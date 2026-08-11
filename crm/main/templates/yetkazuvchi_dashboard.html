@@ -478,7 +478,7 @@
             Kerakli mahsulotni shu yerda so'rang, so'ng stansiyada badge'ingizni skanerlab, aynan shu mahsulotlarning
             QR kodlarini skanerlab yuklama oling. So'ralmagan mahsulot skanerlanmaydi.
         </p>
-        <form method="post" style="margin-bottom: 1rem;">
+        <form method="post" id="sorovForm" style="margin-bottom: 1rem;">
             {% csrf_token %}
             <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem;">
                 {% for m in zaxira_mahsulotlar %}
@@ -518,9 +518,71 @@
                 const val = Math.min(max, Math.max(0, (parseFloat(inp.value) || 0) + delta));
                 inp.value = val;
             }
+
+            // Haqiqiy AJAX: forma yuborilganda SAHIFA UMUMAN QAYTA
+            // YUKLANMAYDI — natija shu yerning o'zida (kutilayotgan
+            // so'rovlar ro'yxati) yangilanadi, faqat toast bildirishnoma
+            // ko'rsatiladi.
+            (function () {
+                const form = document.getElementById('sorovForm');
+                if (!form) return;
+                form.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    const origHtml = submitBtn.innerHTML;
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Yuborilmoqda...';
+
+                    const formData = new FormData(form);
+                    formData.set('sorov_submit', '1');
+
+                    fetch(form.action || window.location.href, {
+                        method: 'POST',
+                        body: formData,
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    })
+                        .then(r => r.json())
+                        .then(data => {
+                            if (window.showNotification) {
+                                window.showNotification(
+                                    data.ok ? "So'rov yuborildi" : 'Diqqat',
+                                    data.message, data.ok ? 'success' : 'warning',
+                                );
+                            }
+                            (data.ogohlantirishlar || []).forEach(w => {
+                                if (window.showNotification) window.showNotification('Diqqat', w, 'warning');
+                            });
+                            const list = document.getElementById('reqYuklamaList');
+                            (data.yaratilgan || []).forEach(item => {
+                                if (!list) return;
+                                const card = document.createElement('div');
+                                card.className = 'req-card';
+                                card.innerHTML = `
+                                    <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                                        <span style="font-weight: 800; color: var(--slate-900);">${item.mahsulot}</span>
+                                        <span style="color: var(--slate-500); font-weight: 500;">
+                                            ${item.miqdor} ${item.birlik} — <i class="fas fa-qrcode"></i> stansiyada skanerlashingiz kutilmoqda
+                                        </span>
+                                    </div>`;
+                                list.appendChild(card);
+                                // Shu mahsulot uchun inputni 0'ga qaytarib,
+                                // qolgan omborda miqdorini qayta so'ramaslik
+                                // uchun maksimal chegarani ham nolga tushiramiz.
+                                const inp = document.getElementById('sorov_inp_' + item.mahsulot_id);
+                                if (inp) { inp.value = 0; }
+                            });
+                        })
+                        .catch(() => {
+                            if (window.showNotification) window.showNotification('Xato', 'Tarmoq xatosi — qayta urinib ko\'ring.', 'warning');
+                        })
+                        .finally(() => {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = origHtml;
+                        });
+                });
+            })();
         </script>
-        {% if reqyuklama %}
-        <div class="req-list">
+        <div class="req-list" id="reqYuklamaList">
             {% for yk in reqyuklama %}
             <div class="req-card">
                 <div style="display: flex; flex-direction: column; gap: 0.25rem;">
@@ -532,7 +594,6 @@
             </div>
             {% endfor %}
         </div>
-        {% endif %}
     </div>
 </div>
 {% else %}

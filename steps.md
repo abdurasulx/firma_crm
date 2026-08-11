@@ -9135,3 +9135,47 @@ Agar bu yondashuv yoqsa — eng ko'p ishlatiladigan 2-3 ta forma (masalan
 pazandaning material so'rovini bekor qilish, yuklama so'rovi) haqiqiy
 fetch()ga o'tkaziladi (sahifa umuman qayta yuklanmaydi, faqat natija
 DOM'da yangilanadi).
+
+---
+
+## 213-qadam: Yetkazib beruvchi "Yuklama so'rovi" — haqiqiy AJAX (sahifa umuman qayta yuklanmaydi)
+
+**Holat: DONE**
+
+### Muammo
+212-qadamdagi "darhol vizual feedback" yetarli emasligi aniqlandi —
+ega ta'kidladi: "baribir qayta yuklanyapti-ku, yetkazib beruvchi va
+ishlab chiqaruvchi zerikib ketadi bunaqada". Ega bilan kelishilgan
+"bir nechta eng muhim joydan boshlash" rejasi bo'yicha birinchi
+haqiqiy (to'liq) AJAX konversiyasi: yetkazib beruvchi dashboardidagi
+"Yuklama olish" so'rov formasi.
+
+### Nima qilindi
+`views.py` (`main` — yetkazib beruvchi POST/`sorov_submit` bo'limi):
+so'rov (ogohlantirish/xato) xabarlari endi Django `messages` o'rniga
+ro'yxatlarga (`yaratilgan_json`, `ogohlantirishlar`) yig'iladi. So'rov
+`X-Requested-With: XMLHttpRequest` header bilan kelsa — sahifa
+redirect o'rniga `JsonResponse({'ok', 'message', 'ogohlantirishlar',
+'yaratilgan'})` qaytaradi. Oddiy (JS o'chirilgan) forma-submit hamon
+eski redirect+messages yo'lidan ishlaydi — orqaga qarab moslik
+saqlangan.
+
+`yetkazuvchi_dashboard.html`: forma submit hodisasi `preventDefault()`
+qilinib, `fetch()` orqali yuboriladi. Muvaffaqiyatli bo'lsa: mavjud
+`showNotification()` (WebSocket bildirishnomalar bilan bir xil toast
+tizimi) orqali natija ko'rsatiladi, yangi so'ralgan mahsulotlar
+ro'yxatga (DOM'ga) to'g'ridan-to'g'ri qo'shiladi, tegishli inputlar
+0'ga qaytariladi — SAHIFA UMUMAN QAYTA YUKLANMAYDI.
+
+### O'zgargan fayllar
+`main/views.py` (import tozalash — `JsonResponse` yuqoriga
+ko'chirildi, duplikat import olib tashlandi; `main` view),
+`main/templates/yetkazuvchi_dashboard.html`,
+`main/tests_yuklama_sorov.py` (yangi — 3 test)
+
+### Tekshirildi
+`manage.py check`/`test` — 71 test, hammasi o'tdi.
+
+### Keyingi nomzod
+Yoqsa — pazandaning material so'rovini bekor qilish tugmasi
+(`pazanda_dashboard.html`) xuddi shu naqsh bilan AJAX'ga o'tkaziladi.

@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.contrib import messages 
 from django.core.paginator import Paginator
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.shortcuts import redirect
 from .models import BACKUP_CHOICES, BillingPaymentLink, Company, Plan, HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri, Savdo, YuklamaSorov, MiqdorQoshish, HaridorDukon, AmalLog, qaytarilgan_mahsulotlar, PlanRequest, NasiyaTolov, ProductionMaterialRequest, StockHistory, Serial, Ombor, MahsulotQoshimchaXarajat, PazandaMahsulot, MahsulotRetsept, DESKTOP_AGENT_UNIT_PRICE, XodimBadge, ProductionTask, XodimMaosh, XodimTolov, XodimOyYopish, QoshimchaChiqim, AgentRelease, TaskMaterialPickup
@@ -1281,7 +1281,10 @@ def main(request):
                 # stansiyada aynan shu so'ralgan mahsulotlarning Serial QR
                 # kodlarini skanerlab oladi; so'ralmagan mahsulot skani
                 # agentda rad etiladi (`agent_scan_delivery_serial`).
-                yaratilgan = []
+                is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+                yaratilgan_matn = []
+                yaratilgan_json = []
+                ogohlantirishlar = []
                 for m in Mahsulot.objects.filter(company=request.company, warehouse_type='finished'):
                     try:
                         sorov_miqdor = float(request.POST.get(f'sorov_miqdor_{m.id}') or 0)
@@ -1290,30 +1293,47 @@ def main(request):
                     if sorov_miqdor <= 0:
                         continue
                     if sorov_miqdor > m.miqdori:
-                        messages.error(request, f"{m.nomi} uchun omborda faqat {m.miqdori:g} {m.turi} bor — so'rov o'tkazib yuborildi.")
+                        ogohlantirishlar.append(f"{m.nomi} uchun omborda faqat {m.miqdori:g} {m.turi} bor — so'rov o'tkazib yuborildi.")
                         continue
                     if YuklamaSorov.objects.filter(
                         company=request.company, user=yt_obj, mahsulot=m, mode='waiting',
                     ).exists():
-                        messages.error(request, f"{m.nomi} uchun kutilayotgan so'rovingiz allaqachon bor — o'tkazib yuborildi.")
+                        ogohlantirishlar.append(f"{m.nomi} uchun kutilayotgan so'rovingiz allaqachon bor — o'tkazib yuborildi.")
                         continue
                     YuklamaSorov.objects.create(
                         company=request.company, user=yt_obj,
                         mahsulot=m, miqdor=sorov_miqdor, mode='waiting',
                     )
-                    yaratilgan.append(f"{sorov_miqdor:g} {m.turi} {m.nomi}")
-                if yaratilgan:
+                    yaratilgan_matn.append(f"{sorov_miqdor:g} {m.turi} {m.nomi}")
+                    yaratilgan_json.append({'mahsulot_id': m.id, 'mahsulot': m.nomi, 'miqdor': f"{sorov_miqdor:g}", 'birlik': m.turi.nomi})
+
+                if yaratilgan_matn:
                     send_ws_notification(
                         request.company.subdomain, "Yuklama so'rovi",
-                        f"{yt_obj.tuliq_ismi} so'radi: {', '.join(yaratilgan)}.",
+                        f"{yt_obj.tuliq_ismi} so'radi: {', '.join(yaratilgan_matn)}.",
                         "info",
                     )
-                    messages.success(
-                        request,
-                        f"So'rov yuborildi ({len(yaratilgan)} mahsulot) — endi stansiyada badge'ingizni skanerlab, QR kodlarni skanerlang.",
-                    )
+                    ok = True
+                    msg = f"So'rov yuborildi ({len(yaratilgan_matn)} mahsulot) — endi stansiyada badge'ingizni skanerlab, QR kodlarni skanerlang."
                 else:
-                    messages.error(request, "Hech qanday miqdor kiritilmadi.")
+                    ok = False
+                    msg = ogohlantirishlar[0] if ogohlantirishlar else "Hech qanday miqdor kiritilmadi."
+
+                # AJAX (fetch) orqali yuborilgan bo'lsa — sahifa umuman
+                # qayta yuklanmasin, faqat JSON javob (frontend DOM'ni o'zi
+                # yangilaydi). Oddiy forma-submit (JS o'chirilgan yoki eski
+                # brauzer) hamon eski redirect+messages yo'lidan ishlaydi.
+                if is_ajax:
+                    return JsonResponse({
+                        'ok': ok, 'message': msg,
+                        'ogohlantirishlar': ogohlantirishlar,
+                        'yaratilgan': yaratilgan_json,
+                    })
+
+                if ok:
+                    messages.success(request, msg)
+                for w in ogohlantirishlar:
+                    messages.error(request, w)
                 return redirect('main')
             if 'yk_id' in request.POST:
                 yk_id=request.POST.get('yk_id')
@@ -2950,7 +2970,6 @@ def sotish(request):
 # ============================================
 # API Endpoint for Browser Notifications
 # ============================================
-from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 
 
