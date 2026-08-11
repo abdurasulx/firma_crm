@@ -9245,3 +9245,37 @@ qilmaydi.
 
 ### Tekshirildi
 `manage.py check` toza (faqat CSS, backend/test o'zgarmadi).
+
+---
+
+## 216-qadam: Boshqa sahifalarda ham tekshirildi — xuddi shu bildirishnoma bug bor-yo'qligi
+
+**Holat: DONE**
+
+### Muammo
+Ega 215-qadamdagi tuzatishdan so'ng "boshqa sahifalarda ham tekshirib
+chiq" deb so'radi — xuddi shu (`#notification-container`da `position:
+fixed` yo'qligi) xato boshqa rol bazalarida ham bo'lishi mumkinmi.
+
+### Nima qilindi
+Barcha 4 ta rol bazasini tekshirdim:
+- `ytbase.html` — `position: fixed` bor edi, muammo yo'q.
+- `egabase.html` — `position: fixed` bor edi, muammo yo'q.
+- `sgbase.html` — o'ziniki emas, umumiy `_notif_partial.html`dan
+  foydalanadi, u yerda ham to'g'ri sozlangan (`position: fixed`).
+- `pzbase.html` — 215-qadamda allaqachon tuzatilgan.
+
+Demak asosiy bug FAQAT `pzbase.html`da edi, boshqa joyda takrorlanmagan.
+Qo'shimcha himoya sifatida (kelajakda shunga o'xshash xato — masalan
+yangi `position: fixed` unutilgan elementi — butun sahifani buzib
+qo'ymasligi uchun) barcha 4 ta bazaning `body` elementiga `overflow-x:
+hidden` qo'shildi (pzbase'da avval faqat `.main-wrapper`da bor edi,
+lekin bildirishnoma konteyneri undan TASHQARIDA joylashgan edi —
+shuning uchun aynan shu himoya ishlamagan edi).
+
+### O'zgargan fayllar
+`main/templates/pzbase.html`, `main/templates/ytbase.html`,
+`main/templates/sgbase.html`, `main/templates/egabase.html`
+
+### Tekshirildi
+`manage.py check` toza (faqat CSS, backend/test o'zgarmadi).
