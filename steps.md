@@ -9668,3 +9668,40 @@ tashlandi), `desktop_agent/app/windows/main_window.py`
 `py_compile` toza, exe muvaffaqiyatli qayta yig'ildi. (Haqiqiy
 stansiyada boshqa dasturlarda yozish/skanerlash endi normal
 ishlashini tasdiqlash tavsiya etiladi.)
+
+---
+
+## 225-qadam: Hali login qilinmagan stansiyada birinchi QR skani noto'g'ri "kiosk qulfini ochish" deb talqin qilinardi
+
+**Holat: DONE (BUG FIX)**
+
+### Muammo
+Ega: "2-marta skaner qilinganda login qilyapti... login qilinmagan
+bo'lsa umuman qulflanishi kerak emas, login qilinishi kerak". Sabab:
+`_on_code_scanned` faqat `self._kiosk_locked` bayrog'iga qarab qaror
+qilardi — bu bayroq dastur ishga tushganda har doim `True` bilan
+BOSHLANADI, HALI LOGIN QILINMAGAN bo'lsa ham (`_kiosk_locked` va
+"login qilinganmi" ikkita BOSHQA-BOSHQA tushuncha edi, lekin bir xil
+bayroq bilan aralashtirilgan). Natijada: birinchi (hali login
+qilinmagan) QR skani NOTO'G'RI "kiosk qulfini ochish" so'rovi deb
+yuborilardi (`agent_verify_kiosk_unlock`ga) — server buni ham qabul
+qilib "Qulf ochildi" derdi (chunki bu endpoint stansiya login
+qilinganini talab qilmaydi), lekin HAQIQIY login sodir bo'lmagan
+edi. Faqat IKKINCHI skanerlashda (`_kiosk_locked` allaqachon
+`False`ga o'tgani uchun) haqiqiy login yo'liga tushardi.
+
+### Nima qilindi
+`_on_code_scanned`: endi avval HAQIQIY login holati
+(`db.get_setting("agent_token", "")` bor-yo'qligi) tekshiriladi.
+Login qilinmagan bo'lsa — DOIM login oqimiga (`_handle_agent_login_qr`)
+yo'naltiriladi, `_kiosk_locked`dan qat'i nazar. Faqat ALLAQACHON login
+qilingan VA kiosk ekrani qulflangan holatda QR skani "qulfni ochish"
+so'rovi sifatida talqin qilinadi.
+
+Exe qayta yig'ildi.
+
+### O'zgargan fayllar
+`desktop_agent/app/windows/main_window.py` (`_on_code_scanned`)
+
+### Tekshirildi
+`py_compile` toza, exe muvaffaqiyatli qayta yig'ildi.

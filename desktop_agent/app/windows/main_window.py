@@ -391,10 +391,23 @@ class MainWindow(QMainWindow):
 
     def _on_code_scanned(self, kod: str):
         if kod.startswith("AGENTQR|"):
-            if self._kiosk_locked:
-                # Qulflangan holatda bu QR — stansiya login emas, balki
-                # kiosk qulfini ochish so'rovi (faqat ega'ning QR kodi
-                # qabul qilinadi, server tomonda tekshiriladi).
+            # Real bug (foydalanuvchi topdi): `_kiosk_locked` dastur
+            # ishga tushganda har doim `True` bilan boshlanadi — HALI
+            # LOGIN QILINMAGAN bo'lsa ham. Shuning uchun avval bu yer
+            # faqat `_kiosk_locked`ga qarab qaror qilardi: birinchi
+            # (hali login qilinmagan) skanerlash NOTO'G'RI "kiosk
+            # qulfini ochish" so'rovi deb talqin qilinardi (server buni
+            # ham qabul qilib "Qulf ochildi" derdi), faqat IKKINCHI
+            # skanerlashda haqiqiy login sodir bo'lardi. Endi avval
+            # HAQIQIY login holati (`agent_token` bor-yo'qligi)
+            # tekshiriladi — hali login qilinmagan bo'lsa, DOIM login
+            # oqimiga yo'naltiriladi, `_kiosk_locked`dan qat'i nazar.
+            is_logged_in = bool(db.get_setting("agent_token", ""))
+            if is_logged_in and self._kiosk_locked:
+                # Allaqachon login qilingan, faqat kiosk ekrani
+                # qulflangan — bu QR kiosk qulfini ochish so'rovi
+                # (faqat ega'ning QR kodi qabul qilinadi, server
+                # tomonda tekshiriladi).
                 self._handle_kiosk_unlock_qr(kod)
             else:
                 self._handle_agent_login_qr(kod)
