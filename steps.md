@@ -9778,3 +9778,49 @@ Exe qayta yig'ildi.
 
 ### Tekshirildi
 `py_compile` toza, exe muvaffaqiyatli qayta yig'ildi.
+
+---
+
+## 229-qadam: "Desktop Agent onlayn emas" banneri sahifani yangilamasdan o'zini tuzata olmasdi
+
+**Holat: DONE (BUG FIX)**
+
+### Muammo
+Ega Desktop Agent haqiqatan ishlab, login qilingan bo'lsa ham, ERP
+bosh sahifasida "Desktop Agent stansiyasi onlayn emas" qizil banneri
+ko'rinishda qolib ketardi. Tekshirilganda: heartbeat mexanizmining
+o'zi TO'G'RI ishlayotgani tasdiqlandi (qo'lda chaqirilganda server
+muvaffaqiyatli qabul qildi, `last_agent_heartbeat` yangilandi) —
+sahifani F5 bilan yangilash bannerni to'g'irlardi. Demak muammo
+heartbeatda emas, balki jonli (WebSocket) yangilanishda edi:
+"onlaynga o'tish" holati FAQAT WebSocket orqali (`agent_heartbeat`
+hodisasi) push qilinardi — agar bu xabar biror sababdan (kanal
+qatlami/tarmoq uzilishi) yetib kelmasa, banner sahifa qayta
+ochilmaguncha "oflayn" holida qotib qolardi. Ega: "yangilamasam ham
+avtomatik o'zi o'zgaradigon qilishing kerak".
+
+### Nima qilindi
+WebSocket asosiy (tezkor) yo'l bo'lib qoladi — unga QO'SHIMCHA, o'zini
+o'zi tuzatuvchi ZAXIRA mexanizmi qo'shildi: `egabase.html`dagi JS endi
+har 30 soniyada yangi `/api/stansiyalar-holati/` endpointini so'raydi
+(`views.agent_stations_status_api`, faqat `ega`, mavjud
+`context_processors._safe_agent_stations_status` hisob-kitobini qayta
+ishlatadi) va natijani `applyAgentStationsSeed()` orqali qayta
+qo'llaydi — WS push qandaydir sabab bilan yo'qolgan bo'lsa ham, 30
+soniya ichida banner o'zi to'g'irlanadi, foydalanuvchi F5 bosishi
+shart emas.
+
+**Diqqat (URL to'qnashuvi)**: birinchi urinishda `/api/agent-stations-
+status/` deb nomlangan edi — bu `CompanyMiddleware`dagi
+`path.startswith('api/agent')` shartiga tushib, middleware'ni
+BUTUNLAY chetlab o'tib ketardi (`request.company` o'rnatilmasdi,
+`AttributeError`). `/api/stansiyalar-holati/` deb nomlanib tuzatildi.
+
+### O'zgargan fayllar
+`main/views.py` (`agent_stations_status_api`), `main/urls.py`,
+`main/templates/egabase.html` (`applyAgentStationsSeed`,
+`pollAgentStationsStatus`), `main/tests_agent_stations_status.py`
+(yangi — 3 test)
+
+### Tekshirildi
+`manage.py check`/`test` — 89 test, hammasi o'tdi.

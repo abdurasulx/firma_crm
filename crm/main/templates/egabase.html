@@ -1625,16 +1625,11 @@
             banner.style.display = 'flex';
         }
 
-        (function seedAgentStations() {
-            const seedEl = document.getElementById('agentStationsSeed');
-            if (!seedEl) return;
-            let seed = [];
-            try {
-                seed = JSON.parse(seedEl.textContent);
-            } catch (err) {
-                return;
-            }
-            seed.forEach(function(s) {
+        function applyAgentStationsSeed(seed) {
+            (seed || []).forEach(function(s) {
+                if (agentStations[s.id] && agentStations[s.id].timeoutHandle) {
+                    clearTimeout(agentStations[s.id].timeoutHandle);
+                }
                 agentStations[s.id] = {name: s.name, isOnline: s.is_online, timeoutHandle: null};
                 if (s.is_online) {
                     // Sahifa yuklangan vaqtdan emas — serverda hisoblangan
@@ -1646,7 +1641,39 @@
                     scheduleAgentOfflineTimeout(s.id, remainingMs);
                 }
             });
+            renderAgentOfflineBanner();
+        }
+
+        (function seedAgentStations() {
+            const seedEl = document.getElementById('agentStationsSeed');
+            if (!seedEl) return;
+            let seed = [];
+            try {
+                seed = JSON.parse(seedEl.textContent);
+            } catch (err) {
+                return;
+            }
+            applyAgentStationsSeed(seed);
         })();
+
+        // Zaxira (fallback) yangilanish — WebSocket orqali "onlayn" xabari
+        // qandaydir sabab bilan (kanal qatlami/tarmoq uzilishi) yetib
+        // kelmasa ham, banner o'zi to'g'irlanib turishi uchun. Ega bilan
+        // kelishilgan qaror: "yangilamasam ham avtomatik o'zi o'zgaradigon
+        // qilish kerak" — WS asosiy, tez yo'l bo'lib qoladi, bu esa
+        // o'zini-o'zi tuzatuvchi zaxira.
+        const AGENT_STATIONS_POLL_MS = 30000;
+        function pollAgentStationsStatus() {
+            fetch('/api/stansiyalar-holati/', {credentials: 'same-origin'})
+                .then(function(r) { return r.ok ? r.json() : null; })
+                .then(function(data) {
+                    if (data && data.stations) applyAgentStationsSeed(data.stations);
+                })
+                .catch(function() {});
+        }
+        if (document.getElementById('agentStationsSeed')) {
+            setInterval(pollAgentStationsStatus, AGENT_STATIONS_POLL_MS);
+        }
 
         // WebSocket Notifications
         (function() {

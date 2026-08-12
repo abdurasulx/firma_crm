@@ -3412,3 +3412,19 @@ def download_desktop_agent(request):
         messages.error(request, "Hozircha Desktop Agent versiyasi yuklanmagan. Administrator bilan bog'laning.")
         return redirect('main')
     return redirect(release.file.url)
+
+
+@login_required(login_url='login')
+def agent_stations_status_api(request):
+    """`egabase.html`dagi "Desktop Agent onlayn emas" banneri uchun
+    ZAXIRA (fallback) yangilanish manbai — asosiy yo'l WebSocket orqali
+    (`agent_heartbeat` hodisasi) DARHOL keladi, lekin kanal qatlami/
+    tarmoq uzilishi sabab xabar yetib kelmasligi mumkin (real holatda
+    ega tomonidan aniqlangan: sahifani qo'lda yangilamaguncha banner
+    "onlayn emas" holida qolib ketardi). Shu sabab veb JS bu endpoint'ni
+    davriy (~30s) so'raydi — `context_processors._safe_agent_stations_
+    status` bilan bir xil hisob-kitob, faqat AJAX orqali."""
+    if request.user.type != 'ega':
+        return JsonResponse({'stations': []})
+    from .context_processors import _safe_agent_stations_status
+    return JsonResponse({'stations': _safe_agent_stations_status(request.company)})
