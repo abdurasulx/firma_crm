@@ -353,6 +353,18 @@ def mark_batch_printed(server_url: str, token: str, session_token: str, batch_id
     })
 
 
+def report_print_result(server_url: str, token: str, kod: str, success: bool, reason: str = ""):
+    """Har bir QR-yorliq jismonan chop etilgandan KEYIN (printer holati
+    tekshirilib) natijani serverga xabar qiladi — muvaffaqiyatsiz bo'lsa,
+    shu kod keyingi badge skanida qayta chop etishga taklif qilinadi.
+    Best-effort: xato bo'lsa ham (masalan tarmoq uzilgan) chaqiruvchi
+    tomon davom etadi, chunki bu faqat qo'shimcha kuzatuv — asosiy
+    "Davom etish" oqimini to'xtatmasligi kerak."""
+    return _post(server_url, token, "/api/agent/report-print-result/", data={
+        "kod": kod, "success": "1" if success else "0", "reason": reason,
+    })
+
+
 def fetch_miqdor_requests(server_url: str, token: str, session_token: str):
     """Ishlab chiqaruvchi uchun kutilayotgan "miqdor qo'shish" so'rovlari
     (82-qadam) — faqat Desktop Agent stansiyasi sotib olingan firmalarda

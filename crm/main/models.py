@@ -544,6 +544,19 @@ class Serial(models.Model):
     scan_soni = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # Chop etish natijasi — Windows'ning RAW printer yozish API'si printer
+    # oflayn/qog'ozsiz bo'lsa ham odatda "muvaffaqiyatli" qaytaradi, shuning
+    # uchun HAQIQIY natija Desktop Agent tomonidan chop etishdan KEYIN
+    # printer holatini (win32print status bitmask — qog'oz tugagan/oflayn/
+    # xato) tekshirib, alohida xabar qilinadi. `True` bo'lsa — keyingi
+    # badge skanida shu QR qayta chop etishga taklif qilinadi.
+    chop_etilmadi = models.BooleanField(
+        default=False,
+        help_text="Oxirgi chop etish urinishi muvaffaqiyatsiz bo'ldi (qog'oz tugagan, printer "
+                   "oflayn va h.k.) — keyingi badge skanida qayta chop etishga taklif qilinadi.",
+    )
+    chop_etish_sababi = models.CharField(max_length=200, blank=True, default='')
+
     class Meta:
         verbose_name = "Serial"
         verbose_name_plural = "Seriallar"

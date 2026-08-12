@@ -16,7 +16,7 @@ from ..api_client import (
     fetch_material_requests, weigh_material_request, fetch_miqdor_requests,
     approve_miqdor_qoshish, scan_delivery_serial, finalize_yuklama, toggle_attendance, scan, ApiError,
     weigh_task_pickup, fetch_my_task_pickups, fetch_pending_print_batch, mark_batch_printed,
-    fetch_delivery_requests,
+    fetch_delivery_requests, report_print_result,
 )
 from ..label_printer_service import LabelPrintWorker
 
@@ -270,6 +270,13 @@ class EmployeeScanWidget(QWidget):
         self._delivery_finalize_worker: _ApiCallWorker | None = None
         self._attendance_worker: _ApiCallWorker | None = None
         self._label_print_worker: LabelPrintWorker | None = None
+        # Bir nechta yorliq ketma-ket chop etilganda, har biri uchun
+        # natija-xabar so'rovi bir vaqtda "havoda" bo'lishi mumkin —
+        # shuning uchun bittalik `_replace_worker` o'rniga ro'yxat orqali
+        # barchasiga ishora saqlanadi (aks holda C++ oqim hali join
+        # bo'lmasdan GC'ga uchrashi mumkin, `_replace_worker`dagi izohga
+        # qarang).
+        self._print_result_workers: list = []
         self._image_worker: _ImageFetchWorker | None = None
         self._weigh_image_worker: _ImageFetchWorker | None = None
         self._miqdor_image_worker: _ImageFetchWorker | None = None
@@ -1173,7 +1180,7 @@ class EmployeeScanWidget(QWidget):
 
     def _print_pending_batch_via_printer(self, batch, printer_name):
         serials = batch["serials"]
-        labels = [{"qr_data": s["url"]} for s in serials]
+        labels = [{"qr_data": s["url"], "kod": s["kod"]} for s in serials]
         width = float(db.get_setting("label_width_mm", "40") or "40")
         height = float(db.get_setting("label_height_mm", "30") or "30")
         gap = float(db.get_setting("label_gap_mm", "2") or "2")
@@ -1183,10 +1190,36 @@ class EmployeeScanWidget(QWidget):
         # sarlavha matnida ko'rsatiladi, lekin `labels_printed`ni
         # ANIQLAMAYDI — yagona haqiqiy tasdiq operatorning "Davom etish"
         # tugmasini bosishi (`_on_print_batch_continue_clicked`).
+        # Shu bilan birga, har bir yorliq uchun printer HOLATI (qog'oz
+        # tugagan/oflayn/xato) alohida tekshirilib serverga xabar
+        # qilinadi — muvaffaqiyatsiz kodlar keyingi badge skanida
+        # qayta chop etishga taklif qilinadi.
         worker.progress.connect(lambda done, total: self._extend_session())
         worker.failed.connect(lambda msg: self._on_pending_batch_print_failed(msg))
         worker.succeeded.connect(lambda count: self._on_pending_batch_print_succeeded(count))
+        worker.label_result.connect(self._report_print_result_async)
         self._replace_worker("_pending_print_label_worker", worker)
+        worker.start()
+
+    def _report_print_result_async(self, kod: str, success: bool, reason: str):
+        """`LabelPrintWorker.label_result`ga ulanadi — har bir yorliqning
+        HAQIQIY chop etish natijasini (printer holati tekshiruvi
+        orqali) serverga xabar qiladi. Best-effort: tarmoq xatosi
+        bo'lsa ham jimgina e'tiborsiz qoldiriladi (`_ApiCallWorker`
+        allaqachon har qanday xatoni xavfsiz ushlaydi) — bu faqat
+        qo'shimcha kuzatuv, asosiy oqimni to'xtatmasligi kerak."""
+        if not kod:
+            return
+        server_url = db.get_setting("server_url", "")
+        token = db.get_setting("agent_token", "")
+        worker = _ApiCallWorker(report_print_result, server_url, token, kod, success, reason)
+
+        def _cleanup():
+            if worker in self._print_result_workers:
+                self._print_result_workers.remove(worker)
+
+        worker.finished.connect(_cleanup)
+        self._print_result_workers.append(worker)
         worker.start()
 
     def _on_pending_batch_print_succeeded(self, count: int):
@@ -1211,10 +1244,19 @@ class EmployeeScanWidget(QWidget):
         self._pending_print_batch = batch
         for s in batch["serials"]:
             self._own_batch_kods.add(s["kod"])
-        self.print_batch_title.setText(
-            f"{batch['mahsulot']} — {len(batch['serials'])} ta QR-yorliq. Har birini yopishtiring "
-            "(yoki ekrandan chop eting)."
-        )
+        if batch.get("is_reprint"):
+            # Oldingi urinishda printer holati (qog'oz tugagan/oflayn/xato)
+            # tekshiruvi orqali HAQIQATAN chop etilmagan deb aniqlangan
+            # QR kodlar — endi qayta taklif qilinmoqda.
+            self.print_batch_title.setText(
+                f"⚠ Qayta chop etish: {batch['mahsulot']} — {len(batch['serials'])} ta yorliq oldin "
+                "chop etilmagan edi. Har birini yopishtiring (yoki ekrandan chop eting)."
+            )
+        else:
+            self.print_batch_title.setText(
+                f"{batch['mahsulot']} — {len(batch['serials'])} ta QR-yorliq. Har birini yopishtiring "
+                "(yoki ekrandan chop eting)."
+            )
 
         while self.print_batch_grid.count():
             item = self.print_batch_grid.takeAt(0)
@@ -1241,7 +1283,13 @@ class EmployeeScanWidget(QWidget):
             worker.start()
 
         self.print_batch_card.setVisible(True)
-        self._mark_batch_printed(batch["id"])
+        if batch.get("id") is not None:
+            self._mark_batch_printed(batch["id"])
+        # Qayta chop etish (`is_reprint`) holatida bitta umumiy partiya
+        # (`MiqdorQoshish`) yo'q — har bir Serial o'z chop etish natijasini
+        # ALOHIDA xabar qiladi (`_report_print_result_async`, printer
+        # holati asosida), shu orqali muvaffaqiyatli bo'lganlari
+        # `chop_etilmadi=False`ga qaytadi va endi qayta taklif qilinmaydi.
         QTimer.singleShot(PRINT_BATCH_DISPLAY_MS, self._on_print_batch_display_timeout)
 
     def _on_batch_qr_image_ready(self, label, content: bytes):
@@ -1746,7 +1794,7 @@ class EmployeeScanWidget(QWidget):
         width = float(db.get_setting("label_width_mm", "40") or "40")
         height = float(db.get_setting("label_height_mm", "30") or "30")
         gap = float(db.get_setting("label_gap_mm", "2") or "2")
-        labels = [{"qr_data": s["url"]} for s in serials]
+        labels = [{"qr_data": s["url"], "kod": s["kod"]} for s in serials]
         worker = LabelPrintWorker(printer_name, labels, width, height, gap)
         # Ko'p dona (masalan 23 ta) yorliqni ketma-ket chop etish bir necha
         # o'nlab soniya olishi mumkin — har bir bosqichda sessiyani
@@ -1756,6 +1804,7 @@ class EmployeeScanWidget(QWidget):
         worker.progress.connect(lambda done, total: self._extend_session())
         worker.failed.connect(lambda msg: self._on_label_print_failed(label, msg))
         worker.succeeded.connect(lambda count: self._on_label_print_succeeded(label, count))
+        worker.label_result.connect(self._report_print_result_async)
         self._replace_worker("_label_print_worker", worker)
         worker.start()
 

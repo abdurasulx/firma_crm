@@ -797,27 +797,64 @@ def agent_pending_print_batch(request):
         return Response({'detail': "Bu foydalanuvchi ishlab chiqaruvchi emas."}, status=status.HTTP_404_NOT_FOUND)
 
     mq, serials = task_service.get_pending_print_batch(pazanda, company)
+    is_reprint = False
     if not mq:
-        return Response({'batch': None})
+        # Yangi (hali umuman chop etilmagan) partiya yo'q — lekin oldingi
+        # urinishda HAQIQATAN chop etilmagan (printer holati bo'yicha
+        # aniqlangan, masalan qog'oz tugagan) QR kodlar bo'lsa, ularni
+        # qayta chop etishga taklif qilamiz.
+        failed_serials = task_service.get_failed_print_serials(pazanda, company)
+        if not failed_serials:
+            return Response({'batch': None})
+        is_reprint = True
+        serials = failed_serials
 
     serial_kodlar = [s.kod for s in serials]
     token = _extract_token(request)
     print_url = request.build_absolute_uri(
         f'/api/agent/miqdor-qoshish/{mq.id}/chop-etish/?token={token}',
-    ) if serial_kodlar else None
+    ) if (mq and serial_kodlar) else None
+    if mq:
+        mahsulot_nomi = mq.mahsulot.nomi
+    else:
+        mahsulot_nomi = ", ".join(sorted({s.mahsulot.nomi for s in serials}))
     return Response({
         'batch': {
-            'id': mq.id,
-            'mahsulot': mq.mahsulot.nomi,
-            'miqdor': mq.miqdor,
+            'id': mq.id if mq else None,
+            'mahsulot': mahsulot_nomi,
+            'miqdor': mq.miqdor if mq else None,
             'serial_soni': len(serial_kodlar),
             'print_url': print_url,
+            'is_reprint': is_reprint,
             'serials': [
-                {'kod': kod, 'url': _public_scan_url(company, kod)}
-                for kod in serial_kodlar
+                {'kod': s.kod, 'url': _public_scan_url(company, s.kod), 'sabab': s.chop_etish_sababi}
+                for s in serials
             ],
         },
     })
+
+
+@api_view(['POST'])
+def agent_report_print_result(request):
+    """Desktop Agent har bir QR-yorliqni jismonan chop etib bo'lgandan
+    KEYIN, PRINTER HOLATINI (win32print status — qog'oz tugagan/oflayn/
+    xato) tekshirib, HAQIQIY natijani shu orqali xabar qiladi. Windows
+    RAW yozish API'sining o'zi ishonchsiz — printer uzilgan/qog'ozsiz
+    bo'lsa ham odatda "muvaffaqiyatli" qaytaradi."""
+    company = _company_from_token(request)
+    if not company:
+        return Response({'detail': "Token noto'g'ri yoki topilmadi."}, status=status.HTTP_401_UNAUTHORIZED)
+
+    kod = request.data.get('kod')
+    if not kod:
+        return Response({'detail': "'kod' kerak."}, status=status.HTTP_400_BAD_REQUEST)
+    success = str(request.data.get('success', '')).lower() in ('1', 'true')
+    reason = request.data.get('reason', '')
+
+    found = task_service.report_serial_print_result(kod, company, success, reason)
+    if not found:
+        return Response({'detail': "Serial topilmadi."}, status=status.HTTP_404_NOT_FOUND)
+    return Response({'ok': True})
 
 
 @api_view(['POST'])

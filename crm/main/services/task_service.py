@@ -319,6 +319,32 @@ def mark_batch_printed(mq_id, pazanda, company):
     MiqdorQoshish.objects.filter(id=mq_id, company=company, pazanda=pazanda).update(labels_printed=True)
 
 
+def get_failed_print_serials(pazanda, company):
+    """Oldingi urinish(lar)da HAQIQIY chop etilmagan (`chop_etilmadi=True`
+    — printer holati tekshiruvi orqali aniqlangan, faqat spooler qabul
+    qilgani emas) QR kodlar. Yangi (hali umuman chop etilmagan) partiya
+    bo'lmasa, Desktop Agent keyingi badge skanida shularni qayta chop
+    etishga taklif qiladi (`get_pending_print_batch` bilan bir xil
+    oqim, faqat manba boshqa)."""
+    return list(
+        Serial.objects.filter(company=company, batch__pazanda=pazanda, chop_etilmadi=True)
+        .select_related('mahsulot', 'batch')
+        .order_by('created_at'),
+    )
+
+
+def report_serial_print_result(kod, company, success, reason=''):
+    """Desktop Agent har bir QR-yorliqni chop etgandan KEYIN printer
+    holatini tekshirib, natijani shu orqali xabar qiladi (Windows RAW
+    yozish API'si o'zi ishonchli emas — printer oflayn/qog'ozsiz bo'lsa
+    ham odatda "muvaffaqiyatli" qaytaradi)."""
+    updated = Serial.objects.filter(company=company, kod=kod).update(
+        chop_etilmadi=not success,
+        chop_etish_sababi='' if success else (reason or "Noma'lum xato"),
+    )
+    return updated > 0
+
+
 def _start_producing(task):
     """`confirm_task_finished_materials` ichidan chaqiriladi (xom ashyo
     tortilib, pazanda "Ish bitdi" bosgach). Eski `_apply_retsept_hisobkitob`dan

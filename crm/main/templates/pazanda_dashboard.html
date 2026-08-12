@@ -574,6 +574,21 @@
 </div>
 {% endif %}
 
+{% if failed_print_serials_count %}
+<div class="content-card" style="margin-top:20px; background:#fffbeb; border:1px solid #fde68a;">
+    <div class="card-body" style="display:flex; align-items:center; gap:12px; padding:14px 16px;">
+        <i class="fa-solid fa-triangle-exclamation" style="color:#b45309; font-size:20px;"></i>
+        <div>
+            <div style="font-weight:800; color:#92400e;">{{ failed_print_serials_count }} ta QR-yorliq chop etilmadi</div>
+            <div style="font-size:13px; color:#b45309;">
+                Printer holatida muammo aniqlandi (qog'oz tugagan, oflayn va h.k.). Desktop Agent
+                stansiyasida badge'ingizni skanerlaganda avtomatik qayta chop etishga taklif qilinadi.
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {% if is_agent_company %}
 <div class="content-card" style="margin-top:20px;">
     <div class="card-head">

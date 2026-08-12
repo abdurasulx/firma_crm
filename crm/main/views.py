@@ -1140,6 +1140,13 @@ def main(request):
                 company=request.company, id__in=bom_mahsulot_ids,
                 warehouse_type='finished', mahsulot_turi='ishlab_chiqariladigan',
             ).order_by('nomi')
+            # Printer holati (qog'oz tugagan/oflayn/xato) tekshiruvi orqali
+            # HAQIQATAN chop etilmagan deb aniqlangan QR-yorliqlar — Desktop
+            # Agentda keyingi badge skanida qayta taklif qilinadi, bu yerda
+            # esa ogohlantirish sifatida ko'rsatiladi.
+            payload['failed_print_serials_count'] = Serial.objects.filter(
+                company=request.company, batch__pazanda=pz, chop_etilmadi=True,
+            ).count()
         else:
             payload['material_requests'] = ProductionMaterialRequest.objects.filter(
                 company=request.company, producer=pz,

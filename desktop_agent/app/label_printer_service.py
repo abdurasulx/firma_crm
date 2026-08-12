@@ -81,6 +81,53 @@ def _escape(text: str) -> str:
     return (text or "").replace('"', "'")
 
 
+# Windows spooler PRINTER_STATUS_* bitmask qiymatlari (win32print
+# konstantalari sifatida eksport qilinmagan, shuning uchun qo'lda
+# yozilgan) — xuddi shu bitlar `startup_check_page._check_printer_live`da
+# ham ishlatiladi.
+_STATUS_PAPER_JAM = 0x8
+_STATUS_PAPER_OUT = 0x10
+_STATUS_OFFLINE = 0x80
+_STATUS_ERROR = 0x2
+_STATUS_USER_INTERVENTION = 0x100000
+_STATUS_DOOR_OPEN = 0x400000
+_STATUS_NOT_AVAILABLE = 0x1000
+
+_STATUS_REASONS = (
+    (_STATUS_PAPER_OUT, "Qog'oz tugagan"),
+    (_STATUS_PAPER_JAM, "Qog'oz tiqilib qolgan"),
+    (_STATUS_DOOR_OPEN, "Printer qopqog'i ochiq"),
+    (_STATUS_OFFLINE, "Printer oflayn"),
+    (_STATUS_NOT_AVAILABLE, "Printer mavjud emas"),
+    (_STATUS_ERROR, "Printer xato holatida"),
+    (_STATUS_USER_INTERVENTION, "Printerga e'tibor kerak"),
+)
+
+
+def get_printer_status_issue(printer_name: str) -> str | None:
+    """Chop etishdan KEYIN chaqiriladi — printer HAQIQIY holatini
+    (Windows spooler `GetPrinter` status bitmask) tekshiradi. `print_raw`
+    (RAW yozish API'si) printer oflayn/qog'ozsiz bo'lsa ham odatda
+    xatosiz qaytadi — shuning uchun haqiqiy natija faqat shu status
+    tekshiruvi orqali aniqlanadi. Muammo topilmasa `None`."""
+    try:
+        handle = win32print.OpenPrinter(printer_name)
+    except Exception:  # noqa: BLE001
+        return "Printer bilan bog'lanib bo'lmadi"
+    try:
+        info = win32print.GetPrinter(handle, 2)
+        status_bits = info.get("Status", 0)
+    except Exception:  # noqa: BLE001
+        return None  # holatni bilib bo'lmadi — ijobiy taxmin qilamiz (spooler qabul qilgan)
+    finally:
+        win32print.ClosePrinter(handle)
+
+    for bit, reason in _STATUS_REASONS:
+        if status_bits & bit:
+            return reason
+    return None
+
+
 def print_raw(printer_name: str, data: bytes, doc_name: str = "StockFirm Label"):
     """Tayyor TSPL bayt ketma-ketligini printer navbatiga RAW rejimida
     yuboradi — hech qanday Windows sahifa-tarjimasi/GDI ishlatilmaydi,
@@ -110,9 +157,15 @@ class LabelPrintWorker(QThread):
     progress = pyqtSignal(int, int)  # (chop etilgan soni, jami)
     succeeded = pyqtSignal(int)  # jami chop etilgan soni
     failed = pyqtSignal(str)
+    # Har bir alohida yorliq chop etilgandan KEYIN, printer HOLATI
+    # tekshirilib chiqadi — (kod, muvaffaqiyatmi, sabab-agar-yo'q-bo'lsa).
+    # `kod` bo'sh bo'lishi mumkin (`label["kod"]` berilmagan chaqiruvlar
+    # uchun, masalan eski/boshqa joylardan) — bunda serverga xabar
+    # qilinmaydi, faqat UI feedback uchun ishlatiladi.
+    label_result = pyqtSignal(str, bool, str)
 
     def __init__(self, printer_name: str, labels: list[dict], width_mm: float, height_mm: float, gap_mm: float):
-        """`labels` — [{"qr_data": str}, ...]"""
+        """`labels` — [{"qr_data": str, "kod": str (ixtiyoriy)}, ...]"""
         super().__init__()
         self._printer_name = printer_name
         self._labels = labels
@@ -128,6 +181,8 @@ class LabelPrintWorker(QThread):
                     label["qr_data"], self._width_mm, self._height_mm, self._gap_mm,
                 )
                 print_raw(self._printer_name, data)
+                issue = get_printer_status_issue(self._printer_name)
+                self.label_result.emit(label.get("kod", ""), issue is None, issue or "")
                 self.progress.emit(i + 1, len(self._labels))
         except Exception as exc:  # noqa: BLE001 — QThread ichida ushlanmagan xato butun dasturni yiqitadi
             self.failed.emit(f"Chop etishda xato: {exc}")

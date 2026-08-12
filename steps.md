@@ -9466,3 +9466,65 @@ Exe qayta yig'ildi.
 ### Tekshirildi
 `manage.py check`/`test` — 79 test, hammasi o'tdi. Desktop Agent
 `py_compile` toza, exe muvaffaqiyatli qayta yig'ildi.
+
+---
+
+## 221-qadam: XPrinterda chop etilmagan (qog'oz tugagan/oflayn) QR kodlar kuzatuvi va avtomatik qayta chop etish
+
+**Holat: DONE**
+
+### Muammo
+Ega: "biz xprinterda qandaydir hatolik bilan chiqmay qolgan qr kodlar
+ro'yhatini olsak bo'ladimi? masalan qog'oz tugab qolgan yoki nimadir".
+Tekshirilganda aniqlandi: Windows'ning RAW printer yozish API'si
+(`win32print.WritePrinter`) printer oflayn/qog'ozsiz bo'lsa ham odatda
+"muvaffaqiyatli" qaytaradi — chop etish natijasi HECH QACHON ishonchli
+tekshirilmagan va HECH QAYERDA saqlanmagan (kod izohlarida shu aniq
+qayd etilgan edi). Ega tasdiqlagan yechim: (1) Desktop Agent
+stansiyasida, (2) ERP dashboardida ogohlantirish, (3) keyingi badge
+skanida avtomatik qayta chop etishga taklif.
+
+### Nima qilindi
+**Backend**: `Serial`ga `chop_etilmadi`/`chop_etish_sababi` maydonlari
+qo'shildi. Yangi `task_service.get_failed_print_serials`/
+`report_serial_print_result`. `/api/agent/pending-print-batch/`
+endi yangi partiya bo'lmasa, oldin HAQIQATAN chop etilmagan
+seriallarni "qayta chop etish" partiyasi sifatida qaytaradi
+(`is_reprint: true`). Yangi `/api/agent/report-print-result/`
+endpoint — har bir yorliq natijasini qabul qiladi.
+
+**Desktop Agent**: `label_printer_service.py`ga `get_printer_status_issue()`
+— win32print `GetPrinter` STATUS bitmask orqali qog'oz tugagan/
+tiqilgan/oflayn/qopqoq ochiq/xato holatlarini HAQIQATAN tekshiradi
+(xuddi startup tekshiruvidagi mexanizm). `LabelPrintWorker` endi har
+bir yorliqni chop etgandan KEYIN shu tekshiruvni bajaradi va yangi
+`label_result` signali orqali xabar beradi. `employee_scan_widget.py`
+har bir natijani serverga (`report_print_result`) yuboradi — ikkala
+chop etish yo'lida ham (vazifa partiyasi va miqdor-tasdiqlash).
+Qayta-chop-etish partiyasi ko'rsatilganda ekranda aniq ogohlantirish
+("⚠ Qayta chop etish...") chiqadi.
+
+**ERP dashboard**: `pazanda_dashboard.html`da yangi sariq ogohlantirish
+kartasi — "N ta QR-yorliq chop etilmadi" (faqat `chop_etilmadi=True`
+seriallar mavjud bo'lsa ko'rinadi).
+
+Exe qayta yig'ildi.
+
+### O'zgargan fayllar
+`main/models.py` (`Serial.chop_etilmadi`/`chop_etish_sababi`),
+`main/migrations/0100_*`, `main/services/task_service.py`,
+`main/agent_api_views.py` (`agent_pending_print_batch`,
+`agent_report_print_result`), `landing/urls.py`, `main/views.py`
+(pazanda dashboard), `main/templates/pazanda_dashboard.html`,
+`main/tests_print_failure.py` (yangi — 7 test);
+`desktop_agent/app/label_printer_service.py`
+(`get_printer_status_issue`, `LabelPrintWorker.label_result`),
+`desktop_agent/app/api_client.py` (`report_print_result`),
+`desktop_agent/app/windows/employee_scan_widget.py`
+
+### Tekshirildi
+`manage.py check`/`test` — 86 test, hammasi o'tdi. Desktop Agent
+`py_compile` toza, exe muvaffaqiyatli qayta yig'ildi. (Haqiqiy
+printerda qog'oz tugatib sinov qilish tavsiya etiladi — status
+bitmask xatti-harakati printer modeliga qarab bir oz farq qilishi
+mumkin.)
