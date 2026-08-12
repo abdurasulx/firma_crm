@@ -9625,3 +9625,46 @@ Exe qayta yig'ildi.
 Bu stansiyada Sozlamalar > Skaner qismida kamera tanlab saqlanishi
 kerak — shundan keyin QR-login (va boshqa barcha skanerlash) ishlay
 boshlaydi.
+
+---
+
+## 224-qadam: 219-qadamdagi Win/Alt+Tab klaviatura ilgichi BUTUNLAY OLIB TASHLANDI (real ishlab chiqarish xatosi)
+
+**Holat: DONE (BUG FIX/REVERT)**
+
+### Muammo
+Ega: "ilova kirishiga klaviaturani deaktivatsiya qilib qo'yyapti...
+boshqa dasturlarda ham yozib bo'lmayapti, shu tufayli skanerdan
+kelgan ma'lumotni ham qabul qilmayapti". 219-qadamda qo'shilgan
+`WH_KEYBOARD_LL` global klaviatura ilgichi (Win/Alt+Tab bloklash
+uchun) — bu XATO YECHIM edi: bunday global ilgich BUTUN TIZIM
+darajasida ishlaydi. Agar hook callback (Python/GIL orqali chaqiriladi,
+tabiatan sekinroq) javob berishda biroz kechiksa, Windows shu
+ilgichni kutib, BOSHQA HAMMA dastur (jumladan HID skaner — u ham
+klaviatura sifatida ishlaydi) uchun kiritishni kechiktiradi/bloklaydi.
+Aynan shu sabab butun kompyuterda yozish va skanerlash ishlamay
+qoldi — 219-qadamda bu xavf hisobga olinmagan edi.
+
+### Nima qilindi
+`KioskKeyboardBlocker` klassi (`WH_KEYBOARD_LL` ilgichi) butunlay
+olib tashlandi — `main_window.py`dan `install()`/`set_enabled()`/
+`uninstall()` chaqiruvlari va importi o'chirildi.
+`kiosk_keyboard_lock.py` faylida FAQAT taskbar yashirish/qaytarish
+(`hide_taskbar`/`show_taskbar`) qoldi — bu XAVFSIZ, chunki global
+INPUT pipeline'ga tegmaydi, faqat bitta oynani ko'rsatadi/yashiradi.
+
+Win/Alt+Tab kabi tizim buyruqlarini ishonchli cheklash endi FAQAT
+operatsion tizim darajasida (Windows Kiosk/Assigned Access yoki
+Group Policy) tavsiya etiladi — xuddi Ctrl+Alt+Delete kabi (bu allaqachon
+221/219-qadamlarda ega bilan kelishilgan yondashuv edi).
+
+Exe qayta yig'ildi.
+
+### O'zgargan fayllar
+`desktop_agent/app/kiosk_keyboard_lock.py` (hook klassi olib
+tashlandi), `desktop_agent/app/windows/main_window.py`
+
+### Tekshirildi
+`py_compile` toza, exe muvaffaqiyatli qayta yig'ildi. (Haqiqiy
+stansiyada boshqa dasturlarda yozish/skanerlash endi normal
+ishlashini tasdiqlash tavsiya etiladi.)
