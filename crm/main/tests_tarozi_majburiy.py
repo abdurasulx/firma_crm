@@ -30,9 +30,10 @@ class TaroziMajburiyAgentApiTests(TestCase):
 
 
 class TaroziMajburiySettingsViewTests(TestCase):
-    """Ega hodimlar sahifasidan `tarozi_majburiy`ni yoqib/o'chira olishi
-    kerak — faqat Desktop Agent stansiyalari sotib olingan firmalar
-    uchun ma'noli."""
+    """Ega Desktop Agent stansiyasini (`type='desktop_agent'`) tahrirlash
+    sahifasidan (`editusr.html`) `tarozi_majburiy`ni yoqib/o'chira olishi
+    kerak — bu firma darajasidagi sozlama, lekin foydalanuvchi qulayligi
+    uchun aynan agent stansiyasi sahifasidan boshqariladi."""
 
     def setUp(self):
         self.company = Company.objects.create(
@@ -40,11 +41,14 @@ class TaroziMajburiySettingsViewTests(TestCase):
             custom_desktop_agent_stations=2,
         )
         self.ega = User.objects.create_user(username="ega1", password="secret123", type="ega", company=self.company)
+        self.agent_user = User.objects.create_user(
+            username="agent001", password="secret123", type="desktop_agent", company=self.company,
+        )
         self.client.force_login(self.ega)
 
     def test_disable_tarozi_majburiy(self):
         response = self.client.post(
-            "/hodimlar/",
+            f"/edituser/{self.agent_user.username}",
             {"action": "set_tarozi_majburiy", "tarozi_majburiy": "0"},
             SERVER_NAME="testtaroziview.localhost",
         )
@@ -56,7 +60,7 @@ class TaroziMajburiySettingsViewTests(TestCase):
         self.company.tarozi_majburiy = False
         self.company.save(update_fields=['tarozi_majburiy'])
         response = self.client.post(
-            "/hodimlar/",
+            f"/edituser/{self.agent_user.username}",
             {"action": "set_tarozi_majburiy", "tarozi_majburiy": "1"},
             SERVER_NAME="testtaroziview.localhost",
         )

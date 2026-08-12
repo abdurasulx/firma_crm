@@ -82,3 +82,36 @@ class KioskKeyboardBlocker:
 
     def set_enabled(self, enabled: bool):
         self.enabled = enabled
+
+
+SW_HIDE = 0
+SW_SHOW = 5
+
+
+def hide_taskbar():
+    """Windows Taskbar'ni yashiradi (`showFullScreen()` o'zi buni
+    qilmaydi — oyna to'liq ekranga chiqadi, lekin taskbar hamon pastda
+    ko'rinib turadi va bosilishi mumkin edi). `Shell_TrayWnd` — asosiy
+    taskbar oynasi, `Button` klassidagi bolasi — "Boshlash" tugmasi."""
+    if _user32 is None:
+        return
+    tray = _user32.FindWindowW("Shell_TrayWnd", None)
+    if tray:
+        _user32.ShowWindow(tray, SW_HIDE)
+    start_btn = _user32.FindWindowW("Button", "Start")
+    if start_btn:
+        _user32.ShowWindow(start_btn, SW_HIDE)
+
+
+def show_taskbar():
+    """`hide_taskbar()`ni bekor qiladi — dastur haqiqatan yopilganda
+    (kiosk qulfi ochiq holatda) chaqiriladi, aks holda foydalanuvchi
+    Windows'ning o'zida taskbarsiz qolib ketardi."""
+    if _user32 is None:
+        return
+    tray = _user32.FindWindowW("Shell_TrayWnd", None)
+    if tray:
+        _user32.ShowWindow(tray, SW_SHOW)
+    start_btn = _user32.FindWindowW("Button", "Start")
+    if start_btn:
+        _user32.ShowWindow(start_btn, SW_SHOW)

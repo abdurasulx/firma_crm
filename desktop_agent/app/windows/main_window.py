@@ -10,7 +10,7 @@ from ..camera_recorder_service import CameraRecorderService
 from ..scale_service import ScaleService
 from ..api_client import ApiError, send_heartbeat, send_logout, normalize_server_url, verify_kiosk_unlock
 from ..agent_socket_service import AgentSocketWorker
-from ..kiosk_keyboard_lock import KioskKeyboardBlocker
+from ..kiosk_keyboard_lock import KioskKeyboardBlocker, hide_taskbar, show_taskbar
 from .warehouse_list_page import WarehouseListPage
 from .employee_scan_widget import EmployeeScanWidget
 from .settings_page import SettingsPage, _ApiCallWorker
@@ -269,8 +269,11 @@ class MainWindow(QMainWindow):
         self.root_stack.setCurrentIndex(1)
         # Kiosk rejimi — dastur ishga tushganda avtomatik to'liq ekranga
         # o'tadi (foydalanuvchi so'rovi: "dasturga kirishi bilan full
-        # screen bo'lib qolishi kerak").
+        # screen bo'lib qolishi kerak"). `showFullScreen()`ning o'zi
+        # taskbarni yashirmaydi (u hamon pastda ko'rinib, bosilishi
+        # mumkin edi) — shuning uchun alohida yashiramiz.
         self.showFullScreen()
+        hide_taskbar()
 
     def _on_startup_open_settings(self):
         """Qurilma-tekshiruv sahifasida birror qurilma nosoz chiqsa
@@ -512,6 +515,7 @@ class MainWindow(QMainWindow):
             return
 
         self._keyboard_blocker.uninstall()
+        show_taskbar()
         self._heartbeat_timer.stop()
         # Dashboardga "oflayn"ligimizni 90 soniyalik heartbeat-kutish
         # oynasini kutmasdan darhol bildiramiz — foydalanuvchi

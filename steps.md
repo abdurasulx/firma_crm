@@ -9420,3 +9420,49 @@ tashqarida. Windows Kiosk rejimi (Assigned Access) yoki maxsus Group
 Policy (Ctrl+Alt+Del ekranidagi variantlarni cheklash) orqali amalga
 oshiriladi — bu alohida, qo'lda (yoki IT xodimi tomonidan) har bir
 stansiyada bajariladigan sozlash, kod bilan avtomatlashtirilmaydi.
+
+---
+
+## 220-qadam: Taskbar yashirish + tarozi sozlamasi editusr.html'ga ko'chirildi
+
+**Holat: DONE**
+
+### Muammo
+Ega ikkita narsa aytdi: (1) kiosk to'liq ekranga chiqsa ham pastki
+Windows taskbar hamon ko'rinib turardi ("Faqat pastki taskbar
+ko'rinib qolyapti, shuni ko'rinmaydigan qilib ber"); (2) 218-qadamda
+qo'shilgan "Tarozi majburiy/shart emas" sozlamasi Hodimlar ro'yxati
+sahifasida edi — ega buni aynan Desktop Agent stansiyasini tahrirlash
+sahifasida ("shu yerda belgilanadi") ko'rishni xohladi.
+
+### Nima qilindi
+**Taskbar yashirish**: `kiosk_keyboard_lock.py`ga `hide_taskbar()`/
+`show_taskbar()` qo'shildi — `FindWindowW("Shell_TrayWnd", ...)` va
+`Button`/"Start" oynalarini `ShowWindow(SW_HIDE)` bilan yashiradi.
+`_on_startup_check_continue`da `showFullScreen()`dan keyin chaqiriladi
+(bu funksiyaning o'zi taskbarni yashirmaydi — alohida qilish kerak
+edi). Dastur haqiqatan yopilganda (`closeEvent`, qulf ochiq holatda)
+`show_taskbar()` bilan qaytariladi — foydalanuvchi Windows'da
+taskbarsiz qolib ketmasligi uchun.
+
+**Tarozi sozlamasi ko'chirildi**: Hodimlar ro'yxatidagi kartadan
+olib tashlandi, o'rniga `editusr.html`ga (faqat
+`user_edit.type == 'desktop_agent'` bo'lganda ko'rinadigan) yangi
+karta qo'shildi — `views.py::editusr`ning `set_tarozi_majburiy`
+handleri xuddi shu joyga ko'chirildi (`list_views.py`dan olib
+tashlandi). Backend hamon firma darajasida (`Company.tarozi_majburiy`)
+— faqat UI qulayroq joyga ko'chirildi, matn ham buni aniq aytadi
+("Bu firmaning BARCHA Desktop Agent stansiyalariga tegishli").
+
+Exe qayta yig'ildi.
+
+### O'zgargan fayllar
+`desktop_agent/app/kiosk_keyboard_lock.py` (`hide_taskbar`/`show_taskbar`),
+`desktop_agent/app/windows/main_window.py`,
+`main/views.py` (`editusr`), `main/list_views.py` (`hodimlar_list`),
+`main/templates/editusr.html`, `main/templates/hodimlar_list.html`,
+`main/tests_tarozi_majburiy.py` (`editusr` yo'liga moslashtirildi)
+
+### Tekshirildi
+`manage.py check`/`test` — 79 test, hammasi o'tdi. Desktop Agent
+`py_compile` toza, exe muvaffaqiyatli qayta yig'ildi.

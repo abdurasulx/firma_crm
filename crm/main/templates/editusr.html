@@ -575,6 +575,31 @@
         </div>
     </div>
     {% endif %}
+
+    {% if user_edit.type == 'desktop_agent' %}
+    <div class="edit-grid" style="margin-top:0;">
+        <div class="edit-card" style="grid-column: 1 / -1;">
+            <h3 class="card-title"><i class="fa-solid fa-weight-scale"></i> Tarozi</h3>
+            <p style="color:var(--text-light); font-size:13px; margin-bottom:14px;">
+                Bu firmaning BARCHA Desktop Agent stansiyalariga tegishli (firma darajasidagi
+                sozlama). O'chirilsa, agent ishga tushishida tarozi ulanishini talab qilmaydi/
+                qidirmaydi, xom ashyo tortish ekranida esa haqiqiy vazn o'rniga oddiy "Oldim ✓"
+                tugmasi chiqadi.
+            </p>
+            <form method="post" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="set_tarozi_majburiy">
+                <select name="tarozi_majburiy" class="form-control" style="flex:1; min-width:220px;">
+                    <option value="1" {% if tarozi_majburiy %}selected{% endif %}>Tarozi majburiy</option>
+                    <option value="0" {% if not tarozi_majburiy %}selected{% endif %}>Tarozi shart emas</option>
+                </select>
+                <button type="submit" class="submit-btn" style="width:auto; padding:10px 20px;">
+                    <i class="fa-solid fa-floppy-disk"></i> Saqlash
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <!-- Hidden deletion form (outside main form) -->

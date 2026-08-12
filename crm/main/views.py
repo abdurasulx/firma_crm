@@ -1968,6 +1968,17 @@ def editusr(request, username):
                 messages.error(request, "Tasdiq matni noto'g'ri.")
                 return redirect('edituser', username=username)
 
+        if request.POST.get('action') == 'set_tarozi_majburiy' and user_edit.type == 'desktop_agent':
+            # Firma darajasidagi sozlama (`Company.tarozi_majburiy`) —
+            # bu yerdan (aynan shu agent stansiyasini tahrirlash
+            # sahifasidan) o'zgartiriladi, chunki ega ko'proq shu yerda
+            # qidiradi (218-qadamda hodimlar ro'yxatida edi, foydalanuvchi
+            # so'rovi bilan shu sahifaga ko'chirildi).
+            request.company.tarozi_majburiy = request.POST.get('tarozi_majburiy') == '1'
+            request.company.save(update_fields=['tarozi_majburiy'])
+            messages.success(request, "Tarozi sozlamasi saqlandi.")
+            return redirect('edituser', username=username)
+
         if request.POST.get('action') in ('assign_mahsulot', 'unassign_mahsulot') and user_edit.type in ['pazanda', 'ishlab_chiqaruvchi']:
             pz = get_object_or_404(Pazanda, user=user_edit, company=request.company)
             if request.POST.get('action') == 'assign_mahsulot':
@@ -2058,6 +2069,9 @@ def editusr(request, username):
         context['savdo_ish_haqi_choices'] = [
             (v, l) for v, l in User.ISH_HAQI_TURI_OVERRIDE_CHOICES if v in ('', 'fixed', 'per_sale')
         ]
+
+    if user_edit.type == 'desktop_agent':
+        context['tarozi_majburiy'] = request.company.tarozi_majburiy
 
     return render(request, 'editusr.html', context)
 @login_required(login_url='login')

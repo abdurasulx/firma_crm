@@ -486,27 +486,6 @@
     }
 </style>
 
-{% if is_agent_company %}
-<div class="page-card" style="margin-bottom:24px;">
-    <h3 style="margin-bottom:8px;"><i class="fa-solid fa-weight-scale"></i> Desktop Agent — Tarozi</h3>
-    <p style="color:var(--text-light); font-size:13px; margin-bottom:14px;">
-        O'chirilsa, Desktop Agent ishga tushishida tarozi ulanishini talab qilmaydi/qidirmaydi,
-        xom ashyo tortish ekranida esa haqiqiy vazn o'rniga oddiy "Oldim ✓" tugmasi chiqadi.
-    </p>
-    <form method="post" style="display:flex; gap:14px; align-items:center; flex-wrap:wrap;">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="set_tarozi_majburiy">
-        <select name="tarozi_majburiy" class="form-control" style="max-width:280px; padding:10px 14px; border-radius:10px; border:1px solid var(--border-color);">
-            <option value="1" {% if tarozi_majburiy %}selected{% endif %}>Tarozi majburiy</option>
-            <option value="0" {% if not tarozi_majburiy %}selected{% endif %}>Tarozi shart emas</option>
-        </select>
-        <button class="submit-btn" type="submit" style="width:auto; padding:10px 20px; margin-top:0;">
-            <i class="fa-solid fa-floppy-disk"></i> Saqlash
-        </button>
-    </form>
-</div>
-{% endif %}
-
 <div class="page-card">
     <!-- Header -->
     <div class="page-header-actions">
