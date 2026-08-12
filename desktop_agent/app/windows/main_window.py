@@ -413,6 +413,17 @@ class MainWindow(QMainWindow):
         xodimga qayta belgilash uchun)."""
         parts = kod.split("|", 2)
         if len(parts) != 3:
+            # Kamera zich QR'ni TO'LIQ/TO'G'RI o'qiy olmagan bo'lishi
+            # mumkin (real muammo — payload ~200 belgi, oddiy xodim
+            # badge'idan ancha zichroq panjara talab qiladi). Avval bu
+            # yerda JIMGINA qaytilar edi — foydalanuvchi hech qanday
+            # feedback olmasdan "hech narsa bo'lmadi" deb qolardi.
+            self._select_page(1)
+            self.settings_page.status_label.setStyleSheet("color:#b91c1c;")
+            self.settings_page.status_label.setText(
+                "QR kod to'liq o'qilmadi — kamerani QR'ga yaqinroq/tekisroq tuting va qayta "
+                "skanerlang, yoki login/parol bilan kiring.",
+            )
             return
         _, subdomain, qr_payload = parts
         server_url = normalize_server_url(subdomain)
@@ -440,6 +451,12 @@ class MainWindow(QMainWindow):
         kodning o'zi to'g'ri va server ishlab tursa ham."""
         parts = kod.split("|", 2)
         if len(parts) != 3:
+            # Kamera zich QR'ni TO'LIQ/TO'G'RI o'qiy olmagan bo'lishi
+            # mumkin — avval jimgina qaytilar edi, foydalanuvchi hech
+            # qanday feedback olmasdi.
+            self.kiosk_status_label.setText(
+                "⚠ QR kod to'liq o'qilmadi — kamerani QR'ga yaqinroq/tekisroq tutib qayta skanerlang.",
+            )
             return
         _, subdomain, qr_payload = parts
         server_url = db.get_setting("server_url", "") or normalize_server_url(subdomain)

@@ -1,5 +1,4 @@
 from io import BytesIO
-from uuid import uuid4
 
 import qrcode
 from django.contrib import messages
@@ -7,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
-from .models import User, XodimBadge
+from .models import User, XodimBadge, _gen_agent_qr_nonce
 from .services.agent_qr_crypto import encrypt_login_payload
 
 
@@ -88,7 +87,7 @@ def regenerate_agent_qr(request, user_id):
     if request.user.type != 'ega' or request.method != 'POST':
         return redirect('main')
     target_user = get_object_or_404(User, id=user_id, company=request.company)
-    target_user.agent_qr_nonce = uuid4().hex
+    target_user.agent_qr_nonce = _gen_agent_qr_nonce()
     target_user.save(update_fields=['agent_qr_nonce'])
     messages.success(request, "Eski QR kod bekor qilindi, yangisi generatsiya qilindi.")
     return redirect('profile', username=target_user.username)

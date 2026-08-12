@@ -9528,3 +9528,59 @@ Exe qayta yig'ildi.
 printerda qog'oz tugatib sinov qilish tavsiya etiladi — status
 bitmask xatti-harakati printer modeliga qarab bir oz farq qilishi
 mumkin.)
+
+---
+
+## 222-qadam: Desktop Agent QR-login — jimgina muvaffaqiyatsiz bo'lish tuzatildi + QR zichligi kamaytirildi
+
+**Holat: DONE**
+
+### Muammo
+Ega: "agentda shu bilan skaner qilib login qila olmadim chiqilgan
+holatda" — QR skanerlanganda "hech narsa bo'lmadi (skanerlash
+sezilmadi)". Tekshirilganda ikkita muammo topildi:
+
+1. **Jimgina muvaffaqiyatsizlik (asosiy topilma)**:
+   `main_window.py::_handle_agent_login_qr` va
+   `_handle_kiosk_unlock_qr` ikkalasida ham, agar kamera zich QR'ni
+   TO'LIQ/TO'G'RI o'qiy olmasa (`kod.split("|", 2)` 3 ta qism
+   bermasa), kod JIMGINA `return` qilar edi — foydalanuvchiga HECH
+   QANDAY xabar chiqmasdi. Bu aynan xabar berilgan holat bilan mos
+   keladi.
+2. **QR haddan tashqari zich**: shifrlangan payload (~200 belgi) +
+   `agent_qr_nonce` (avval to'liq UUID, 32-36 belgi) juda zich QR
+   panjarasini talab qilardi (skrinshotda ko'ringan) — kamera bilan
+   o'qish real sinovda ishonchsiz ekani kod izohlarida oldindan qayd
+   etilgan edi.
+
+### Nima qilindi
+- Ikkala joyda ham parsing muvaffaqiyatsiz bo'lsa endi ANIQ xabar
+  ko'rsatiladi ("QR kod to'liq o'qilmadi — kamerani QR'ga yaqinroq/
+  tekisroq tuting va qayta skanerlang, yoki login/parol bilan
+  kiring") — foydalanuvchi nima bo'lganini bilib, qayta urinishi
+  yoki zaxira yo'l (login/parol)dan foydalanishi mumkin.
+- `User.agent_qr_nonce` generatori yangi `_gen_agent_qr_nonce()`ga
+  o'zgartirildi — to'liq UUID (32-36 belgi) o'rniga `secrets.token_hex(8)`
+  (16 belgi). Bu maxfiy token EMAS (shifrlangan Fernet payload ICHIDA
+  yotadi, faqat eski QR'ni bekor qilish uchun) — 64 bit yetarli,
+  qisqarishi esa QR-login kodining zichligini (kamerada o'qish
+  qulayligini) sezilarli yaxshilaydi. `regenerate_agent_qr`
+  ("Yangilash" tugmasi) ham shu funksiyaga o'tkazildi.
+
+Exe qayta yig'ildi.
+
+### O'zgargan fayllar
+`main/models.py` (`_gen_agent_qr_nonce`, `User.agent_qr_nonce`),
+`main/migrations/0101_*`, `main/badge_views.py`
+(`regenerate_agent_qr`), `desktop_agent/app/windows/main_window.py`
+(`_handle_agent_login_qr`, `_handle_kiosk_unlock_qr`)
+
+### Tekshirildi
+`manage.py check`/`test` — 86 test, hammasi o'tdi. Desktop Agent
+`py_compile` toza, exe muvaffaqiyatli qayta yig'ildi.
+
+### Eslatma
+Yangi (qisqaroq) nonce faqat KEYINGI "Yangilash" bosilganda yoki yangi
+xodim yaratilganda qo'llaniladi — mavjud xodimlarning eski (uzun)
+nonce'lari o'zgarmaydi, avvalgidek ishlashda davom etadi (faqat yangi
+QR ko'rsatilganda zichlik kamayadi).

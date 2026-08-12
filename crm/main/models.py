@@ -5,9 +5,20 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from decimal import Decimal
 from uuid import uuid4
+import secrets
 
 SAVDOGAR_SALES_ADDON_PRICE = Decimal("10.00")
 DESKTOP_AGENT_UNIT_PRICE = Decimal("60.00")
+
+
+def _gen_agent_qr_nonce():
+    """16 ta hex belgi — `User.agent_qr_nonce` uchun. Qasddan to'liq
+    UUID (32-36 belgi)dan QISQA: bu maxfiy autentifikatsiya tokeni emas
+    (shifrlangan Fernet payload ICHIDA yotadi, faqat eski QR'ni bekor
+    qilish uchun), shuning uchun 64 bit yetarli — uzunligi esa QR-login
+    kodining zichligiga (kamerada o'qish qulayligiga) bevosita ta'sir
+    qiladi."""
+    return secrets.token_hex(8)
 
 BACKUP_CHOICES = (
     ('none', 'Yo\'q ($0)'),
@@ -219,10 +230,13 @@ class User(AbstractUser):
                    "eskisi CompanyMiddleware orqali avtomatik yopiladi (bitta faol veb-sessiya qoidasi).",
     )
     agent_qr_nonce = models.CharField(
-        max_length=64, default=uuid4, editable=False,
+        max_length=64, default=_gen_agent_qr_nonce, editable=False,
         help_text="Desktop Agent QR-login shifrlangan payload'ining bir qismi — "
                    "'Yangilash' bosilganda o'zgaradi, shu orqali eski ko'rsatilgan/chop "
-                   "etilgan QR kod bekor bo'ladi.",
+                   "etilgan QR kod bekor bo'ladi. Qasddan QISQA (16 belgi, to'liq UUID "
+                   "emas) — bu QR-login payload'ining bir qismi, uzunligi shifrlangan "
+                   "QR'ning zichligiga (kamerada o'qish qulayligiga) bevosita ta'sir "
+                   "qiladi, alohida maxfiy token sifatida ishlatilmaydi.",
     )
     ISH_HAQI_TURI_OVERRIDE_CHOICES = (
         ('', "Firma standarti"),
