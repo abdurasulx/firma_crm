@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButt
 from PyQt6.QtCore import pyqtSignal, QTimer, QThread
 
 from .. import db
+from ..api_client import fetch_omborlar
 from ..label_printer_service import list_printers
 
 OK_STYLE = "color:#059669; font-weight:700;"
@@ -70,6 +71,26 @@ def _check_printer_live():
     except Exception as exc:  # noqa: BLE001
         return False, f"\"{name}\" bilan bog'lanib bo'lmadi: {exc}"
     return True, f"Ulangan: {name}"
+
+
+def _sync_tarozi_majburiy():
+    """Har safar qurilma tekshiruvi ishga tushganda (dastur ochilganda va
+    "Qayta tekshirish" bosilganda), ega ERP'da "Tarozi shart emas"ni
+    ENDI SOZLASA ham, agent buni DARHOL bilishi uchun — firma
+    sozlamasini serverdan qayta olib, mahalliy `tarozi_majburiy`ni
+    yangilaydi. Bu `_DeviceProbeWorker.run()` ichida (fon oqimida)
+    chaqiriladi, shuning uchun GUI muzlab qolmaydi. Best-effort: token
+    yo'q yoki tarmoq xatosi bo'lsa — jimgina o'tkazib yuboriladi, eski
+    (keshlangan) qiymat ishlatiladi."""
+    token = db.get_setting("agent_token", "")
+    if not token:
+        return
+    server_url = db.get_setting("server_url", "")
+    try:
+        _omborlar, _company_name, tarozi_majburiy = fetch_omborlar(server_url, token)
+    except Exception:  # noqa: BLE001 — best-effort, startup tekshiruvini to'xtatmasligi kerak
+        return
+    db.set_setting("tarozi_majburiy", "1" if tarozi_majburiy else "")
 
 
 def _check_scale_live(scale_checker):
@@ -145,6 +166,7 @@ class _DeviceProbeWorker(QThread):
         self._ombor_checker = ombor_checker
 
     def run(self):
+        _sync_tarozi_majburiy()
         result = {}
         result["printer"] = _check_printer_live()
         result["scale"] = _check_scale_live(self._scale_checker)

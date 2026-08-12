@@ -9743,3 +9743,38 @@ qaytarildi (revert)
 
 ### Tekshirildi
 `py_compile` toza, exe muvaffaqiyatli qayta yig'ildi va yuborildi.
+
+---
+
+## 228-qadam: Ega "Tarozi shart emas" deb belgilagach ham, startup tekshiruvida hamon majburiy ko'rsatilar edi
+
+**Holat: DONE (BUG FIX)**
+
+### Muammo
+Ega ERP'da (`editusr.html` — agent001 stansiyasi) "Tarozi shart emas"
+deb belgiladi, lekin Desktop Agent'da startup qurilma-tekshiruvi
+hamon "Tarozi — COM4 portidan javob kelmadi" deb ko'rsatardi. Sabab:
+`tarozi_majburiy` mahalliy sozlamasi FAQAT login qilinganda yoki
+"Sinxronlash" tugmasi bosilganda serverdan yangilanadi — stansiya
+ALLAQACHON login qilingan holatda (token saqlanib qolgan) qayta
+ishga tushirilsa, ega ERP'da sozlamani O'ZGARTIRGANDAN KEYIN ham,
+mahalliy qiymat ESKI (sinxronlanmagan) holicha qolardi — startup
+tekshiruvi esa aynan shu eski qiymatga qarab ishlaydi.
+
+### Nima qilindi
+`startup_check_page.py`ga yangi `_sync_tarozi_majburiy()` — har safar
+qurilma tekshiruvi ishga tushganda (dastur ochilganda VA "Qayta
+tekshirish" bosilganda), `_DeviceProbeWorker.run()` ichida (fon
+oqimida, GUI muzlamaydi) `tarozi_majburiy` firma sozlamasi
+serverdan QAYTA olinadi va mahalliy saqlanadi — shu bilan tarozi
+tekshiruvi HAR DOIM eng yangi qiymatga qarab ishlaydi. Best-effort:
+token yo'q yoki tarmoq xatosi bo'lsa jimgina o'tkazib yuboriladi.
+
+Exe qayta yig'ildi.
+
+### O'zgargan fayllar
+`desktop_agent/app/windows/startup_check_page.py`
+(`_sync_tarozi_majburiy`, `_DeviceProbeWorker.run`)
+
+### Tekshirildi
+`py_compile` toza, exe muvaffaqiyatli qayta yig'ildi.
