@@ -9705,3 +9705,51 @@ Exe qayta yig'ildi.
 
 ### Tekshirildi
 `py_compile` toza, exe muvaffaqiyatli qayta yig'ildi.
+
+---
+
+## 226-qadam: Alt+Tab/Alt+Esc/Alt+F4 xavfsiz (RegisterHotKey) bloklanadi — 224-qadamdagi xavfli ilgichning o'rniga
+
+**Holat: DONE**
+
+### Muammo
+224-qadamda xavfli global klaviatura ilgichi (`WH_KEYBOARD_LL`) olib
+tashlangandan keyin, ega skrinshot bilan ko'rsatdi: endi kiosk
+qulflangan holatda ham Win tugmasi bosilsa Windows Boshlash menyusi
+ochilib, dasturdan bemalol chiqib ketish mumkin edi — "klaviatura ham
+bemalol ishlayapti, bemalol dasturdan chiqib ketish mumkin".
+
+### Nima qilindi
+`kiosk_keyboard_lock.py`ga BUTUNLAY BOSHQA, XAVFSIZ mexanizm
+qo'shildi — `RegisterHotKey` (Windows API). Bu `WH_KEYBOARD_LL`dan
+tubdan farq qiladi: har bir tugma bosilishini kuzatmaydi, Windows'ning
+o'zi FAQAT ro'yxatdan o'tkazilgan aniq kombinatsiyani (Alt+Tab,
+Alt+Esc, Alt+F4) "band qilib" qo'yadi — bizning kodimiz chaqirilmaydi,
+shuning uchun tizim tezligiga UMUMAN ta'sir qilmaydi (223-qadamdagi
+muammo bu yerda TAKRORLANMAYDI).
+
+`_set_kiosk_locked`: qulflanganda `register_kiosk_hotkeys()`,
+ochilganda `unregister_kiosk_hotkeys()` chaqiriladi.
+`MainWindow.nativeEvent()` — `WM_HOTKEY` xabarini e'tiborsiz
+qoldiradi (kombinatsiya allaqachon Windows darajasida "yutilgan",
+bu yerda faqat xabar "ishlov berilgan" deb belgilanadi).
+
+**Cheklov (o'zgarmagan)**: yolg'iz Win tugmasi (Boshlash menyusi)ni
+`RegisterHotKey` orqali bloklab bo'lmaydi — Windows buni oddiy hotkey
+sifatida ro'yxatdan o'tkazishga imkon bermaydi. Buni ham cheklash
+UCHUN operatsion tizim darajasida (Windows Kiosk/Assigned Access
+yoki Group Policy) sozlash kerak — xuddi Ctrl+Alt+Delete kabi (ega
+bilan avval kelishilgan yondashuv).
+
+Exe qayta yig'ildi.
+
+### O'zgargan fayllar
+`desktop_agent/app/kiosk_keyboard_lock.py`
+(`register_kiosk_hotkeys`/`unregister_kiosk_hotkeys`),
+`desktop_agent/app/windows/main_window.py` (`nativeEvent`,
+`_set_kiosk_locked`)
+
+### Tekshirildi
+`py_compile` toza, exe muvaffaqiyatli qayta yig'ildi. (Haqiqiy
+stansiyada Alt+Tab/Alt+F4 bloklanishini VA boshqa dasturlarda
+yozish/skanerlash hamon normal ishlashini tasdiqlash tavsiya etiladi.)
