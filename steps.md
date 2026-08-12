@@ -9705,3 +9705,41 @@ Exe qayta yig'ildi.
 
 ### Tekshirildi
 `py_compile` toza, exe muvaffaqiyatli qayta yig'ildi.
+
+---
+
+## 226-227-qadam: RegisterHotKey (Alt+Tab bloklash) — bekor qilindi, ilova ochilmay qoldi
+
+**Holat: DONE (REVERT)**
+
+### Muammo
+226-qadamda `RegisterHotKey` + `MainWindow.nativeEvent()` orqali
+Alt+Tab/Alt+Esc/Alt+F4'ni bloklash qo'shildi. Push qilingan exe
+o'rnatilgach, ega darhol xabar berdi: "ilovaga kirib bo'lmayapti" —
+dastur ochilmay/ishga tushmay qoldi. Bu jiddiy regressiya edi.
+
+### Nima qilindi
+Xavfsizlik uchun DARHOL `git revert` orqali 226-qadamdagi commit
+(`9774bcd2`) bekor qilindi — `kiosk_keyboard_lock.py` va
+`main_window.py` 225-qadamdagi (ishlab turgan) holatiga qaytarildi.
+Exe qayta yig'ilib, foydalanuvchiga yuborildi.
+
+**Ehtimoliy sabab (keyinroq chuqurroq tekshirish kerak)**:
+`MainWindow.nativeEvent()` HAR BIR Windows xabari (`windows_generic_MSG`)
+uchun chaqirilardi — nafaqat `WM_HOTKEY`, balki sichqoncha harakati,
+chizish va h.k. kabi juda tez-tez keladigan xabarlar ham. Har safar
+`wintypes.MSG.from_address(int(message))` chaqirilishi ilova ochilish
+bosqichida (`__init__` ichida, oyna hali to'liq shakllanmagan holatda
+`self.winId()` chaqirilib, `RegisterHotKey` ishga tushirilgani bilan
+bir vaqtda) muammoli bo'lgan bo'lishi mumkin. Alt+Tab bloklash
+funksiyasi hozircha QURILMAGAN — kelgusida qayta urinilsa, avval
+mahalliy (haqiqiy Windows kompyuterda, production emas) sinovdan
+albatta o'tkazilishi kerak.
+
+### O'zgargan fayllar
+`desktop_agent/app/kiosk_keyboard_lock.py`,
+`desktop_agent/app/windows/main_window.py` — 225-qadamdagi holatga
+qaytarildi (revert)
+
+### Tekshirildi
+`py_compile` toza, exe muvaffaqiyatli qayta yig'ildi va yuborildi.
