@@ -9371,3 +9371,52 @@ oladi.
 `manage.py check`/`test` — 79 test, hammasi o'tdi. Desktop Agent
 fayllari sintaksis tekshiruvidan o'tdi (`py_compile`), exe muvaffaqiyatli
 qayta yig'ildi.
+
+---
+
+## 219-qadam: Desktop Agent kiosk qulfida Win/Alt+Tab bloklanadi (Ctrl+Alt+Delete — OS chegarasi)
+
+**Holat: DONE**
+
+### Muammo
+Ega: "desktop agentda pusk alt tab ctrl alt delete kabi tugmalarni
+ishlamaydigon qilish kerak qulf ochilmagunicha". Aniqlashtirildi:
+Ctrl+Alt+Delete'ni HECH QANDAY oddiy dastur (bu jumladan) dasturiy
+kod bilan bloklay olmaydi — Windows uni doim to'g'ridan-to'g'ri
+Winlogon'ga yuboradi (Secure Attention Sequence), hech qanday
+user-mode ilova buni ko'rmaydi ham. Ega buni "tizim darajasida
+bloklash kerak" deb tasdiqladi — bu operatsion tizim (Windows Kiosk/
+Assigned Access yoki Group Policy) sozlamasi, dasturiy kod emas.
+
+### Nima qilindi
+Yangi `desktop_agent/app/kiosk_keyboard_lock.py` — `WH_KEYBOARD_LL`
+past darajali Windows klaviatura ilgichi (`ctypes` orqali, qo'shimcha
+kutubxona shart emas). `KioskKeyboardBlocker.enabled=True` bo'lganda
+Win (chap/o'ng) va Alt+Tab/Alt+Esc kombinatsiyalarini butunlay yutib
+yuboradi — Boshlash menyusi ochilmaydi, oyna almashtirilmaydi.
+
+`main_window.py`: `MainWindow.__init__`da bir marta `install()`
+qilinadi; kiosk qulfi holati o'zgarganda (`_set_kiosk_locked`)
+`set_enabled(locked)` chaqiriladi — ya'ni bloklash FAQAT "qulf
+ochilmaguncha" faol (mavjud `_kiosk_locked` bayrog'i bilan bir xil
+holatda), qulf ochilgach avvalgidek erkin. Dastur haqiqatan yopilganda
+(`closeEvent`, qulf ochiq holatda) ilgich `uninstall()` qilinadi.
+
+Exe qayta yig'ildi.
+
+### O'zgargan fayllar
+`desktop_agent/app/kiosk_keyboard_lock.py` (yangi),
+`desktop_agent/app/windows/main_window.py`
+
+### Tekshirildi
+`py_compile` toza, exe muvaffaqiyatli qayta yig'ildi. (Windows
+klaviatura ilgichi haqiqiy stansiyada qo'lda sinovdan o'tkazilishi
+tavsiya etiladi — CI/avtomatlashtirilgan testda tekshirib bo'lmaydi.)
+
+### Cheklov (ega bilan kelishilgan, hal qilinmagan)
+Ctrl+Alt+Delete'ni bloklash operatsion tizim darajasida (stansiya
+kompyuterida) sozlanishi kerak — bu ERP/agent kodi doirasidan
+tashqarida. Windows Kiosk rejimi (Assigned Access) yoki maxsus Group
+Policy (Ctrl+Alt+Del ekranidagi variantlarni cheklash) orqali amalga
+oshiriladi — bu alohida, qo'lda (yoki IT xodimi tomonidan) har bir
+stansiyada bajariladigan sozlash, kod bilan avtomatlashtirilmaydi.

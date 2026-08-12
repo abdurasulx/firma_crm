@@ -10,6 +10,7 @@ from ..camera_recorder_service import CameraRecorderService
 from ..scale_service import ScaleService
 from ..api_client import ApiError, send_heartbeat, send_logout, normalize_server_url, verify_kiosk_unlock
 from ..agent_socket_service import AgentSocketWorker
+from ..kiosk_keyboard_lock import KioskKeyboardBlocker
 from .warehouse_list_page import WarehouseListPage
 from .employee_scan_widget import EmployeeScanWidget
 from .settings_page import SettingsPage, _ApiCallWorker
@@ -251,6 +252,16 @@ class MainWindow(QMainWindow):
         self._socket_worker: AgentSocketWorker | None = None
         self._restart_socket_worker()
 
+        # Win tugmasi va Alt+Tab/Alt+Esc'ni bloklaydigan past darajali
+        # klaviatura ilgichi — faqat kiosk QULFLANGAN paytda faol
+        # (`_set_kiosk_locked`). Ctrl+Alt+Delete BUNGA KIRMAYDI — Windows
+        # uni har doim to'g'ridan-to'g'ri Winlogon'ga yuboradi, hech qanday
+        # dastur uni ko'ra olmaydi (`kiosk_keyboard_lock.py`dagi izohga
+        # qarang) — buni cheklash operatsion tizim darajasida (Kiosk
+        # rejimi/Group Policy) alohida sozlanishi kerak.
+        self._keyboard_blocker = KioskKeyboardBlocker()
+        self._keyboard_blocker.install()
+
         self._kiosk_unlock_worker: _ApiCallWorker | None = None
         self._set_kiosk_locked(True)
 
@@ -461,6 +472,7 @@ class MainWindow(QMainWindow):
         faqat kamera orqali xodim-skan/badge oqimi (mishka/klaviatura emas)
         ishlab turadi. Ochilganda: hammasi avvalgidek erkin."""
         self._kiosk_locked = locked
+        self._keyboard_blocker.set_enabled(locked)
         self.warehouse_btn.setEnabled(not locked)
         self.settings_btn.setEnabled(not locked)
         self.kiosk_lock_btn.setVisible(not locked)
@@ -499,6 +511,7 @@ class MainWindow(QMainWindow):
             )
             return
 
+        self._keyboard_blocker.uninstall()
         self._heartbeat_timer.stop()
         # Dashboardga "oflayn"ligimizni 90 soniyalik heartbeat-kutish
         # oynasini kutmasdan darhol bildiramiz — foydalanuvchi
