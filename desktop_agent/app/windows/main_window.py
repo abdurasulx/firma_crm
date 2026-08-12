@@ -1,5 +1,3 @@
-from ctypes import wintypes
-
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QStackedWidget,
     QStackedLayout, QLabel, QMessageBox, QGraphicsOpacityEffect,
@@ -12,9 +10,7 @@ from ..camera_recorder_service import CameraRecorderService
 from ..scale_service import ScaleService
 from ..api_client import ApiError, send_heartbeat, send_logout, normalize_server_url, verify_kiosk_unlock
 from ..agent_socket_service import AgentSocketWorker
-from ..kiosk_keyboard_lock import (
-    hide_taskbar, show_taskbar, register_kiosk_hotkeys, unregister_kiosk_hotkeys, WM_HOTKEY,
-)
+from ..kiosk_keyboard_lock import hide_taskbar, show_taskbar
 from .warehouse_list_page import WarehouseListPage
 from .employee_scan_widget import EmployeeScanWidget
 from .settings_page import SettingsPage, _ApiCallWorker
@@ -264,26 +260,13 @@ class MainWindow(QMainWindow):
         # tezligi tufayli haqiqiy xavf), Windows shu ilgichni kutib,
         # BOSHQA HAMMA dastur uchun ham klaviatura kiritishni kechiktirib/
         # bloklab qo'yadi — aynan shu sabab HID skaner (klaviatura sifatida
-        # ishlaydi) va boshqa dasturlarda yozish ishlamay qoldi. O'rniga
-        # `RegisterHotKey` asosidagi xavfsiz Alt+Tab/Alt+Esc/Alt+F4
-        # bloklash qo'shildi (225-qadam, `_set_kiosk_locked`da) — Win
-        # tugmasining o'zi (Boshlash menyusi) hamon OS darajasidagi
-        # sozlashni talab qiladi (`kiosk_keyboard_lock.py`ga qarang).
+        # ishlaydi) va boshqa dasturlarda yozish ishlamay qoldi. Win/Alt+Tab
+        # kabi tizim buyruqlarini haqiqatan ishonchli va xavfsiz cheklash
+        # FAQAT operatsion tizim darajasida (Windows Kiosk/Assigned Access
+        # yoki Group Policy) — xuddi Ctrl+Alt+Delete kabi — amalga
+        # oshirilishi kerak, dasturiy global ilgich orqali emas.
         self._kiosk_unlock_worker: _ApiCallWorker | None = None
         self._set_kiosk_locked(True)
-
-    def nativeEvent(self, eventType, message):
-        """`RegisterHotKey` orqali "band qilingan" Alt+Tab/Alt+Esc/Alt+F4
-        bosilganda Windows shu oynaga `WM_HOTKEY` xabarini yuboradi — bu
-        yerda shunchaki E'TIBORSIZ qoldiriladi (hech qanday amal
-        bajarmaymiz), lekin "ishlov berilgan" deb belgilanadi, aks holda
-        Qt buni standart oyna protsedurasiga uzatib, kutilmagan ta'sir
-        qilishi mumkin edi."""
-        if eventType == b"windows_generic_MSG":
-            msg = wintypes.MSG.from_address(int(message))
-            if msg.message == WM_HOTKEY:
-                return True, 0
-        return super().nativeEvent(eventType, message)
 
     def _on_startup_check_continue(self):
         self.root_stack.setCurrentIndex(1)
@@ -528,19 +511,12 @@ class MainWindow(QMainWindow):
         self.warehouse_btn.setEnabled(not locked)
         self.settings_btn.setEnabled(not locked)
         self.kiosk_lock_btn.setVisible(not locked)
-        # Alt+Tab/Alt+Esc/Alt+F4'ni xavfsiz "band qilish" (`RegisterHotKey`
-        # — 224-qadamda olib tashlangan global klaviatura ilgichidan farqli,
-        # tizim tezligiga ta'sir qilmaydi). Win tugmasining o'zini bu orqali
-        # bloklab bo'lmaydi — buning uchun OS darajasidagi Kiosk/Group
-        # Policy sozlash kerak (`kiosk_keyboard_lock.py`dagi izohga qarang).
         if locked:
-            register_kiosk_hotkeys(int(self.winId()))
             self.kiosk_status_label.setText(
             "🔒 Qulflangan — ega profilidagi \"Desktop Agent QR-login\" kodini skanerlang "
             "(shaxsiy badge emas)."
         )
         else:
-            unregister_kiosk_hotkeys(int(self.winId()))
             self.kiosk_status_label.setText("🔓 Qulf ochiq.")
 
     def _hide_scan_overlay(self):
