@@ -9584,3 +9584,44 @@ Yangi (qisqaroq) nonce faqat KEYINGI "Yangilash" bosilganda yoki yangi
 xodim yaratilganda qo'llaniladi — mavjud xodimlarning eski (uzun)
 nonce'lari o'zgarmaydi, avvalgidek ishlashda davom etadi (faqat yangi
 QR ko'rsatilganda zichlik kamayadi).
+
+---
+
+## 223-qadam: QR-login "hech qanday reaksiya yo'q" — haqiqiy sabab: skaner kamerasi umuman sozlanmagan edi
+
+**Holat: DONE**
+
+### Muammo
+222-qadamdagi tuzatishdan keyin ham ega "hali ham reaksiya yo'q" dedi.
+Chuqurroq tekshirilganda (fon agent orqali): `ScannerService.reload()`
+(`scanner_service.py`) — agar `db.get_scanner_camera()` (skaner ROLIGA
+ulangan kamera) `None` qaytarsa, funksiya DARHOL qaytadi — hech qanday
+kamera ochilmaydi, `QRScanWorker` yaratilmaydi. Yangi/hali sozlanmagan
+stansiyada (aynan LOGIN ekrani — birinchi ko'rinadigan sahifa) hech
+qanday kamera "skaner" sifatida ulanmagan bo'lsa, kamera UMUMAN
+ishga tushmaydi — na login QR, na boshqa hech narsa skanerlanmaydi,
+va hech qanday oyna/xato ko'rsatilmaydi (ega tasdiqladi: "hech qanday
+kamera oynasi ko'rinmaydi"). Bu chinakam sabab edi — kod xatosi emas,
+sozlash bosqichi o'tkazib yuborilgan edi.
+
+### Nima qilindi
+`settings_page.py`ga yangi ogohlantirish yorlig'i qo'shildi — login
+ekranidagi QR-login ko'rsatmasi ostida, agar `db.get_scanner_camera()
+is None` bo'lsa, aniq sariq ogohlantirish chiqadi: "⚠ Hali hech qanday
+kamera 'Skaner' sifatida ulanmagan — QR-login ISHLAMAYDI. Pastdagi
+'Skaner' bo'limida kamerani tanlab saqlang." Bu `_refresh_scanner_status()`
+orqali (sahifa ochilganda va skaner qayta sozlanganda) yangilanadi —
+kamera sozlangach avtomatik yashiriladi.
+
+Exe qayta yig'ildi.
+
+### O'zgargan fayllar
+`desktop_agent/app/windows/settings_page.py`
+
+### Tekshirildi
+`py_compile` toza, exe muvaffaqiyatli qayta yig'ildi.
+
+### Foydalanuvchiga ko'rsatma
+Bu stansiyada Sozlamalar > Skaner qismida kamera tanlab saqlanishi
+kerak — shundan keyin QR-login (va boshqa barcha skanerlash) ishlay
+boshlaydi.

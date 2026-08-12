@@ -106,6 +106,23 @@ class SettingsPage(QWidget):
         )
         layout.addWidget(self.qr_prompt_label)
 
+        # Real muammo (foydalanuvchi xabar berdi): yangi stansiyada hali
+        # hech qanday kamera "skaner" roliga ulanmagan bo'lsa,
+        # `ScannerService` HECH QACHON kamerani ochmaydi — QR-login
+        # skaneri "jim" qoladi, hech qanday oyna/xato ko'rinmaydi.
+        # Foydalanuvchi buni tushunishi qiyin edi ("nega reaksiya yo'q").
+        self.no_scanner_warning_label = QLabel(
+            "⚠ Hali hech qanday kamera \"Skaner\" sifatida ulanmagan — QR-login "
+            "ISHLAMAYDI. Pastdagi \"Skaner\" bo'limida kamerani tanlab saqlang."
+        )
+        self.no_scanner_warning_label.setWordWrap(True)
+        self.no_scanner_warning_label.setStyleSheet(
+            "color:#92400e; background:#fffbeb; border:1px solid #fde68a; "
+            "border-radius:8px; padding:12px; font-weight:700; margin-top:8px;"
+        )
+        self.no_scanner_warning_label.setVisible(False)
+        layout.addWidget(self.no_scanner_warning_label)
+
         self.manual_toggle_btn = QPushButton("Qo'lda login/parol bilan kirish")
         self.manual_toggle_btn.setFlat(True)
         self.manual_toggle_btn.setStyleSheet("text-align:left; color:#2563eb; border:none;")
@@ -493,6 +510,7 @@ class SettingsPage(QWidget):
 
     def _refresh_scanner_status(self):
         cam = db.get_scanner_camera()
+        self.no_scanner_warning_label.setVisible(cam is None)
         if cam is None:
             self.scanner_status_label.setText("Holat: skaner hali sozlanmagan")
         elif cam.connection_type == "usb":
