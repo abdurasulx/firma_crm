@@ -10323,3 +10323,28 @@ harakatlanmayotganini bilolmasdi.
 `main/views.py`, `main/templates/pazanda_dashboard.html`
 
 Pure backend/shablon — Desktop Agent exe rebuild talab qilinmaydi.
+
+## 246-qadam: Vazifa nima uchun osilib qolganini ko'rish uchun admin panel kerak bo'lmasin — hammasi avtomatik dashboardda
+
+Foydalanuvchi 245-qadamdagi tuzatishni sinab ko'rgach o'zgarish sezmadi va
+qattiq tanqid qildi: "biz tizim quryabmiz, qo'lda to'g'irlanadigon
+dasturcha emas" — admin panelga kirib qo'lda tekshirish talab qilinishi
+noto'g'ri yondashuv edi.
+
+### Tuzatish
+245-qadamdagi shart-bog'liq ("faqat yetishmasa ko'rsatiladi") yondashuv
+olib tashlandi. Endi HAR BIR "claimed" holatdagi vazifa uchun uning
+BARCHA tasdiqlanmagan komponentlari (nomi, kerak miqdor, omborda mavjud
+miqdor) SO'ZSIZ, avtomatik ravishda "Mening vazifalarim" ro'yxatida
+to'g'ridan-to'g'ri ko'rsatiladi — yetarli bo'lmagan komponent qizil ⛔
+belgi bilan alohida ajratiladi. Endi vazifa nega harakatlanmayotganini
+bilish uchun hech qanday admin panelga kirish yoki qo'lda so'rov
+yuborish shart emas — sabab har doim ko'z oldida.
+
+### O'zgargan fayllar
+`main/views.py`, `main/templates/pazanda_dashboard.html`
+
+### Tekshirildi
+`manage.py check` — toza. `manage.py test main` — 93 test, hammasi o'tdi.
+
+Pure backend/shablon — Desktop Agent exe rebuild talab qilinmaydi.

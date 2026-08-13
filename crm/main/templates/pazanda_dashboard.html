@@ -759,11 +759,7 @@
                 <div class="act-sub">
                     {{ task.rejalashtirilgan_miqdor|floatformat:0 }} dona
                     &nbsp;·&nbsp;
-                    {% if task.status == 'claimed' and task.stok_yetishmovchiligi %}
-                    <span style="color:#b91c1c;font-weight:600;">
-                        ⛔ Omborda yetarli xom ashyo yo'q — tortib bo'lmaydi: {{ task.stok_yetishmovchiligi }}
-                    </span>
-                    {% elif task.status == 'claimed' %}
+                    {% if task.status == 'claimed' %}
                     <span style="color:#b45309;font-weight:600;">⏳ Xom ashyoni Desktop Agent'da tarozida tortib oling</span>
                     {% elif task.status == 'materials_ready' %}
                     <span style="color:#9a3412;font-weight:600;">📦 Xom ashyo tortildi — mahsulotni tayyorlab bo'lgach "Ish bitdi"ni bosing</span>
@@ -779,6 +775,18 @@
                     <span style="color:#64748b;font-weight:600;">Bekor qilindi</span>
                     {% endif %}
                 </div>
+                {% if task.status == 'claimed' and task.pickup_details %}
+                <div style="margin-top:4px; font-size:12px;">
+                    {% for p in task.pickup_details %}
+                    <div style="{% if not p.yetarli %}color:#b91c1c;font-weight:700;{% else %}color:var(--text-light);{% endif %}">
+                        {% if not p.yetarli %}⛔{% else %}·{% endif %}
+                        {{ p.nomi }} — kerak: {{ p.kerak|floatformat:2 }} {{ p.birlik }},
+                        omborda: {{ p.qoldiq|floatformat:2 }} {{ p.birlik }}
+                        {% if not p.yetarli %} — yetarli emas, tortib bo'lmaydi{% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
             </div>
             {% if task.status == 'materials_ready' %}
             <form method="post" action="{% url 'pz_confirm_task_finished' task.id %}" style="margin-left:auto;">

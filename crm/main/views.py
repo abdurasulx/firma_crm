@@ -1117,30 +1117,30 @@ def main(request):
                 # olishi mumkin (real holatda sodir bo'lgan bug).
                 mq = t.miqdor_qoshishlar.first() if t.status == 'producing' else None
                 t.labels_printed = bool(mq and mq.labels_printed)
-                # Real bug (foydalanuvchi topdi): agar vazifaning BOM
-                # komponentlaridan biri omborda yetarli bo'lmasa,
-                # "hammasi yoki hech narsa" qoidasi (task_service.
-                # weigh_task_pickup) tufayli vazifa Desktop Agent'da
-                # HECH QANDAY xom ashyo tortishga yo'l qo'ymay,
-                # abadiy "claimed" holatda qolib ketardi — bu sabab
-                # esa faqat Desktop Agent'da tortishga urinilganda
-                # (o'tkinchi xato sifatida) ko'rinardi, veb dashboardda
-                # HECH QANDAY iz qoldirmasdi. Endi shu sabab, agar bor
-                # bo'lsa, to'g'ridan-to'g'ri shu yerda ko'rsatiladi.
-                t.stok_yetishmovchiligi = None
+                # Real bug (foydalanuvchi topdi, achchiq tanqid bilan
+                # "qo'lda to'g'rilanadigon dasturcha emas"): vazifa nega
+                # "claimed" holatda osilib qolgani (masalan biror BOM
+                # komponent omborda yetarli emas — `task_service.
+                # weigh_task_pickup`dagi "hammasi yoki hech narsa"
+                # qoidasi) avval HECH QAYERDA ko'rinmasdi — bu sababni
+                # topish uchun admin panelga kirib qo'lda tekshirish
+                # kerak edi. Endi HAR BIR "claimed" vazifaning barcha
+                # tasdiqlanmagan komponentlari (kerak/tortilgan/qoldiq)
+                # to'liq, avtomatik, dashboard'ning o'zida ko'rinadi —
+                # hech qanday qo'lda diagnostika kerak emas.
+                t.pickup_details = []
                 if t.status == 'claimed':
-                    kamomad = [
-                        p for p in TaskMaterialPickup.objects.filter(
-                            task=t, tasdiqlangan=False,
-                        ).select_related('komponent')
-                        if p.komponent.miqdori < (p.expected_qty - p.poured_qty)
-                    ]
-                    if kamomad:
-                        t.stok_yetishmovchiligi = ", ".join(
-                            f"{p.komponent.nomi} (kerak: {p.expected_qty - p.poured_qty:g}, "
-                            f"qoldiq: {p.komponent.miqdori:g})"
-                            for p in kamomad
-                        )
+                    for p in TaskMaterialPickup.objects.filter(
+                        task=t, tasdiqlangan=False,
+                    ).select_related('komponent', 'komponent__turi'):
+                        kerak = p.expected_qty - p.poured_qty
+                        t.pickup_details.append({
+                            'nomi': p.komponent.nomi,
+                            'birlik': p.komponent.turi.nomi if p.komponent.turi else '',
+                            'kerak': kerak,
+                            'qoldiq': p.komponent.miqdori,
+                            'yetarli': p.komponent.miqdori >= kerak,
+                        })
             payload['my_tasks'] = my_tasks
             # Sanoq/hajm (dona/litr) komponentlar — Desktop Agent'da EMAS,
             # shu yerda bitta tugma bilan tasdiqlanadi (kioskda sichqoncha
