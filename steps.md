@@ -10348,3 +10348,37 @@ yuborish shart emas — sabab har doim ko'z oldida.
 `manage.py check` — toza. `manage.py test main` — 93 test, hammasi o'tdi.
 
 Pure backend/shablon — Desktop Agent exe rebuild talab qilinmaydi.
+
+## 247-qadam: TOPILDI — tarozi shart bo'lmaganda kg/g komponentlar veb dashboardda "Oldim" tugmasisiz qolib ketardi
+
+246-qadamdagi to'liq diagnostika (har bir komponent kerak/mavjud bilan)
+ishga tushgach, foydalanuvchi barcha komponentlar OMBORDA YETARLI ekanini
+ko'rsatdi (hech biri qizil emas) va so'radi: "qanday qabul qildimni
+bosadi?" — ya'ni veb sahifada "Oldim ✓" tugmasi UMUMAN yo'q edi bu
+komponentlar uchun.
+
+### HAQIQIY sabab
+`main()` view'da "Mening vazifalarim" ro'yxatidagi `pending_pickups`
+(dashboardda "Olib qo'yish kerak" — "Oldim ✓" tugmasi bilan) kg/g
+(tarozida o'lchanadigan) komponentlarni HAR DOIM chetlab o'tardi —
+`Company.tarozi_majburiy` sozlamasidan qat'i nazar. Bu komponentlar
+FAQAT Desktop Agent orqali tasdiqlanishi mumkin edi (u tarozi sozlamasini
+to'g'ri hisobga oladi), lekin foydalanuvchiga bu haqda hech narsa
+aytilmagan — veb sahifada ular ko'rinmasdi, "qanday tasdiqlashni" bilmay
+qolgan.
+
+### Tuzatish (`main/views.py`)
+`pending_pickups` filtriga `or not request.company.tarozi_majburiy`
+qo'shildi — tarozi shart bo'lmasa, kg/g komponentlar ham xuddi dona/litr
+kabi "Mening vazifalarim" ro'yxatida "Oldim ✓" tugmasi bilan chiqadi va
+shu yerning o'zida (Desktop Agent'ga borish shart emas) tasdiqlanadi
+(`pz_ack_task_pickup` allaqachon birlikdan qat'i nazar ishlaydi —
+`weigh_task_pickup(pickup_id, pazanda, pickup.expected_qty)`).
+
+### Tekshirildi
+`manage.py check` — toza. `manage.py test main` — 93 test, hammasi o'tdi.
+
+### O'zgargan fayllar
+`main/views.py`
+
+Pure backend — Desktop Agent exe rebuild talab qilinmaydi.

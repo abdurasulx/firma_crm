@@ -1152,9 +1152,21 @@ def main(request):
                     task__status='claimed', tasdiqlangan=False,
                 ).select_related('komponent', 'komponent__turi', 'task', 'task__mahsulot')
             )
+            # Real bug (foydalanuvchi topdi): kg/g (tarozida o'lchanadigan)
+            # komponentlar bu ro'yxatdan HAR DOIM chetlab o'tilardi —
+            # `Company.tarozi_majburiy` sozlamasidan qat'i nazar. Natijada
+            # ega "tarozi shart emas" deb belgilagan firmada ham, bu
+            # komponentlar veb dashboardda HECH QACHON "Oldim ✓" tugmasi
+            # bilan chiqmasdi — faqat Desktop Agent orqali (u tarozi
+            # sozlamasini to'g'ri hisobga oladi) tasdiqlash mumkin edi,
+            # lekin bu haqda foydalanuvchiga hech narsa aytilmagan edi.
+            # Endi: tarozi shart bo'lmasa, kg/g komponentlar ham xuddi
+            # dona/litr kabi shu yerning o'zida "Oldim ✓" bilan
+            # tasdiqlanadi.
             payload['pending_pickups'] = [
                 p for p in pending_pickups
                 if not task_service.is_weighable_birlik(p.komponent.turi.nomi if p.komponent.turi else '')
+                or not request.company.tarozi_majburiy
             ]
             # Ishlab chiqaruvchi o'zi vazifa yaratishi uchun — faqat BOM
             # (retsept) kiritilgan mahsulotlar tanlanishi mumkin.
