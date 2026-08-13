@@ -10214,3 +10214,21 @@ badge'i, ham maxsus "Desktop Agent QR-login" kodi bilan ochishi mumkin.
 
 ### Build
 `StockFirmAgent.exe` qayta yig'ildi, foydalanuvchiga yuborildi.
+
+## 242-qadam: Omborlar sahifasidan qo'lda "O'chirish" tugmasi olib tashlandi
+
+Foydalanuvchi: "agentda ombor o'chirish imkoniyati kerak emas". Omborlar
+ro'yxati allaqachon ERP'dan (`sync_warehouses_from_remote`) avtomatik
+boshqariladi — ERP'da o'chirilgan ombor mahalliy bazadan ham o'zi
+o'chadi. Qo'lda o'chirish imkoniyati endi shart emas edi.
+
+### Tuzatish
+`warehouse_list_page.py` — har bir qator uchun "O'chirish" tugmasi va
+`_delete_warehouse()` metodi olib tashlandi (faqat "Kameralar" tugmasi
+qoladi).
+
+### O'zgargan fayllar
+`desktop_agent/app/windows/warehouse_list_page.py`
+
+### Build
+`StockFirmAgent.exe` qayta yig'ildi, foydalanuvchiga yuborildi.

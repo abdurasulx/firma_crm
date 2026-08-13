@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTableWidget,
-    QTableWidgetItem, QHeaderView, QMessageBox,
+    QTableWidgetItem, QHeaderView,
 )
 from PyQt6.QtCore import QThread, QTimer, pyqtSignal
 
@@ -167,10 +167,9 @@ class WarehouseListPage(QWidget):
             cam_btn.clicked.connect(lambda _, w=wh: self._manage_cameras(w))
             actions_layout.addWidget(cam_btn)
 
-            delete_btn = QPushButton("O'chirish")
-            delete_btn.clicked.connect(lambda _, w=wh: self._delete_warehouse(w))
-            actions_layout.addWidget(delete_btn)
-
+            # Ombor o'chirish tugmasi olib tashlandi (foydalanuvchi talabi:
+            # "agentda ombor o'chirish imkoniyati kerak emas") — omborlar
+            # faqat ERP'dan (`sync_warehouses_from_remote`) boshqariladi.
             self.table.setCellWidget(row, 3, actions)
 
         # `ResizeToContents` cell-WIDGET (tugmalar) uchun birinchi
@@ -179,17 +178,6 @@ class WarehouseListPage(QWidget):
         # to'ldirilgandan KEYIN yana bir marta aniq chaqiriladi.
         self.table.resizeColumnToContents(2)
         self.table.resizeColumnToContents(3)
-
-    def _delete_warehouse(self, warehouse: db.Warehouse):
-        confirm = QMessageBox.question(
-            self, "Tasdiqlash",
-            f"'{warehouse.nomi}' omborini o'chirmoqchimisiz? Unga bog'langan barcha kameralar ham o'chadi.",
-        )
-        if confirm == QMessageBox.StandardButton.Yes:
-            db.delete_warehouse(warehouse.id)
-            self.refresh()
-            if self._on_cameras_changed:
-                self._on_cameras_changed()  # ombor bilan birga uning kameralari ham o'chdi
 
     def _manage_cameras(self, warehouse: db.Warehouse):
         dialog = WarehouseCamerasDialog(warehouse, parent=self)
