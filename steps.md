@@ -10382,3 +10382,21 @@ shu yerning o'zida (Desktop Agent'ga borish shart emas) tasdiqlanadi
 `main/views.py`
 
 Pure backend — Desktop Agent exe rebuild talab qilinmaydi.
+
+## 248-qadam: "Olib qo'yish kerak" ro'yxatida kichik kg miqdorlar "0 Kg" bo'lib ko'rinardi
+
+Foydalanuvchi skrinshot bilan ko'rsatdi: "Palma — 0 Kg", "Tuz — 0 Kg" kabi
+qatorlar — aslida 0.03/0.01 kg kabi kichik, lekin haqiqiy miqdorlar,
+`floatformat:0` ularni nolga yaxlitlab ko'rsatgan.
+
+### Tuzatish (`main/views.py`, `pazanda_dashboard.html`)
+`pending_pickups`dagi har bir qatorga `display_qty`/`display_birlik`
+hisoblanadi: agar birlik "kg" bo'lib, miqdor 1 kg'dan kichik bo'lsa,
+avtomatik grammga o'giriladi (masalan 0.03 kg → 30 g). Shablon endi shu
+ikkalasini ko'rsatadi.
+
+### Tekshirildi
+`manage.py check` — toza. `manage.py test main` — 93 test, hammasi o'tdi.
+
+### O'zgargan fayllar
+`main/views.py`, `main/templates/pazanda_dashboard.html`

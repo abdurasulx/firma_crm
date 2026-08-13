@@ -659,7 +659,7 @@
             <div class="act-dot send"><i class="fa-solid fa-box"></i></div>
             <div class="act-info">
                 <div class="act-title">{{ pickup.komponent.nomi }} ({{ pickup.task.mahsulot.nomi }} uchun)</div>
-                <div class="act-sub">{{ pickup.expected_qty|floatformat:0 }} {{ pickup.komponent.turi.nomi }}</div>
+                <div class="act-sub">{{ pickup.display_qty|floatformat:0 }} {{ pickup.display_birlik }}</div>
             </div>
             <form method="post" action="{% url 'pz_ack_task_pickup' pickup.id %}" class="ack-pickup-form" style="margin-left:auto;">
                 {% csrf_token %}

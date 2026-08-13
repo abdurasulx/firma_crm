@@ -1168,6 +1168,18 @@ def main(request):
                 if not task_service.is_weighable_birlik(p.komponent.turi.nomi if p.komponent.turi else '')
                 or not request.company.tarozi_majburiy
             ]
+            # Foydalanuvchi topdi: kg birlikdagi kichik miqdorlar
+            # (masalan 0.03 kg) `floatformat:0` bilan "0 Kg" bo'lib
+            # ko'rinardi — miqdor go'yo yo'qdek tuyulardi. Endi 1 kg'dan
+            # kichik bo'lsa avtomatik grammga o'giriladi.
+            for p in payload['pending_pickups']:
+                birlik = (p.komponent.turi.nomi if p.komponent.turi else '') or ''
+                if birlik.strip().lower() in ('kg', 'kilogramm') and 0 < p.expected_qty < 1:
+                    p.display_qty = p.expected_qty * 1000
+                    p.display_birlik = 'g'
+                else:
+                    p.display_qty = p.expected_qty
+                    p.display_birlik = birlik
             # Ishlab chiqaruvchi o'zi vazifa yaratishi uchun — faqat BOM
             # (retsept) kiritilgan mahsulotlar tanlanishi mumkin.
             bom_mahsulot_ids = MahsulotRetsept.objects.filter(
