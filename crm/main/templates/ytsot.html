@@ -65,10 +65,15 @@
         border-radius: 1rem;
         border: 1.5px solid var(--slate-200);
         display: flex;
+        flex-wrap: wrap;
         justify-content: space-between;
         align-items: center;
         transition: all 0.2s;
     }
+    /* Serial-skanerlash bloki flexbox ichida `grid-column:1/-1` bilan
+       to'liq kenglikka cho'zilmasdi — stepper ("0 dona") bilan bir
+       qatorda torayib, ustma-ust chiqib qolar edi. */
+    .serial-scan-block { flex-basis: 100%; width: 100%; }
 
     .product-item.selected {
         border-color: var(--primary);

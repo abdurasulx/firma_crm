@@ -41,6 +41,7 @@
     .products-list { display: grid; gap: .75rem; }
     .product-item {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
         justify-content: space-between;
         gap: 1rem;
@@ -49,6 +50,11 @@
         border-radius: .9rem;
         background: #fff;
     }
+    /* Serial-skanerlash bloki flexbox ichida `grid-column:1/-1` bilan
+       to'liq kenglikka cho'zilmasdi — stepper ("0 dona") bilan bir
+       qatorda torayib, ustma-ust chiqib qolar edi (real topilgan
+       vizual xato). `flex-basis:100%` uni yangi qatorga majburlaydi. */
+    .serial-scan-block { flex-basis: 100%; width: 100%; }
     .product-item.selected { border-color: var(--primary); background: #ecfdf5; }
     .p-info { min-width: 0; }
     .p-name { display: block; color: var(--slate-900); font-weight: 800; overflow-wrap: anywhere; }

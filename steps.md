@@ -10232,3 +10232,26 @@ qoladi).
 
 ### Build
 `StockFirmAgent.exe` qayta yig'ildi, foydalanuvchiga yuborildi.
+
+## 243-qadam: Savdo sahifasida Serial-skan bloki "0 dona" stepper bilan ustma-ust chiqib qolardi
+
+Foydalanuvchi skrinshot bilan ko'rsatdi: savdo sahifasida (Serial/QR kodli
+mahsulot uchun) "Serial (QR) kodlari — miqdor skanerlangan donalar soniga
+teng" bloki "0 dona" ko'rsatkichi ustiga chiqib, matn kesilib/chalkashib
+ko'rinardi ("hunuk va noqulay").
+
+Sabab: `.product-item` flexbox (`display:flex`) edi, lekin serial-skan
+bloki `grid-column:1/-1` bilan to'liq kenglikka cho'zilishga urinardi —
+bu faqat CSS Grid'da ishlaydi, flexbox'da hech narsa qilmaydi. Natijada
+blok stepper bilan bir qatorda, tor joyga siqilib, ustma-ust chiqib
+qolardi.
+
+### Tuzatish (`sgsot.html`, `ytsot.html`)
+`.product-item`ga `flex-wrap: wrap` qo'shildi, `.serial-scan-block`ga
+`flex-basis:100%; width:100%` — endi bu blok har doim to'liq kenglikda,
+yangi qatorda chiqadi.
+
+### O'zgargan fayllar
+`main/templates/sgsot.html`, `main/templates/ytsot.html`
+
+Pure CSS/shablon — Desktop Agent exe rebuild talab qilinmaydi.
