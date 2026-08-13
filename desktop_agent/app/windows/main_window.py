@@ -10,7 +10,6 @@ from ..camera_recorder_service import CameraRecorderService
 from ..scale_service import ScaleService
 from ..api_client import ApiError, send_heartbeat, send_logout, normalize_server_url, verify_kiosk_unlock
 from ..agent_socket_service import AgentSocketWorker
-from ..kiosk_keyboard_lock import hide_taskbar, show_taskbar
 from .warehouse_list_page import WarehouseListPage
 from .employee_scan_widget import EmployeeScanWidget
 from .settings_page import SettingsPage, _ApiCallWorker
@@ -272,11 +271,20 @@ class MainWindow(QMainWindow):
         self.root_stack.setCurrentIndex(1)
         # Kiosk rejimi — dastur ishga tushganda avtomatik to'liq ekranga
         # o'tadi (foydalanuvchi so'rovi: "dasturga kirishi bilan full
-        # screen bo'lib qolishi kerak"). `showFullScreen()`ning o'zi
-        # taskbarni yashirmaydi (u hamon pastda ko'rinib, bosilishi
-        # mumkin edi) — shuning uchun alohida yashiramiz.
+        # screen bo'lib qolishi kerak").
+        #
+        # **Muhim (real ishlab chiqarish xatosi, 232-qadam)**: avval
+        # bu yerda `hide_taskbar()` ham chaqirilardi (`ShowWindow`
+        # orqali `Shell_TrayWnd`ni yashirish) — lekin bu Windows
+        # DARAJASIDAGI GLOBAL holat, dastur jarayoniga BOG'LIQ EMAS.
+        # Agar dastur "Vazifalar menejeri"/`taskkill` orqali majburan
+        # o'chirilsa, yiqilib tushsa (crash) yoki boshqa har qanday
+        # NOTO'G'RI (closeEvent'dan tashqari) usulda tugasa —
+        # `show_taskbar()` HECH QACHON chaqirilmaydi va foydalanuvchi
+        # butun kompyuterda taskbarsiz qolib ketadi (aynan shu holat
+        # real sinovda yuz berdi). Xavf foyda-zarar nisbatiga
+        # nomutanosib bo'lgani uchun BUTUNLAY OLIB TASHLANDI.
         self.showFullScreen()
-        hide_taskbar()
 
     def _on_startup_open_settings(self):
         """Qurilma-tekshiruv sahifasida birror qurilma nosoz chiqsa
@@ -546,7 +554,6 @@ class MainWindow(QMainWindow):
             )
             return
 
-        show_taskbar()
         self._heartbeat_timer.stop()
         # Dashboardga "oflayn"ligimizni 90 soniyalik heartbeat-kutish
         # oynasini kutmasdan darhol bildiramiz — foydalanuvchi

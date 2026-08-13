@@ -9898,3 +9898,37 @@ Exe qayta yig'ildi.
 `py_compile` toza, exe muvaffaqiyatli qayta yig'ildi. (Vizual natija
 — haqiqiy stansiyada ko'rinishni tasdiqlash tavsiya etiladi, avtomatik
 testda tekshirib bo'lmaydi.)
+
+---
+
+## 232-qadam: Taskbar yashirish BUTUNLAY OLIB TASHLANDI — dastur to'g'ri yopilmasa, foydalanuvchi kompyuterida taskbar butunlay yashiringan qolib ketardi (jiddiy xato)
+
+**Holat: DONE (BUG FIX/REVERT — jiddiy)**
+
+### Muammo
+Ega: "kompyuterimni nima qilding? ... sen tizim darajada yo'qotvorgansan ilova yopilsa ham taskbar berkitilgan". 219/223-qadamlarda qo'shilgan `hide_taskbar()` (`ShowWindow(Shell_TrayWnd, SW_HIDE)`) — bu Windows DARAJASIDAGI GLOBAL holat, dastur jarayoniga BOG'LIQ EMAS. `show_taskbar()` faqat `closeEvent`ning "toza yopilish" yo'lida chaqirilardi. Agar dastur "Vazifalar menejeri"/`taskkill //F` orqali majburan o'chirilsa (aynan shu — bu sessiyada exe qayta-qayta shu tarzda qayta qurish uchun o'chirilgan edi), yiqilib tushsa yoki boshqa har qanday NOTO'G'RI yo'l bilan tugasa — `show_taskbar()` HECH QACHON chaqirilmaydi, natijada foydalanuvchining BUTUN KOMPYUTERIDA taskbar doimiy yashiringan holda qolib ketadi (dastur o'zi yopilgandan keyin ham). Aynan shu real hodisa yuz berdi.
+
+### Nima qilindi
+1. Foydalanuvchining taskbarini DARHOL (PowerShell orqali, `ShowWindow`
+   to'g'ridan-to'g'ri chaqirilib) tiklandi.
+2. `hide_taskbar()`/`show_taskbar()` chaqiruvlari `main_window.py`dan
+   BUTUNLAY OLIB TASHLANDI (`_on_startup_check_continue`, `closeEvent`).
+3. Ular endi hech qayerda ishlatilmagani uchun butun
+   `kiosk_keyboard_lock.py` fayli (faqat shu ikki funksiyani saqlab
+   qolgan edi, 224-qadamdan buyon) o'chirildi.
+
+Xulosa: kiosk to'liq ekran (`showFullScreen()`) rejimida ishlayveradi,
+lekin taskbar endi DASTURIY ravishda yashirilmaydi — bu xavf-foyda
+nisbatiga nomutanosib ekani aniqlandi (bitta noto'g'ri yopilish butun
+kompyuterni "buzib" qo'yishi mumkin edi).
+
+Exe qayta yig'ildi.
+
+### O'zgargan fayllar
+`desktop_agent/app/windows/main_window.py` (`hide_taskbar`/
+`show_taskbar` chaqiruvlari olib tashlandi), `desktop_agent/app/
+kiosk_keyboard_lock.py` (o'chirildi)
+
+### Tekshirildi
+`py_compile` toza, exe muvaffaqiyatli qayta yig'ildi. Foydalanuvchi
+taskbari qo'lda tiklandi va tasdiqlandi.
