@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import QThread, QTimer, pyqtSignal
 
 from .. import db
-from ..api_client import station_login, station_login_by_qr, fetch_omborlar, parse_server_input, ApiError, send_logout
+from ..api_client import station_login, station_login_by_qr, parse_server_input, ApiError, send_logout
 from ..label_printer_service import list_printers, LabelPrintWorker
 from .camera_config_dialog import CameraConfigDialog
 
@@ -66,7 +66,6 @@ class SettingsPage(QWidget):
         self.on_recheck_devices = on_recheck_devices
         self.on_logout = on_logout
         self._login_worker: _ApiCallWorker | None = None
-        self._sync_worker: _ApiCallWorker | None = None
         self._logout_worker: _ApiCallWorker | None = None
         self._connecting_timer = QTimer(self)
         self._connecting_timer.setInterval(400)
@@ -170,10 +169,10 @@ class SettingsPage(QWidget):
         layout.addWidget(self.manual_login_container)
 
         sync_row = QHBoxLayout()
-        self.sync_btn = QPushButton("Sinxronlash")
-        self.sync_btn.clicked.connect(self._sync)
-        sync_row.addWidget(self.sync_btn)
-        sync_row.addStretch(1)
+        # Real bug (foydalanuvchi topdi): omborlar allaqachon WebSocket
+        # orqali real-vaqtda avtomatik sinxronlanadi (91-qadam) — qo'lda
+        # "Sinxronlash" tugmasi endi ortiqcha, chalkashtiradi. Olib
+        # tashlandi.
         # Faqat login qilingan holatda ko'rinadi (`_show_synced_view`/
         # `show_login_required` shu ko'rinishni boshqaradi) — stansiyani
         # boshqa xodim/firma uchun qayta ishlatish uchun.
@@ -474,39 +473,6 @@ class SettingsPage(QWidget):
         self.status_label.setStyleSheet("color:#666;")
         self.status_label.setText("Tizimdan chiqdingiz.")
         self._update_login_ui_state()
-
-    def _sync(self):
-        server_url = db.get_setting("server_url", "")
-        token = db.get_setting("agent_token", "")
-        if not token:
-            self.status_label.setStyleSheet("color:#b91c1c;")
-            self.status_label.setText("Avval login/parol bilan kiring.")
-            return
-
-        self.sync_btn.setEnabled(False)
-        self.status_label.setStyleSheet("color:#666;")
-        self.status_label.setText("Sinxronlanmoqda...")
-
-        self._sync_worker = _ApiCallWorker(fetch_omborlar, server_url, token)
-        self._sync_worker.succeeded.connect(self._on_sync_succeeded)
-        self._sync_worker.failed.connect(self._on_sync_failed)
-        self._sync_worker.token_invalid.connect(self.session_expired.emit)
-        self._sync_worker.start()
-
-    def _on_sync_succeeded(self, result: tuple):
-        self.sync_btn.setEnabled(True)
-        omborlar, company_name, tarozi_majburiy = result
-        db.sync_warehouses_from_remote(omborlar)
-        db.set_setting("tarozi_majburiy", "1" if tarozi_majburiy else "")
-        self.status_label.setStyleSheet("color:#059669;")
-        self.status_label.setText(f"'{company_name}' — {len(omborlar)} ta ombor sinxronlandi.")
-        if self.on_synced:
-            self.on_synced()
-
-    def _on_sync_failed(self, message: str):
-        self.sync_btn.setEnabled(True)
-        self.status_label.setStyleSheet("color:#b91c1c;")
-        self.status_label.setText(message)
 
     def _refresh_scanner_status(self):
         cam = db.get_scanner_camera()

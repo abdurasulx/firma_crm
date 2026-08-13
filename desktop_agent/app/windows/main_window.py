@@ -290,11 +290,17 @@ class MainWindow(QMainWindow):
         # stansiyada bu — chiqib ketib bo'lmaydigan tuzoq. Qulf faqat
         # ALLAQACHON login qilingan stansiyada (kiosk rejimiga
         # kirilgandan keyin) ma'noga ega — shuning uchun endi haqiqiy
-        # login holatiga qarab qaror qilinadi.
-        self._set_kiosk_locked(bool(db.get_setting("agent_token", "")))
+        # login holatiga qarab qaror qilinadi. Bu yerda hali umuman
+        # QULFLANMAYDI — qulf faqat qurilma-tekshiruv MUVAFFAQIYATLI
+        # o'tib, asosiy qobiqqa kirilganda yoqiladi
+        # (`_on_startup_check_continue`), aks holda (masalan qurilma
+        # nosoz chiqib Sozlamalarga o'tilganda) Omborlar/Sozlamalar
+        # bloklanib, kameralarni/printerni sozlab bo'lmay qolardi.
+        self._set_kiosk_locked(False)
 
     def _on_startup_check_continue(self):
         self.root_stack.setCurrentIndex(1)
+        self._set_kiosk_locked(True)
         # Kiosk rejimi — dastur ishga tushganda avtomatik to'liq ekranga
         # o'tadi (foydalanuvchi so'rovi: "dasturga kirishi bilan full
         # screen bo'lib qolishi kerak").
@@ -337,13 +343,20 @@ class MainWindow(QMainWindow):
             self._heartbeat_timer.start()
         self._send_heartbeat()
         self.warehouse_page.refresh()
-        # Endi haqiqatan login qilindi — shu daqiqadan kiosk qulfi
-        # ma'noga ega bo'ladi (ega o'z QR kodini skanerlab ochishi
-        # kerak bo'ladi). Qurilma-tekshiruv sahifasi bu paytgacha
-        # o'tkazib yuborilgan edi (login yo'q holatda ma'nosiz edi) —
-        # endi, aynan login qilingandan KEYIN, birinchi marta ishga
-        # tushiriladi ("Davom etish" bosilgach kiosk qobig'iga o'tiladi).
-        self._set_kiosk_locked(True)
+        # Qurilma-tekshiruv sahifasi bu paytgacha o'tkazib yuborilgan
+        # edi (login yo'q holatda ma'nosiz edi) — endi, aynan login
+        # qilingandan KEYIN, birinchi marta ishga tushiriladi.
+        #
+        # **Muhim (real bug, foydalanuvchi topdi)**: bu yerda avval
+        # `_set_kiosk_locked(True)` DARHOL chaqirilardi — birinchi
+        # marta login qilingan (dastlabki sozlash) stansiyada bu
+        # Omborlar bo'limini bloklab qo'yardi, holbuki ega hali
+        # kameralarni (Omborlar → Kameralar) va printer/tarozi
+        # (Sozlamalar)ni SOZLASHI kerak. Kiosk qulfi endi FAQAT
+        # qurilma-tekshiruv MUVAFFAQIYATLI o'tib, "Davom etish"
+        # bosilib, asosiy qobiqqa kirilganda yoqiladi
+        # (`_on_startup_check_continue`) — shu paytgacha erkin
+        # navigatsiya (Omborlar/Sozlamalar) ochiq qoladi.
         self.root_stack.setCurrentIndex(0)
         self.startup_check_page.refresh()
 

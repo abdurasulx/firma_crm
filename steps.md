@@ -10150,3 +10150,38 @@ DOIM (login holatidan qat'i nazar) dastur ochilganda birinchi ko'rsatilardi.
 
 ### Build
 `StockFirmAgent.exe` qayta yig'ildi, foydalanuvchiga yuborildi.
+
+## 240-qadam: Login qilingandan keyin kiosk darhol qulflanib, kameralarni sozlashga to'sqinlik qilardi + keraksiz "Sinxronlash" tugmasi
+
+Foydalanuvchi: "kirilganidan keyin ombor bloklanib qolyabdi omborni bosib
+kameralarni sozlash kerakku" va "sinxronlash tugmasi kerak emas ... web
+socketni nega uladik?".
+
+### Muammo 1: erta qulflash
+`_on_login_succeeded` login bo'lgan zahoti `_set_kiosk_locked(True)`
+chaqirardi — DASTLABKI sozlashda (birinchi marta login qilinganda) ega
+hali Omborlar → Kameralar va Sozlamalar → printer/tarozi sozlamalarini
+KIRITISHI kerak, lekin bu ikkalasi ham bloklangan edi.
+
+### Tuzatish (`main_window.py`)
+Kiosk qulfi endi FAQAT qurilma-tekshiruv MUVAFFAQIYATLI o'tib, "Davom
+etish" bosilib, asosiy qobiqqa haqiqatan kirilganda yoqiladi
+(`_on_startup_check_continue`) — na dastur ochilganda (`__init__`), na
+login bo'lgan zahoti endi qulflanmaydi. Shu paytgacha Omborlar/Sozlamalar
+erkin ochiq — kameralar/printer/tarozi sozlanadi, keyin "Qurilmalarni
+qayta tekshirish" orqali tekshiruv qaytadan o'tkaziladi.
+
+### Muammo 2: keraksiz qo'lda "Sinxronlash" tugmasi
+Omborlar ro'yxati allaqachon WebSocket orqali real-vaqtda avtomatik
+sinxronlanadi (91-qadam) — qo'lda tugma endi faqat chalkashtirar edi.
+
+### Tuzatish (`settings_page.py`)
+"Sinxronlash" tugmasi va unga bog'liq `_sync`/`_on_sync_succeeded`/
+`_on_sync_failed` metodlari butunlay olib tashlandi.
+
+### O'zgargan fayllar
+`desktop_agent/app/windows/main_window.py`,
+`desktop_agent/app/windows/settings_page.py`
+
+### Build
+`StockFirmAgent.exe` qayta yig'ildi, foydalanuvchiga yuborildi.
