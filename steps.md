@@ -9932,3 +9932,41 @@ kiosk_keyboard_lock.py` (o'chirildi)
 ### Tekshirildi
 `py_compile` toza, exe muvaffaqiyatli qayta yig'ildi. Foydalanuvchi
 taskbari qo'lda tiklandi va tasdiqlandi.
+
+---
+
+## 233-qadam: "Desktop Agent QR-login" kartasi noto'g'ri profillarda (jumladan ega'ning o'zinikida) ko'rinardi
+
+**Holat: DONE (BUG FIX)**
+
+### Muammo
+Ega: "login qilsam ega ism-familyasi chiqyapti, agent nomi emas" —
+kutilgan xatti-harakat: Hodim → Agent (desktop_agent turidagi xodim)
+→ Profil sahifasidan QR skanerlab login qilinishi kerak edi. Sabab
+topildi: `egaprofile.html`dagi "Desktop Agent QR-login" karta shartida
+(`{% if request.user.type == 'ega' %}`) faqat KO'RAYOTGAN kishi (ega)
+tekshirilardi, KO'RILAYOTGAN profil (`user`) `desktop_agent` turida
+ekani UMUMAN tekshirilmagan edi. Bu shablon ega o'zining PROFILINI
+ko'rganda ham ishlatiladi (`views.py` — "ega o'zini ko'rish" yo'li),
+shuning uchun ega o'z profiliga kirganda ham xuddi shu QR karta
+chiqib, unda `user.id` = EGA'NING O'ZINING ID'si bilan shifrlangan
+login QR ko'rsatilardi. Xuddi shu xato `egayt.html`da ham bor edi
+(savdogar/yetkazib beruvchi profili uchun — ular hech qachon
+`desktop_agent` turida bo'lmaydi, shuning uchun bu QR u yerda umuman
+ma'nosiz edi).
+
+### Nima qilindi
+- `egaprofile.html`: shart `{% if request.user.type == 'ega' and
+  user.type == 'desktop_agent' %}`ga o'zgartirildi — endi FAQAT ega
+  aynan bir `desktop_agent` turidagi xodim profilini ko'rganda
+  chiqadi (ega o'zini yoki boshqa turdagi xodimni ko'rganda
+  ko'rinmaydi).
+- `egayt.html`dan (savdogar/yetkazib beruvchi profili) karta
+  BUTUNLAY OLIB TASHLANDI — u yerga hech qachon tegishli emas edi.
+
+### O'zgargan fayllar
+`main/templates/egaprofile.html`, `main/templates/egayt.html`
+
+### Tekshirildi
+`manage.py check`/`test` — 89 test, hammasi o'tdi (bu faqat shablon
+shartlari, backend logikasi o'zgarmadi — mavjud testlar buzilmadi).

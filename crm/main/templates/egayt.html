@@ -221,21 +221,14 @@
         </table>
     </div>
 
-    <div class="products-container" style="text-align:center;">
-        <h3>Desktop Agent QR-login</h3>
-        <p style="font-size:12px; color:#555; margin:8px 0 12px;">
-            Qo'lda login/parol o'rniga — Desktop Agent'ning Sozlamalar
-            sahifasida shu QR kodni kamerasiga ko'rsating, stansiya
-            avtomatik tizimga kiradi. QR kod shifrlangan.
-        </p>
-        <img src="{% url 'agent_login_qr_image' user.id %}?v={{ user.agent_qr_nonce }}" alt="Agent login QR"
-             style="width:420px; height:420px; max-width:100%; border:1px solid #ddd; border-radius:10px; padding:10px; background:#fff;">
-        <form method="post" action="{% url 'regenerate_agent_qr' user.id %}" style="margin-top:12px;"
-              onsubmit="return confirm('Eski QR kod bekor bo\'ladi. Davom etasizmi?');">
-            {% csrf_token %}
-            <button type="submit" style="padding: 8px 16px; background: #0f172a; color: #fff; border: none; border-radius: 4px; cursor: pointer;">QR kodni yangilash</button>
-        </form>
-    </div>
+    <!-- "Desktop Agent QR-login" kartasi bu yerdan OLIB TASHLANDI (232-qadam,
+         real ishlab chiqarish xatosi) — bu shablon savdogar/yetkazib
+         beruvchi profilini ko'rsatish uchun, ular hech qachon
+         `type='desktop_agent'` bo'lmaydi, shuning uchun bu QR ularning
+         profilida umuman ma'noga ega emas edi (faqat chalkashtirar edi
+         — ega bunday xodim profilini ochsa, xatoga olib keluvchi QR
+         ko'rinardi). -->
+
 
     {% if user.type == "yetkazib_beruvchi" %}
     <div class="products-container">

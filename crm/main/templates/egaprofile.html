@@ -128,7 +128,7 @@
         </div>
         {% endif %}
 
-        {% if request.user.type == 'ega' %}
+        {% if request.user.type == 'ega' and user.type == 'desktop_agent' %}
         <div class="owner-card" style="text-align:center;">
             <div class="owner-label">Desktop Agent QR-login</div>
             <p class="muted" style="font-size:12px; margin:8px 0 12px;">
