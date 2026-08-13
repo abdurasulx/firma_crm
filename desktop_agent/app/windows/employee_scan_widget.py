@@ -222,6 +222,15 @@ class EmployeeScanWidget(QWidget):
     # mumkin, `MainWindow._handle_token_invalid`ga (avtomatik logout)
     # ulanadi (heartbeatdagi bilan bir xil oqim).
     session_expired = pyqtSignal()
+    # Real bug (foydalanuvchi topdi): kiosk qulfini ochish avval FAQAT
+    # maxsus shifrlangan "Desktop Agent QR-login" kodi orqali mumkin edi
+    # — ega o'zining oddiy shaxsiy QR badge'ini (bu yerdagi umumiy skan
+    # oqimi orqali, `scan()` API — allaqachon shu firma ekanini server
+    # tasdiqlagan) ko'rsatganda esa faqat "Xush kelibsiz" karta ko'rinib,
+    # qulf ochilmasdi. Endi bu yerda `user_type == 'ega'` aniqlansa, shu
+    # signal orqali `MainWindow`ga bildiriladi — agar kiosk qulflangan
+    # bo'lsa, xuddi maxsus QR bilan ochilganidek ochiladi.
+    ega_badge_scanned = pyqtSignal(str)
 
     def __init__(self, camera_recorder=None, parent=None):
         super().__init__(parent)
@@ -791,6 +800,8 @@ class EmployeeScanWidget(QWidget):
         self._show_employee_card(info)
         self._start_session(info)
         self._toggle_attendance(info["session_token"])
+        if info.get("user_type") == "ega":
+            self.ega_badge_scanned.emit(info.get("tuliq_ismi") or info.get("username", "Ega"))
 
     def _toggle_attendance(self, session_token: str):
         """Reception — har bir muvaffaqiyatli badge skaneridan keyin

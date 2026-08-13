@@ -203,6 +203,7 @@ class MainWindow(QMainWindow):
         # eskirganini (401) sezishi mumkin, faqat heartbeatni kutmasdan —
         # heartbeatdagi bilan bir xil avtomatik logout oqimi ishlatiladi.
         self._scan_widget.session_expired.connect(self._handle_token_invalid)
+        self._scan_widget.ega_badge_scanned.connect(self._on_ega_badge_scanned)
         card_layout.addWidget(self._scan_widget)
 
         center_row.addWidget(card)
@@ -556,6 +557,22 @@ class MainWindow(QMainWindow):
         self._kiosk_unlock_worker.succeeded.connect(self._on_kiosk_unlock_succeeded)
         self._kiosk_unlock_worker.failed.connect(self._on_kiosk_unlock_failed)
         self._kiosk_unlock_worker.start()
+
+    def _on_ega_badge_scanned(self, name: str):
+        """Ega o'zining ODDIY shaxsiy QR badge'ini (maxsus "Desktop Agent
+        QR-login" emas) ko'rsatganda — agar kiosk hozir qulflangan bo'lsa,
+        shu orqali ham ochiladi (foydalanuvchi talabi: alohida-alohida QR
+        qidirishning hojati yo'q). Server allaqachon `scan()` orqali bu
+        badge shu firmaning `ega`siga tegishli ekanini tasdiqlagan —
+        qo'shimcha so'rov shart emas."""
+        if not self._kiosk_locked:
+            return  # allaqachon ochiq — oddiy skan, hech narsa qilinmaydi
+        self._set_kiosk_locked(False)
+        QMessageBox.information(
+            self, "Qulf ochildi",
+            f"{name} tomonidan qulf ochildi — endi mishka/klaviatura orqali "
+            "boshqarish mumkin. Ishni tugatgach \"Qulflash\" tugmasini bosing.",
+        )
 
     def _on_kiosk_unlock_succeeded(self, result: dict):
         self._set_kiosk_locked(False)

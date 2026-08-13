@@ -10185,3 +10185,32 @@ sinxronlanadi (91-qadam) — qo'lda tugma endi faqat chalkashtirar edi.
 
 ### Build
 `StockFirmAgent.exe` qayta yig'ildi, foydalanuvchiga yuborildi.
+
+## 241-qadam: Ega o'zining oddiy shaxsiy QR badge'i bilan kiosk qulfini ocholmasdi
+
+Foydalanuvchi ega sifatida o'z oddiy shaxsiy QR badge'ini ("MENING SHAXSIY
+QR BADGE'IM") skanerladi — server uni to'g'ri taniди ("Xush kelibsiz, Islom
+Kabilov! (Ega)"), lekin kiosk qulfi OCHILMADI, chunki bu oddiy skan umumiy
+xodim-tanish oqimiga (`EmployeeScanWidget`) tushib ketardi — faqat maxsus
+`AGENTQR|...` formatidagi (profildagi alohida "Desktop Agent QR-login"
+kartasi) kod qulfni ochish uchun tan olinardi.
+
+### Tuzatish
+- `employee_scan_widget.py`: yangi `ega_badge_scanned` signali — badge
+  muvaffaqiyatli tanilgach (`_on_badge_resolved`), agar `user_type == 'ega'`
+  bo'lsa, shu signal orqali ismini yuboradi. Server allaqachon `scan()` API
+  orqali bu badge shu firmaning egasiga tegishli ekanini tasdiqlagani
+  uchun qo'shimcha so'rov shart emas.
+- `main_window.py`: yangi `_on_ega_badge_scanned()` — agar kiosk hozir
+  qulflangan bo'lsa, shu orqali ham ochiladi (allaqachon ochiq bo'lsa,
+  hech narsa qilinmaydi — oddiy skan sifatida qoladi).
+
+Natijada endi kiosk qulfini ochish uchun ega ham o'zining oddiy shaxsiy
+badge'i, ham maxsus "Desktop Agent QR-login" kodi bilan ochishi mumkin.
+
+### O'zgargan fayllar
+`desktop_agent/app/windows/employee_scan_widget.py`,
+`desktop_agent/app/windows/main_window.py`
+
+### Build
+`StockFirmAgent.exe` qayta yig'ildi, foydalanuvchiga yuborildi.
