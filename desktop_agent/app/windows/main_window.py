@@ -164,7 +164,7 @@ class MainWindow(QMainWindow):
             on_login_succeeded=self._on_login_succeeded,
             on_scale_changed=self._reload_scale,
             on_recheck_devices=self._on_recheck_devices_requested,
-            on_logout=self._stop_session_workers,
+            on_logout=self._on_logout,
         )
         self.settings_page.session_expired.connect(self._handle_token_invalid)
         self.stack.addWidget(self.warehouse_page)
@@ -265,7 +265,19 @@ class MainWindow(QMainWindow):
         # yoki Group Policy) — xuddi Ctrl+Alt+Delete kabi — amalga
         # oshirilishi kerak, dasturiy global ilgich orqali emas.
         self._kiosk_unlock_worker: _ApiCallWorker | None = None
-        self._set_kiosk_locked(True)
+        # Real bug (foydalanuvchi topdi): bu yerda har doim `True`
+        # bilan qulflanardi — HALI LOGIN QILINMAGAN holatda ham.
+        # Natijada: stansiya hech qachon login qilmagan (yoki token
+        # tozalangan) bo'lsa ham, dastur "qulflangan" holatda ochilib,
+        # Sozlamalar/Omborlar tugmalari o'chirilgan, oyna yopilmaydi —
+        # lekin qulfni ochish uchun kerak bo'lgan `agent_verify_kiosk_unlock`
+        # so'rovi ALLAQACHON login qilingan stansiyani talab qiladi
+        # (saqlangan `server_url`ga tayanadi). Hali login qilinmagan
+        # stansiyada bu — chiqib ketib bo'lmaydigan tuzoq. Qulf faqat
+        # ALLAQACHON login qilingan stansiyada (kiosk rejimiga
+        # kirilgandan keyin) ma'noga ega — shuning uchun endi haqiqiy
+        # login holatiga qarab qaror qilinadi.
+        self._set_kiosk_locked(bool(db.get_setting("agent_token", "")))
 
     def _on_startup_check_continue(self):
         self.root_stack.setCurrentIndex(1)
@@ -310,6 +322,10 @@ class MainWindow(QMainWindow):
         if not self._heartbeat_timer.isActive():
             self._heartbeat_timer.start()
         self._send_heartbeat()
+        # Endi haqiqatan login qilindi — shu daqiqadan kiosk qulfi
+        # ma'noga ega bo'ladi (ega o'z QR kodini skanerlab ochishi
+        # kerak bo'ladi).
+        self._set_kiosk_locked(True)
 
     def _restart_socket_worker(self):
         """Stansiya login qilingach (yoki dastur ochilganda, agar
@@ -369,6 +385,13 @@ class MainWindow(QMainWindow):
         self._heartbeat_worker.token_invalid.connect(self._handle_token_invalid)
         self._heartbeat_worker.start()
 
+    def _on_logout(self):
+        """Sozlamalar sahifasida "Chiqish" bosilib, token tozalanganda —
+        login yo'q endi, shuning uchun kiosk qulfi ham bo'shatiladi
+        (aks holda login yo'q/qulflangan tuzog'i qayta yuzaga keladi)."""
+        self._stop_session_workers()
+        self._set_kiosk_locked(False)
+
     def _stop_session_workers(self):
         """Faol sessiyaga bog'liq fon jarayonlarini (heartbeat, WS ulanish)
         to'xtatadi — token bekor qilinganda (`_handle_token_invalid`) ham,
@@ -389,6 +412,10 @@ class MainWindow(QMainWindow):
             return  # allaqachon logout qilingan (masalan foydalanuvchi o'zi chiqqan)
         self._stop_session_workers()
         db.set_setting("agent_token", "")
+        # Token bekor qilindi — endi login qilinmagan, shuning uchun
+        # kiosk qulfi ham ma'nosiz (aks holda yuqoridagi tuzoq qayta
+        # takrorlanadi: login yo'q, lekin qulflangan).
+        self._set_kiosk_locked(False)
         QMessageBox.warning(
             self, "Sessiya yopildi",
             "Boshqa kompyuter yoki qurilmada shu hisob bilan tizimga kirilgani uchun "

@@ -10045,3 +10045,32 @@ nusxalari endi rad etiladi.
 
 ### Tekshirildi
 `manage.py check`/`test` — 93 test, hammasi o'tdi.
+
+## 236-qadam: Kiosk qulfi login qilinmagan holatda ham yoqilib qolib, foydalanuvchini tuzoqqa tushirardi
+
+Foydalanuvchi skrinshotlar bilan ko'rsatdi: dastur hali stansiya sifatida
+LOGIN QILINMAGAN holatda ham "🔒 Qulflangan" holatida ochilardi — Omborlar/
+Sozlamalar tugmalari o'chirilgan, oyna yopilmaydi, faqat ega QR kodini
+skanerlab qulfni ochish so'raladi. Lekin qulfni ochish (`agent_verify_kiosk_unlock`)
+ALLAQACHON login qilingan stansiyani talab qiladi (saqlangan `server_url`ga
+tayanadi) — hali login qilinmagan qurilmada bu chiqib bo'lmaydigan tuzoq edi.
+
+Sabab: `MainWindow.__init__` ichida `self._set_kiosk_locked(True)` HAR DOIM
+chaqirilardi, login holatidan qat'i nazar.
+
+### Tuzatish (`desktop_agent/app/windows/main_window.py`)
+- `__init__`: endi `self._set_kiosk_locked(bool(db.get_setting("agent_token", "")))`
+  — faqat ALLAQACHON login qilingan bo'lsa qulflanadi.
+- `_on_login_succeeded`: login muvaffaqiyatli bo'lgach endi `_set_kiosk_locked(True)`
+  chaqiriladi — kiosk qulfi aynan shu daqiqadan boshlab ma'noga ega bo'ladi.
+- `_handle_token_invalid` (boshqa qurilmada qayta login qilingani uchun
+  token bekor bo'lganda): endi `_set_kiosk_locked(False)` ham chaqiriladi.
+- Sozlamalar sahifasidagi "Chiqish" (`_logout`) uchun yangi `MainWindow._on_logout`
+  qo'shildi (avvalgi `on_logout=self._stop_session_workers` o'rniga) —
+  workerlarni to'xtatish bilan bir qatorda kiosk qulfini ham bo'shatadi.
+
+### O'zgargan fayllar
+`desktop_agent/app/windows/main_window.py`
+
+### Build
+`StockFirmAgent.exe` qayta yig'ildi, foydalanuvchiga yuborildi.
