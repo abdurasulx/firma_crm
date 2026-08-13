@@ -101,6 +101,7 @@ from .services.stock_service import (
 )
 from .services.retsept_service import add_retsept_row, delete_retsept_row
 from .services import qr_service, task_service, payroll_service, kpi_service
+from .services.notifications import create_company_notification
 from .services.auth_service import create_user_service, update_user_service
 from .services.billing_service import (
     consume_billing_payment_link,
@@ -2749,6 +2750,17 @@ def sotish(request):
                             ).select_related('yetkazib_beruvchi')
                         }
                         sabablar = []
+                        # Foydalanuvchi talabi: yetkazib beruvchi hali
+                        # Desktop Agent orqali RASMAN olib chiqmagan (holati
+                        # hamon "omborda") mahsulotni to'g'ridan-to'g'ri
+                        # sotishga urinishi — bu potentsial o'g'irlik
+                        # urinishi (mahsulot tizimdan o'tmasdan qo'lga
+                        # tushirilgan). Avval bu FAQAT sotuvchining o'ziga
+                        # (xato xabari sifatida) ko'rinardi, ega hech qanday
+                        # ogohlantirish olmasdi. Endi shu holat aniqlansa,
+                        # egaga darhol bildirishnoma yuboriladi va
+                        # `SerialHarakat('shubhali')` log yoziladi.
+                        suspicious_kodlar = []
                         for kod in missing[:5]:
                             s = real_serials.get(kod)
                             if not s:
@@ -2757,10 +2769,22 @@ def sotish(request):
                                 sabablar.append(f"{kod} — allaqachon sotilgan")
                             elif s.holati == 'omborda' and request.user.type == 'yetkazib_beruvchi':
                                 sabablar.append(f"{kod} — hali agentda ro'yxatdan o'tkazilmagan (yuklamaga olinmagan, omborda turibdi)")
+                                suspicious_kodlar.append(s)
                             elif s.holati == 'chiqarilgan' and request.user.type == 'yetkazib_beruvchi':
                                 sabablar.append(f"{kod} — boshqa yetkazib beruvchiga tegishli")
                             else:
                                 sabablar.append(f"{kod} — noto'g'ri holatda ({s.get_holati_display()})")
+                        if suspicious_kodlar:
+                            qr_service.log_shubhali_sotish_urinishi(suspicious_kodlar, request.user)
+                            kodlar_text = ", ".join(s.kod for s in suspicious_kodlar)
+                            create_company_notification(
+                                request.company,
+                                "Shubhali sotish urinishi",
+                                f"{request.user.tuliq_ismi or request.user.username} (yetkazib beruvchi) "
+                                f"hali omboradan rasman olib chiqilmagan {nom} mahsulotini sotishga urindi "
+                                f"(QR: {kodlar_text}).",
+                                "warning",
+                            )
                         messages.error(
                             request,
                             f"{nom} uchun quyidagi serial kodlari qabul qilinmadi: {'; '.join(sabablar)}.",

@@ -10255,3 +10255,38 @@ yangi qatorda chiqadi.
 `main/templates/sgsot.html`, `main/templates/ytsot.html`
 
 Pure CSS/shablon — Desktop Agent exe rebuild talab qilinmaydi.
+
+## 244-qadam: Yetkazib beruvchi hali olib chiqilmagan mahsulotni sotishga urinsa — ega ogohlantirilmasdi
+
+Foydalanuvchi: yetkazib beruvchi sifatida tizimdan (Desktop Agent orqali
+yuklamaga) rasman olib chiqilmagan mahsulotni QR kod orqali sotishga
+urindi. Server buni to'g'ri rad etdi ("hali agentda ro'yxatdan
+o'tkazilmagan... omborda turibdi"), lekin bu xabar FAQAT urinayotgan
+xodimning o'ziga ko'rinardi — ega hech qanday ogohlantirish olmasdi,
+holbuki bu potentsial o'g'irlik urinishi.
+
+### Tuzatish
+- `services/qr_service.py`: yangi `log_shubhali_sotish_urinishi()` —
+  bunday urinishda har bir donaga `SerialHarakat('shubhali')` (audit
+  zanjiri uchun, model'da oldindan mavjud, lekin hech qachon
+  ishlatilmagan choice) yozadi.
+- `views.py` (sotish POST oqimi): yetkazib beruvchi `holati='omborda'`
+  (hali chiqarilmagan) serialni sotishga urinsa — endi
+  `create_company_notification()` orqali egaga darhol "Shubhali sotish
+  urinishi" ogohlantirishi yuboriladi (xodim ismi, mahsulot, QR kodlari
+  bilan).
+
+### Yon-daf topilgan xato (`services/notifications.py`)
+`create_company_notification` avval hech qayerda import qilinmagani
+uchun sezilmay qolgan — ichida `AppNotification` modeliga yozardi, lekin
+bu model 0055-migratsiyada ANCHA OLDIN ataylab o'chirilgan (endi faqat
+jonli WebSocket "toast" bildirishnomasi bor, saqlanadigan jadval yo'q).
+Import qilingan zahoti `ImportError` bilan BUTUN SAYT ishga tushmay
+qolardi. Tuzatildi — endi faqat WS orqali yuboradi, DB'ga yozmaydi.
+
+### Tekshirildi
+`manage.py check` — toza. `manage.py test main` — 93 test, hammasi o'tdi.
+
+### O'zgargan fayllar
+`main/views.py`, `main/services/qr_service.py`,
+`main/services/notifications.py`

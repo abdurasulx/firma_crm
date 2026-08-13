@@ -145,6 +145,18 @@ def mark_serials_chiqarilgan(mahsulot, company, qty, yetkazib_beruvchi=None, ser
     return updated
 
 
+def log_shubhali_sotish_urinishi(serials, actor):
+    """Yetkazib beruvchi hali Desktop Agent orqali rasman olib chiqmagan
+    (holati hamon 'omborda') mahsulotni sotishga urinsa chaqiriladi —
+    audit-zanjir uchun har bir donaga `SerialHarakat('shubhali')` yozadi
+    (egaga bildirishnoma alohida, `views.py`da yuboriladi)."""
+    for serial in serials:
+        _log_harakat(
+            serial, 'shubhali', user=actor,
+            izoh="Sotishga urinildi, lekin holati hali 'omborda' edi (yuklamaga olinmagan).",
+        )
+
+
 @transaction.atomic
 def mark_serials_sotilgan(serial_ids, savdo, actor=None, izoh=""):
     """Savdo yopilganda validatsiyadan o'tgan seriallarni savdoga bog'laydi,
