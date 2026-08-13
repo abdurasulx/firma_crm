@@ -671,9 +671,17 @@ class EmployeeScanWidget(QWidget):
             self._handle_delivery_scan(kod)
             return
 
-        self._set_result("Tekshirilmoqda...", "idle")
         server_url = db.get_setting("server_url", "")
         token = db.get_setting("agent_token", "")
+        if not token:
+            # Stansiya hali login qilinmagan (yoki "Chiqish" bosilgan) —
+            # avval "Token kiritilmagan" degan tushunarsiz xato chiqardi
+            # (real ishlab chiqarishda topilgan: foydalanuvchi shaxsiy
+            # badge/boshqa QR'ni chiqib ketgan holatda skanerlasa).
+            self._set_result("Avval stansiya login qilinishi kerak — Sozlamalarda kiring.", "error")
+            return
+
+        self._set_result("Tekshirilmoqda...", "idle")
         # Faol sessiya bo'lsa, uning tokeni ham yuboriladi — bu vazifa
         # (`ProductionTask`) QR kodini kim skanerlaganini serverga
         # bildiradi, shu orqali vazifa o'sha xodimga band qilinadi

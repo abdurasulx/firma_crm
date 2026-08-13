@@ -9970,3 +9970,43 @@ ma'nosiz edi).
 ### Tekshirildi
 `manage.py check`/`test` — 89 test, hammasi o'tdi (bu faqat shablon
 shartlari, backend logikasi o'zgarmadi — mavjud testlar buzilmadi).
+
+---
+
+## 234-qadam: Chiqib ketilgan holatda QR skanerlansa "Token kiritilmagan" tushunarsiz xato chiqardi
+
+**Holat: DONE (BUG FIX)**
+
+### Muammo
+Ega chiqib ketib (logout), keyin QR skanerlaganda "Token kiritilmagan"
+degan tushunarsiz xato ko'rdi. Sabab aniqlandi: ega aslida
+"Desktop Agent QR-login" kartasi o'rniga BOSHQA QR'ni (`xodim_badge.html`
+— shaxsiy ID-karta, login uchun emas) skanerlagan edi. Bunday QR
+`AGENTQR|`bilan boshlanmagani uchun login oqimiga emas, ODATDAGI
+xodim-badge skanerlash oqimiga (`EmployeeScanWidget.handle_scanned_code`)
+tushadi — bu esa stansiyaning O'ZI login qilingan bo'lishini talab
+qiladi (serverga so'rov stansiya tokeni bilan yuboriladi). Chiqib
+ketilgan holatda token yo'q, shuning uchun past darajadagi
+`api_client._request()`dagi umumiy xato ("Token kiritilmagan.")
+to'g'ridan-to'g'ri ko'rsatilib qolardi — foydalanuvchiga nima
+bo'lganini tushunish qiyin edi.
+
+### Nima qilindi
+`handle_scanned_code()`ga oldindan tekshiruv qo'shildi — token yo'q
+bo'lsa, tarmoq so'rovi umuman yuborilmaydi, o'rniga aniq xabar
+ko'rsatiladi: "Avval stansiya login qilinishi kerak — Sozlamalarda
+kiring."
+
+Bundan tashqari, foydalanuvchiga ikkita QR o'rtasidagi farq
+tushuntirildi: "Desktop Agent QR-login" (login uchun, faqat agent
+turidagi xodim PROFIL sahifasida) va shaxsiy "ID-karta" badge QR
+(identifikatsiya uchun, alohida sahifada) — bular ikki xil narsa.
+
+Exe qayta yig'ildi.
+
+### O'zgargan fayllar
+`desktop_agent/app/windows/employee_scan_widget.py`
+(`handle_scanned_code`)
+
+### Tekshirildi
+`py_compile` toza, exe muvaffaqiyatli qayta yig'ildi.
