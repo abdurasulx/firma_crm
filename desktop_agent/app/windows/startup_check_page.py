@@ -130,7 +130,14 @@ def _check_scanner_camera_live(scanner_checker):
 def _check_ombor_cameras_live(ombor_checker):
     cams = db.list_all_ombor_cameras()
     if not cams:
-        return False, "Hech qanday ombor kamerasi sozlanmagan."
+        # Ombor kamerasi HAMMA firma uchun majburiy emas — bu shunchaki
+        # qo'shimcha (voqea atrofida video yozish) imkoniyat,
+        # `CameraRecorderService` ham sozlanmagan bo'lsa hech narsa
+        # qilmaydi. Shuning uchun "sozlanmagan" holat startup'ni
+        # BLOKLAMASLIGI kerak — faqat HAQIQATAN sozlangan, lekin
+        # ulanolmayotgan kameralar muammo hisoblanadi (ega bilan
+        # kelishilgan: "to'liq sozlangan bo'lsa qulflansin").
+        return True, "Ombor kamerasi shart emas (sozlanmagan)."
     if ombor_checker is None:
         return False, "Kamera xizmati mavjud emas."
     total = len(cams)

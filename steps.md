@@ -9824,3 +9824,37 @@ BUTUNLAY chetlab o'tib ketardi (`request.company` o'rnatilmasdi,
 
 ### Tekshirildi
 `manage.py check`/`test` — 89 test, hammasi o'tdi.
+
+---
+
+## 230-qadam: Ombor kamerasi sozlanmagan bo'lsa ham startup'ni bloklardi — endi tarozi kabi ixtiyoriy
+
+**Holat: DONE (BUG FIX)**
+
+### Muammo
+Ega: "kamera bilan bog'liq muammo bo'lsa yoki to'liq sozlanmagan
+bo'lsa nega qulflanib qolyapti — to'liq sozlangan bo'lsa qulflansin".
+`_check_ombor_cameras_live` — agar HECH QANDAY ombor kamerasi
+sozlanmagan bo'lsa ham (`db.list_all_ombor_cameras()` bo'sh), `False`
+qaytarardi — bu esa startup tekshiruvini bloklab, "Davom etish"
+o'rniga "Sozlamalarga o'tish"ni majburlardi. Bu izchilliksiz edi:
+`CameraRecorderService`ning o'zi (voqea atrofida video yozish)
+sozlanmagan bo'lsa "hech narsa qilmaydi" (ixtiyoriy xususiyat), lekin
+startup tekshiruvi buni HAR DOIM majburiy deb hisoblardi.
+
+### Nima qilindi
+`_check_ombor_cameras_live`: endi hech qanday kamera sozlanmagan
+bo'lsa `True` ("Ombor kamerasi shart emas (sozlanmagan)") qaytaradi
+— startup'ni bloklamaydi, xuddi 218-qadamdagi tarozi bilan bir xil
+mantiq. Kamera SOZLANGAN, lekin ulanolmayotgan holat esa o'zgarishsiz
+qoladi — bu haqiqiy muammo, hamon bloklaydi ("to'liq sozlangan
+bo'lsa qulflansin" — ega so'ragan aynan shu).
+
+Exe qayta yig'ildi.
+
+### O'zgargan fayllar
+`desktop_agent/app/windows/startup_check_page.py`
+(`_check_ombor_cameras_live`)
+
+### Tekshirildi
+`py_compile` toza, exe muvaffaqiyatli qayta yig'ildi.
