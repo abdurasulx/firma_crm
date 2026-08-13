@@ -10128,3 +10128,25 @@ serverga ulangandek ko'rinardi.
 
 ### Build
 `StockFirmAgent.exe` qayta yig'ildi, foydalanuvchiga yuborildi.
+
+## 239-qadam: Login qilinmagan holatda ham qurilma-tekshiruv (printer/tarozi/kamera) ishga tushardi
+
+Foydalanuvchi: "login qilinmagan bo'lsa tekshirmasin qurilmalarni". To'g'ri —
+login yo'q holatda printer/tarozi/kamera tekshiruvining hech qanday ma'nosi
+yo'q (ular login qilingan stansiyaga xizmat qiladi). Avval bu tekshiruv HAR
+DOIM (login holatidan qat'i nazar) dastur ochilganda birinchi ko'rsatilardi.
+
+### Tuzatish (`desktop_agent/app/windows/main_window.py`)
+- Dastur ishga tushganda: token bo'lmasa, qurilma-tekshiruv sahifasi
+  butunlay o'tkazib yuboriladi — to'g'ridan-to'g'ri Sozlamalar (login)
+  sahifasi ko'rsatiladi.
+- `_on_login_succeeded`: endi aynan LOGIN MUVAFFAQIYATLI bo'lgandan KEYIN
+  qurilma-tekshiruv birinchi marta ishga tushiriladi (`root_stack` → 0,
+  `startup_check_page.refresh()`), shundan keyin "Davom etish" orqali
+  kiosk qobig'iga o'tiladi.
+
+### O'zgargan fayllar
+`desktop_agent/app/windows/main_window.py`
+
+### Build
+`StockFirmAgent.exe` qayta yig'ildi, foydalanuvchiga yuborildi.

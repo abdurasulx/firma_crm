@@ -220,7 +220,21 @@ class MainWindow(QMainWindow):
         shell_layers.setCurrentIndex(0)  # normal_content tepada, overlay boshida yashirin
 
         self.root_stack.addWidget(shell)  # index 1
-        self.root_stack.setCurrentIndex(0)
+
+        # Real bug (foydalanuvchi topdi): qurilma-tekshiruv sahifasi
+        # (printer/tarozi/kamera) HAR DOIM birinchi ko'rsatilardi — hali
+        # login qilinmagan stansiyada ham. Bu ma'nosiz: login yo'q bo'lsa
+        # qurilmalarni ishlatishning o'zi mumkin emas (xodim skanerlash,
+        # etiketka chop etish va h.k. barchasi login qilingan stansiyaga
+        # bog'liq). Endi: token yo'q bo'lsa — tekshiruvni butunlay
+        # o'tkazib yuborib, to'g'ridan-to'g'ri Sozlamalar (login) sahifasi
+        # ko'rsatiladi; login qilingandan keyin esa tekshiruv haqiqiy
+        # ma'noga ega bo'lganda (`_on_login_succeeded`) ishga tushadi.
+        if db.get_setting("agent_token", ""):
+            self.root_stack.setCurrentIndex(0)
+        else:
+            self.root_stack.setCurrentIndex(1)
+            self._select_page(1)
 
         # Fon skaner xizmati — hech qanday sahifaga bog'liq emas, dastur
         # ochiq turgan davomida doimiy ishlaydi.
@@ -322,11 +336,16 @@ class MainWindow(QMainWindow):
         if not self._heartbeat_timer.isActive():
             self._heartbeat_timer.start()
         self._send_heartbeat()
+        self.warehouse_page.refresh()
         # Endi haqiqatan login qilindi — shu daqiqadan kiosk qulfi
         # ma'noga ega bo'ladi (ega o'z QR kodini skanerlab ochishi
-        # kerak bo'ladi).
+        # kerak bo'ladi). Qurilma-tekshiruv sahifasi bu paytgacha
+        # o'tkazib yuborilgan edi (login yo'q holatda ma'nosiz edi) —
+        # endi, aynan login qilingandan KEYIN, birinchi marta ishga
+        # tushiriladi ("Davom etish" bosilgach kiosk qobig'iga o'tiladi).
         self._set_kiosk_locked(True)
-        self.warehouse_page.refresh()
+        self.root_stack.setCurrentIndex(0)
+        self.startup_check_page.refresh()
 
     def _restart_socket_worker(self):
         """Stansiya login qilingach (yoki dastur ochilganda, agar
