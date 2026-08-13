@@ -10099,3 +10099,32 @@ xatti-harakat o'zgarishsiz qoladi.
 `main/templates/xodim_badge.html`
 
 Pure backend/template — Desktop Agent exe rebuild talab qilinmaydi.
+
+## 238-qadam: Sessiya yo'q bo'lsa ham Omborlar sahifasi eski keshdagi ombor ma'lumotini ko'rsatib turardi
+
+Foydalanuvchi: "login qilmagan agent nima qiladi sozlamalarni tekshirib
+asosiy omborni qayerdan oldi sessiya yo'q bo'lsa" — to'g'ri topdi:
+`WarehouseListPage.refresh()` login holatini UMUMAN tekshirmasdan,
+to'g'ridan-to'g'ri mahalliy SQLite keshidan (`db.list_warehouses()`)
+o'qib ko'rsatardi. Token bo'lmasa ham (logout qilingan yoki hali umuman
+login qilinmagan, lekin ilgari boshqa hisob bilan sinxronlangan bo'lsa)
+"Asosiy [ERP]" kabi eski ma'lumot jadvalda qolib ketardi — go'yo stansiya
+serverga ulangandek ko'rinardi.
+
+### Tuzatish
+- `warehouse_list_page.py` — `refresh()` endi avval `agent_token`
+  borligini tekshiradi; token yo'q bo'lsa jadval bo'shatiladi va
+  "Stansiya login qilinmagan..." xabari ko'rsatiladi (keshdagi
+  ma'lumotga umuman qaralmaydi).
+- `main_window.py` — login muvaffaqiyatli bo'lganda, logout qilinganda
+  va token bekor bo'lganda (`_handle_token_invalid`) endi
+  `self.warehouse_page.refresh()` ham chaqiriladi — holat DARHOL
+  ekranga aks etadi, foydalanuvchi qo'lda Omborlar bo'limiga
+  qayta kirmasa ham.
+
+### O'zgargan fayllar
+`desktop_agent/app/windows/warehouse_list_page.py`,
+`desktop_agent/app/windows/main_window.py`
+
+### Build
+`StockFirmAgent.exe` qayta yig'ildi, foydalanuvchiga yuborildi.

@@ -116,6 +116,26 @@ class WarehouseListPage(QWidget):
         self.sync_from_server(silent=False)
 
     def refresh(self):
+        # Real bug (foydalanuvchi topdi): bu yerda login holati
+        # TEKSHIRILMAY, to'g'ridan-to'g'ri mahalliy keshdagi (oldingi
+        # sessiyadan qolgan) omborlar ro'yxati ko'rsatilardi — token
+        # yo'q/tozalangan (logout, boshqa qurilmada qayta login) holatda
+        # ham "Asosiy [ERP]" kabi eski ma'lumot ekranda qolib ketardi,
+        # go'yo stansiya hali ham serverga ulangandek. Endi avval
+        # HAQIQIY login holati tekshiriladi.
+        if not db.get_setting("agent_token", ""):
+            self.table.setRowCount(0)
+            self.table.setVisible(False)
+            self.empty_label.setText(
+                "Stansiya login qilinmagan. Sozlamalar sahifasida login "
+                "qiling — omborlar shundan keyin yuklanadi."
+            )
+            self.empty_label.setVisible(True)
+            return
+        self.empty_label.setText(
+            "Hali hech qanday ombor topilmadi. Avval Sozlamalar sahifasida "
+            "login qiling — omborlar avtomatik yuklanadi."
+        )
         warehouses = db.list_warehouses()
         self.table.setRowCount(len(warehouses))
         self.table.setVisible(bool(warehouses))

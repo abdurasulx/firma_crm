@@ -326,6 +326,7 @@ class MainWindow(QMainWindow):
         # ma'noga ega bo'ladi (ega o'z QR kodini skanerlab ochishi
         # kerak bo'ladi).
         self._set_kiosk_locked(True)
+        self.warehouse_page.refresh()
 
     def _restart_socket_worker(self):
         """Stansiya login qilingach (yoki dastur ochilganda, agar
@@ -391,6 +392,7 @@ class MainWindow(QMainWindow):
         (aks holda login yo'q/qulflangan tuzog'i qayta yuzaga keladi)."""
         self._stop_session_workers()
         self._set_kiosk_locked(False)
+        self.warehouse_page.refresh()
 
     def _stop_session_workers(self):
         """Faol sessiyaga bog'liq fon jarayonlarini (heartbeat, WS ulanish)
@@ -416,6 +418,7 @@ class MainWindow(QMainWindow):
         # kiosk qulfi ham ma'nosiz (aks holda yuqoridagi tuzoq qayta
         # takrorlanadi: login yo'q, lekin qulflangan).
         self._set_kiosk_locked(False)
+        self.warehouse_page.refresh()
         QMessageBox.warning(
             self, "Sessiya yopildi",
             "Boshqa kompyuter yoki qurilmada shu hisob bilan tizimga kirilgani uchun "
