@@ -144,7 +144,7 @@ class MainWindow(QMainWindow):
             "background:#334155; border:none; border-radius:8px; }"
             "QPushButton:hover { background:#475569; }"
         )
-        self.kiosk_lock_btn.clicked.connect(lambda: self._set_kiosk_locked(True))
+        self.kiosk_lock_btn.clicked.connect(self._on_kiosk_lock_btn_clicked)
         sidebar_layout.addWidget(self.kiosk_lock_btn)
 
         root_layout.addWidget(sidebar)
@@ -536,6 +536,22 @@ class MainWindow(QMainWindow):
             "(shaxsiy badge emas)."
         )
         QMessageBox.warning(self, "Qulf ochilmadi", message)
+
+    def _on_kiosk_lock_btn_clicked(self):
+        """"Qulflash" tugmasi — real bug (foydalanuvchi topdi): bu
+        avval login holatidan qat'i nazar ishlar edi, ya'ni hali login
+        qilinmagan stansiyada ham bosilsa, xuddi 236-qadamdagi tuzoqni
+        FOYDALANUVCHI O'ZI qo'lda qayta yaratardi (qulf ochish esa
+        ALLAQACHON login qilingan stansiyani talab qiladi). Qulflash
+        faqat ALLAQACHON login qilingan stansiyada ma'noga ega."""
+        if not db.get_setting("agent_token", ""):
+            QMessageBox.warning(
+                self, "Login qilinmagan",
+                "Hali stansiya login qilinmagan — avval Sozlamalarda login qiling, "
+                "keyingina kiosk qulflash mumkin bo'ladi.",
+            )
+            return
+        self._set_kiosk_locked(True)
 
     def _set_kiosk_locked(self, locked: bool):
         """Kiosk qulfi holatini o'rnatadi. Qulflanganda: sidebar

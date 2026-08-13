@@ -10074,3 +10074,28 @@ chaqirilardi, login holatidan qat'i nazar.
 
 ### Build
 `StockFirmAgent.exe` qayta yig'ildi, foydalanuvchiga yuborildi.
+
+## 237-qadam: Desktop Agent uchun "Badge" sahifasi login QR emas edi — ikkita alohida QR chalkashtirdi
+
+Foydalanuvchi skanerlagan QR "Badge ko'rish" sahifasidan (`xodim_badge.html`)
+edi — bu shaxsni tasdiqlash uchun mo'ljallangan oddiy QR (login formatida
+emas), shuning uchun Desktop Agent uni login sifatida qabul qilmadi. Haqiqiy
+login QR faqat profil sahifasida (`egaprofile.html`) pastroqda alohida
+"Desktop Agent QR-login" kartasida edi — foydalanuvchi buni topmadi va
+"nega ishlamayapti" deb noto'g'ri QR'ni ishlatdi.
+
+Foydalanuvchi talabi (ilgari ham bir necha marta aytilgan): desktop_agent
+turidagi hisob uchun ALOHIDA-ALOHIDA ikkita QR bo'lmasligi kerak — bitta QR
+hammasini (identifikatsiya + login) o'z ichiga olsin.
+
+### Tuzatish (`main/templates/xodim_badge.html`)
+Agar ko'rilayotgan foydalanuvchi (`target_user`) `desktop_agent` turida bo'lsa
+va ko'ruvchi `ega` bo'lsa — "Badge ko'rish" sahifasi endi oddiy identifikatsiya
+QR o'rniga to'g'ridan-to'g'ri login QR'ni (`agent_login_qr_image`) ko'rsatadi.
+Boshqa barcha xodim turlari uchun (pazanda, omborchi va h.k.) eski
+xatti-harakat o'zgarishsiz qoladi.
+
+### O'zgargan fayllar
+`main/templates/xodim_badge.html`
+
+Pure backend/template — Desktop Agent exe rebuild talab qilinmaydi.
