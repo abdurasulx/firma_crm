@@ -9858,3 +9858,43 @@ Exe qayta yig'ildi.
 
 ### Tekshirildi
 `py_compile` toza, exe muvaffaqiyatli qayta yig'ildi.
+
+---
+
+## 231-qadam: Omborlar jadvalida "Kameralar"/"O'chirish" tugmalari bir-birining ustiga chiqib ko'rinardi (vizual xato)
+
+**Holat: DONE (BUG FIX)**
+
+### Muammo
+Ega skrinshot bilan ko'rsatdi: Desktop Agent'ning "Omborlar" sahifasida
+jadval ustunlari (kamera holati matni va amal tugmalari) juda tor
+bo'lib, "Kameralar"/"O'chirish" tugmalari matni kesilgan va bir-
+birining ustiga chiqib ko'rinardi. Sababni topish uchun dastur manba
+kodidan (`main.py`) to'g'ridan-to'g'ri ishga tushirib tekshirildi
+(avval kompilyatsiya qilingan eski nusxa mutex orqali ikkinchi
+nusxani ochishga to'sqinlik qilgani aniqlanib, o'chirilgach qayta
+urinildi). Kodni ko'zdan kechirib sabab topildi:
+`WarehouseListPage`dagi jadvalning 2- va 3-ustunlari
+(`setSectionResizeMode`) uchun HECH QANDAY kenglik rejimi
+belgilanmagan edi — faqat 0/1-ustunlar (`Nomi`/`Manzil`) `Stretch`
+qilingan, qolganlari standart (juda tor) holicha qolib, ichidagi
+matn/tugmalarga yetarli joy bermasdi.
+
+### Nima qilindi
+2- va 3-ustunlarga `QHeaderView.ResizeMode.ResizeToContents` qo'shildi
+— endi mazmuniga (matn/tugmalar) qarab avtomatik kenglashadi. Qo'shimcha
+xavfsizlik: `refresh()` oxirida `resizeColumnToContents(2)`/`(3)` ham
+aniq chaqiriladi — chunki `setCellWidget` orqali qo'yilgan
+widget'lar (tugmalar) uchun `ResizeToContents` birinchi to'ldirishda
+har doim to'g'ri hisoblanavermasligi mumkin (Qt'ning tanilgan xatti-
+harakati).
+
+Exe qayta yig'ildi.
+
+### O'zgargan fayllar
+`desktop_agent/app/windows/warehouse_list_page.py`
+
+### Tekshirildi
+`py_compile` toza, exe muvaffaqiyatli qayta yig'ildi. (Vizual natija
+— haqiqiy stansiyada ko'rinishni tasdiqlash tavsiya etiladi, avtomatik
+testda tekshirib bo'lmaydi.)

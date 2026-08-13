@@ -86,6 +86,13 @@ class WarehouseListPage(QWidget):
         self.table.setHorizontalHeaderLabels(["Nomi", "Manzil", "Kameralar", ""])
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        # 2-ustun (kamera holati matni) va 3-ustun (tugmalar) uchun
+        # kenglik rejimi ko'rsatilmagan edi — standart holatda juda tor
+        # bo'lib qolib, "Kameralar"/"O'chirish" tugmalari matni kesilib/
+        # bir-birining ustiga chiqib ko'rinardi (real topilgan vizual
+        # xato). Endi mazmuniga qarab avtomatik kenglashadi.
+        self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        self.table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
         self.table.verticalHeader().setVisible(False)
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -145,6 +152,13 @@ class WarehouseListPage(QWidget):
             actions_layout.addWidget(delete_btn)
 
             self.table.setCellWidget(row, 3, actions)
+
+        # `ResizeToContents` cell-WIDGET (tugmalar) uchun birinchi
+        # to'ldirishda to'g'ri hisoblanmasligi mumkin (widget hali
+        # joylashtirilmagan bo'ladi) — shuning uchun barcha qatorlar
+        # to'ldirilgandan KEYIN yana bir marta aniq chaqiriladi.
+        self.table.resizeColumnToContents(2)
+        self.table.resizeColumnToContents(3)
 
     def _delete_warehouse(self, warehouse: db.Warehouse):
         confirm = QMessageBox.question(
