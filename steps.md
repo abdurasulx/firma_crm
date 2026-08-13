@@ -10010,3 +10010,38 @@ Exe qayta yig'ildi.
 
 ### Tekshirildi
 `py_compile` toza, exe muvaffaqiyatli qayta yig'ildi.
+
+---
+
+## 235-qadam: Stansiya login (QR/parol) endi FAQAT desktop_agent turidagi hisob uchun — eski ega QR'i backend darajasida ham yopildi
+
+**Holat: DONE (XAVFSIZLIK TUZATISHI)**
+
+### Muammo
+233-qadamda faqat UI'dan (`egaprofile.html`) "Desktop Agent QR-login"
+kartasi yashirilgan edi — lekin BACKEND (`agent_station_login`,
+`agent_login_by_qr`) hech qanday xodim TURINI tekshirmasdi (bu
+ATAYLAB shunday loyihalashtirilgan edi — "firmaning istalgan faol
+foydalanuvchisi... stansiya sifatida kira oladi"). Natijada: avval
+chop etilgan/saqlangan ega QR kodi (yoki istalgan boshqa xodim
+login/paroli) HAMON stansiya sifatida kirish uchun ishlardi — ega
+buni aniqladi ("eski ega qr kodi bilan login qilib kirib
+ketaveryapti") va buni ATAYLAB yopishni so'radi: "agentni qrsi eski
+eganikidek hamma narsani o'z ichiga olsin" — ya'ni FAQAT maxsus
+yaratilgan agent hisobi orqali kirish ishlashi kerak.
+
+### Nima qilindi
+`agent_station_login` (parol) va `agent_login_by_qr` (QR) — ikkalasiga
+ham `station.type != 'desktop_agent'` tekshiruvi qo'shildi (403,
+aniq xabar bilan). Endi hisob turi qat'iy nazar (ega, omborchi va h.k.)
+— faqat maxsus yaratilgan `desktop_agent` turidagi hisob (login/QR)
+stansiya tokeni ola oladi. Bu 233-qadamdagi UI-yashirishni HAQIQIY
+(backend darajasidagi) cheklovga aylantiradi — eski/saqlangan QR
+nusxalari endi rad etiladi.
+
+### O'zgargan fayllar
+`main/agent_api_views.py` (`agent_station_login`, `agent_login_by_qr`),
+`main/tests_agent_station_type_restriction.py` (yangi — 4 test)
+
+### Tekshirildi
+`manage.py check`/`test` — 93 test, hammasi o'tdi.

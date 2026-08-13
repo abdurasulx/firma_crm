@@ -190,6 +190,17 @@ def agent_station_login(request):
     if not station.is_active:
         return Response({'detail': "Bu hisob faol emas."}, status=status.HTTP_403_FORBIDDEN)
 
+    # 234-qadam (real ishlab chiqarish talabi): avval ISTALGAN faol
+    # hisob (ega, omborchi va h.k.) stansiya sifatida kira olardi — bu
+    # ega bilan kelishilgan holda YOPILDI, faqat maxsus yaratilgan
+    # `desktop_agent` turidagi hisoblar stansiya bo'la oladi (ega'ning
+    # shaxsiy hisobi bilan agentga kirish endi ATAYLAB rad etiladi).
+    if station.type != 'desktop_agent':
+        return Response(
+            {'detail': "Faqat maxsus yaratilgan Desktop Agent stansiyasi hisobi bilan kirish mumkin."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
     return Response(_issue_station_token(station, company))
 
 
@@ -228,6 +239,19 @@ def agent_login_by_qr(request):
 
     if not station.is_active:
         return Response({'detail': "Bu hisob faol emas."}, status=status.HTTP_403_FORBIDDEN)
+
+    # 234-qadam: eski (masalan avval bosib olingan/saqlangan) ega yoki
+    # boshqa turdagi xodim QR kodi ENDI stansiya sifatida kira olmaydi
+    # — faqat maxsus yaratilgan `desktop_agent` turidagi hisob QR kodi
+    # ishlaydi (`egaprofile.html`/`egayt.html`dagi 233-qadamda UI'dan
+    # olib tashlangan edi, bu esa backend darajasidagi haqiqiy yopiq
+    # eshik — eski chop etilgan/saqlangan QR nusxalari ham endi
+    # rad etiladi).
+    if station.type != 'desktop_agent':
+        return Response(
+            {'detail': "Bu QR kod stansiya login uchun emas — faqat Desktop Agent xodimi QR kodi ishlaydi."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
 
     return Response(_issue_station_token(station, company))
 
