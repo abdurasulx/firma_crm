@@ -10290,3 +10290,36 @@ qolardi. Tuzatildi — endi faqat WS orqali yuboradi, DB'ga yozmaydi.
 ### O'zgargan fayllar
 `main/views.py`, `main/services/qr_service.py`,
 `main/services/notifications.py`
+
+## 245-qadam: "Xom ashyoni tarozida tortib oling" abadiy osilib qolishi mumkin edi — sababi ko'rinmasdi
+
+Foydalanuvchi bir necha kundan beri o'zgarmagan (2 dona "claimed" holatidagi)
+vazifalarni ko'rsatib, "eski tizimda qolib ketgan buglarni ham tozalab
+ketadigon qil" dedi.
+
+Kod tekshiruvida real sabab topildi: `task_service.weigh_task_pickup`da
+"hammasi yoki hech narsa" qoidasi bor — vazifaning BOM komponentlaridan
+BIRORTASI omborda yetarli bo'lmasa, Desktop Agent'da HECH QANDAY xom ashyo
+(hatto yetarli bo'lganlari ham) tortib bo'lmaydi, vazifa abadiy "claimed"
+holatda osilib qoladi. Bu sabab FAQAT Desktop Agent'da tortishga
+urinilganda, o'tkinchi xato sifatida ko'rinardi — veb dashboardda hech
+qanday iz qoldirmasdi, shuning uchun pazanda/ega nima uchun vazifa
+harakatlanmayotganini bilolmasdi.
+
+### Tuzatish
+- `views.py` (`main` — pazanda dashboard): endi har bir "claimed" vazifa
+  uchun uning tasdiqlanmagan komponentlari omborda yetarlimi tekshiriladi,
+  yetishmasa `task.stok_yetishmovchiligi` (qaysi komponent, kerak/qoldiq)
+  hisoblanadi.
+- `pazanda_dashboard.html`: agar shunday yetishmovchilik bo'lsa, oddiy
+  "⏳ tarozida tortib oling" o'rniga qizil "⛔ Omborda yetarli xom ashyo
+  yo'q — tortib bo'lmaydi: ..." xabari aniq komponent va yetishmagan
+  miqdor bilan ko'rsatiladi.
+
+### Tekshirildi
+`manage.py check` — toza. `manage.py test main` — 93 test, hammasi o'tdi.
+
+### O'zgargan fayllar
+`main/views.py`, `main/templates/pazanda_dashboard.html`
+
+Pure backend/shablon — Desktop Agent exe rebuild talab qilinmaydi.

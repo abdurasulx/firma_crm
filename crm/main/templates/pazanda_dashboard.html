@@ -759,7 +759,11 @@
                 <div class="act-sub">
                     {{ task.rejalashtirilgan_miqdor|floatformat:0 }} dona
                     &nbsp;·&nbsp;
-                    {% if task.status == 'claimed' %}
+                    {% if task.status == 'claimed' and task.stok_yetishmovchiligi %}
+                    <span style="color:#b91c1c;font-weight:600;">
+                        ⛔ Omborda yetarli xom ashyo yo'q — tortib bo'lmaydi: {{ task.stok_yetishmovchiligi }}
+                    </span>
+                    {% elif task.status == 'claimed' %}
                     <span style="color:#b45309;font-weight:600;">⏳ Xom ashyoni Desktop Agent'da tarozida tortib oling</span>
                     {% elif task.status == 'materials_ready' %}
                     <span style="color:#9a3412;font-weight:600;">📦 Xom ashyo tortildi — mahsulotni tayyorlab bo'lgach "Ish bitdi"ni bosing</span>
