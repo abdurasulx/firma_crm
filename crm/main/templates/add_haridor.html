@@ -373,14 +373,7 @@
                             <span>Galereya</span>
                         </div>
                     </div>
-                    {# Real bug (foydalanuvchi topdi, real qurilmada): `capture="environment"`
-                       iOS Safari'da Kamera ilovasini ALOHIDA (Safari'dan tashqarida)
-                       ochadi — qaytganda Safari xotira tejash uchun sahifani qisman
-                       qayta tiklaydi, natijada CSRF cookie/token holati yo'qolib,
-                       "CSRF token missing" xatosi berardi. `capture` olib tashlansa,
-                       mobil brauzer kamerani Safari ICHIDA (action sheet) ochadi —
-                       sahifa holati saqlanadi. #}
-                    <input type="file" id="dukon_rasmi_mobile" name="dukon_rasmi" accept="image/*" style="display:none;" onchange="handleFile(this, 'dukon_rasmi')">
+                    <input type="file" id="dukon_rasmi_mobile" name="dukon_rasmi" accept="image/*" capture="environment" style="display:none;" onchange="handleFile(this, 'dukon_rasmi')">
                     <input type="file" id="dukon_rasmi_gallery" name="dukon_rasmi" accept="image/*" style="display:none;" onchange="handleFile(this, 'dukon_rasmi')">
                     <div class="img-preview" id="preview_dukon_rasmi">
                         <img src="" alt="Preview">
@@ -401,7 +394,7 @@
                             <span>Galereya</span>
                         </div>
                     </div>
-                    <input type="file" id="egasining_rasmi_mobile" name="egasining_rasmi" accept="image/*" style="display:none;" onchange="handleFile(this, 'egasining_rasmi')">
+                    <input type="file" id="egasining_rasmi_mobile" name="egasining_rasmi" accept="image/*" capture="user" style="display:none;" onchange="handleFile(this, 'egasining_rasmi')">
                     <input type="file" id="egasining_rasmi_gallery" name="egasining_rasmi" accept="image/*" style="display:none;" onchange="handleFile(this, 'egasining_rasmi')">
                     <div class="img-preview" id="preview_egasining_rasmi">
                         <img src="" alt="Preview">
