@@ -1,21 +1,67 @@
-.camera-widget {
-    background: #fff;
-    border: 1.5px solid var(--slate-200, #e2e8f0);
-    border-radius: 1rem;
-    padding: 1rem;
-}
-
-.camera-widget .camera-label {
+/* Rasm maydoni — default holatda KICHIK (thumbnail + tugmalar), jonli
+   kamera faqat modal ochilganda ko'rinadi. */
+.camera-field-label {
     font-size: 0.75rem;
     font-weight: 800;
     color: var(--slate-700, #334155);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.5rem;
     display: block;
 }
 
-.camera-frame {
+.camera-thumb {
+    position: relative;
+    width: 100%;
+    max-width: 220px;
+    aspect-ratio: 4/3;
+    background: var(--slate-100, #f1f5f9);
+    border: 1.5px dashed var(--slate-300, #cbd5e1);
+    border-radius: 0.75rem;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.6rem;
+}
+
+.camera-thumb-img { width: 100%; height: 100%; object-fit: cover; display: none; }
+
+.camera-thumb-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    color: #94a3b8;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.camera-thumb-placeholder i { font-size: 1.4rem; }
+
+.camera-field-actions { display: flex; gap: 0.5rem; }
+
+.camera-field-actions button {
+    padding: 0.55rem 0.9rem;
+    border-radius: 0.6rem;
+    border: 1.5px solid var(--slate-200, #e2e8f0);
+    background: var(--slate-50, #f8fafc);
+    font-weight: 700;
+    font-size: 0.8rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.btn-camera-open {
+    background: var(--primary, #10b981) !important;
+    color: #fff !important;
+    border-color: transparent !important;
+}
+
+/* === Modal ichidagi jonli kamera === */
+#cameraCaptureModal .camera-frame {
     position: relative;
     width: 100%;
     aspect-ratio: 4/3;
@@ -27,14 +73,15 @@
     justify-content: center;
 }
 
-.camera-video, .camera-preview {
+#cameraCaptureModal .camera-video,
+#cameraCaptureModal .camera-preview {
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: none;
 }
 
-.camera-placeholder {
+#cameraCaptureModal .camera-placeholder {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -46,9 +93,9 @@
     padding: 1rem;
 }
 
-.camera-placeholder i { font-size: 1.75rem; }
+#cameraCaptureModal .camera-placeholder i { font-size: 1.75rem; }
 
-.camera-status {
+#cameraCaptureModal .camera-status {
     font-size: 0.75rem;
     color: #b45309;
     font-weight: 700;
@@ -56,13 +103,13 @@
     min-height: 1em;
 }
 
-.camera-actions {
+#cameraCaptureModal .camera-actions {
     display: flex;
     gap: 0.5rem;
     margin-top: 0.75rem;
 }
 
-.camera-actions button {
+#cameraCaptureModal .camera-actions button {
     flex: 1;
     padding: 0.7rem 0.5rem;
     border-radius: 0.65rem;
@@ -75,19 +122,15 @@
     align-items: center;
     justify-content: center;
     gap: 0.4rem;
-    transition: all .15s;
 }
 
-.camera-actions button:hover { background: var(--slate-100, #f1f5f9); }
-
-.btn-camera-shoot {
+#cameraCaptureModal .btn-camera-shoot,
+#cameraCaptureModal .btn-camera-accept {
     background: var(--primary, #10b981) !important;
     color: #fff !important;
     border-color: transparent !important;
 }
 
-.btn-camera-shoot:hover { background: var(--primary-dark, #059669) !important; }
-
 @media (max-width: 480px) {
-    .camera-actions { flex-direction: column; }
+    #cameraCaptureModal .camera-actions { flex-direction: column; }
 }

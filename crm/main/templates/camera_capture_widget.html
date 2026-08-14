@@ -1,0 +1,28 @@
+{% load static %}
+<!-- Umumiy "sahifa ichidagi kamera" modali — qr_scan_widget.html bilan bir xil
+     naqsh: rasm maydonlari default holatda kichik ("Rasmga olish" tugmasi +
+     preview), bosilganda esa shu modal ochilib, jonli kamera ko'rsatiladi.
+     Sahifada bir nechta rasm maydoni bo'lsa (masalan add_haridor.html —
+     do'kon + mas'ul rasmi) ham bitta shu modal barchasiga xizmat qiladi. -->
+<div id="cameraCaptureModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,.75); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:16px; padding:18px; width:min(92vw, 420px);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <strong id="cameraModalTitle">Rasmga olish</strong>
+            <button type="button" onclick="closeCameraCaptureModal()" style="border:none; background:none; font-size:20px; cursor:pointer;">&times;</button>
+        </div>
+        <div class="camera-frame">
+            <video class="camera-video" autoplay playsinline muted></video>
+            <canvas class="camera-canvas" style="display:none;"></canvas>
+            <img class="camera-preview" alt="Olingan rasm">
+            <div class="camera-placeholder"><i class="fas fa-camera"></i><span>Kamera ochilmoqda...</span></div>
+        </div>
+        <div class="camera-status"></div>
+        <div class="camera-actions">
+            <button type="button" class="btn-camera-shoot"><i class="fas fa-camera"></i> Rasmga olish</button>
+            <button type="button" class="btn-camera-retake" style="display:none;"><i class="fas fa-rotate"></i> Qayta olish</button>
+            <button type="button" class="btn-camera-accept" style="display:none;"><i class="fas fa-check"></i> Saqlash</button>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'js/camera_widget.js' %}"></script>

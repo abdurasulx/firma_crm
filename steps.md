@@ -10711,3 +10711,23 @@ xatosiz kompilyatsiya qilinishi tasdiqlandi.
 tashlandi), `main/csrf_debug.py` (o'chirildi)
 
 Pure backend/frontend — Desktop Agent exe rebuild talab qilinmaydi.
+
+## 260-qadam: Rasm/chek maydonlari majburiy "Chek rasmi" endi Safari ichida ochiladi (galereya muqobili yo'qligi CSRF xatosini har safar takrorlagan)
+
+Foydalanuvchi skrinshot bilan ko'rsatdi: "Chek rasmi" maydoni "Do'kon
+qo'shish"dan farqli — galereya muqobili YO'Q edi, `capture="environment"`
+HAR SAFAR sotuv yopilganda majburan iOS Kamera ilovasini ochardi. Bu
+259-qadamda topilgan WebKit xatosini ("CSRF token missing" — aslida
+CONTENT_LENGTH=0, so'rov tanasi butunlay bo'sh) har bir sotuvda
+takrorlashi ehtimoli yuqori edi.
+
+### Tuzatish (`sgsot.html`, `ytsot.html`)
+"Chek rasmi" endi 259-qadamdagi sahifa-ichi kamera vidjetiga
+o'tkazildi — galereya muqobili bilan birga, hech qachon tashqi Kamera
+ilovasiga chiqmaydi.
+
+### Tekshirildi
+`manage.py check` — toza.
+
+### O'zgargan fayllar
+`main/templates/sgsot.html`, `main/templates/ytsot.html`

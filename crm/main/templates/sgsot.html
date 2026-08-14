@@ -297,30 +297,24 @@
         </div>
 
         <div class="form-card">
-            <label class="camera-label">Chek rasmi</label>
+            <label class="camera-field-label">Chek rasmi</label>
             {# Real bug (server logida CONTENT_LENGTH=0 bilan tasdiqlangan):
                <input capture> orqali tashqi iOS Kamera ilovasi ochilib,
                qaytgach tanlangan fayl "yaroqsiz" holatga tushib qolar,
                forma butunlay bo'sh tanada yuborilar edi ("CSRF token
                missing" — aslida CSRF bilan bog'liq emas edi). Endi
-               kamera sahifaning O'ZIDA (getUserMedia) ochiladi —
-               hech qachon tashqariga chiqmaydi. #}
-            <div class="camera-widget" id="cam-chek-rasmi">
-                <div class="camera-frame">
-                    <video class="camera-video" autoplay playsinline muted></video>
-                    <canvas class="camera-canvas" style="display:none;"></canvas>
-                    <img class="camera-preview" alt="Chek rasmi">
-                    <div class="camera-placeholder" style="display:none;">
-                        <i class="fas fa-camera"></i>
-                        <span>Kamera ochilmoqda...</span>
-                    </div>
+               kamera sahifaning O'ZIDA (getUserMedia) ochiladi, MODAL
+               orqali (foydalanuvchi so'rovi: sahifada darhol katta
+               qora oyna bo'lib turmasin). #}
+            <div class="camera-field" data-camera-field data-facing="environment" data-filename="chek" data-label="Chek rasmi">
+                <div class="camera-thumb">
+                    <img class="camera-thumb-img" alt="Chek rasmi">
+                    <div class="camera-thumb-placeholder"><i class="fas fa-camera"></i><span>Rasm yo'q</span></div>
                 </div>
-                <div class="camera-actions">
-                    <button type="button" class="btn-camera-shoot" style="display:none;"><i class="fas fa-camera"></i> Rasmga olish</button>
+                <div class="camera-field-actions">
+                    <button type="button" class="btn-camera-open"><i class="fas fa-camera"></i> Rasmga olish</button>
                     <button type="button" class="btn-camera-gallery"><i class="fas fa-image"></i> Galereyadan</button>
-                    <button type="button" class="btn-camera-retake" style="display:none;"><i class="fas fa-rotate"></i> Qayta olish</button>
                 </div>
-                <div class="camera-status"></div>
                 <input type="file" accept="image/*" class="camera-gallery-input" style="display:none;">
                 <input type="file" name="rasm" id="id_rasm" accept="image/*" required style="display:none;" class="camera-real-input">
             </div>
@@ -338,7 +332,6 @@
     </form>
 </div>
 
-<script src="{% static 'js/camera_widget.js' %}"></script>
 <script>
     // === CSRF himoyasi (to'liq, ko'p qatlamli) ===
     // Real bug, uzoq diagnostika orqali aniqlangan: mobil qurilmalarda
@@ -464,8 +457,7 @@
     document.getElementById('customer-name').addEventListener('input', updateContractLink);
     document.getElementById('credit-down-payment').addEventListener('input', updateContractLink);
     updateContractLink();
-
-    setupCameraWidget(document.getElementById('cam-chek-rasmi'), { facingMode: 'environment', filename: 'chek' });
 </script>
+{% include 'camera_capture_widget.html' %}
 {% include 'qr_scan_widget.html' %}
 {% endblock %}
