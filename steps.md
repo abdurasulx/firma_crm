@@ -10428,3 +10428,34 @@ noto'g'ri yo'lga yuborilib ketadi.
 
 ### Build
 `StockFirmAgent.exe` qayta yig'ildi, foydalanuvchiga yuborildi.
+
+## 250-qadam: TOPILDI (aniq diagnostika) — HID skaner-Caps Lock nomuvofiqligi tufayli login QR harflari teskari registrda kelardi
+
+Foydalanuvchi bilan birgalikda aniq diagnostika: Notepad'ga skanerlab
+ko'rildi — natija `"agentqr|SAFIYA|Gaaaa...=..."` (kutilgan
+`"AGENTQR|safiya|..."` o'rniga). Bir xil fizik skaner boshqa kompyuterda
+to'g'ri ishlaganidan aniq bo'ldi: muammo shu kompyuterning Caps Lock
+holati bilan skaner o'rtasidagi nomuvofiqlik (keng tarqalgan HID
+skaner-Windows muammosi) — BARCHA harflar teskari registrda keladi,
+raqam/belgilar (`|`, `-`, `_`) ta'sirlanmaydi. Klaviatura tilini
+inglizchaga o'tkazish yordam bermadi (sabab til emas, Caps Lock edi).
+
+### Tuzatish (`main_window.py`)
+`_on_code_scanned`: agar `kod` `"AGENTQR|"` bilan boshlanmasa, lekin
+`kod.swapcase()` boshlansa — asl (to'g'ri registrli) matn tiklab
+olinadi. Fernet payload registrga sezgir (base64) bo'lgani uchun
+to'g'ridan-to'g'ri katta/kichik qilib bo'lmaydi, lekin muammo aynan
+BUTUN matnning registri teskari bo'lgani uchun `swapcase()` to'liq
+to'g'ri tiklaydi.
+
+**Eslatma**: xuddi shu Caps Lock muammosi shu kompyuterda boshqa
+skanlarga (xodim badge, Serial QR) ham ta'sir qilishi mumkin — ular
+hozircha bu tuzatishga kirmagan. Agar ular ham muammo bersa, aynan shu
+kompyuterda **Caps Lock**ni yoqib/o'chirib ko'rish (klaviaturadagi LED
+holatini tekshirib) haqiqiy (OS darajasidagi) yechim bo'ladi.
+
+### O'zgargan fayllar
+`desktop_agent/app/windows/main_window.py`
+
+### Build
+`StockFirmAgent.exe` qayta yig'ildi, foydalanuvchiga yuborildi.

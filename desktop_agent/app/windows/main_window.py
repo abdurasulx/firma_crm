@@ -473,6 +473,21 @@ class MainWindow(QMainWindow):
         # shu sababli mos kelmay qolib, kod noto'g'ri (oddiy xodim-skan)
         # yo'lga yuborilardi. Endi avval bo'shliqlar tozalanadi.
         kod = kod.strip()
+        # Real bug (foydalanuvchi topdi, aniq diagnostika bilan): ba'zi
+        # kompyuterlarda HID skaner-Windows Caps Lock holati mos
+        # kelmasligi tufayli, skanerdan kelgan matnning BARCHA harflari
+        # teskari registrda keladi ("AGENTQR|SAFIYA|xxx" o'rniga
+        # "agentqr|safiya|XXX") — bu klassik, keng tarqalgan HID skaner
+        # muammosi (raqam/belgilar ta'sirlanmaydi, faqat harflar). Bir
+        # xil skaner boshqa kompyuterda to'g'ri ishlaganidan aniq
+        # bo'ldi — muammo shu kompyuterning Caps Lock holatida, foydalanuvchi
+        # dasturiy yechim so'radi. Fernet payload harf registriga sezgir
+        # (base64) bo'lgani uchun uni to'g'ridan-to'g'ri katta/kichik
+        # qilib bo'lmaydi — lekin BUTUN matnning registrini
+        # ALMASHTIRISH (`swapcase`) asl holatni tiklaydi, chunki muammo
+        # aynan shu — har bir harf teskari.
+        if not kod.startswith("AGENTQR|") and kod.swapcase().startswith("AGENTQR|"):
+            kod = kod.swapcase()
         if kod.startswith("AGENTQR|"):
             # Real bug (foydalanuvchi topdi): `_kiosk_locked` dastur
             # ishga tushganda har doim `True` bilan boshlanadi — HALI
