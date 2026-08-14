@@ -10583,3 +10583,30 @@ Agar (23 ta ochiq tab kabi og'ir xotira bosimi tufayli) `csrftoken`
 cookie'sining o'zi ham yo'qolgan bo'lsa, bu JS ham yordam bermaydi —
 bunday holatda muammo haqiqatan brauzer/qurilma tomonida (Safari
 tab-tozalash xatti-harakati), Django kodida emas.
+
+## 256-qadam: Sotish formalarida "Chek rasmi" majburiy kamera-only maydoni — CSRF xatosining haqiqiy sababi
+
+Yangi dalil: foydalanuvchi BOSHQA brauzerdan yangi login qilib ham xuddi
+shu "CSRF token missing" xatosini oldi. Bu 253-qadamda (do'kon
+qo'shishda) revert qilingan holatdan farq qiladi — u yerda galereya
+muqobili bor edi, shuning uchun boshqa brauzerda tasodifan galereya
+ishlatilib, muammo "yo'qolgandek" ko'ringan edi.
+
+Sotish formalarida (`sgsot.html`, `ytsot.html`) "Chek rasmi" maydoni
+MAJBURIY va **muqobilsiz** — faqat `capture="environment"` (to'g'ridan-
+to'g'ri iOS Kamera ilovasi). Galereya tanlash imkoni yo'qligi sababli, bu
+muammo HAR SAFAR, HAR QANDAY iOS brauzerda (WebKit darajasidagi xatti-
+harakat — Safari, Chrome-iOS bir xil) takrorlanadi.
+
+### Tuzatish
+`sgsot.html`, `ytsot.html` — "Chek rasmi" maydonidan `capture="environment"`
+olib tashlandi. Endi brauzer kamerani Safari/Chrome ICHIDA (action sheet)
+ochadi, alohida Kamera ilovasiga chiqmaydi — sahifa holati (CSRF) buzilmaydi.
+
+### Tekshirildi
+`manage.py check` — toza.
+
+### O'zgargan fayllar
+`main/templates/sgsot.html`, `main/templates/ytsot.html`
+
+Pure frontend/shablon — Desktop Agent exe rebuild talab qilinmaydi.

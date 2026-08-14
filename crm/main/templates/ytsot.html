@@ -371,7 +371,11 @@
                 <img id="upload-preview" style="display:none; max-width:100%; max-height:180px; border-radius:0.75rem; object-fit:cover;">
                 <div style="font-weight: 600;" id="file-status">Rasm tanlang yoki rasmga oling</div>
                 <div style="font-size: 0.75rem; color: var(--slate-400);">Majburiy rasm</div>
-                <input type="file" name="rasm" id="id_rasm" accept="image/*" capture="environment" required style="display:none" onchange="onFileChange(this)">
+                {# Real bug (sgsot.html'dagi bilan bir xil, boshqa brauzerlarda ham
+                   takrorlanadi): galereya muqobili yo'q, `capture="environment"`
+                   har safar majburan iOS Kamera ilovasini ochadi, Safari qaytganda
+                   CSRF holatini yo'qotadi. #}
+                <input type="file" name="rasm" id="id_rasm" accept="image/*" required style="display:none" onchange="onFileChange(this)">
             </label>
         </div>
 

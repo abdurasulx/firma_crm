@@ -300,7 +300,15 @@
                 <i class="fas fa-camera" id="upload-icon"></i>
                 <img id="upload-preview" style="display:none; max-width:100%; max-height:180px; border-radius:0.75rem; object-fit:cover;">
                 <strong id="file-status">Rasm tanlang yoki rasmga oling</strong>
-                <input type="file" name="rasm" id="id_rasm" accept="image/*" capture="environment" required style="display:none" onchange="onFileChange(this)">
+                {# Real bug (foydalanuvchi topdi, boshqa brauzerlarda ham takrorlanadi):
+                   bu yerda (do'kon qo'shishdan farqli) galereya muqobili YO'Q —
+                   `capture="environment"` HAR SAFAR to'g'ridan-to'g'ri iOS Kamera
+                   ilovasini majburan ochadi (WebKit darajasidagi xatti-harakat,
+                   barcha iOS brauzerlarga tegishli). Safari qaytganda sahifani
+                   qisman qayta tiklab, CSRF holatini yo'qotardi ("CSRF token
+                   missing"). `capture` olib tashlansa, brauzer kamerani ICHKI
+                   action sheet orqali ochadi — Safari fonga chiqmaydi. #}
+                <input type="file" name="rasm" id="id_rasm" accept="image/*" required style="display:none" onchange="onFileChange(this)">
             </label>
         </div>
 
