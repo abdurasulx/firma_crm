@@ -10528,3 +10528,29 @@ Pure frontend/shablon — Desktop Agent exe rebuild talab qilinmaydi.
 **MUHIM ESLATMA**: bu diagnostika uchun serverda vaqtincha `DEBUG=True`
 qilingan edi — foydalanuvchiga darhol `DEBUG=False`ga qaytarish va
 qayta restart qilish eslatildi.
+
+## 253-qadam: TOPILDI (aniq) — faqat "Kamera" tugmasi (native camera) CSRF xatosini keltirib chiqarardi, "Galereya" ishlagan
+
+Foydalanuvchi bilan tekshirildi: kompyuterda muammosiz qo'shildi, telefonda
+esa faqat "Kamera" tugmasi orqali (to'g'ridan-to'g'ri surat olish) urinishda
+"CSRF token missing" xatosi berardi. Bu 252-qadamdagi taxminni tasdiqladi
+va aniq sababni ko'rsatdi: `capture="environment"`/`capture="user"`
+atributi iOS Safari'da OS darajasidagi ALOHIDA Kamera ilovasini ochadi
+(Safari fonga o'tadi) — qaytganda Safari xotira tejash uchun sahifani
+qisman qayta tiklaydi, CSRF cookie/token holati (252-qadamdagi JS
+tuzatishi bilan birga) baribir yo'qolib qolar edi.
+
+### Tuzatish (`main/templates/add_haridor.html`)
+Ikkala "Kamera" fayl maydonidan (`dukon_rasmi_mobile`,
+`egasining_rasmi_mobile`) `capture="environment"`/`capture="user"`
+atributi olib tashlandi. Endi mobil brauzer kamerani Safari/Chrome
+ICHIDA (action sheet — "Suratga olish/Galereya" tanlovi) ochadi, alohida
+ilovaga chiqmaydi — sahifa holati (shu jumladan CSRF) buzilmaydi.
+
+### Tekshirildi
+`manage.py check` — toza.
+
+### O'zgargan fayllar
+`main/templates/add_haridor.html`
+
+Pure frontend/shablon — Desktop Agent exe rebuild talab qilinmaydi.
