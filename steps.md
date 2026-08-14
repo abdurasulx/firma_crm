@@ -10494,3 +10494,37 @@ holatidan butunlay mustaqil ishlaydi.
 
 Pure backend — Desktop Agent exe rebuild talab qilinmaydi (bu qadam
 uchun; 250-qadamdagi exe allaqachon yuborilgan).
+
+## 252-qadam: Do'kon qo'shish formasida "CSRF token missing" xatosi (mobil, kamera orqali rasm yuklashda)
+
+Foydalanuvchi (yetkazib beruvchi) mobil telefonda "Do'kon qo'shish"
+formasini to'ldirib yuborganda "CSRF tekshiruvi amalga oshmadi — CSRF
+token missing" xatosi oldi. Vaqtincha `DEBUG=True` bilan aniq sabab
+tasdiqlandi: `csrfmiddlewaretoken` maydoni POST'da UMUMAN yo'q edi.
+
+Shablon (`add_haridor.html`) tekshirildi — `{% csrf_token %}` to'g'ri
+joylashgan, hech qanday JS uni bekor qilmaydi. Eng ehtimolli sabab:
+formada `capture="environment"`/`capture="user"` orqali to'g'ridan-
+to'g'ri mobil kamera ochiladi (ikkita rasm — do'kon va mas'ul shaxs
+uchun) — ba'zi qurilmalarda kameradan qaytgach sahifa xotira tejash
+uchun qisman qayta tiklanadi, natijada yashirin CSRF maydoni bo'sh
+qolib ketishi mumkin (bizning kodimizga bog'liq bo'lmagan, ammo
+himoyalanadigan brauzer xatti-harakati).
+
+### Tuzatish (`main/templates/add_haridor.html`)
+Forma yuborilishidan OLDIN (`submit` hodisasida) yashirin
+`csrfmiddlewaretoken` maydoni har doim `csrftoken` cookie'sining joriy
+qiymati bilan qayta yoziladi — Django cookie va POST maydonini
+solishtirgani uchun, ikkalasi ham to'g'ri bo'lsa yetarli.
+
+### Tekshirildi
+`manage.py check` — toza.
+
+### O'zgargan fayllar
+`main/templates/add_haridor.html`
+
+Pure frontend/shablon — Desktop Agent exe rebuild talab qilinmaydi.
+
+**MUHIM ESLATMA**: bu diagnostika uchun serverda vaqtincha `DEBUG=True`
+qilingan edi — foydalanuvchiga darhol `DEBUG=False`ga qaytarish va
+qayta restart qilish eslatildi.

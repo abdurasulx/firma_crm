@@ -414,6 +414,30 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
+    // === CSRF himoyasi ===
+    // Real bug (foydalanuvchi topdi, real qurilmada): forma ichida
+    // `capture="environment"`/`capture="user"` orqali to'g'ridan-to'g'ri
+    // mobil kamera ochiladi — ba'zi qurilmalar/brauzerlarda (xotira
+    // tejash uchun) kameradan qaytgach sahifa QISMAN qayta tiklanadi va
+    // yashirin `csrfmiddlewaretoken` maydoni bo'sh/yo'q bo'lib qolishi
+    // mumkin ("CSRF token missing" xatosi). Himoya sifatida — yuborishdan
+    // OLDIN har doim `csrftoken` cookie'sidan yangi qiymat o'qib, yashirin
+    // maydonga qayta yoziladi (Django bu ikkalasini — cookie va POST
+    // maydonini — solishtiradi, shuning uchun ikkalasi ham to'g'ri
+    // bo'lishi kifoya).
+    function _getCookie(name) {
+        const match = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+        return match ? decodeURIComponent(match[2]) : null;
+    }
+
+    document.getElementById('customerForm').addEventListener('submit', function () {
+        const csrfInput = this.querySelector('input[name="csrfmiddlewaretoken"]');
+        const cookieToken = _getCookie('csrftoken');
+        if (csrfInput && cookieToken) {
+            csrfInput.value = cookieToken;
+        }
+    });
+
     // === Image Handling ===
     function handleFile(input, fieldName) {
         if (input.files && input.files[0]) {
