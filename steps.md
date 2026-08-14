@@ -10459,3 +10459,38 @@ holatini tekshirib) haqiqiy (OS darajasidagi) yechim bo'ladi.
 
 ### Build
 `StockFirmAgent.exe` qayta yig'ildi, foydalanuvchiga yuborildi.
+
+## 251-qadam: Caps Lock/skaner muammosi uchun UNIVERSAL yechim (backend + Desktop Agent)
+
+Foydalanuvchi: "biz universal yechim qilishimiz kerak, Caps Lock yoniq
+bo'lsa ham, o'chiq bo'lsa ham ishlaydigon qilish kerak — backend kodlar
+ham o'zgaradimi?" — 250-qadamdagi tuzatish faqat Desktop Agent
+tomonidagi LOGIN QR (`AGENTQR|...`) yo'liga tegishli edi. Xuddi shu Caps
+Lock/skaner muammosi boshqa barcha skanlashlarga (xodim badge, material
+so'rovi, vazifa QR, Serial QR) ham tegishli bo'lishi mumkin — ular
+serverga (`agent_scan`/`agent_badge_scan`) yuboriladi va u yerda DB'da
+aniq (case-sensitive) qidiriladi.
+
+### Tuzatish (backend, `main/agent_api_views.py`)
+`_kod_candidates()` — barcha skanerlash turlari (badge, material so'rovi,
+vazifa, Serial) shu funksiya orqali DB'da qidiriladi. Endi har bir
+nomzodning `swapcase()` varianti ham nomzodlar ro'yxatiga qo'shiladi —
+Caps Lock qanday holatda bo'lishidan qat'i nazar (yoniq yoki o'chiq),
+to'g'ri kod har doim topiladi. `agent_badge_scan` (eski, orqaga moslik
+endpointi) ham shu funksiyadan foydalanadigan qilindi (avval
+to'g'ridan-to'g'ri aniq taqqoslardi).
+
+Natijada: 250-qadamdagi Desktop Agent-tomon tuzatish (login QR uchun,
+tarmoqqa chiqishdan OLDIN kerak, chunki qaysi oqimga — login yoki oddiy
+skan — yuborish haligacha mahalliy qaror) + endi backend-tomon tuzatish
+(qolgan BARCHA skan turlari uchun) — ikkalasi birgalikda Caps Lock
+holatidan butunlay mustaqil ishlaydi.
+
+### Tekshirildi
+`manage.py check` — toza. `manage.py test main` — 93 test, hammasi o'tdi.
+
+### O'zgargan fayllar
+`main/agent_api_views.py`
+
+Pure backend — Desktop Agent exe rebuild talab qilinmaydi (bu qadam
+uchun; 250-qadamdagi exe allaqachon yuborilgan).

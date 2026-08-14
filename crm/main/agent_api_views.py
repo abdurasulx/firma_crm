@@ -369,7 +369,7 @@ def agent_badge_scan(request):
     if not kod:
         return Response({'detail': "'kod' parametri kerak."}, status=status.HTTP_400_BAD_REQUEST)
 
-    badge = XodimBadge.objects.filter(kod=kod, company=company).select_related('user').first()
+    badge = XodimBadge.objects.filter(kod__in=_kod_candidates(kod), company=company).select_related('user').first()
     if not badge:
         return Response({'detail': "Bu QR kod hech qanday xodimga tegishli emas."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -393,6 +393,19 @@ def _kod_candidates(raw: str) -> list:
             extracted = path.split('/')[-1]
             if extracted and extracted not in candidates:
                 candidates.append(extracted)
+    # Real bug (foydalanuvchi aniq diagnostika bilan topdi): ba'zi
+    # kompyuterlarda HID skaner-Windows Caps Lock holati mos kelmasligi
+    # tufayli, skanerdan kelgan matnning BARCHA harflari teskari
+    # registrda kelishi mumkin (masalan uuid-asosidagi `kod`lar odatda
+    # kichik registrda saqlanadi, lekin bunday kompyuterda katta
+    # registrda kelib qoladi). Bu server darajasida — Desktop Agent'dan
+    # QAYSI mashinadan kelishidan qat'i nazar, barcha skanerlash turlari
+    # (badge, material so'rovi, vazifa, Serial) uchun bir joyda —
+    # `swapcase()` nomzodini ham qo'shib hal qilinadi.
+    for c in list(candidates):
+        swapped = c.swapcase()
+        if swapped not in candidates:
+            candidates.append(swapped)
     return candidates
 
 
