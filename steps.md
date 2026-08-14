@@ -10400,3 +10400,31 @@ ikkalasini ko'rsatadi.
 
 ### O'zgargan fayllar
 `main/views.py`, `main/templates/pazanda_dashboard.html`
+
+## 249-qadam: Boshqa qurilmada login qilingani uchun logout bo'lgan stansiyada login QR "tanilmadi" xatosi berdi
+
+Foydalanuvchi: boshqa qurilma login orqali bu stansiya avtomatik logout
+bo'lgan, keyin "Desktop Agent QR-login" kodini qayta skanerlaganda,
+kutilgan login oqimi o'rniga "Avval stansiya login qilinishi kerak"
+xabari chiqqan — bu xabar login QR TANILMAGANDA (oddiy xodim-skan
+yo'liga tushib ketganda) chiqadi.
+
+Sabab: `MainWindow._on_code_scanned`da `kod.startswith("AGENTQR|")` QATIY
+tekshiriladi — kamera/HID skanerdan kelgan matnda boshida/oxirida
+bo'shliq yoki qator ko'chirish belgisi bo'lsa (real skanerlarda uchraydi),
+bu moslik ishlamay qoladi va login QR ham oddiy xodim-skan sifatida
+noto'g'ri yo'lga yuborilib ketadi.
+
+### Tuzatish
+- `main_window.py`: `_on_code_scanned` endi `kod`ni tekshirishdan oldin
+  `.strip()` qiladi.
+- `employee_scan_widget.py`: token-yo'q xabari endi aniqroq — agar
+  aslida login QR skanerlangan bo'lsa, qaytadan urinib ko'rish
+  tavsiya etiladi.
+
+### O'zgargan fayllar
+`desktop_agent/app/windows/main_window.py`,
+`desktop_agent/app/windows/employee_scan_widget.py`
+
+### Build
+`StockFirmAgent.exe` qayta yig'ildi, foydalanuvchiga yuborildi.

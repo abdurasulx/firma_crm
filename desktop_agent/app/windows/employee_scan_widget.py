@@ -687,7 +687,13 @@ class EmployeeScanWidget(QWidget):
             # avval "Token kiritilmagan" degan tushunarsiz xato chiqardi
             # (real ishlab chiqarishda topilgan: foydalanuvchi shaxsiy
             # badge/boshqa QR'ni chiqib ketgan holatda skanerlasa).
-            self._set_result("Avval stansiya login qilinishi kerak — Sozlamalarda kiring.", "error")
+            self._set_result(
+                "Avval stansiya login qilinishi kerak — Sozlamalarda kiring. Agar "
+                "\"Desktop Agent QR-login\" kodini skanerlagan bo'lsangiz-u shu xabar "
+                "chiqqan bo'lsa, kod to'liq o'qilmagan bo'lishi mumkin — qaytadan "
+                "skanerlang.",
+                "error",
+            )
             return
 
         self._set_result("Tekshirilmoqda...", "idle")

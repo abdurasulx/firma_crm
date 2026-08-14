@@ -461,6 +461,18 @@ class MainWindow(QMainWindow):
         self._select_page(1)
 
     def _on_code_scanned(self, kod: str):
+        # Real bug (foydalanuvchi topdi): boshqa qurilmada login qilingani
+        # uchun bu stansiya avtomatik logout qilingan holatda edi, ega
+        # "Desktop Agent QR-login" kodini qayta skanerlagach ham
+        # "Avval stansiya login qilinishi kerak" xabari chiqdi — bu
+        # xabar faqat login QR TANILMAGANDA (pastdagi umumiy xodim-skan
+        # yo'liga tushib ketganda) chiqadi. Sabab: kamera/HID skaneridan
+        # kelgan matnda ba'zan boshida/oxirida bo'shliq yoki qator
+        # ko'chirish belgisi bo'lib qolishi mumkin (real skanerlarda
+        # tez-tez uchraydigan holat) — qat'iy `startswith("AGENTQR|")`
+        # shu sababli mos kelmay qolib, kod noto'g'ri (oddiy xodim-skan)
+        # yo'lga yuborilardi. Endi avval bo'shliqlar tozalanadi.
+        kod = kod.strip()
         if kod.startswith("AGENTQR|"):
             # Real bug (foydalanuvchi topdi): `_kiosk_locked` dastur
             # ishga tushganda har doim `True` bilan boshlanadi — HALI
