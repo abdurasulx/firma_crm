@@ -10528,3 +10528,18 @@ Pure frontend/shablon — Desktop Agent exe rebuild talab qilinmaydi.
 **MUHIM ESLATMA**: bu diagnostika uchun serverda vaqtincha `DEBUG=True`
 qilingan edi — foydalanuvchiga darhol `DEBUG=False`ga qaytarish va
 qayta restart qilish eslatildi.
+
+## 254-qadam: 253-qadam revert qilindi — sabab aslida brauzerning o'zida ekan
+
+Foydalanuvchi boshqa brauzerdan urinib ko'rdi — muvaffaqiyatli qo'shildi.
+Demak muammo `capture` atributida emas, balki o'sha muayyan (eski holatga
+tushib qolgan) brauzer sessiyasida edi. 253-qadamdagi o'zgarish (kamera
+`capture` atributini olib tashlash) noto'g'ri gipotezaga asoslangan edi —
+`git revert` bilan bekor qilindi (commit `f40691bc`).
+
+**Hali ochiq (keyingi safar uchun eslatma)**:
+- Serverda `.env`dagi `DEBUG=True`ni `False`ga qaytarish kerakligi
+  eslatilgan edi — tasdiqlab qo'yish kerak.
+- Redis xizmati 2026-08-05'dan beri ishlamay turibdi
+  (`redis-server.service` — failed), real-vaqtli bildirishnomalar
+  shuning uchun uzilib-ulanib turibdi — bu alohida hal qilinishi kerak.
