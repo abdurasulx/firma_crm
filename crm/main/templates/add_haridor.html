@@ -414,29 +414,63 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-    // === CSRF himoyasi ===
-    // Real bug (foydalanuvchi topdi, real qurilmada): forma ichida
-    // `capture="environment"`/`capture="user"` orqali to'g'ridan-to'g'ri
-    // mobil kamera ochiladi — ba'zi qurilmalar/brauzerlarda (xotira
-    // tejash uchun) kameradan qaytgach sahifa QISMAN qayta tiklanadi va
-    // yashirin `csrfmiddlewaretoken` maydoni bo'sh/yo'q bo'lib qolishi
-    // mumkin ("CSRF token missing" xatosi). Himoya sifatida — yuborishdan
-    // OLDIN har doim `csrftoken` cookie'sidan yangi qiymat o'qib, yashirin
-    // maydonga qayta yoziladi (Django bu ikkalasini — cookie va POST
-    // maydonini — solishtiradi, shuning uchun ikkalasi ham to'g'ri
-    // bo'lishi kifoya).
-    function _getCookie(name) {
-        const match = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
-        return match ? decodeURIComponent(match[2]) : null;
-    }
-
-    document.getElementById('customerForm').addEventListener('submit', function () {
-        const csrfInput = this.querySelector('input[name="csrfmiddlewaretoken"]');
-        const cookieToken = _getCookie('csrftoken');
-        if (csrfInput && cookieToken) {
-            csrfInput.value = cookieToken;
+    // === CSRF himoyasi (to'liq, ko'p qatlamli) ===
+    // Real bug (foydalanuvchi topdi, real qurilmada, uzoq diagnostika
+    // orqali): mobil qurilmalarda (kamera/boshqa ilovaga o'tish, tab
+    // fonga chiqishi, brauzer xotira tejashi va h.k.) forma uzoq ochiq
+    // turganda yashirin `csrfmiddlewaretoken` maydoni bo'shab qolishi
+    // mumkin ("CSRF token missing" xatosi) — sabab har doim bir xil
+    // emas (ba'zan kamera, ba'zan sahifa fonga chiqishi), shuning uchun
+    // BIR NECHA nuqtada (yuklanganda, qaytganda, ko'rinadigan bo'lganda,
+    // yuborishdan oldin) qayta sinxronlanadi. Agar oxirida cookie'ning
+    // o'zi ham yo'q bo'lib chiqsa (haqiqatan sessiya uzilgan) — forma
+    // yuborilmaydi, tushunarsiz CSRF-403 sahifasi o'rniga sahifa
+    // qayta yuklanadi va foydalanuvchiga aniq xabar ko'rsatiladi.
+    (function () {
+        function getCookie(name) {
+            const match = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+            return match ? decodeURIComponent(match[2]) : null;
         }
-    });
+
+        const form = document.getElementById('customerForm');
+        if (!form) return;
+
+        function syncCsrf() {
+            const csrfInput = form.querySelector('input[name="csrfmiddlewaretoken"]');
+            const cookieToken = getCookie('csrftoken');
+            if (csrfInput && cookieToken) {
+                csrfInput.value = cookieToken;
+            }
+            return { csrfInput, cookieToken };
+        }
+
+        // 1-2) Sahifa yuklanganda darhol sinxronlash.
+        syncCsrf();
+
+        // 3) `pageshow` — bfcache orqali qaytganda (masalan kamera/boshqa
+        // ilovadan Safari'ga qaytilganda) ham ishga tushadi
+        // (`event.persisted` bfcache holatini bildiradi).
+        window.addEventListener('pageshow', syncCsrf);
+
+        // 4) Tab qayta ko'rinadigan (fondan qaytgan) bo'lganda.
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'visible') syncCsrf();
+        });
+
+        // 5-6) Yuborishdan oldin oxirgi marta tekshirish — agar cookie
+        // ham topilmasa, yuborish TO'XTATILADI va sahifa qayta
+        // yuklanadi (foydalanuvchi formani qayta to'ldirishi kerak
+        // bo'ladi, lekin bu tushunarsiz "CSRF token missing" xatosidan
+        // ancha yaxshi).
+        form.addEventListener('submit', function (e) {
+            const { csrfInput, cookieToken } = syncCsrf();
+            if (!cookieToken || !csrfInput || !csrfInput.value) {
+                e.preventDefault();
+                alert("Sessiya vaqtinchalik uzilib qoldi — sahifa hozir qayta yuklanadi, iltimos formani qayta to'ldiring.");
+                window.location.reload();
+            }
+        });
+    })();
 
     // === Image Handling ===
     function handleFile(input, fieldName) {

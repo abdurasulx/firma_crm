@@ -10610,3 +10610,36 @@ ochadi, alohida Kamera ilovasiga chiqmaydi — sahifa holati (CSRF) buzilmaydi.
 `main/templates/sgsot.html`, `main/templates/ytsot.html`
 
 Pure frontend/shablon — Desktop Agent exe rebuild talab qilinmaydi.
+
+## 257-qadam: CSRF himoyasi to'liq, ko'p qatlamli qilib kuchaytirildi (foydalanuvchi taklifi)
+
+Server-tomonlama diagnostika (to'g'ridan-to'g'ri `curl` orqali production
+serverga so'rov yuborib) — cookie/token mexanizmi, Cloudflare, Django
+barchasi sog'lom ekani tasdiqlandi. Muammo qurilma/brauzer tomonida
+davom etayotgani uchun, foydalanuvchi aniq reja taklif qildi: "sahifa
+ochilganda tokenni olish → JS memory'da saqlash → pageshow → tiklash →
+visibilitychange → tekshirish → submit → qayta tiklash → token umuman
+yo'q bo'lsa → reload".
+
+### Tuzatish (`add_haridor.html`, `sgsot.html`, `ytsot.html`)
+Avvalgi oddiy "submit paytida cookie'dan qayta yozish" o'rniga, endi
+BIR NECHA nuqtada sinxronlanadi:
+1. Sahifa yuklanganda darhol.
+2. `pageshow` hodisasi — bfcache orqali qaytganda ham ishlaydi (masalan
+   kamera/boshqa ilovadan Safari'ga qaytilganda).
+3. `visibilitychange` — tab qayta ko'rinadigan bo'lganda.
+4. `submit` — yuborishdan oldin oxirgi marta.
+
+Agar shu oxirgi tekshiruvda `csrftoken` cookie'sining o'zi ham topilmasa
+(haqiqatan sessiya butunlay uzilgan bo'lsa) — forma YUBORILMAYDI,
+foydalanuvchiga aniq xabar ko'rsatiladi va sahifa avtomatik qayta
+yuklanadi (tushunarsiz "CSRF token missing" 403 sahifasi o'rniga).
+
+### Tekshirildi
+`manage.py check` — toza.
+
+### O'zgargan fayllar
+`main/templates/add_haridor.html`, `main/templates/sgsot.html`,
+`main/templates/ytsot.html`
+
+Pure frontend/shablon — Desktop Agent exe rebuild talab qilinmaydi.

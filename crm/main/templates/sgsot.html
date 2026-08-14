@@ -325,24 +325,49 @@
 </div>
 
 <script>
-    // === CSRF himoyasi ===
-    // Mobil qurilmalarda (ko'p tab ochiq bo'lganda, brauzer xotira
-    // tejashi tufayli) forma uzoq ochiq turganda yashirin
-    // `csrfmiddlewaretoken` maydoni bo'shab qolishi mumkin ("CSRF token
-    // missing" xatosi, `add_haridor.html`da ham topilgan). Himoya
-    // sifatida — yuborishdan OLDIN har doim `csrftoken` cookie'sidan
-    // yangi qiymat o'qib, yashirin maydonga qayta yoziladi.
-    function _getCookie(name) {
-        const match = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
-        return match ? decodeURIComponent(match[2]) : null;
-    }
-    document.getElementById('sotish-form').addEventListener('submit', function () {
-        const csrfInput = this.querySelector('input[name="csrfmiddlewaretoken"]');
-        const cookieToken = _getCookie('csrftoken');
-        if (csrfInput && cookieToken) {
-            csrfInput.value = cookieToken;
+    // === CSRF himoyasi (to'liq, ko'p qatlamli) ===
+    // Real bug, uzoq diagnostika orqali aniqlangan: mobil qurilmalarda
+    // (kamera/boshqa ilovaga o'tish, tab fonga chiqishi, ko'p tab ochiq
+    // bo'lgani uchun brauzer xotira tejashi va h.k.) forma uzoq ochiq
+    // turganda yashirin `csrfmiddlewaretoken` maydoni bo'shab qolishi
+    // mumkin ("CSRF token missing" xatosi, `add_haridor.html`da ham
+    // topilgan). Sabab har doim bir xil emasligi sababli, BIR NECHA
+    // nuqtada (yuklanganda, qaytganda, ko'rinadigan bo'lganda,
+    // yuborishdan oldin) qayta sinxronlanadi. Agar oxirida cookie'ning
+    // o'zi ham yo'q bo'lib chiqsa — forma yuborilmaydi, tushunarsiz
+    // CSRF-403 sahifasi o'rniga sahifa qayta yuklanadi.
+    (function () {
+        function getCookie(name) {
+            const match = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+            return match ? decodeURIComponent(match[2]) : null;
         }
-    });
+
+        const form = document.getElementById('sotish-form');
+        if (!form) return;
+
+        function syncCsrf() {
+            const csrfInput = form.querySelector('input[name="csrfmiddlewaretoken"]');
+            const cookieToken = getCookie('csrftoken');
+            if (csrfInput && cookieToken) {
+                csrfInput.value = cookieToken;
+            }
+            return { csrfInput, cookieToken };
+        }
+
+        syncCsrf();
+        window.addEventListener('pageshow', syncCsrf);
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'visible') syncCsrf();
+        });
+        form.addEventListener('submit', function (e) {
+            const { csrfInput, cookieToken } = syncCsrf();
+            if (!cookieToken || !csrfInput || !csrfInput.value) {
+                e.preventDefault();
+                alert("Sessiya vaqtinchalik uzilib qoldi — sahifa hozir qayta yuklanadi, iltimos formani qayta to'ldiring.");
+                window.location.reload();
+            }
+        });
+    })();
 
     const PRODUCT_DATA = [
         {% for m in mahsulotlar %}
