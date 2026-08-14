@@ -389,6 +389,25 @@
 </div>
 
 <script>
+    // === CSRF himoyasi ===
+    // Mobil qurilmalarda (ko'p tab ochiq bo'lganda, brauzer xotira
+    // tejashi tufayli) forma uzoq ochiq turganda yashirin
+    // `csrfmiddlewaretoken` maydoni bo'shab qolishi mumkin ("CSRF token
+    // missing" xatosi, `add_haridor.html`da ham topilgan). Himoya
+    // sifatida — yuborishdan OLDIN har doim `csrftoken` cookie'sidan
+    // yangi qiymat o'qib, yashirin maydonga qayta yoziladi.
+    function _getCookie(name) {
+        const match = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+        return match ? decodeURIComponent(match[2]) : null;
+    }
+    document.getElementById('sotish-form').addEventListener('submit', function () {
+        const csrfInput = this.querySelector('input[name="csrfmiddlewaretoken"]');
+        const cookieToken = _getCookie('csrftoken');
+        if (csrfInput && cookieToken) {
+            csrfInput.value = cookieToken;
+        }
+    });
+
     const PRODUCT_DATA = [
         {% for m in mahsulotlar %}
         {

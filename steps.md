@@ -10543,3 +10543,43 @@ tushib qolgan) brauzer sessiyasida edi. 253-qadamdagi o'zgarish (kamera
 - Redis xizmati 2026-08-05'dan beri ishlamay turibdi
   (`redis-server.service` — failed), real-vaqtli bildirishnomalar
   shuning uchun uzilib-ulanib turibdi — bu alohida hal qilinishi kerak.
+
+## 255-qadam: Middleware tahlili + CSRF himoya JS'ini sotish formalariga ham qo'shish
+
+Foydalanuvchi so'radi: "middleware'ni tekshir" (sotish/haridor qo'shishda
+"o'zidan o'zi", bir necha daqiqadan keyin CSRF 403). Middleware zanjiri
+sinchiklab tekshirildi:
+
+`MIDDLEWARE` tartibi (`settings.py:78-87`): `SecurityMiddleware` →
+`SessionMiddleware` → `CommonMiddleware` → **`CsrfViewMiddleware`** →
+`AuthenticationMiddleware` → **`CompanyMiddleware`** (bitta faol sessiya
+qoidasi shu yerda). `CsrfViewMiddleware` `CompanyMiddleware`dan OLDIN
+turgani uchun — CSRF tekshiruvi muvaffaqiyatsiz bo'lgan so'rovda
+`CompanyMiddleware`ning `web_session_key` sessiya-kick kodi umuman
+ishga TUSHMAYDI (CSRF 403 undan oldin qaytariladi). Xulosa: bitta faol
+sessiya qoidasi bu aniq xatoning bevosita sababi BO'LOLMAYDI.
+
+Shu bilan birga, aniq bo'shliq topildi: 252-qadamda "Do'kon qo'shish"
+formasiga qo'shilgan CSRF-himoya JS (yuborishdan oldin yashirin
+maydonni `csrftoken` cookie'sidan qayta to'ldirish) sotish
+formalariga (`sgsot.html`, `ytsot.html`) HALI QO'SHILMAGAN edi —
+foydalanuvchi aynan shu formalarda ham xuddi shu xatoni ko'rmoqda edi.
+
+### Tuzatish
+`sgsot.html`, `ytsot.html` — 252-qadamdagi bilan bir xil CSRF-himoya
+JS qo'shildi (`sotish-form` uchun `submit` hodisasida cookie'dan
+qayta to'ldirish).
+
+### Tekshirildi
+`manage.py check` — toza.
+
+### O'zgargan fayllar
+`main/templates/sgsot.html`, `main/templates/ytsot.html`
+
+Pure frontend/shablon — Desktop Agent exe rebuild talab qilinmaydi.
+
+**Eslatma**: bu himoya faqat COOKIE hali mavjud bo'lsa yordam beradi.
+Agar (23 ta ochiq tab kabi og'ir xotira bosimi tufayli) `csrftoken`
+cookie'sining o'zi ham yo'qolgan bo'lsa, bu JS ham yordam bermaydi —
+bunday holatda muammo haqiqatan brauzer/qurilma tomonida (Safari
+tab-tozalash xatti-harakati), Django kodida emas.
