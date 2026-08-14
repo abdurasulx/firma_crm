@@ -1,8 +1,10 @@
 {% extends 'sgbase.html' %}
+{% load static %}
 
 {% block title %}Savdogar sotuvi - StockFirm{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="{% static 'css/camera_widget.css' %}">
 <style>
     .sales-container { max-width: 720px; margin: 0 auto; padding-bottom: 110px; }
     .page-title { margin-bottom: 1.25rem; }
@@ -295,21 +297,33 @@
         </div>
 
         <div class="form-card">
-            <label class="form-label">Chek rasmi</label>
-            <label for="id_rasm" class="upload-area" id="upload-label">
-                <i class="fas fa-camera" id="upload-icon"></i>
-                <img id="upload-preview" style="display:none; max-width:100%; max-height:180px; border-radius:0.75rem; object-fit:cover;">
-                <strong id="file-status">Rasm tanlang yoki rasmga oling</strong>
-                {# Real bug (foydalanuvchi topdi, boshqa brauzerlarda ham takrorlanadi):
-                   bu yerda (do'kon qo'shishdan farqli) galereya muqobili YO'Q —
-                   `capture="environment"` HAR SAFAR to'g'ridan-to'g'ri iOS Kamera
-                   ilovasini majburan ochadi (WebKit darajasidagi xatti-harakat,
-                   barcha iOS brauzerlarga tegishli). Safari qaytganda sahifani
-                   qisman qayta tiklab, CSRF holatini yo'qotardi ("CSRF token
-                   missing"). `capture` olib tashlansa, brauzer kamerani ICHKI
-                   action sheet orqali ochadi — Safari fonga chiqmaydi. #}
-                <input type="file" name="rasm" id="id_rasm" accept="image/*" required style="display:none" onchange="onFileChange(this)">
-            </label>
+            <label class="camera-label">Chek rasmi</label>
+            {# Real bug (server logida CONTENT_LENGTH=0 bilan tasdiqlangan):
+               <input capture> orqali tashqi iOS Kamera ilovasi ochilib,
+               qaytgach tanlangan fayl "yaroqsiz" holatga tushib qolar,
+               forma butunlay bo'sh tanada yuborilar edi ("CSRF token
+               missing" — aslida CSRF bilan bog'liq emas edi). Endi
+               kamera sahifaning O'ZIDA (getUserMedia) ochiladi —
+               hech qachon tashqariga chiqmaydi. #}
+            <div class="camera-widget" id="cam-chek-rasmi">
+                <div class="camera-frame">
+                    <video class="camera-video" autoplay playsinline muted></video>
+                    <canvas class="camera-canvas" style="display:none;"></canvas>
+                    <img class="camera-preview" alt="Chek rasmi">
+                    <div class="camera-placeholder" style="display:none;">
+                        <i class="fas fa-camera"></i>
+                        <span>Kamera ochilmoqda...</span>
+                    </div>
+                </div>
+                <div class="camera-actions">
+                    <button type="button" class="btn-camera-shoot" style="display:none;"><i class="fas fa-camera"></i> Rasmga olish</button>
+                    <button type="button" class="btn-camera-gallery"><i class="fas fa-image"></i> Galereyadan</button>
+                    <button type="button" class="btn-camera-retake" style="display:none;"><i class="fas fa-rotate"></i> Qayta olish</button>
+                </div>
+                <div class="camera-status"></div>
+                <input type="file" accept="image/*" class="camera-gallery-input" style="display:none;">
+                <input type="file" name="rasm" id="id_rasm" accept="image/*" required style="display:none;" class="camera-real-input">
+            </div>
         </div>
 
         <div class="sticky-bar">
@@ -324,6 +338,7 @@
     </form>
 </div>
 
+<script src="{% static 'js/camera_widget.js' %}"></script>
 <script>
     // === CSRF himoyasi (to'liq, ko'p qatlamli) ===
     // Real bug, uzoq diagnostika orqali aniqlangan: mobil qurilmalarda
@@ -446,37 +461,11 @@
         link.href = CONTRACT_DOWNLOAD_URL + '?' + params.toString();
         link.classList.remove('disabled');
     }
-    function onFileChange(input) {
-        const label = document.getElementById('upload-label');
-        const status = document.getElementById('file-status');
-        const icon = document.getElementById('upload-icon');
-        const preview = document.getElementById('upload-preview');
-        if (input.files && input.files[0]) {
-            const file = input.files[0];
-            status.textContent = file.name;
-            label.classList.add('has-file');
-            if (preview) {
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    preview.src = e.target.result;
-                    preview.style.display = '';
-                    if (icon) icon.style.display = 'none';
-                };
-                reader.readAsDataURL(file);
-            }
-        } else {
-            status.textContent = 'Rasm tanlang yoki rasmga oling';
-            label.classList.remove('has-file');
-            if (preview) {
-                preview.style.display = 'none';
-                preview.src = '';
-            }
-            if (icon) icon.style.display = '';
-        }
-    }
     document.getElementById('customer-name').addEventListener('input', updateContractLink);
     document.getElementById('credit-down-payment').addEventListener('input', updateContractLink);
     updateContractLink();
+
+    setupCameraWidget(document.getElementById('cam-chek-rasmi'), { facingMode: 'environment', filename: 'chek' });
 </script>
 {% include 'qr_scan_widget.html' %}
 {% endblock %}

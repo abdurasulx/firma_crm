@@ -10660,3 +10660,54 @@ stderr'iga (shu orqali `journalctl -u stockfirm`ga) yoziladi.
 
 ### O'zgargan fayllar
 `main/csrf_debug.py` (yangi), `crm/crm/settings.py`
+
+## 259-qadam: TOPILDI VA HAL QILINDI — "CSRF token missing" aslida CSRF bilan bog'liq emas edi
+
+Diagnostika logi haqiqiy sababni ko'rsatdi: `CONTENT_LENGTH=0`,
+`post_keys=[]`, `files_keys=[]` — brauzer so'rovni BUTUNLAY BO'SH tanada
+yuborgan (cookie/token ikkalasi ham to'g'ri edi). Bu — WebKit'ning
+tanilgan xatosi: `<input type="file" capture>` (yoki oddiy file input
+orqali "Take Photo" tanlanganda ham) iOS'ning tashqi Kamera ilovasini
+ochadi, Safari fonga o'tadi; rasm olib qaytgandan keyin ba'zan tanlangan
+faylning ichki (Blob) ma'lumoti "yaroqsiz" holatga tushib qoladi —
+forma yuborilganda esa butun so'rov tanasi bo'sh ketadi. Xato xabari
+"CSRF token missing" bo'lgani sabab CSRF muammosidek ko'rinardi, aslida
+umuman aloqasi yo'q edi.
+
+### Haqiqiy tuzatish — sahifa ICHIDA kamera (getUserMedia)
+Foydalanuvchi taklif qilgan dizayn asosida: `getUserMedia()` + `<video>`
++ `<canvas>` orqali kamera SAHIFANING O'ZIDA ochiladi — hech qachon
+tashqi ilovaga chiqmaydi, shuning uchun bu WebKit xatosi butunlay oldini
+olinadi.
+
+- Yangi umumiy vidjet: `static/js/camera_widget.js`
+  (`setupCameraWidget(rootEl, opts)`) — jonli kamera oqimi, "Rasmga
+  olish" (canvas'ga frame chizib, Blob'ga aylantirib, `DataTransfer`
+  orqali haqiqiy `<input type=file>`ga joylaydi), "Qayta olish",
+  "Galereyadan" (muqobil, oddiy fayl tanlash) tugmalari.
+- Yangi umumiy stil: `static/css/camera_widget.css`.
+- Uchala forma yangilandi: `add_haridor.html` (Do'kon rasmi —
+  `environment`, Mas'ul rasmi — `user` kamera), `sgsot.html`,
+  `ytsot.html` (Chek rasmi — `environment`). Eski
+  `<input capture>`/`handleFile`/`onFileChange` kodi butunlay olib
+  tashlandi.
+
+252-257-qadamlardagi barcha JS "CSRF-himoya" urinishlari (cookie'dan
+qayta yozish, pageshow/visibilitychange, reload fallback) endi ORTIQCHA
+emas — zararsiz, xavfsizlik zaxirasi sifatida qoldirildi, lekin
+haqiqiy sabab endi bu emas edi.
+
+Vaqtincha diagnostika (`main/csrf_debug.py`,
+`settings.py`dagi `CSRF_FAILURE_VIEW`) sabab aniqlangach olib tashlandi.
+
+### Tekshirildi
+`manage.py check` — toza. Uchala shablon Django template loader orqali
+xatosiz kompilyatsiya qilinishi tasdiqlandi.
+
+### O'zgargan fayllar
+`static/js/camera_widget.js` (yangi), `static/css/camera_widget.css`
+(yangi), `main/templates/add_haridor.html`, `main/templates/sgsot.html`,
+`main/templates/ytsot.html`, `crm/crm/settings.py` (diagnostika olib
+tashlandi), `main/csrf_debug.py` (o'chirildi)
+
+Pure backend/frontend — Desktop Agent exe rebuild talab qilinmaydi.

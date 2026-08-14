@@ -56,11 +56,6 @@ if not any(CSRF_TRUSTED_ORIGINS):
         'https://*.stockfirm.uz',
     ]
 
-# VAQTINCHA DIAGNOSTIKA (pilot kunida takrorlanuvchi "CSRF token missing"
-# sababini topish uchun) — `main/csrf_debug.py`ga qarang. Sabab
-# aniqlangach BU QATOR VA FAYL OLIB TASHLANISHI KERAK.
-CSRF_FAILURE_VIEW = 'main.csrf_debug.csrf_failure'
-
 
 
 

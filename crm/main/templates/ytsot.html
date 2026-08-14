@@ -4,6 +4,7 @@
 {% block title %}Yangi sotuv - StockFirm{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="{% static 'css/camera_widget.css' %}">
 <style>
     .sales-container {
         max-width: 600px;
@@ -365,18 +366,31 @@
         </div>
 
         <div class="form-card">
-            <label class="form-label">Chek rasmi <span style="color:var(--danger)">*</span></label>
-            <label for="id_rasm" class="upload-area" id="upload-label">
-                <i class="fas fa-camera" id="upload-icon"></i>
-                <img id="upload-preview" style="display:none; max-width:100%; max-height:180px; border-radius:0.75rem; object-fit:cover;">
-                <div style="font-weight: 600;" id="file-status">Rasm tanlang yoki rasmga oling</div>
-                <div style="font-size: 0.75rem; color: var(--slate-400);">Majburiy rasm</div>
-                {# Real bug (sgsot.html'dagi bilan bir xil, boshqa brauzerlarda ham
-                   takrorlanadi): galereya muqobili yo'q, `capture="environment"`
-                   har safar majburan iOS Kamera ilovasini ochadi, Safari qaytganda
-                   CSRF holatini yo'qotadi. #}
-                <input type="file" name="rasm" id="id_rasm" accept="image/*" required style="display:none" onchange="onFileChange(this)">
-            </label>
+            <label class="camera-label">Chek rasmi <span style="color:var(--danger)">*</span></label>
+            {# Real bug (server logida CONTENT_LENGTH=0 bilan tasdiqlangan):
+               <input capture> orqali tashqi iOS Kamera ilovasi ochilib,
+               qaytgach tanlangan fayl "yaroqsiz" holatga tushib qolar,
+               forma butunlay bo'sh tanada yuborilar edi. Endi kamera
+               sahifaning O'ZIDA (getUserMedia) ochiladi. #}
+            <div class="camera-widget" id="cam-chek-rasmi">
+                <div class="camera-frame">
+                    <video class="camera-video" autoplay playsinline muted></video>
+                    <canvas class="camera-canvas" style="display:none;"></canvas>
+                    <img class="camera-preview" alt="Chek rasmi">
+                    <div class="camera-placeholder" style="display:none;">
+                        <i class="fas fa-camera"></i>
+                        <span>Kamera ochilmoqda...</span>
+                    </div>
+                </div>
+                <div class="camera-actions">
+                    <button type="button" class="btn-camera-shoot" style="display:none;"><i class="fas fa-camera"></i> Rasmga olish</button>
+                    <button type="button" class="btn-camera-gallery"><i class="fas fa-image"></i> Galereyadan</button>
+                    <button type="button" class="btn-camera-retake" style="display:none;"><i class="fas fa-rotate"></i> Qayta olish</button>
+                </div>
+                <div class="camera-status"></div>
+                <input type="file" accept="image/*" class="camera-gallery-input" style="display:none;">
+                <input type="file" name="rasm" id="id_rasm" accept="image/*" required style="display:none;" class="camera-real-input">
+            </div>
         </div>
 
         <!-- Sticky Bar -->
@@ -392,6 +406,7 @@
     </form>
 </div>
 
+<script src="{% static 'js/camera_widget.js' %}"></script>
 <script>
     // === CSRF himoyasi (to'liq, ko'p qatlamli) ===
     // Real bug, uzoq diagnostika orqali aniqlangan: mobil qurilmalarda
@@ -488,34 +503,7 @@
         document.getElementById('pay-input').value = val;
     }
 
-    function onFileChange(input) {
-        const area = document.getElementById('upload-label');
-        const status = document.getElementById('file-status');
-        const icon = document.getElementById('upload-icon');
-        const preview = document.getElementById('upload-preview');
-        if (input.files && input.files[0]) {
-            const file = input.files[0];
-            status.textContent = file.name;
-            area.classList.add('has-file');
-            if (preview) {
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    preview.src = e.target.result;
-                    preview.style.display = '';
-                    if (icon) icon.style.display = 'none';
-                };
-                reader.readAsDataURL(file);
-            }
-        } else {
-            status.textContent = 'Rasm tanlang yoki rasmga oling';
-            area.classList.remove('has-file');
-            if (preview) {
-                preview.style.display = 'none';
-                preview.src = '';
-            }
-            if (icon) icon.style.display = '';
-        }
-    }
+    setupCameraWidget(document.getElementById('cam-chek-rasmi'), { facingMode: 'environment', filename: 'chek' });
 </script>
 {% include 'qr_scan_widget.html' %}
 {% endblock %}

@@ -4,6 +4,7 @@
 {% block title %}Mijoz qo'shish - StockFirm{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="{% static 'css/camera_widget.css' %}">
 <style>
     .add-customer-container {
         max-width: 800px;
@@ -359,46 +360,56 @@
             </div>
 
             <div class="form-section-title"><i class="fas fa-camera"></i> Vizual ma'lumotlar</div>
+            {# Real bug (server logida CONTENT_LENGTH=0 bilan tasdiqlangan):
+               <input capture> orqali tashqi iOS Kamera ilovasi ochilib,
+               qaytgach tanlangan fayl "yaroqsiz" holatga tushib qolar,
+               forma butunlay bo'sh tanada yuborilar edi ("CSRF token
+               missing" — aslida CSRF bilan bog'liq emas edi). Endi
+               kamera sahifaning O'ZIDA (getUserMedia) ochiladi. #}
             <div class="upload-container">
-                <!-- Shop Photo -->
                 <div class="upload-box">
-                    <label class="form-label required">Do'kon rasmi</label>
-                    <div class="upload-btns">
-                        <div class="upload-trigger" onclick="document.getElementById('dukon_rasmi_mobile').click()">
-                            <i class="fas fa-camera"></i>
-                            <span>Kamera</span>
+                    <label class="camera-label">Do'kon rasmi</label>
+                    <div class="camera-widget" id="cam-dukon-rasmi">
+                        <div class="camera-frame">
+                            <video class="camera-video" autoplay playsinline muted></video>
+                            <canvas class="camera-canvas" style="display:none;"></canvas>
+                            <img class="camera-preview" alt="Do'kon rasmi">
+                            <div class="camera-placeholder" style="display:none;">
+                                <i class="fas fa-camera"></i>
+                                <span>Kamera ochilmoqda...</span>
+                            </div>
                         </div>
-                        <div class="upload-trigger" onclick="document.getElementById('dukon_rasmi_gallery').click()">
-                            <i class="fas fa-image"></i>
-                            <span>Galereya</span>
+                        <div class="camera-actions">
+                            <button type="button" class="btn-camera-shoot" style="display:none;"><i class="fas fa-camera"></i> Rasmga olish</button>
+                            <button type="button" class="btn-camera-gallery"><i class="fas fa-image"></i> Galereyadan</button>
+                            <button type="button" class="btn-camera-retake" style="display:none;"><i class="fas fa-rotate"></i> Qayta olish</button>
                         </div>
-                    </div>
-                    <input type="file" id="dukon_rasmi_mobile" name="dukon_rasmi" accept="image/*" capture="environment" style="display:none;" onchange="handleFile(this, 'dukon_rasmi')">
-                    <input type="file" id="dukon_rasmi_gallery" name="dukon_rasmi" accept="image/*" style="display:none;" onchange="handleFile(this, 'dukon_rasmi')">
-                    <div class="img-preview" id="preview_dukon_rasmi">
-                        <img src="" alt="Preview">
-                        <button type="button" class="remove-img" onclick="removeImage('dukon_rasmi')"><i class="fas fa-times"></i></button>
+                        <div class="camera-status"></div>
+                        <input type="file" accept="image/*" class="camera-gallery-input" style="display:none;">
+                        <input type="file" name="dukon_rasmi" class="camera-real-input" accept="image/*" style="display:none;">
                     </div>
                 </div>
 
-                <!-- Owner Photo -->
                 <div class="upload-box">
-                    <label class="form-label required">Mas'ul rasmi</label>
-                    <div class="upload-btns">
-                        <div class="upload-trigger" onclick="document.getElementById('egasining_rasmi_mobile').click()">
-                            <i class="fas fa-user-circle"></i>
-                            <span>Kamera</span>
+                    <label class="camera-label">Mas'ul rasmi</label>
+                    <div class="camera-widget" id="cam-egasining-rasmi">
+                        <div class="camera-frame">
+                            <video class="camera-video" autoplay playsinline muted></video>
+                            <canvas class="camera-canvas" style="display:none;"></canvas>
+                            <img class="camera-preview" alt="Mas'ul rasmi">
+                            <div class="camera-placeholder" style="display:none;">
+                                <i class="fas fa-camera"></i>
+                                <span>Kamera ochilmoqda...</span>
+                            </div>
                         </div>
-                        <div class="upload-trigger" onclick="document.getElementById('egasining_rasmi_gallery').click()">
-                            <i class="fas fa-portrait"></i>
-                            <span>Galereya</span>
+                        <div class="camera-actions">
+                            <button type="button" class="btn-camera-shoot" style="display:none;"><i class="fas fa-camera"></i> Rasmga olish</button>
+                            <button type="button" class="btn-camera-gallery"><i class="fas fa-image"></i> Galereyadan</button>
+                            <button type="button" class="btn-camera-retake" style="display:none;"><i class="fas fa-rotate"></i> Qayta olish</button>
                         </div>
-                    </div>
-                    <input type="file" id="egasining_rasmi_mobile" name="egasining_rasmi" accept="image/*" capture="user" style="display:none;" onchange="handleFile(this, 'egasining_rasmi')">
-                    <input type="file" id="egasining_rasmi_gallery" name="egasining_rasmi" accept="image/*" style="display:none;" onchange="handleFile(this, 'egasining_rasmi')">
-                    <div class="img-preview" id="preview_egasining_rasmi">
-                        <img src="" alt="Preview">
-                        <button type="button" class="remove-img" onclick="removeImage('egasining_rasmi')"><i class="fas fa-times"></i></button>
+                        <div class="camera-status"></div>
+                        <input type="file" accept="image/*" class="camera-gallery-input" style="display:none;">
+                        <input type="file" name="egasining_rasmi" class="camera-real-input" accept="image/*" style="display:none;">
                     </div>
                 </div>
             </div>
@@ -412,6 +423,7 @@
 
 <!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'js/camera_widget.js' %}"></script>
 
 <script>
     // === CSRF himoyasi (to'liq, ko'p qatlamli) ===
@@ -472,28 +484,9 @@
         });
     })();
 
-    // === Image Handling ===
-    function handleFile(input, fieldName) {
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const preview = document.getElementById('preview_' + fieldName);
-                preview.style.display = 'block';
-                preview.querySelector('img').src = e.target.result;
-            }
-            reader.readAsDataURL(input.files[0]);
-            
-            // Disable other input for the same field
-            const type = input.id.includes('mobile') ? 'gallery' : 'mobile';
-            document.getElementById(`${fieldName}_${type}`).value = '';
-        }
-    }
-
-    function removeImage(fieldName) {
-        document.getElementById('preview_' + fieldName).style.display = 'none';
-        document.getElementById(fieldName + '_mobile').value = '';
-        document.getElementById(fieldName + '_gallery').value = '';
-    }
+    // === Kamera vidjetlari ===
+    setupCameraWidget(document.getElementById('cam-dukon-rasmi'), { facingMode: 'environment', filename: 'dukon' });
+    setupCameraWidget(document.getElementById('cam-egasining-rasmi'), { facingMode: 'user', filename: 'egasi' });
 
     // === Map Handling ===
     let map = L.map('map').setView([41.2995, 69.2401], 13);
