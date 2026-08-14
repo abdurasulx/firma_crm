@@ -10643,3 +10643,20 @@ yuklanadi (tushunarsiz "CSRF token missing" 403 sahifasi o'rniga).
 `main/templates/ytsot.html`
 
 Pure frontend/shablon — Desktop Agent exe rebuild talab qilinmaydi.
+
+## 258-qadam: Vaqtincha CSRF diagnostika logi qo'shildi (haqiqiy sababni topish uchun)
+
+"CSRF token missing" xatosi barcha sinovlardan (JS himoya, boshqa
+brauzer, Wi-Fi/mobil, bir nechta gunicorn worker tekshiruvi) keyin ham
+davom etmoqda — JS submit vaqtida token/cookie borligini tasdiqlaydi,
+lekin serverga yetganda "yo'q" deb hisoblanadi. Buni aniqlash uchun
+`CSRF_FAILURE_VIEW` orqali vaqtincha diagnostika logi qo'shildi
+(`main/csrf_debug.py`) — har bir CSRF muvaffaqiyatsizligida
+content-length, POST/FILES kalitlari, cookie holati va h.k. serverning
+stderr'iga (shu orqali `journalctl -u stockfirm`ga) yoziladi.
+
+**MUHIM**: bu vaqtinchalik — sabab aniqlangach `main/csrf_debug.py` va
+`settings.py`dagi `CSRF_FAILURE_VIEW` qatori olib tashlanishi kerak.
+
+### O'zgargan fayllar
+`main/csrf_debug.py` (yangi), `crm/crm/settings.py`
