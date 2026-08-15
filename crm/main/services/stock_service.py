@@ -1,5 +1,5 @@
 import datetime as dt
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 from django.db import transaction
 from django.db.models import Sum
@@ -218,12 +218,21 @@ def recompute_tannarx(mahsulot):
     # retsept (BOM)ga ega bo'lmasa ham. Shu ikkinchi shartsiz tekshirilsa,
     # xom ashyolarning baza_tannarxi (bo'sh BOM=0 dan) noto'g'ri
     # nolga tushirib qo'yilardi (real bug — shu joyda topilgan).
+    # Real bug (foydalanuvchi topdi): bo'lish amallari (foizlarni 100'ga
+    # bo'lish) natijasida `Decimal` qiymatlar 2 xonadan ANCHA ortiq kasr
+    # qismga ega bo'lib qolar edi (Python Decimal aniqlik cheklovi ~28
+    # xonagacha) — natija DB ustuniga (`DecimalField(decimal_places=2)`)
+    # saqlanayotganda MySQL strict rejimida "Data truncated" xatosi
+    # berardi, garchi qiymatning o'zi (magnitude) kichik bo'lsa ham.
+    # Endi har bir oraliq/yakuniy natija 2 xonaga aniq yaxlitlanadi.
+    TWOPLACES = Decimal('0.01')
+
     if mahsulot.warehouse_type == 'finished' and mahsulot.mahsulot_turi == 'ishlab_chiqariladigan':
         rows = MahsulotRetsept.objects.filter(mahsulot=mahsulot).select_related('komponent')
         baza = sum(
             (Decimal(str(r.komponent.tannarx)) * Decimal(str(r.norma_miqdor)) for r in rows),
             Decimal('0'),
-        )
+        ).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
         if baza != Decimal(str(mahsulot.baza_tannarx or 0)):
             mahsulot.baza_tannarx = baza
             update_fields.append('baza_tannarx')
@@ -235,11 +244,11 @@ def recompute_tannarx(mahsulot):
 
     extra_miqdor = mahsulot.qoshimcha_xarajatlar.filter(turi='miqdor').aggregate(t=Sum('summa'))['t'] or 0
     extra_foiz_yigindisi = mahsulot.qoshimcha_xarajatlar.filter(turi='foiz').aggregate(t=Sum('summa'))['t'] or 0
-    extra_foiz = baza * (Decimal(str(extra_foiz_yigindisi)) / Decimal('100'))
+    extra_foiz = (baza * (Decimal(str(extra_foiz_yigindisi)) / Decimal('100'))).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
 
     subtotal = baza + ish_haqi + sotuv_ish_haqi + Decimal(str(extra_miqdor)) + extra_foiz
     foiz = Decimal(str(mahsulot.amortizatsiya_foizi or 0))
-    yangi_tannarx = subtotal * (1 + foiz / Decimal('100'))
+    yangi_tannarx = (subtotal * (1 + foiz / Decimal('100'))).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
 
     # Real bug (foydalanuvchi topdi): har bir kiritilgan maydon o'z
     # ustunining sig'imi ichida bo'lsa ham (masalan amortizatsiya foizi

@@ -10836,3 +10836,37 @@ urinishda qaysi ustun/qiymat sabab ekani aniq ko'rinadi.
 
 ### O'zgargan fayllar
 `main/views.py`
+
+## 265-qadam: TOPILDI (haqiqiy sabab) — "Data truncated" MAGNITUDE emas, ANIQLIK (decimal joylar) muammosi edi
+
+Foydalanuvchi haqiqiy DB xato matnini yubordi (264-qadamdagi tuzatish
+tufayli ko'rindi): tannarx 10042 kabi KICHIK son bo'lsa ham, xuddi shu
+"Data truncated for column 'tannarx'" xatosi chiqaverdi. Bu 263-qadamdagi
+"juda katta son" gipotezasini rad etdi.
+
+### Haqiqiy sabab
+`recompute_tannarx`dagi foiz hisob-kitoblari (`.../ Decimal('100')`)
+natijasida oraliq/yakuniy `Decimal` qiymatlar 2 xonadan ANCHA ortiq kasr
+qismga ega bo'lib qolar edi (Python Decimal standart aniqligi ~28 xona).
+Bu qiymat to'g'ridan-to'g'ri `mahsulot.tannarx`ga yozilib, `.save()`
+chaqirilardi — hech qanday `full_clean()`/validatsiya YO'Q edi, shuning
+uchun Django ham buni oldindan yaxlitlamas edi. MySQL strict rejimida
+esa DB ustuni (`decimal_places=2`)dan ortiq kasr xonali qiymatni jim
+yaxlitlash o'rniga XATO bilan rad etadi ("Data truncated") — hatto
+qiymatning o'zi (magnitude) juda kichik bo'lsa ham.
+
+### Tuzatish (`stock_service.recompute_tannarx`)
+Barcha oraliq va yakuniy hisob-kitoblar (`baza`, `extra_foiz`,
+`yangi_tannarx`) endi `.quantize(Decimal('0.01'), rounding=
+ROUND_HALF_UP)` bilan aniq 2 xonaga yaxlitlanadi — DB ustuniga
+yozilishidan OLDIN.
+
+263-qadamdagi magnitude-tekshiruvi (chegaradan katta sonlar uchun) ham
+foydali bo'lgani uchun saqlab qolindi — ikkalasi birgalikda endi bu
+turdagi barcha "Data truncated" holatlarini qamrab oladi.
+
+### Tekshirildi
+`manage.py check` — toza. `manage.py test main` — 93 test, hammasi o'tdi.
+
+### O'zgargan fayllar
+`main/services/stock_service.py`
