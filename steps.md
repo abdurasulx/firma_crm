@@ -10759,3 +10759,32 @@ qilinishi tasdiqlandi.
 `main/templates/add_haridor.html`, `main/templates/sgsot.html`,
 `main/templates/ytsot.html`, `main/templates/camera_capture_widget.html`,
 `static/js/camera_widget.js`
+
+## 262-qadam: Mahsulot narxlash maydonlariga katta qiymat kiritilsa DatabaseError chiqib, hech narsa saqlanmasdi
+
+Foydalanuvchi "sotuvchiga beriladigan summa" (`sotuv_ish_haqi_narxi`)ni
+o'zgartirganda `DatabaseError: (1265, "Data truncated for column
+'tannarx'...")` xom xato sahifasi chiqdi.
+
+Sabab: `seemahsulot` view'i `ishlab_chiqarish_narxi`/
+`sotuv_ish_haqi_narxi`/`amortizatsiya_foizi` POST qiymatlarini hech
+qanday tekshiruvsiz saqlardi. `recompute_tannarx` shu qiymatlarni
+qo'shib `tannarx`ni hisoblaydi — agar yig'indi `DecimalField(max_digits=
+10, decimal_places=2)` sig'imidan (99 999 999.99) oshsa, MySQL strict
+rejimda saqlashni rad etib, tushunarsiz `DatabaseError` beradi.
+
+### Tuzatish (`main/views.py`)
+- Har bir maydon saqlashdan OLDIN o'z ustunining `max_digits`/
+  `decimal_places`iga qarab tekshiriladi — chegaradan oshsa yoki
+  noto'g'ri son bo'lsa, aniq xabar bilan (`messages.error`) sahifaga
+  qaytariladi, hech narsa saqlanmaydi (lekin xato ham bermaydi).
+- `mahsulot.save()`/`recompute_tannarx()` atrofiga `DatabaseError`
+  uchun qo'shimcha xavfsizlik to'ri o'ralgan — alohida maydonlar to'g'ri
+  bo'lsa ham ularning YIG'INDISI (tannarx) chegaradan oshib ketishi
+  mumkin, bu holat ham endi tushunarli xabar bilan qaytariladi.
+
+### Tekshirildi
+`manage.py check` — toza. `manage.py test main` — 93 test, hammasi o'tdi.
+
+### O'zgargan fayllar
+`main/views.py`

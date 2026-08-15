@@ -17,7 +17,7 @@ from .plan_utils import (
 import datetime as dt
 import json
 from django.core.cache import cache
-from django.db import transaction
+from django.db import transaction, DatabaseError
 from django.db.models import Count, F, Q, Sum
 from collections import defaultdict
 from decimal import Decimal, InvalidOperation
@@ -2203,9 +2203,38 @@ def seemahsulot(request, mahsulot_id):
         # eski xatti-harakat saqlanadi).
         if mahsulot.mahsulot_turi == 'distributor':
             mahsulot.miqdori = request.POST.get('miqdori')
-        mahsulot.ishlab_chiqarish_narxi = request.POST.get('ishlab_chiqarish_narxi') or 0
-        mahsulot.sotuv_ish_haqi_narxi = request.POST.get('sotuv_ish_haqi_narxi') or 0
-        mahsulot.amortizatsiya_foizi = request.POST.get('amortizatsiya_foizi') or 0
+
+        # Real bug (foydalanuvchi topdi): "sotuvchiga beriladigan summa"
+        # (`sotuv_ish_haqi_narxi`) kabi maydonlarga juda katta qiymat
+        # kiritilsa (masalan qo'shimcha nol bosilib ketsa), `recompute_
+        # tannarx` shu qiymatni `tannarx`ga qo'shib hisoblaydi va natija
+        # DB ustunining sig'imidan (`DecimalField(max_digits=10,
+        # decimal_places=2)` — 99 999 999.99) oshib ketadi. Django'ning
+        # o'zi buni oldindan tekshirmaydi (bu yerda `full_clean()`
+        # chaqirilmaydi) — natijada tushunarsiz "DatabaseError: Data
+        # truncated" xato sahifasi chiqib, hech narsa saqlanmasdi. Endi
+        # oldindan tekshiriladi, aniq xabar bilan.
+        decimal_field_errors = []
+        for field_name, post_key in (
+            ('ishlab_chiqarish_narxi', 'ishlab_chiqarish_narxi'),
+            ('sotuv_ish_haqi_narxi', 'sotuv_ish_haqi_narxi'),
+            ('amortizatsiya_foizi', 'amortizatsiya_foizi'),
+        ):
+            field = Mahsulot._meta.get_field(field_name)
+            max_val = Decimal(10) ** (field.max_digits - field.decimal_places) - Decimal(1) / (Decimal(10) ** field.decimal_places)
+            try:
+                val = Decimal(str(request.POST.get(post_key) or 0))
+            except Exception:
+                decimal_field_errors.append(f"{field_name}: noto'g'ri son formati.")
+                continue
+            if val < 0 or val > max_val:
+                decimal_field_errors.append(f"{field_name}: qiymat 0 dan {max_val} gacha bo'lishi kerak.")
+                continue
+            setattr(mahsulot, field_name, val)
+        if decimal_field_errors:
+            messages.error(request, "Saqlanmadi — " + " ".join(decimal_field_errors))
+            return redirect('seeproduct', mahsulot_id=mahsulot.id)
+
         mahsulot.mahsulot_turi = request.POST.get('mahsulot_turi', mahsulot.mahsulot_turi)
         kutilgan_soat = (request.POST.get('kutilgan_ishlab_chiqarish_soat') or '').strip()
         try:
@@ -2226,8 +2255,21 @@ def seemahsulot(request, mahsulot_id):
         if 'rasmi' in request.FILES:
             mahsulot.rasmi = request.FILES['rasmi']
 
-        mahsulot.save()
-        recompute_tannarx(mahsulot)
+        try:
+            mahsulot.save()
+            recompute_tannarx(mahsulot)
+        except DatabaseError:
+            # Yuqoridagi tekshiruv har bir maydonni alohida qamrab
+            # oladi, lekin ularning YIG'INDISI (tannarx) baribir
+            # ustun sig'imidan oshib ketishi mumkin — shu holatni ham
+            # xavfsiz ushlaymiz (xom xato sahifasi o'rniga tushunarli
+            # xabar).
+            messages.error(
+                request,
+                "Saqlanmadi — kiritilgan qiymatlar yig'indisi juda katta (tannarx hisoblanmadi). "
+                "Kichikroq summalar kiriting.",
+            )
+            return redirect('seeproduct', mahsulot_id=mahsulot.id)
 
         try:
             yangi_narxi = Decimal(str(request.POST.get('narxi') or 0))
