@@ -2263,16 +2263,15 @@ def seemahsulot(request, mahsulot_id):
             # chegara oshib ketganini xabar qiladi (stock_service.py).
             messages.error(request, f"Saqlanmadi — {exc}")
             return redirect('seeproduct', mahsulot_id=mahsulot.id)
-        except DatabaseError:
+        except DatabaseError as exc:
             # Yuqoridagi ikkala tekshiruv (har bir maydon alohida +
             # yakuniy tannarx) qamrab olmagan kutilmagan holat uchun
-            # so'nggi xavfsizlik to'ri — xom xato sahifasi o'rniga
-            # tushunarli xabar.
-            messages.error(
-                request,
-                "Saqlanmadi — kiritilgan qiymatlar yig'indisi juda katta (tannarx hisoblanmadi). "
-                "Kichikroq summalar kiriting.",
-            )
+            # so'nggi xavfsizlik to'ri — real bug (foydalanuvchi topdi):
+            # bu yerda avval qattiq kodlangan "tannarx" haqidagi xabar
+            # chiqardi, garchi haqiqiy sabab BOSHQA maydon bo'lsa ham
+            # (chalg'ituvchi edi). Endi Django/MySQL'ning o'zi bergan
+            # aniq sababni ko'rsatadi.
+            messages.error(request, f"Saqlanmadi — ma'lumotlar bazasi xatosi: {exc}")
             return redirect('seeproduct', mahsulot_id=mahsulot.id)
 
         try:

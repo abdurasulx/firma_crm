@@ -10814,3 +10814,25 @@ katta") — aniq qaysi son ekanini ko'rsatmasdi.
 
 ### O'zgargan fayllar
 `main/services/stock_service.py`, `main/views.py`
+
+## 264-qadam: Chalg'ituvchi "tannarx" xabari — endi haqiqiy DB xato matni ko'rsatiladi
+
+Foydalanuvchi: tannarx 10042 so'm (kichik) turgan holda, oddiy narxni
+12k'dan 14k'ga o'zgartirmoqchi bo'lganda ham xuddi shu "yig'indisi juda
+katta (tannarx hisoblanmadi)" xabari chiqaverdi. Bu mantiqan mumkin emas
+edi (10042 chegaradan — 99 999 999.99 — juda uzoq), demak 263-qadamdagi
+`ValueError` (tannarx uchun) ishga tushmagan, balki umumiy `except
+DatabaseError` boshqa (noma'lum) sababdan ushlanib, HAR DOIM bir xil,
+qattiq kodlangan "tannarx" haqidagi xabarni ko'rsatardi — bu chalg'ituvchi
+edi.
+
+### Tuzatish (`views.py`)
+`except DatabaseError` endi qattiq kodlangan taxmin o'rniga Django/MySQL
+bergan HAQIQIY xato matnini (`{exc}`) ko'rsatadi — shu orqali keyingi
+urinishda qaysi ustun/qiymat sabab ekani aniq ko'rinadi.
+
+### Tekshirildi
+`manage.py check` — toza. `manage.py test main` — 93 test, hammasi o'tdi.
+
+### O'zgargan fayllar
+`main/views.py`
