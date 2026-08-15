@@ -2258,12 +2258,16 @@ def seemahsulot(request, mahsulot_id):
         try:
             mahsulot.save()
             recompute_tannarx(mahsulot)
+        except ValueError as exc:
+            # `recompute_tannarx` o'zi aniq hisoblab, qaysi son va qaysi
+            # chegara oshib ketganini xabar qiladi (stock_service.py).
+            messages.error(request, f"Saqlanmadi — {exc}")
+            return redirect('seeproduct', mahsulot_id=mahsulot.id)
         except DatabaseError:
-            # Yuqoridagi tekshiruv har bir maydonni alohida qamrab
-            # oladi, lekin ularning YIG'INDISI (tannarx) baribir
-            # ustun sig'imidan oshib ketishi mumkin — shu holatni ham
-            # xavfsiz ushlaymiz (xom xato sahifasi o'rniga tushunarli
-            # xabar).
+            # Yuqoridagi ikkala tekshiruv (har bir maydon alohida +
+            # yakuniy tannarx) qamrab olmagan kutilmagan holat uchun
+            # so'nggi xavfsizlik to'ri — xom xato sahifasi o'rniga
+            # tushunarli xabar.
             messages.error(
                 request,
                 "Saqlanmadi — kiritilgan qiymatlar yig'indisi juda katta (tannarx hisoblanmadi). "

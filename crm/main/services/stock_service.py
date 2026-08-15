@@ -239,7 +239,26 @@ def recompute_tannarx(mahsulot):
 
     subtotal = baza + ish_haqi + sotuv_ish_haqi + Decimal(str(extra_miqdor)) + extra_foiz
     foiz = Decimal(str(mahsulot.amortizatsiya_foizi or 0))
-    mahsulot.tannarx = subtotal * (1 + foiz / Decimal('100'))
+    yangi_tannarx = subtotal * (1 + foiz / Decimal('100'))
+
+    # Real bug (foydalanuvchi topdi): har bir kiritilgan maydon o'z
+    # ustunining sig'imi ichida bo'lsa ham (masalan amortizatsiya foizi
+    # va sotuv ish haqi alohida-alohida ruxsat etilgan chegarada), ular
+    # KO'PAYTIRILGANDA/YIG'ILGANDA natija (`tannarx`) baribir ustun
+    # sig'imidan (`DecimalField(max_digits=10, decimal_places=2)` —
+    # 99 999 999.99) oshib ketishi mumkin — DB darajasida kutilmagan
+    # xato ("Data truncated") berardi. Endi bu yerda, saqlashdan OLDIN,
+    # aniq tekshiriladi va aniq son bilan xabar beriladi.
+    tannarx_field = mahsulot._meta.get_field('tannarx')
+    tannarx_max = Decimal(10) ** (tannarx_field.max_digits - tannarx_field.decimal_places) - Decimal(1) / (Decimal(10) ** tannarx_field.decimal_places)
+    if yangi_tannarx > tannarx_max:
+        raise ValueError(
+            f"Hisoblangan tannarx ({yangi_tannarx:,.2f} so'm) ruxsat etilgan chegaradan "
+            f"({tannarx_max:,.2f} so'm) katta — ishlab chiqarish narxi, sotuv ish haqi yoki "
+            f"amortizatsiya foizini kamaytiring."
+        )
+
+    mahsulot.tannarx = yangi_tannarx
     mahsulot.save(update_fields=update_fields)
     return mahsulot.tannarx
 

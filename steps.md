@@ -10788,3 +10788,29 @@ rejimda saqlashni rad etib, tushunarsiz `DatabaseError` beradi.
 
 ### O'zgargan fayllar
 `main/views.py`
+
+## 263-qadam: Tannarx yig'indisi (ko'paytmasi) chegaradan oshsa endi aniq son bilan xabar beriladi
+
+262-qadamdagi tuzatish har bir maydonni ALOHIDA tekshirardi, lekin
+`recompute_tannarx`dagi yakuniy formula — `(baza + ish_haqi + sotuv_ish_haqi
++ qo'shimcha xarajatlar) * (1 + amortizatsiya_foizi/100)` — har bir kirish
+o'z chegarasida bo'lsa ham, KO'PAYTMA/YIG'INDI natijasida yakuniy tannarx
+baribir ustun sig'imidan (99 999 999.99) oshib ketishi mumkin edi. Bu
+holat oldingi tuzatishda faqat umumiy "DatabaseError" xavfsizlik to'riga
+tushib, generik xabar berardi ("kiritilgan qiymatlar yig'indisi juda
+katta") — aniq qaysi son ekanini ko'rsatmasdi.
+
+### Tuzatish
+- `stock_service.recompute_tannarx`: yakuniy hisoblangan tannarxni
+  saqlashdan OLDIN chegara bilan solishtiradi; oshib ketsa, hisoblangan
+  ANIQ son va chegarani ko'rsatuvchi `ValueError` ko'taradi (DB
+  saqlashga umuman urinmaydi).
+- `views.py` (`seemahsulot`): bu `ValueError`ni ushlab, foydalanuvchiga
+  aniq xabar ko'rsatadi ("Hisoblangan tannarx (X so'm) ruxsat etilgan
+  chegaradan (Y so'm) katta — ...").
+
+### Tekshirildi
+`manage.py check` — toza. `manage.py test main` — 93 test, hammasi o'tdi.
+
+### O'zgargan fayllar
+`main/services/stock_service.py`, `main/views.py`
