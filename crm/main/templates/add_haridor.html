@@ -4,7 +4,7 @@
 {% block title %}Mijoz qo'shish - StockFirm{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'css/camera_widget.css' %}">
+<link rel="stylesheet" href="{% static 'css/camera_widget.css' %}?v=3">
 <style>
     .add-customer-container {
         max-width: 800px;
@@ -360,14 +360,6 @@
             </div>
 
             <div class="form-section-title"><i class="fas fa-camera"></i> Vizual ma'lumotlar</div>
-            {# Real bug (server logida CONTENT_LENGTH=0 bilan tasdiqlangan):
-               <input capture> orqali tashqi iOS Kamera ilovasi ochilib,
-               qaytgach tanlangan fayl "yaroqsiz" holatga tushib qolar,
-               forma butunlay bo'sh tanada yuborilar edi ("CSRF token
-               missing" — aslida CSRF bilan bog'liq emas edi). Endi
-               kamera sahifaning O'ZIDA (getUserMedia) ochiladi, MODAL
-               orqali (foydalanuvchi so'rovi: sahifada darhol katta
-               qora oyna bo'lib turmasin). #}
             <div class="upload-container">
                 <div class="upload-box">
                     <label class="camera-field-label">Do'kon rasmi</label>
@@ -377,10 +369,8 @@
                             <div class="camera-thumb-placeholder"><i class="fas fa-camera"></i><span>Rasm yo'q</span></div>
                         </div>
                         <div class="camera-field-actions">
-                            <button type="button" class="btn-camera-open"><i class="fas fa-camera"></i> Rasmga olish</button>
-                            <button type="button" class="btn-camera-gallery"><i class="fas fa-image"></i> Galereyadan</button>
+                            <button type="button" class="btn-camera-open"><i class="fas fa-camera"></i> Kamerani ochish</button>
                         </div>
-                        <input type="file" accept="image/*" class="camera-gallery-input" style="display:none;">
                         <input type="file" name="dukon_rasmi" class="camera-real-input" accept="image/*" style="display:none;">
                     </div>
                 </div>
@@ -393,10 +383,8 @@
                             <div class="camera-thumb-placeholder"><i class="fas fa-camera"></i><span>Rasm yo'q</span></div>
                         </div>
                         <div class="camera-field-actions">
-                            <button type="button" class="btn-camera-open"><i class="fas fa-camera"></i> Rasmga olish</button>
-                            <button type="button" class="btn-camera-gallery"><i class="fas fa-image"></i> Galereyadan</button>
+                            <button type="button" class="btn-camera-open"><i class="fas fa-camera"></i> Kamerani ochish</button>
                         </div>
-                        <input type="file" accept="image/*" class="camera-gallery-input" style="display:none;">
                         <input type="file" name="egasining_rasmi" class="camera-real-input" accept="image/*" style="display:none;">
                     </div>
                 </div>

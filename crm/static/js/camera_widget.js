@@ -1,16 +1,4 @@
-/*
- * Sahifa ICHIDA (getUserMedia orqali) ishlaydigan kamera vidjeti — MODAL
- * ko'rinishida (QR-skaner modali bilan bir xil naqsh). Har bir rasm
- * maydoni default holatda kichik ("Rasmga olish"/"Galereyadan" tugmalari +
- * kichik preview) — jonli kamera oqimi FAQAT modal ochilganda ko'rinadi,
- * sahifada darhol katta qora oyna bo'lib turmaydi (foydalanuvchi so'rovi).
- *
- * Ildiz sabab (server logida CONTENT_LENGTH=0 bilan tasdiqlangan): oldingi
- * <input type="file" capture> yondashuvida iOS'ning tashqi Kamera ilovasi
- * ochilardi — Safari fonga o'tib, qaytgach tanlangan fayl "yaroqsiz"
- * holatga tushib qolar, forma butunlay bo'sh tanada yuborilar edi. Bu
- * vidjet kamerani hech qachon tashqariga chiqarmaydi.
- */
+/* Sahifa ICHIDA (getUserMedia) ishlaydigan kamera vidjeti — modal orqali. */
 (function () {
     let activeField = null;   // hozir modal orqali to'ldirilayotgan .camera-field elementi
     let stream = null;
@@ -69,7 +57,7 @@
 
     function startStream(facingMode) {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            showPlaceholder('Bu brauzerda jonli kamera qo‘llab-quvvatlanmaydi — Galereyadan tanlang.');
+            showPlaceholder('Bu brauzerda kamera qo‘llab-quvvatlanmaydi.');
             return;
         }
         showPlaceholder('Kamera ochilmoqda...');
@@ -82,7 +70,7 @@
             showLive();
             setStatus('');
         }).catch(function () {
-            showPlaceholder('Kameraga ruxsat berilmadi — Galereyadan tanlang.');
+            showPlaceholder('Kameraga ruxsat berilmadi.');
         });
     }
 
@@ -143,18 +131,8 @@
 
     document.querySelectorAll('[data-camera-field]').forEach(function (fieldEl) {
         const openBtn = fieldEl.querySelector('.btn-camera-open');
-        const galleryBtn = fieldEl.querySelector('.btn-camera-gallery');
-        const galleryInput = fieldEl.querySelector('.camera-gallery-input');
-
         if (openBtn) {
             openBtn.addEventListener('click', function () { openCameraModalFor(fieldEl); });
-        }
-        if (galleryBtn && galleryInput) {
-            galleryBtn.addEventListener('click', function () { galleryInput.click(); });
-            galleryInput.addEventListener('change', function () {
-                const file = galleryInput.files && galleryInput.files[0];
-                if (file) setFieldFile(fieldEl, file);
-            });
         }
     });
 })();

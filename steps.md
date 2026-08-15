@@ -10731,3 +10731,31 @@ ilovasiga chiqmaydi.
 
 ### O'zgargan fayllar
 `main/templates/sgsot.html`, `main/templates/ytsot.html`
+
+## 261-qadam: Galereya olib tashlandi, faqat "Kamerani ochish" tugmasi + izoh matnlari tozalandi
+
+Foydalanuvchi qattiq talab qildi: (1) shablonlarga yozilgan izoh matnlari
+(`{# ... #}`) nimadir sabab bilan xom holicha ekranda ko'rinib qolgan edi
+— butunlay olib tashlandi (Django kod-izohlari endi shablon fayllarida
+umuman yozilmaydi, faqat steps.md'da). (2) "Galereyadan" tanlash imkoniyati
+butunlay olib tashlandi — faqat "Kamerani ochish" tugmasi qoladi, bosilganda
+darhol modalda kameraga ruxsat so'raladi.
+
+### Tuzatish
+- `add_haridor.html`, `sgsot.html`, `ytsot.html` — izoh matnlari va
+  "Galereyadan" tugmasi/fayl-input olib tashlandi, faqat "Kamerani
+  ochish" qoldi.
+- `static/js/camera_widget.js` — galereya bilan bog'liq barcha kod
+  (tugma, fayl-input, event listener) olib tashlandi, xabar matnlaridan
+  ham "Galereyadan tanlang" iboralari olib tashlandi.
+- Static fayllar (`camera_widget.css`/`.js`) kesh muammosining oldini
+  olish uchun `?v=3` versiyalash qo'shildi.
+
+### Tekshirildi
+`manage.py check` — toza. Barcha shablonlar xatosiz kompilyatsiya
+qilinishi tasdiqlandi.
+
+### O'zgargan fayllar
+`main/templates/add_haridor.html`, `main/templates/sgsot.html`,
+`main/templates/ytsot.html`, `main/templates/camera_capture_widget.html`,
+`static/js/camera_widget.js`
