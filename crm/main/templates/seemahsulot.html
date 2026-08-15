@@ -544,6 +544,13 @@
                         </label>
                     </div>
 
+                    {% if request.company.custom_desktop_agent_stations %}
+                    <div class="form-group">
+                        <label class="form-label">Shtrix-kod (Savdogar Agent uchun)</label>
+                        <input type="text" name="shtrix_kod" class="form-input" value="{{ mahsulot.shtrix_kod }}" placeholder="Masalan: 4780000123456" maxlength="32">
+                    </div>
+                    {% endif %}
+
                     <button type="submit" class="btn primary" style="width:100%; justify-content:center;">
                         <i class="fa-solid fa-floppy-disk"></i> O'zgarishlarni saqlash
                     </button>

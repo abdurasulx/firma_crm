@@ -379,6 +379,11 @@ class Mahsulot(models.Model):
         help_text="Faqat 'semi_finished' mahsulotlar uchun ma'noli",
     )
     is_savdogar_product = models.BooleanField(default=False)
+    shtrix_kod = models.CharField(
+        max_length=32, blank=True, default='',
+        help_text="Real shtrix-kod (EAN/UPC va h.k.) — Desktop Agent orqali savdogar "
+                   "sotuvida mahsulotni tez topish uchun (faqat Desktop Agent tarifida ma'noli).",
+    )
 
     SERIAL_GRANULARITY_CHOICES = (
         ('none', "Yo'q"),

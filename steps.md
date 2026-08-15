@@ -10870,3 +10870,62 @@ turdagi barcha "Data truncated" holatlarini qamrab oladi.
 
 ### O'zgargan fayllar
 `main/services/stock_service.py`
+
+## 266-qadam: Yangi "Saler Agent" — savdogar uchun alohida (mustaqil) dastur
+
+Foydalanuvchi: supermarket-uslubidagi savdogar sotuvi uchun mavjud
+Desktop Agent (ombor/ishlab chiqarish uchun)ga tegilmasdan, BUTUNLAY
+ALOHIDA dastur kerakligini aytdi — "savdo agenti omborni oldida
+ishlaydi, unga yuklama va boshqa narsalar kerak emas".
+
+### Backend (`crm/`, mavjud loyihaga qo'shildi — bu qism umumiy)
+- `Mahsulot.shtrix_kod` — yangi maydon (real EAN/UPC shtrix-kod),
+  migratsiya `0102_mahsulot_shtrix_kod`.
+- `seemahsulot.html` — mahsulot tahrirlash sahifasida shtrix-kod
+  maydoni faqat `company.custom_desktop_agent_stations` bo'lsa
+  ko'rinadi ("Savdogar sotadigan mahsulotlar" checkbox yonida).
+- Ikkita yangi API endpoint (`main/agent_api_views.py`,
+  `landing/urls.py`):
+  - `GET /api/agent/saler/mahsulot/?kod=...` — shtrix-kod bo'yicha
+    `is_savdogar_product=True` mahsulotni topadi.
+  - `POST /api/agent/saler/sotuv/` — savatni (`items`) yakuniy `Savdo`
+    sifatida saqlaydi (mavjud `station`/badge-sessiya tokenidan
+    foydalanadi). ATAYLAB soddalashtirilgan: PDF shartnoma/imzo
+    skani/pasport rasmi TALAB QILINMAYDI (supermarket tezkor kassasi
+    uchun, `views.sotish`dagi nasiya/shartnoma oqimidan farqli). Faqat
+    naqd/karta.
+- Mavjud stansiya-login (`/api/agent/login/`, faqat `type=
+  'desktop_agent'` hisoblar) va badge-skan (`/api/agent/scan/`)
+  endpointlari QAYTA ISHLATILDI — hech qanday backend autentifikatsiya
+  o'zgarishi kerak emas edi.
+
+### Yangi mustaqil dastur: `saler_desktop_agent/`
+`desktop_agent/`dan BUTUNLAY ALOHIDA papka/loyiha — hech qanday umumiy
+kod/import yo'q. Tarkibi:
+- `main.py` — kirish nuqtasi.
+- `app/api_client.py` — faqat kerakli funksiyalar (login, badge skan,
+  mahsulot izlash, sotuvni yakunlash, heartbeat/logout). Ombor/kamera/
+  tarozi bilan bog'liq hech narsa yo'q.
+- `app/db.py` — juda kichik JSON-fayl asosidagi sozlama saqlash
+  (SQLite shart emas, faqat server/token).
+- `app/windows/main_window.py` — Login sahifasi (firma/login/parol) +
+  Sotuv sahifasi: xodim badge skanerlash (matn maydoni — HID
+  skaner/QR skaner "klaviatura" sifatida ishlaydi), shtrix-kod
+  skanerlash → savat jadvali, to'lov turi (naqd/karta), "Sotuvni
+  yakunlash".
+
+**Hali qilinmagan (keyingi qadamlar, hozircha MVP)**: PyInstaller
+`.spec` fayli (exe qilib yig'ish), kiosk-qulf, real-vaqtli
+bildirishnoma (WebSocket), xatolarni qayta urinish. Hozircha manba
+kod (`python main.py`) darajasida ishlaydi.
+
+### Tekshirildi
+Backend: `manage.py check` — toza, `manage.py test main` — 93 test,
+hammasi o'tdi. Yangi dastur: barcha `.py` fayllar `py_compile` orqali
+sintaksis xatosiz tasdiqlandi (PyQt6 muhiti hali sozlanmagani uchun
+to'liq ishga tushirish sinovi qilinmadi).
+
+### O'zgargan/yangi fayllar
+`main/models.py`, `main/migrations/0102_mahsulot_shtrix_kod.py`,
+`main/templates/seemahsulot.html`, `main/agent_api_views.py`,
+`landing/urls.py`, `saler_desktop_agent/` (butunlay yangi papka)

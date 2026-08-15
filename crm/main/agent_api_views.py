@@ -23,6 +23,7 @@ from django.shortcuts import render
 from .models import (
     Company, Ombor, XodimBadge, Pazanda, ProductionMaterialRequest, User, Mahsulot, StockHistory,
     MiqdorQoshish, Serial, YetkazibBeruvchi, YuklamaSorov, XodimDavomat, ProductionTask, TaskMaterialPickup,
+    Savdo,
 )
 from .warehouse_views import _send_ws_notification
 from .services.stock_service import approve_miqdor_qoshish_service, approve_yuklama_sorov_service
@@ -1223,6 +1224,130 @@ def agent_finalize_yuklama(request):
         pass
 
     return Response({'results': results})
+
+
+@api_view(['GET'])
+def agent_saler_lookup_mahsulot(request):
+    """Yangi "Saler Agent" (alohida dastur, `desktop_agent`ga bog'liq
+    emas) uchun — savdogar shtrix-kod skanerlaganda/kiritganda mahsulotni
+    topadi. Faqat `is_savdogar_product=True` (ega tomonidan "Savdogar
+    sotadigan mahsulotlar ro'yxati"ga qo'shilgan) mahsulotlar orasidan
+    qidiriladi — boshqa xodim turlariga tegishli xom ashyo/yarim tayyor
+    mahsulotlar savdogarga ko'rinmasligi kerak."""
+    company = _company_from_token(request)
+    if not company:
+        return Response({'detail': "Token noto'g'ri yoki topilmadi."}, status=status.HTTP_401_UNAUTHORIZED)
+
+    kod = (request.GET.get('kod') or '').strip()
+    if not kod:
+        return Response({'detail': "'kod' parametri kerak."}, status=status.HTTP_400_BAD_REQUEST)
+
+    mahsulot = Mahsulot.objects.filter(
+        company=company, is_savdogar_product=True, shtrix_kod=kod,
+    ).select_related('turi').first()
+    if not mahsulot:
+        return Response({'detail': "Bu shtrix-kodga tegishli mahsulot topilmadi."}, status=status.HTTP_404_NOT_FOUND)
+
+    return Response({
+        'id': mahsulot.id,
+        'nomi': mahsulot.nomi,
+        'narxi': float(mahsulot.narxi),
+        'miqdori': float(mahsulot.miqdori),
+        'birlik': mahsulot.turi.nomi if mahsulot.turi else '',
+    })
+
+
+@api_view(['POST'])
+def agent_saler_finalize_sale(request):
+    """"Saler Agent" — savdogar savatini (shtrix-kod orqali to'plangan)
+    yakuniy sotuv sifatida saqlaydi. Odatdagi veb "Sotish" oqimidan farqli
+    (`views.sotish`) — bu yerda PDF shartnoma/imzo skani/pasport rasmi
+    talab QILINMAYDI (supermarket-uslubidagi tezkor kassa uchun ataylab
+    soddalashtirilgan, foydalanuvchi bilan kelishilgan qaror). Faqat
+    naqd/karta qo'llab-quvvatlanadi — nasiya (kredit shartnomasi talab
+    qiladigan) turi bu tezkor oqimga mos emas."""
+    company = _company_from_token(request)
+    if not company:
+        return Response({'detail': "Token noto'g'ri yoki topilmadi."}, status=status.HTTP_401_UNAUTHORIZED)
+
+    user_id = _user_id_from_session_token(request.data.get('session_token'), company)
+    if not user_id:
+        return Response(
+            {'detail': "Sessiya-token yo'q yoki muddati tugagan. Badge'ni qayta skanerlang."},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+    savdogar_user = User.objects.filter(id=user_id, company=company, type='savdogar').first()
+    if not savdogar_user:
+        return Response({'detail': "Bu foydalanuvchi savdogar emas."}, status=status.HTTP_404_NOT_FOUND)
+
+    st = request.data.get('st') or 'naqd'
+    if st not in ('naqd', 'karta'):
+        return Response({'detail': "To'lov turi faqat naqd yoki karta bo'lishi mumkin."}, status=status.HTTP_400_BAD_REQUEST)
+
+    oluvchi = (request.data.get('oluvchining_ismi') or '').strip() or "Mijoz"
+
+    items = request.data.get('items') or []
+    if not isinstance(items, list) or not items:
+        return Response({'detail': "Savat bo'sh."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        with transaction.atomic():
+            txt = ''
+            summa = 0.0
+            foyda = 0.0
+            ish_haqi_summasi = 0.0
+            for item in items:
+                try:
+                    mahsulot_id = int(item.get('mahsulot_id'))
+                    miqdor = float(item.get('miqdor'))
+                except (TypeError, ValueError, AttributeError):
+                    continue
+                if miqdor <= 0:
+                    continue
+                mahsulot = Mahsulot.objects.select_for_update().filter(
+                    id=mahsulot_id, company=company, is_savdogar_product=True,
+                ).first()
+                if not mahsulot:
+                    return Response(
+                        {'detail': f"Mahsulot (id={mahsulot_id}) topilmadi yoki savdogar ro'yxatida emas."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                if miqdor > float(mahsulot.miqdori):
+                    return Response(
+                        {'detail': f"{mahsulot.nomi} uchun zaxirada yetarli miqdor yo'q (qoldiq: {mahsulot.miqdori:g})."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                mahsulot.miqdori = float(mahsulot.miqdori) - miqdor
+                mahsulot.save(update_fields=['miqdori'])
+
+                price = float(mahsulot.narxi)
+                cost = float(mahsulot.tannarx or 0)
+                txt += f'{mahsulot.nomi} {miqdor:g} {mahsulot.narxi},'
+                summa += miqdor * price
+                foyda += miqdor * (price - cost)
+                ish_haqi_summasi += miqdor * float(mahsulot.sotuv_ish_haqi_narxi or 0)
+
+            if not txt:
+                return Response({'detail': "Savatda haqiqiy mahsulot topilmadi."}, status=status.HTTP_400_BAD_REQUEST)
+
+            svd = Savdo.objects.create(
+                savdogar=savdogar_user,
+                smm=txt,
+                smr='',
+                oluvchining_ismi=oluvchi,
+                tulandi=True,
+                tasdiq_kutilmoqda=True,
+                st=st,
+                base_summa=summa,
+                summa=summa,
+                foyda=foyda,
+                ish_haqi_summasi=ish_haqi_summasi,
+                company=company,
+            )
+    except Exception as exc:  # noqa: BLE001 — kutilmagan xato bo'lsa ham stansiya jimgina yiqilmasligi kerak
+        return Response({'detail': f"Sotuvni saqlashda xato: {exc}"}, status=status.HTTP_400_BAD_REQUEST)
+
+    return Response({'ok': True, 'savdo_id': svd.id, 'summa': summa})
 
 
 @api_view(['POST'])
