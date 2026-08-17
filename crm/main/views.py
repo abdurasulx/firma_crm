@@ -1522,11 +1522,20 @@ def main(request):
     payload['oylik_qoshimcha'] = add_spctoint(round(oylik_qoshimcha))
     payload['oylik_marja'] = round(oylik_marja, 1)
 
-    # ── Ombordagi hozirgi mahsulotlar qiymati (miqdori x narxi) ──────────────
+    # ── Ombordagi hozirgi mahsulotlar qiymati (miqdori x tannarx) ────────────
+    # Real bug (foydalanuvchi topdi): avval `narxi` (sotuv narxi) bilan
+    # hisoblanardi — lekin ombor mahsulotlari (xom ashyo/yarim tayyor)
+    # yaratilganda `narxi` HAR DOIM 0 qilib qo'yiladi (`warehouse_
+    # product_create` — ularga sotuv narxi emas, faqat tannarx tegishli).
+    # Natijada bu statistika ombordagi asosiy qismni (xom ashyo) butunlay
+    # e'tiborsiz qoldirib, faqat tayyor mahsulotlarni hisoblardi —
+    # ko'rsatilgan summa haqiqiy zaxira qiymatidan ancha kichik chiqardi.
+    # `tannarx` (asl qiymat) har ikkala tur uchun ham mazmunli, shuning
+    # uchun endi shu ishlatiladi.
     from django.db.models import F, DecimalField, ExpressionWrapper
     ombor_qiymati = Mahsulot.objects.filter(company=request.company).aggregate(
         t=Sum(
-            ExpressionWrapper(F('miqdori') * F('narxi'), output_field=DecimalField(max_digits=18, decimal_places=2)),
+            ExpressionWrapper(F('miqdori') * F('tannarx'), output_field=DecimalField(max_digits=18, decimal_places=2)),
         )
     )['t'] or 0
     payload['ombor_qiymati'] = add_spctoint(round(ombor_qiymati))

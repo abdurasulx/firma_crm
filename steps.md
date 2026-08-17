@@ -10929,3 +10929,29 @@ to'liq ishga tushirish sinovi qilinmadi).
 `main/models.py`, `main/migrations/0102_mahsulot_shtrix_kod.py`,
 `main/templates/seemahsulot.html`, `main/agent_api_views.py`,
 `landing/urls.py`, `saler_desktop_agent/` (butunlay yangi papka)
+
+## 266-qadam: "Ombordagi Mahsulotlar Qiymati" haqiqiy qiymatdan ancha kichik ko'rsatilardi
+
+Foydalanuvchi ro'yxatdagi mahsulotlarni qo'lda hisoblab, dashboarddagi
+"280 000 so'm" mantiqsiz kichik ekanini payqadi (masalan bitta "Energiya"
+qatorining o'zi — 100000 dona x 1500 so'm — bir necha million so'mni
+tashkil qiladi).
+
+Sabab: dashboard bu statistikani `miqdori * narxi` orqali hisoblardi.
+Lekin `warehouse_product_create` (ombor/xom ashyo mahsuloti yaratish)
+`narxi`ni HAR DOIM `0` qilib qattiq belgilaydi (xom ashyo/yarim tayyor
+mahsulotlarga sotuv narxi emas, faqat tannarx tegishli). Natijada bu
+statistika ombordagi deyarli barcha mahsulotlarni (xom ashyo) 0 deb
+hisoblab, faqat haqiqiy `narxi` bor tayyor mahsulotlarnigina qo'shardi —
+ko'rsatilgan summa haqiqiy zaxira qiymatidan ancha kichik chiqardi.
+
+### Tuzatish (`main/views.py`)
+Hisoblash endi `miqdori * tannarx` orqali amalga oshiriladi — `tannarx`
+HAR IKKALA turdagi mahsulot (xom ashyo va tayyor) uchun ham to'g'ri
+to'ldiriladi.
+
+### Tekshirildi
+`manage.py check` — toza. `manage.py test main` — 93 test, hammasi o'tdi.
+
+### O'zgargan fayllar
+`main/views.py`
