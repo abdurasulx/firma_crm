@@ -1181,14 +1181,25 @@ def main(request):
                     p.display_qty = p.expected_qty
                     p.display_birlik = birlik
             # Ishlab chiqaruvchi o'zi vazifa yaratishi uchun — faqat BOM
-            # (retsept) kiritilgan mahsulotlar tanlanishi mumkin.
+            # (retsept) kiritilgan VA aynan shu ishlab chiqaruvchiga
+            # biriktirilgan mahsulotlar tanlanishi mumkin. Real bug
+            # (foydalanuvchi topdi): avval BUTUN FIRMADAGI barcha
+            # BOM-mahsulotlar ko'rsatilardi — hatto shu ishlab
+            # chiqaruvchiga umuman biriktirilmagan (masalan boshqa
+            # ishlab chiqaruvchiga tegishli) mahsulotlar ham chiqib
+            # turardi, garchi firmada faqat bitta ishlab chiqaruvchi
+            # bo'lib, unga bor-yo'g'i 2 ta mahsulot biriktirilgan
+            # bo'lsa ham.
             bom_mahsulot_ids = MahsulotRetsept.objects.filter(
                 company=request.company,
             ).values_list('mahsulot_id', flat=True).distinct()
+            biriktirilgan_ids = PazandaMahsulot.objects.filter(
+                pazanda=pz,
+            ).values_list('mahsulot_id', flat=True)
             payload['task_mahsulotlar'] = Mahsulot.objects.filter(
                 company=request.company, id__in=bom_mahsulot_ids,
                 warehouse_type='finished', mahsulot_turi='ishlab_chiqariladigan',
-            ).order_by('nomi')
+            ).filter(id__in=biriktirilgan_ids).order_by('nomi')
             # Printer holati (qog'oz tugagan/oflayn/xato) tekshiruvi orqali
             # HAQIQATAN chop etilmagan deb aniqlangan QR-yorliqlar — Desktop
             # Agentda keyingi badge skanida qayta taklif qilinadi, bu yerda
@@ -1653,7 +1664,8 @@ def add_haridor(request):
                 egasining_rasmi=egasining_rasmi,
                 telefon=telefon,
                 telegram_username=telegram_username,
-                company=request.company
+                company=request.company,
+                created_by=request.user,
             )
             
             messages.success(request, "Yangi haridor muvaffaqiyatli qo‘shildi!")
@@ -2728,7 +2740,14 @@ def sotish(request):
             ]
         else:
             mahsulotlar = mahsulotlar_miqdori(yt.mahsulotlar, company=request.company)
-        xaridorlar=HaridorDukon.objects.filter(company=request.company)
+        # Real bug (foydalanuvchi topdi): do'kon tanlash oddiy <select> edi,
+        # ro'yxat uzun bo'lsa qidirib topish qiyin, o'zi yaratgan
+        # do'konlar boshqalar bilan aralashib ketardi. Endi modal +
+        # qidiruv uchun — o'zi yaratganlar birinchi navbatda chiqadi.
+        from django.db.models import Case, When, Value, IntegerField
+        xaridorlar = HaridorDukon.objects.filter(company=request.company).annotate(
+            _own=Case(When(created_by=request.user, then=Value(0)), default=Value(1), output_field=IntegerField()),
+        ).order_by('_own', 'nomi')
         
         if request.method == "POST":
             from django.db import transaction

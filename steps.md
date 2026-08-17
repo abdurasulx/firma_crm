@@ -10994,3 +10994,42 @@ qulflangan holatda ham ishlashda davom etadi.
 
 ### Build
 `StockFirmAgent.exe` qayta yig'ildi, foydalanuvchiga yuborildi.
+
+## 268-qadam: Ikkita tuzatish — Vazifa yaratish mahsulot ro'yxati + Haridor/Do'kon tanlash modali
+
+### 1) "Vazifa yaratish" mahsulot dropdown butun firmani ko'rsatardi
+Foydalanuvchi: "Safiya firmasida faqat bitta ishlab chiqaruvchi bor, nega
+qolgan mahsulotlar ham ko'rinyabdi" — `task_mahsulotlar` (ishlab
+chiqaruvchi dashboardida o'zi vazifa yaratish uchun) BUTUN firmadagi
+barcha BOM-mahsulotlarni ko'rsatardi, aynan shu ishlab chiqaruvchiga
+biriktirilgan-biriktirilmaganidan qat'i nazar.
+
+**Tuzatish** (`views.py::main`): ro'yxat endi `PazandaMahsulot` orqali
+shu ishlab chiqaruvchiga biriktirilgan mahsulotlar bilan ham
+kesishtiriladi.
+
+### 2) Haridor/Do'kon — oddiy <select> o'rniga qidiruvli modal
+Foydalanuvchi: yetkazib beruvchi dashboardida "Sotish" sahifasida do'kon
+tanlashda modal ochilsin, boshida o'zi yaratgan do'konlar tursin, qidiruv
+orqali topilsin, nomi yonida kichik rasmi ham chiqsin.
+
+**Tuzatish**:
+- `HaridorDukon`ga yangi `created_by` FK qo'shildi (migratsiya
+  `0103_haridordukon_created_by`) — avval bu umuman saqlanmasdi.
+- `views.py::add_haridor` — endi `created_by=request.user` yozib
+  qo'yiladi.
+- `views.py::sotish` — `xaridorlar` queryset endi `created_by=request.user`
+  bo'lganlarni birinchi navbatga chiqaradi (`annotate` + `order_by`).
+- `ytsot.html` — oddiy `<select name="haridor">` o'rniga: yashirin
+  input + tugma (tanlangan do'kon rasmi+nomi ko'rsatadi) + modal
+  (qidiruv maydoni, ro'yxat — har biri kichik rasm bilan, "Mening"
+  belgisi o'zi yaratganlarga).
+
+### Tekshirildi
+`manage.py check` — toza. `manage.py test main` — 93 test, hammasi
+o'tdi. Shablon xatosiz kompilyatsiya qilinishi tasdiqlandi. Lokal
+migratsiya qo'llanildi.
+
+### O'zgargan fayllar
+`main/models.py`, `main/views.py`, `main/templates/ytsot.html`,
+`main/migrations/0103_haridordukon_created_by.py` (yangi)
