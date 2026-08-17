@@ -11033,3 +11033,38 @@ migratsiya qo'llanildi.
 ### O'zgargan fayllar
 `main/models.py`, `main/views.py`, `main/templates/ytsot.html`,
 `main/migrations/0103_haridordukon_created_by.py` (yangi)
+
+## 270-qadam: Kiosk qulfida sichqoncha/klaviatura ilova ichida ishlamaydi (faqat skaner)
+
+Foydalanuvchi qayta so'radi: "klaviatura blok muammosi hal bo'lmagan,
+faqat skannerniki qabul qilinsin, mishka/klaviatura ishlamay tursin".
+
+Avvalgi urinishlar (219/226-qadamlar) OS darajasidagi global klaviatura
+HOOK orqali kalitlarni "yutish" edi — bu butun tizim klaviaturasini/HID
+skanerni ishdan chiqargan (232-qadamgacha bo'lgan real falokatlar).
+Bu safar butunlay boshqa, XAVFSIZ yondashuv: `QApplication.
+installEventFilter()` orqali FAQAT Qt darajasida (shu dastur ichida)
+sichqoncha/klaviatura hodisalari yutiladi — OS'ga yoki boshqa
+dasturlarga (jumladan HID skaner — u alohida, mustaqil passiv
+`keyboard.hook()` orqali ishlaydi, Qt event tizimidan butunlay tashqarida)
+hech qanday ta'sir qilmaydi.
+
+### Tuzatish (`main_window.py`)
+- `MainWindow.__init__`da `QApplication.instance().installEventFilter(self)`.
+- `eventFilter()` — `_kiosk_locked=True` bo'lganda, MainWindow'ning O'ZIGA
+  tegishli sichqoncha (bosish/harakat/g'ildirak) va klaviatura
+  hodisalarini yutadi (`return True`). Alohida oyna sifatida ochiladigan
+  `QMessageBox` (masalan "Qulf ochilmadi" ogohlantirishi)
+  filtrlanmaydi — `widget.window() is self` tekshiruvi orqali —
+  aks holda ogohlantirish oynasi ham bosilmay, dastur abadiy tiqilib
+  qolardi.
+
+**Eslatma (foydalanuvchiga aytilgan)**: Win tugmasi Boshlash menyusini
+ochishi — bu OS darajasidagi xatti-harakat, Qt/dastur darajasida
+xavfsiz bloklab bo'lmaydi (avvalroq shu sessiyada ham aniqlangan) —
+buni to'xtatish uchun Windows Kiosk/Assigned Access yoki Group Policy
+(OS darajasida, bir martalik sozlash) kerak.
+
+### Build
+`StockFirmAgent.exe` toza (`build/` keshi tozalab) qayta yig'ildi,
+foydalanuvchiga yuborildi.
