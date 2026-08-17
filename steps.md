@@ -10955,3 +10955,42 @@ to'ldiriladi.
 
 ### O'zgargan fayllar
 `main/views.py`
+
+## 267-qadam (Desktop Agent / ombor agenti): kiosk qulfi endi HAQIQATDA sichqoncha/klaviaturani bloklaydi
+
+Foydalanuvchi: "klaviatura blok muammosi hal bo'lmagan, faqat skannerniki
+qabul qilinsin, mishka va klaviaturani qabul qilmay tursin". Kod
+tekshirilganda aniqlandi: `_set_kiosk_locked`ning docstring'ida "faqat
+kamera orqali... mishka/klaviatura emas" deb yozilgan edi, lekin bu
+HECH QACHON haqiqatda amalga oshirilmagan — qulf faqat sidebar
+tugmalarini (`setEnabled(False)`) o'chirardi, boshqa hech qanday
+sichqoncha bosish/klaviatura terish harakatini to'xtatmasdi.
+
+### Tuzatish — XAVFSIZ yondashuv (avvalgi falokatlarni takrorlamasdan)
+219-232-qadamlarda OS darajasidagi global klaviatura HOOK (WH_KEYBOARD_LL)
+orqali kalitlarni "yutish" butun tizim klaviaturasini (va HID skanerni)
+ishdan chiqargan edi — bu QAYTA QO'LLANILMAYDI. Buning o'rniga:
+
+`main_window.py`ga `QApplication.installEventFilter(self)` o'rnatildi —
+`eventFilter()` endi kiosk qulflangan holatda sichqoncha
+(bosish/harakat/g'ildirak) va klaviatura hodisalarini **faqat shu
+dastur oynasining o'zi uchun** yutadi (Qt darajasida, boshqa dasturlarga
+yoki OS'ga hech qanday ta'sir qilmaydi). Alohida oyna sifatida
+ochiladigan `QMessageBox` (masalan "Qulf ochilmadi" ogohlantirishi)
+buning ta'siriga tushmaydi — `widget.window() is self` tekshiruvi
+orqali chetlab o'tiladi, aks holda ogohlantirish oynasini yopib
+bo'lmay qolardi.
+
+Skaner (`ScannerService`) allaqachon Qt hodisa tizimidan MUSTAQIL,
+global PASSIV hook orqali ishlaydi (hech narsani "yutmaydi", faqat
+kuzatadi) — shuning uchun bu o'zgarishdan butunlay ta'sirlanmaydi va
+qulflangan holatda ham ishlashda davom etadi.
+
+### Tekshirildi
+`py_compile` orqali sintaksis tekshirildi — toza.
+
+### O'zgargan fayllar
+`desktop_agent/app/windows/main_window.py`
+
+### Build
+`StockFirmAgent.exe` qayta yig'ildi, foydalanuvchiga yuborildi.

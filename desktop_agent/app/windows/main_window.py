@@ -1,8 +1,8 @@
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QStackedWidget,
-    QStackedLayout, QLabel, QMessageBox, QGraphicsOpacityEffect,
+    QStackedLayout, QLabel, QMessageBox, QGraphicsOpacityEffect, QApplication,
 )
-from PyQt6.QtCore import QThread, QTimer, pyqtSignal, QPropertyAnimation, QEasingCurve
+from PyQt6.QtCore import QThread, QTimer, pyqtSignal, QPropertyAnimation, QEasingCurve, QEvent
 
 from .. import db
 from ..scanner_service import ScannerService
@@ -83,6 +83,14 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("StockFirm Desktop Agent")
         self.resize(1000, 640)
+
+        # `eventFilter` pastda o'rnatilgan zahoti Qt undan hodisalarni
+        # so'rashi mumkin — shu sabab `_kiosk_locked` va filtrning o'zi
+        # ENG BOSHIDA, boshqa hech narsa yaratilishidan oldin tayyor
+        # bo'lishi kerak (aks holda `AttributeError` yoki hodisalar
+        # tasodifiy o'tkazib yuborilishi mumkin).
+        self._kiosk_locked = False
+        QApplication.instance().installEventFilter(self)
 
         self.root_stack = QStackedWidget()
         self.setCentralWidget(self.root_stack)
@@ -632,11 +640,47 @@ class MainWindow(QMainWindow):
             return
         self._set_kiosk_locked(True)
 
+    # Real bug (foydalanuvchi topdi): "mishka/klaviatura orqali boshqarish
+    # mumkin emas" degan xabar avvaldan yozilgan edi, lekin bu HAQIQATDA
+    # HECH QACHON amalga oshirilmagan — qulf faqat sidebar tugmalarini
+    # `setEnabled(False)` qilardi, boshqa hech qanday sichqoncha/klaviatura
+    # bosilishini to'xtatmasdi. Foydalanuvchi aniq so'radi: qulflangan
+    # holatda FAQAT skaner (fon rejimidagi `ScannerService`, alohida —
+    # Qt hodisa tizimidan MUSTAQIL, global passiv hook orqali ishlaydi)
+    # qabul qilinsin, sichqoncha/klaviatura esa umuman ta'sir qilmasin.
+    #
+    # Bu yerda ATAYLAB avvalgi (219-232-qadamlardagi) xavfli usul — OS
+    # darajasidagi global klaviatura HOOK orqali kalitlarni "yutish" —
+    # QAYTARILMAYDI (aynan shu butun tizim klaviaturasini/HID skanerni
+    # ishdan chiqargan edi). Buning o'rniga faqat Qt DARAJASIDA (shu
+    # dastur ichida, `QApplication.installEventFilter`) sichqoncha/
+    # klaviatura hodisalari yutiladi — OS'ga yoki boshqa dasturlarga
+    # HECH QANDAY ta'sir qilmaydi, xavfsiz.
+    _BLOCKED_EVENT_TYPES = {
+        QEvent.Type.MouseButtonPress, QEvent.Type.MouseButtonRelease, QEvent.Type.MouseButtonDblClick,
+        QEvent.Type.MouseMove, QEvent.Type.Wheel,
+        QEvent.Type.KeyPress, QEvent.Type.KeyRelease,
+        QEvent.Type.TouchBegin, QEvent.Type.TouchUpdate, QEvent.Type.TouchEnd,
+    }
+
+    def eventFilter(self, obj, event):
+        if self._kiosk_locked and event.type() in self._BLOCKED_EVENT_TYPES:
+            # Faqat shu asosiy oynaning O'ZIGA tegishli hodisalar
+            # yutiladi — alohida oyna sifatida ochiladigan QMessageBox
+            # (masalan "Qulf ochilmadi" ogohlantirishi) o'zining "OK"
+            # tugmasini bosish orqali yopilishi kerak, aks holda dastur
+            # abadiy tiqilib qolgan bo'lardi.
+            widget = obj if isinstance(obj, QWidget) else None
+            if widget is not None and widget.window() is self:
+                return True
+        return super().eventFilter(obj, event)
+
     def _set_kiosk_locked(self, locked: bool):
         """Kiosk qulfi holatini o'rnatadi. Qulflanganda: sidebar
-        navigatsiyasi (Omborlar/Sozlamalar) va oynani yopish bloklanadi —
-        faqat kamera orqali xodim-skan/badge oqimi (mishka/klaviatura emas)
-        ishlab turadi. Ochilganda: hammasi avvalgidek erkin."""
+        navigatsiyasi (Omborlar/Sozlamalar), oynani yopish, va endi
+        HAQIQATDA sichqoncha/klaviatura orqali dastur bilan ishlash
+        bloklanadi — faqat fon rejimidagi skaner (badge/QR) ishlab
+        turadi. Ochilganda: hammasi avvalgidek erkin."""
         self._kiosk_locked = locked
         self.warehouse_btn.setEnabled(not locked)
         self.settings_btn.setEnabled(not locked)
