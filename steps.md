@@ -11033,3 +11033,25 @@ migratsiya qo'llanildi.
 ### O'zgargan fayllar
 `main/models.py`, `main/views.py`, `main/templates/ytsot.html`,
 `main/migrations/0103_haridordukon_created_by.py` (yangi)
+
+## 269-qadam: Mahsulot sahifasidan barcha QR kodlarni ko'rish/qayta chop etish uchun bog'lama qo'shildi
+
+Foydalanuvchi allaqachon ishlab chiqarilgan mahsulotning 20 ta QR-yorlig'ini
+qayta chop etish/yopishtirish uchun olishni so'radi. Bunday funksiya
+(`/ishlab-chiqarish/seriallar/<mahsulot_id>/` — `serial_list_page`, har bir
+Serial uchun alohida QR PNG havolasi bilan) ALLAQACHON mavjud edi, lekin
+mahsulot tahrirlash sahifasidan unga hech qanday bog'lama yo'q edi —
+foydalanuvchi buni topa olmagan.
+
+### Tuzatish
+`seemahsulot.html` — "Serial/QR kod" bo'limiga (agar
+`serial_granularity != 'none'` bo'lsa) "Barcha QR kodlarni ko'rish (qayta
+chop etish uchun)" tugmasi qo'shildi, mavjud `serial_list` sahifasiga olib
+boradi.
+
+### Tekshirildi
+`manage.py check` — toza. Shablon xatosiz kompilyatsiya qilinishi
+tasdiqlandi.
+
+### O'zgargan fayllar
+`main/templates/seemahsulot.html`

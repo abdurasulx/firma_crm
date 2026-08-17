@@ -441,6 +441,11 @@
                                 (Desktop Agent orqali) har bir dona uchun alohida QR yorliq avtomatik
                                 chop etiladi.
                             </div>
+                            {% if mahsulot.serial_granularity != 'none' %}
+                            <a class="btn" href="{% url 'serial_list' mahsulot.id %}" style="margin-top:8px; display:inline-flex;">
+                                <i class="fa-solid fa-qrcode"></i> Barcha QR kodlarni ko'rish (qayta chop etish uchun)
+                            </a>
+                            {% endif %}
                         </div>
 
                         {% if mahsulot.mahsulot_turi != 'distributor' %}
