@@ -1694,6 +1694,21 @@ def _payroll_context(user, company, can_edit):
     }
 
 
+def _yetkazib_beruvchi_month_stats(yb, company):
+    """Pazandaning 'Bu oy statistikam' bloki bilan bir xil ko'rinishda —
+    yetkazib beruvchi shu oy sotgan mahsulotlarini (SavdoMahsulot, ID
+    orqali bog'langan) mahsulot bo'yicha yig'ib ko'rsatadi."""
+    now = timezone.localtime()
+    month_start, month_end = payroll_service.get_month_bounds(now.year, now.month)
+    per_product = SavdoMahsulot.objects.filter(
+        savdo__company=company, savdo__yetkazib_beruvchi=yb,
+        savdo__vaqt_sana__gte=month_start, savdo__vaqt_sana__lt=month_end,
+    ).values('mahsulot__nomi', 'mahsulot__turi__nomi').annotate(
+        jami_miqdor=Sum('miqdor'),
+    ).order_by('-jami_miqdor')
+    return {'per_product': per_product}
+
+
 def _pazanda_assignment_context(pz, company):
     """Pazanda uchun biriktirilgan/biriktirilishi mumkin bo'lgan mahsulotlar + oylik statistika."""
     assignable_products = Mahsulot.objects.filter(
@@ -1724,6 +1739,10 @@ def profile_view(request, username):
             context = {'user': user, 'base_template': base_template}
             context['kpi'] = kpi_service.get_employee_kpi(user, request.company)
             context.update(_payroll_context(user, request.company, can_edit=False))
+            if request.user.type == 'yetkazib_beruvchi':
+                yb = YetkazibBeruvchi.objects.filter(user=user, company=request.company).first()
+                if yb:
+                    context['yb_month_stats'] = _yetkazib_beruvchi_month_stats(yb, request.company)
             if request.user.pk == user.pk:
                 context['own_badge'], _ = XodimBadge.objects.get_or_create(
                     user=user, defaults={'company': request.company},

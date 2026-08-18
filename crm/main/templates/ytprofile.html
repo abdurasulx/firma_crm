@@ -263,6 +263,44 @@
             {% endif %}
             {% endif %}
 
+            {% if payroll_summary %}
+            <div class="info-section" style="margin-top:20px; display:block;">
+                <span class="info-label"><i class="fas fa-sack-dollar"></i> Bu oy statistikam</span>
+                <div style="margin-top:10px; display:flex; gap:14px; flex-wrap:wrap;">
+                    <div class="info-box" style="background:#eff6ff; border-color:#bfdbfe;">
+                        <span class="info-label" style="color:#1e40af;">Ishlab topganim</span>
+                        <span class="info-value" style="color:#1e3a8a;">{{ payroll_summary.earned|floatformat:0 }} so'm</span>
+                    </div>
+                    <div class="info-box">
+                        <span class="info-label">Avans olganim</span>
+                        <span class="info-value">{{ payroll_summary.avans_sum|floatformat:0 }} so'm</span>
+                    </div>
+                    <div class="info-box" style="background:#f0fdf4; border-color:#bbf7d0;">
+                        <span class="info-label" style="color:#166534;">Qolgan qarzim</span>
+                        <span class="info-value" style="color:#065f46;">{{ payroll_summary.qoldiq|floatformat:0 }} so'm</span>
+                    </div>
+                </div>
+                {% if yb_month_stats.per_product %}
+                <table style="width:100%; border-collapse:collapse; margin-top:16px;">
+                    <thead>
+                        <tr style="border-bottom:1px solid var(--slate-200); text-align:left;">
+                            <th style="padding:8px 4px; font-size:12px; color:var(--slate-500);">Mahsulot</th>
+                            <th style="padding:8px 4px; font-size:12px; color:var(--slate-500);">Sotgan miqdorim (shu oy)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in yb_month_stats.per_product %}
+                        <tr style="border-bottom:1px solid var(--slate-100);">
+                            <td style="padding:10px 4px; font-weight:700;">{{ row.mahsulot__nomi }}</td>
+                            <td style="padding:10px 4px;">{{ row.jami_miqdor|floatformat:0 }} {{ row.mahsulot__turi__nomi }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% endif %}
+            </div>
+            {% endif %}
+
             {% if own_badge %}
             <div class="info-section" style="margin-top:20px; text-align:center;">
                 <span class="info-label"><i class="fas fa-qrcode"></i> Mening shaxsiy QR badge'im</span>
