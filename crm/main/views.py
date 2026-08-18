@@ -2823,9 +2823,15 @@ def sotish(request):
                         messages.error(request, str(exc))
                         return redirect('sotish')
 
-                # QR/Serial — "unit" granularity mahsulotlar uchun savdo yopishda
-                # skanerlangan/kiritilgan serial kodlari majburiy va oldindan
-                # tekshiriladi (hech qanday zaxira o'zgarishidan oldin).
+                # QR/Serial — sotuvchidan endi hech qanday serial (QR) kodi
+                # talab qilinmaydi (foydalanuvchi so'roviga ko'ra: "qr
+                # kodsiz tavarni qanday sotsa shunday sotilsin"). Miqdor
+                # oddiy son sifatida kiritiladi. Agar mahsulot serial
+                # (`unit`) darajasida kuzatilsa, mavjud seriallar
+                # (yetkazib beruvchiga tegishli, hali sotilmagan) fondan
+                # avtomatik, foydalanuvchiga ko'rinmas holda tanlab
+                # olinadi — bu faqat ichki hisobot/qoldiq maqsadida,
+                # savdoni bloklamaydi.
                 expected_serial_holati = 'chiqarilgan' if request.user.type == 'yetkazib_beruvchi' else 'omborda'
                 serial_ids_by_nom = {}
                 for m in mahsulotlar:
@@ -2837,84 +2843,15 @@ def sotish(request):
                     if not mahsulot_for_check or mahsulot_for_check.serial_granularity != 'unit':
                         continue
                     miqdor_float = float(miqdor)
-                    kodlar_raw = request.POST.get(f'serial_kodlari_{nom}', '')
-                    kodlar = [k.strip() for k in kodlar_raw.replace(',', '\n').splitlines() if k.strip()]
-                    if len(kodlar) != int(miqdor_float):
-                        messages.error(
-                            request,
-                            f"{nom} uchun {int(miqdor_float)} ta serial (QR) kodi kiritilishi/skanerlanishi shart, {len(kodlar)} ta kiritildi.",
-                        )
-                        return redirect('sotish')
                     serials_qs = Serial.objects.select_for_update().filter(
                         company=request.company, mahsulot=mahsulot_for_check,
-                        kod__in=kodlar, holati=expected_serial_holati, savdo__isnull=True,
+                        holati=expected_serial_holati, savdo__isnull=True,
                     )
                     if request.user.type == 'yetkazib_beruvchi':
-                        # Faqat shu yetkazib beruvchi o'zi yuklamada olib
-                        # chiqqan donalarni sotishi mumkin — boshqa
-                        # yetkazuvchiga tegishli (yoki hali umuman
-                        # chiqarilmagan) QR kod kiritilsa qabul qilinmaydi.
                         serials_qs = serials_qs.filter(yetkazib_beruvchi=yt)
-                    found_kodlar = set(serials_qs.values_list('kod', flat=True))
-                    missing = [k for k in kodlar if k not in found_kodlar]
-                    if missing:
-                        # Har bir "yaroqsiz" kod uchun ANIQ sababini topib
-                        # ko'rsatamiz — ayniqsa yetkazib beruvchi hali
-                        # Desktop Agent orqali yuklamaga olmagan (holati
-                        # hamon "omborda") mahsulotni to'g'ridan-to'g'ri
-                        # sotishga urinsa, oldingi umumiy "yaroqsiz yoki
-                        # ishlatilgan" xabari chalkashtirar edi — ega bilan
-                        # kelishilgan aniqlashtirish.
-                        real_serials = {
-                            s.kod: s for s in Serial.objects.filter(
-                                company=request.company, mahsulot=mahsulot_for_check, kod__in=missing,
-                            ).select_related('yetkazib_beruvchi')
-                        }
-                        sabablar = []
-                        # Foydalanuvchi talabi: yetkazib beruvchi hali
-                        # Desktop Agent orqali RASMAN olib chiqmagan (holati
-                        # hamon "omborda") mahsulotni to'g'ridan-to'g'ri
-                        # sotishga urinishi — bu potentsial o'g'irlik
-                        # urinishi (mahsulot tizimdan o'tmasdan qo'lga
-                        # tushirilgan). Avval bu FAQAT sotuvchining o'ziga
-                        # (xato xabari sifatida) ko'rinardi, ega hech qanday
-                        # ogohlantirish olmasdi. Endi shu holat aniqlansa,
-                        # egaga darhol bildirishnoma yuboriladi va
-                        # `SerialHarakat('shubhali')` log yoziladi.
-                        suspicious_kodlar = []
-                        for kod in missing[:5]:
-                            s = real_serials.get(kod)
-                            if not s:
-                                sabablar.append(f"{kod} — topilmadi")
-                            elif s.savdo_id:
-                                sabablar.append(f"{kod} — allaqachon sotilgan")
-                            elif s.holati == 'omborda' and request.user.type == 'yetkazib_beruvchi':
-                                sabablar.append(f"{kod} — hali agentda ro'yxatdan o'tkazilmagan (yuklamaga olinmagan, omborda turibdi)")
-                                suspicious_kodlar.append(s)
-                            elif s.holati == 'chiqarilgan' and request.user.type == 'yetkazib_beruvchi':
-                                sabablar.append(f"{kod} — boshqa yetkazib beruvchiga tegishli")
-                            else:
-                                sabablar.append(f"{kod} — noto'g'ri holatda ({s.get_holati_display()})")
-                        if suspicious_kodlar:
-                            qr_service.log_shubhali_sotish_urinishi(suspicious_kodlar, request.user)
-                            kodlar_text = ", ".join(s.kod for s in suspicious_kodlar)
-                            create_company_notification(
-                                request.company,
-                                "Shubhali sotish urinishi",
-                                f"{request.user.tuliq_ismi or request.user.username} (yetkazib beruvchi) "
-                                f"hali omboradan rasman olib chiqilmagan {nom} mahsulotini sotishga urindi "
-                                f"(QR: {kodlar_text}).",
-                                "warning",
-                            )
-                        messages.error(
-                            request,
-                            f"{nom} uchun quyidagi serial kodlari qabul qilinmadi: {'; '.join(sabablar)}.",
-                        )
-                        return redirect('sotish')
-                    if len(found_kodlar) != len(set(kodlar)):
-                        messages.error(request, f"{nom} uchun takrorlangan serial kodlari topildi.")
-                        return redirect('sotish')
-                    serial_ids_by_nom[nom] = list(serials_qs.values_list('id', flat=True))
+                    serial_ids_by_nom[nom] = list(
+                        serials_qs.order_by('id').values_list('id', flat=True)[:int(miqdor_float)]
+                    )
 
                 sotilganlar = []
                 for m in mahsulotlar:
@@ -3109,27 +3046,11 @@ def sotish(request):
         return redirect('main')
 
     template_name = 'sgsot.html' if request.user.type == 'savdogar' else 'ytsot.html'
-    unit_serial_products = list(
-        Mahsulot.objects.filter(company=request.company, serial_granularity='unit').values_list('nomi', flat=True)
-    )
-    # QR-skanerda serverga qaysi mahsulotga tekshirilayotgani ma'lum
-    # bo'lishi uchun har bir qatorga mahsulot id'si biriktiriladi
-    # (`check_sale_serial`, sahifada JS shu id bilan chaqiradi).
-    id_by_nom = dict(
-        Mahsulot.objects.filter(company=request.company).values_list('nomi', 'id')
-    )
-    for m in mahsulotlar:
-        nom = m['nom'] if isinstance(m, dict) else m.nom
-        if isinstance(m, dict):
-            m['id'] = id_by_nom.get(nom)
-        else:
-            m.id = id_by_nom.get(nom)
     return render(request, template_name, {
         'mahsulotlar': mahsulotlar,
         'haridorlar': xaridorlar,
         'credit_terms': credit_terms,
         'next_contract_number': request.company.savdogar_contract_next_number,
-        'unit_serial_products': unit_serial_products,
     })
 
 
@@ -3137,61 +3058,6 @@ def sotish(request):
 # API Endpoint for Browser Notifications
 # ============================================
 from django.views.decorators.http import require_http_methods
-
-
-def _extract_serial_kod(raw: str) -> str:
-    """QR ichidagi matn to'liq public URL (`/p/<kod>/`) yoki xom kod
-    bo'lishi mumkin — ikkalasini ham bir xilda qabul qilish uchun."""
-    raw = (raw or '').strip()
-    if '/' in raw:
-        parts = [p for p in raw.split('/') if p]
-        if parts:
-            return parts[-1]
-    return raw
-
-
-@login_required(login_url='login')
-@require_http_methods(["GET"])
-def check_sale_serial(request):
-    """Sotuv sahifasida (`ytsot.html`/`sgsot.html`) telefon kamerasi bilan
-    QR skanerlanganda, kod ro'yxatga (yashirin maydonga) qo'shilishidan
-    OLDIN chaqiriladi — begona/mos kelmaydigan QR kodlar sukut bo'yicha
-    qabul qilinib, faqat "Tasdiqlash"da rad etilishi (yomon UX — foydalanuvchi
-    nima xato ekanini darhol bilmaydi) o'rniga, shu yerda darhol tekshiriladi:
-    kod mavjudmi, aynan shu mahsulotga tegishlimi va — yetkazib beruvchi
-    bo'lsa — aynan shu xodim o'z yuklamasida olib chiqqan donami."""
-    kod = _extract_serial_kod(request.GET.get('kod', ''))
-    mahsulot_id = request.GET.get('mahsulot_id')
-    if not kod or not mahsulot_id:
-        return JsonResponse({'valid': False, 'detail': "Parametrlar yetishmayapti."}, status=400)
-
-    try:
-        mahsulot = Mahsulot.objects.get(id=mahsulot_id, company=request.company)
-    except (Mahsulot.DoesNotExist, ValueError):
-        return JsonResponse({'valid': False, 'detail': "Mahsulot topilmadi."}, status=404)
-
-    expected_holati = 'chiqarilgan' if request.user.type == 'yetkazib_beruvchi' else 'omborda'
-    serial = Serial.objects.filter(
-        company=request.company, kod=kod, holati=expected_holati, savdo__isnull=True,
-    ).select_related('mahsulot').first()
-    if not serial:
-        return JsonResponse({'valid': False, 'detail': "Bu QR kod topilmadi yoki allaqachon ishlatilgan."})
-
-    if serial.mahsulot_id != mahsulot.id:
-        return JsonResponse({
-            'valid': False,
-            'detail': f"Bu QR kod \"{serial.mahsulot.nomi}\"ga tegishli, \"{mahsulot.nomi}\"ga emas.",
-        })
-
-    if request.user.type == 'yetkazib_beruvchi':
-        yt = YetkazibBeruvchi.objects.filter(user=request.user, company=request.company).first()
-        if not yt or serial.yetkazib_beruvchi_id != yt.id:
-            return JsonResponse({
-                'valid': False,
-                'detail': "Bu dona sizning yuklamangizda emas — boshqa yetkazuvchiga tegishli.",
-            })
-
-    return JsonResponse({'valid': True, 'kod': kod, 'mahsulot': serial.mahsulot.nomi})
 
 
 @login_required(login_url='login')

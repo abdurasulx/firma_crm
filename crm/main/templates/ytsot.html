@@ -307,7 +307,6 @@
                         <span class="p-stock">Mavjud: {{ m.miqdor }} {{ m.turi }}</span>
                         <span class="p-price">{{ m.narx|floatformat:0 }} so'm</span>
                     </div>
-                    {% if m.nom not in unit_serial_products %}
                     <div class="stepper">
                         <button type="button" class="step-btn step-minus" onclick="stepBy({{ forloop.counter }}, -1)">
                             <i class="fas fa-minus"></i>
@@ -317,24 +316,7 @@
                             <i class="fas fa-plus"></i>
                         </button>
                     </div>
-                    {% else %}
-                    <!-- QR-serial mahsulotda miqdor +/- bilan emas, faqat
-                         skanerlangan donalar soni bilan belgilanadi. -->
-                    <div class="stepper" style="justify-content:flex-end;">
-                        <div class="step-val" id="pval{{ forloop.counter }}" style="min-width:auto; padding:0 8px;">0 dona</div>
-                    </div>
-                    {% endif %}
                     <input type="hidden" name="miqdor_{{ m.nom }}" id="pinp{{ forloop.counter }}" value="0">
-                    {% if m.nom in unit_serial_products %}
-                    <div class="serial-scan-block" style="margin-top:10px; grid-column:1/-1;" data-idx="{{ forloop.counter }}" data-mahsulot-id="{{ m.id|default:'' }}">
-                        <div style="font-size:12px; font-weight:700; color:var(--slate-500,#64748b); margin-bottom:6px;">
-                            Serial (QR) kodlari — miqdor skanerlangan donalar soniga teng
-                        </div>
-                        <textarea class="serial-kodlari-input" name="serial_kodlari_{{ m.nom }}" readonly style="display:none;"></textarea>
-                        <div class="scanned-serial-list" id="scannedList{{ forloop.counter }}" style="display:flex; flex-direction:column; gap:4px; margin-bottom:6px;"></div>
-                        <button type="button" class="btn-scan-qr" data-target="serial_kodlari_{{ m.nom }}" data-idx="{{ forloop.counter }}" data-mahsulot-id="{{ m.id|default:'' }}"><i class="fas fa-qrcode"></i> Kamera bilan skanerlash</button>
-                    </div>
-                    {% endif %}
                 </div>
                 {% empty %}
                 <div style="text-align:center;padding:2rem;color:var(--slate-400)">
@@ -576,5 +558,4 @@
 
 </script>
 {% include 'camera_capture_widget.html' %}
-{% include 'qr_scan_widget.html' %}
 {% endblock %}
