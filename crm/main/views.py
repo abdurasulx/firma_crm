@@ -7,7 +7,7 @@ from django.core.paginator import Paginator
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.shortcuts import redirect
-from .models import BACKUP_CHOICES, BillingPaymentLink, Company, Plan, HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri, Savdo, YuklamaSorov, MiqdorQoshish, HaridorDukon, AmalLog, qaytarilgan_mahsulotlar, PlanRequest, NasiyaTolov, ProductionMaterialRequest, StockHistory, Serial, Ombor, MahsulotQoshimchaXarajat, PazandaMahsulot, MahsulotRetsept, DESKTOP_AGENT_UNIT_PRICE, XodimBadge, ProductionTask, XodimMaosh, XodimTolov, XodimOyYopish, QoshimchaChiqim, AgentRelease, TaskMaterialPickup
+from .models import BACKUP_CHOICES, BillingPaymentLink, Company, Plan, HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri, Savdo, SavdoMahsulot, YuklamaSorov, MiqdorQoshish, HaridorDukon, AmalLog, qaytarilgan_mahsulotlar, PlanRequest, NasiyaTolov, ProductionMaterialRequest, StockHistory, Serial, Ombor, MahsulotQoshimchaXarajat, PazandaMahsulot, MahsulotRetsept, DESKTOP_AGENT_UNIT_PRICE, XodimBadge, ProductionTask, XodimMaosh, XodimTolov, XodimOyYopish, QoshimchaChiqim, AgentRelease, TaskMaterialPickup
 from .functions import mahsulotlar_miqdori, makenewform, yuklama_maker, accptyuk, sotishm, sotuv_new_form ,yetkazuvchi_mahsulot_filter, get_bugungi_savdo_summ, add_spctoint, format_compact_money
 from .plan_utils import (
     company_has_access, get_feature_flags,
@@ -2899,6 +2899,7 @@ def sotish(request):
                             'qty': qty,
                             'unit': mxs.turi.nomi if mxs.turi else '',
                             'price': price,
+                            'mahsulot_id': mxs.id,
                         })
                     seller_lat = yt.last_lat if request.user.type == 'yetkazib_beruvchi' else None
                     seller_lng = yt.last_lng if request.user.type == 'yetkazib_beruvchi' else None
@@ -2982,6 +2983,19 @@ def sotish(request):
                             latitude=seller_lat,
                             longitude=seller_lng
                         )
+
+                    # Har bir sotilgan mahsulot qatori ID orqali bog'lanadi
+                    # (`smm` matn maydoni faqat ko'rsatish/tarix uchun qoladi).
+                    SavdoMahsulot.objects.bulk_create([
+                        SavdoMahsulot(
+                            savdo=svd,
+                            mahsulot_id=item['mahsulot_id'],
+                            nomi=item['name'],
+                            miqdor=item['qty'],
+                            narx=item['price'],
+                        )
+                        for item in sale_items
+                    ])
 
                     # QR/Serial — validatsiyadan o'tgan seriallar shu savdoga bog'lanadi
                     # (SerialHarakat'ga "kim sotgan" logi bilan birga)

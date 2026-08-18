@@ -683,6 +683,24 @@ class Savdo(models.Model):
 
         super().save(*args, **kwargs)
 
+
+class SavdoMahsulot(models.Model):
+    """Bitta savdodagi bitta mahsulot qatori — `Savdo.smm` matn maydonidan
+    farqli, mahsulotga to'g'ridan-to'g'ri ID orqali bog'lanadi. Shuning
+    uchun mahsulot keyinchalik qayta nomlansa ham (`smm`dagi eski nom bilan
+    endi mos kelmay qolgan holatlar kabi), bu qator hamon to'g'ri
+    mahsulotga ishora qiladi. `nomi`/`narx` — sotuv vaqtidagi lavha
+    (snapshot), mahsulot keyin o'chirilsa ham tarix saqlanib qoladi."""
+    savdo = models.ForeignKey(Savdo, on_delete=models.CASCADE, related_name='items')
+    mahsulot = models.ForeignKey('Mahsulot', on_delete=models.SET_NULL, null=True, blank=True, related_name='savdo_qatorlari')
+    nomi = models.CharField(max_length=255)
+    miqdor = models.FloatField()
+    narx = models.FloatField()
+
+    def __str__(self):
+        return f"{self.nomi} x{self.miqdor}"
+
+
 class AmalLog(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True, blank=True)
