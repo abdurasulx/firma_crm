@@ -1690,6 +1690,11 @@ def _payroll_context(user, company, can_edit):
             effective_ish_haqi_turi(user, company) == 'per_unit'
             and Pazanda.objects.filter(user=user, company=company).exists()
         ),
+        # Fiks maoshli xodimning "ishlab topganim" summasi ko'rsatilmaydi —
+        # ular uchun bu raqam chalkashtiradi (haqiqiy to'lov oylik, hajmga
+        # bog'liq emas; rejalashtirilgan-haqiqiy farqi faqat firma moliya
+        # hisobotida, xodimga emas, ko'rinadi).
+        'payroll_is_fixed': effective_ish_haqi_turi(user, company) == 'fixed',
         'can_edit_payroll': can_edit,
     }
 

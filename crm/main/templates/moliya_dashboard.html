@@ -48,7 +48,7 @@
 </div>
 
 <p style="font-size:12px; color:var(--muted);">
-    Sof foyda = Umumiy tushum − Xomashyo xarajati (COGS) − Ish haqi (tanlangan davrda to'langan) − Qo'shimcha xarajatlar.
+    Sof foyda = Umumiy tushum − Xomashyo xarajati (COGS) − Ish haqi (tanlangan davrda to'langan, fiks maoshli xodimlarsiz) − Qo'shimcha xarajatlar + Fiks xodimlar rejalashtirilgan-haqiqiy farqi.
 </p>
 
 <div class="card" style="padding:16px 20px; margin-top:8px; background:#f8fafc;">
@@ -63,6 +63,12 @@
         <div>
             <div style="font-size:11px; color:var(--muted); font-weight:700;">To'langan ish haqqi</div>
             <div style="font-size:19px; font-weight:900; margin-top:4px;">{{ tolangan_ish_haqi_joriy_oy|floatformat:0 }} so'm</div>
+        </div>
+        <div>
+            <div style="font-size:11px; color:var(--muted); font-weight:700;">Fiks xodimlar farqi (rejalashtirilgan − oylik)</div>
+            <div style="font-size:19px; font-weight:900; margin-top:4px; color:{% if fixed_variance_total < 0 %}#b91c1c{% else %}#166534{% endif %};">
+                {% if fixed_variance_total >= 0 %}+{% endif %}{{ fixed_variance_total|floatformat:0 }} so'm
+            </div>
         </div>
     </div>
 </div>

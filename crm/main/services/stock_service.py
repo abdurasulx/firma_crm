@@ -373,7 +373,15 @@ def _apply_retsept_hisobkitob(req, mahsulot):
         tannarx_ulushi += Decimal(str(row.komponent.tannarx)) * Decimal(str(row.norma_miqdor))
 
     req.jarima_summasi = jarima_summasi
-    if req.company and req.pazanda and effective_ish_haqi_turi(req.pazanda.user, req.company) == 'per_unit':
+    # Bu qiymat endi ish haqi turidan qat'i nazar HAR DOIM hisoblanadi
+    # ("standart qiymat" — ishchi shu miqdorni per_unit rejimida ishlab
+    # chiqarganda qancha to'lanardi). `per_unit` xodim uchun bu haqiqatan
+    # to'lanadigan summa (`compute_oylik_ish_haqi`da ishlatiladi). `fixed`
+    # xodim uchun esa faqat moliya hisobotidagi "rejalashtirilgan-haqiqiy"
+    # farqi (variance) uchun ma'lumot manbai — fiks oylik o'zgarmaydi,
+    # lekin firma foydasiga bu farq orqali ta'sir qiladi
+    # (`payroll_service.compute_fixed_worker_variance`).
+    if req.company and req.pazanda:
         req.ish_haqi_summasi = Decimal(str(req.miqdor)) * mahsulot.ishlab_chiqarish_narxi - jarima_summasi
 
     mahsulot.baza_tannarx = tannarx_ulushi

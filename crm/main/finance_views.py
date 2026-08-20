@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from .models import QoshimchaChiqim, Savdo, NasiyaTolov, XodimTolov, User
 from .services import payroll_service
+from .services.stock_service import effective_ish_haqi_turi
 
 
 def _ega_guard(request):
@@ -90,14 +91,30 @@ def moliya_dashboard(request):
     ).aggregate(t=Sum('tolov_summasi'))['t'] or 0
     cash_turnover = cash_from_sales + nasiya_tolovlar
 
+    # Fiks maoshli xodimlarga to'langan summalar bu yerdan chiqarib
+    # tashlanadi — ularning foydaga ta'siri pastdagi `fixed_variance_total`
+    # orqali (rejalashtirilgan-haqiqiy farq sifatida) hisobga olinadi,
+    # aks holda oyligi HAM shu yerda, HAM tannarx ichida (ishlab_chiqarish_narxi/
+    # sotuv_ish_haqi_narxi orqali) ikki marta ayirilib, foyda noto'g'ri
+    # kamayib ko'rsatilardi.
+    company_users = list(User.objects.filter(company=company).exclude(type__in=['ega', 'desktop_agent']))
+    fixed_user_ids = {u.id for u in company_users if effective_ish_haqi_turi(u, company) == 'fixed'}
     wages_paid = XodimTolov.objects.filter(
         company=company, sana__range=(from_date, to_date),
-    ).aggregate(t=Sum('summa'))['t'] or 0
+    ).exclude(user_id__in=fixed_user_ids).aggregate(t=Sum('summa'))['t'] or 0
     qoshimcha_summa = QoshimchaChiqim.objects.filter(
         company=company, sana__range=(from_date, to_date),
     ).aggregate(t=Sum('summa'))['t'] or 0
 
-    net_profit = revenue - cogs - float(wages_paid) - float(qoshimcha_summa)
+    # Fiks xodimlar bo'yicha rejalashtirilgan-haqiqiy farq — joriy oy
+    # uchun (sana oralig'idan mustaqil, xuddi `umumiy_ish_haqi` kabi).
+    fixed_variance_total = sum(
+        (payroll_service.compute_fixed_worker_variance(u, company)['farq']
+         for u in company_users if effective_ish_haqi_turi(u, company) == 'fixed'),
+        Decimal('0'),
+    )
+
+    net_profit = revenue - cogs - float(wages_paid) - float(qoshimcha_summa) + float(fixed_variance_total)
     margin_percent = (net_profit / revenue * 100) if revenue else 0
 
     # Joriy oy ish haqi — sana filtridan MUSTAQIL, doim joriy oy uchun
@@ -131,6 +148,7 @@ def moliya_dashboard(request):
             {"Ko'rsatkich": 'Marja (%)', 'Summa': round(float(margin_percent), 2)},
             {"Ko'rsatkich": "Joriy oy — umumiy ish haqqi (hisoblangan)", 'Summa': float(umumiy_ish_haqi)},
             {"Ko'rsatkich": "Joriy oy — to'langan ish haqqi", 'Summa': float(tolangan_ish_haqi_joriy_oy)},
+            {"Ko'rsatkich": "Joriy oy — fiks xodimlar rejalashtirilgan-haqiqiy farqi", 'Summa': float(fixed_variance_total)},
         ])
         header_info = {
             'title': f"Moliya hisoboti - {company.name}",
@@ -150,6 +168,7 @@ def moliya_dashboard(request):
         'margin_percent': margin_percent,
         'umumiy_ish_haqi': umumiy_ish_haqi,
         'tolangan_ish_haqi_joriy_oy': tolangan_ish_haqi_joriy_oy,
+        'fixed_variance_total': fixed_variance_total,
         'joriy_oy_nomi': now.strftime('%Y-%m'),
         'outstanding_months': outstanding_months,
         'outstanding_total': outstanding_total,

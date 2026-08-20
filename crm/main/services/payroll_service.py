@@ -90,6 +90,43 @@ def compute_oylik_ish_haqi(user, company, yil=None, oy=None):
     return base
 
 
+def compute_fixed_worker_variance(user, company, yil=None, oy=None):
+    """Fiks maoshli xodim uchun — oylik o'zgarmas, lekin haqiqatan
+    ishlab chiqargan/sotgan qiymati (agar ular per_unit/per_sale
+    rejimida bo'lganida qancha to'lanishi kerak edi) shu oyning
+    oyligidan KO'P bo'lsa — farq firma FOYDASIGA qo'shiladi (xodim
+    o'ziga to'langandan ko'proq qiymat yaratdi). KAM bo'lsa — farq
+    foydadan AYRILADI (rejalashtirilganidan kam ishlab chiqardi/sotdi,
+    lekin oylik baribir to'liq to'landi). Faqat `ish_haqi_turi`
+    haqiqatan 'fixed' bo'lgan xodimlar uchun ma'noli — aks holda `None`."""
+    if effective_ish_haqi_turi(user, company) != 'fixed':
+        return None
+
+    now = timezone.localtime()
+    if yil is None or oy is None:
+        yil, oy = now.year, now.month
+
+    standart_qiymat = Decimal('0')
+    pazanda = Pazanda.objects.filter(user=user, company=company).first()
+    if pazanda:
+        stats = get_pazanda_month_stats(pazanda, company, yil=yil, oy=oy)
+        standart_qiymat += Decimal(str(stats['gross']))
+    if user.type in ('savdogar', 'yetkazib_beruvchi'):
+        summa = _month_savdolar_for_user(user, company, yil, oy).aggregate(
+            t=Sum('ish_haqi_summasi'),
+        )['t'] or Decimal('0')
+        standart_qiymat += Decimal(str(summa))
+
+    maosh_obj = XodimMaosh.objects.filter(user=user, company=company).first()
+    oylik = maosh_obj.oylik_maosh if maosh_obj else Decimal('0')
+
+    return {
+        'standart_qiymat': standart_qiymat,
+        'oylik': oylik,
+        'farq': standart_qiymat - oylik,
+    }
+
+
 def set_fixed_salary(user, company, oylik_maosh, updated_by):
     oylik_maosh = Decimal(str(oylik_maosh))
     if oylik_maosh < 0:

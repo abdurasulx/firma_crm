@@ -267,10 +267,12 @@
             <div class="info-section" style="margin-top:20px; display:block;">
                 <span class="info-label"><i class="fas fa-sack-dollar"></i> Bu oy statistikam</span>
                 <div style="margin-top:10px; display:flex; gap:14px; flex-wrap:wrap;">
+                    {% if not payroll_is_fixed %}
                     <div class="info-box" style="background:#eff6ff; border-color:#bfdbfe;">
                         <span class="info-label" style="color:#1e40af;">Ishlab topganim</span>
                         <span class="info-value" style="color:#1e3a8a;">{{ payroll_summary.earned|floatformat:0 }} so'm</span>
                     </div>
+                    {% endif %}
                     <div class="info-box">
                         <span class="info-label">Avans olganim</span>
                         <span class="info-value">{{ payroll_summary.avans_sum|floatformat:0 }} so'm</span>
