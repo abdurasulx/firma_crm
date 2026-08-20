@@ -2289,7 +2289,19 @@ def seemahsulot(request, mahsulot_id):
 
         serial_granularity = request.POST.get('serial_granularity')
         if serial_granularity in dict(Mahsulot.SERIAL_GRANULARITY_CHOICES):
-            mahsulot.serial_granularity = serial_granularity
+            # `unit`/`batch` — jismoniy QR yorliq chop etilishini va
+            # Desktop Agentda skanerlanishini talab qiladi. Bunday
+            # stansiyasi yo'q firmada bu tanlov faqat "hech qachon chop
+            # etilmaydigan/ko'rinmaydigan" Serial qatorlarini yaratib
+            # qoladi (real logik xato — foydalanuvchi topdi), shuning
+            # uchun bunday firmalar uchun har doim 'none'ga majburlanadi.
+            if serial_granularity != 'none' and not request.company.custom_desktop_agent_stations:
+                messages.error(
+                    request,
+                    "Har bir dona/partiyaga alohida QR faqat Desktop Agent stansiyasi bor firmalarda ishlaydi.",
+                )
+            else:
+                mahsulot.serial_granularity = serial_granularity
 
         # Look up by ID as sent from the template <option value="{{ tur.id }}">
         turi_id = request.POST.get('turi')

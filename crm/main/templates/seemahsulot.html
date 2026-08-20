@@ -426,6 +426,7 @@
                             </div>
                         </div>
 
+                        {% if request.company.custom_desktop_agent_stations %}
                         <div class="form-group">
                             <label class="form-label">Serial/QR kod</label>
                             <div class="input-wrapper">
@@ -442,6 +443,9 @@
                                 chop etiladi.
                             </div>
                         </div>
+                        {% else %}
+                        <input type="hidden" name="serial_granularity" value="none">
+                        {% endif %}
 
                         {% if mahsulot.mahsulot_turi != 'distributor' %}
                         <div class="form-group">
