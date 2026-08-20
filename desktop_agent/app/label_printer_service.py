@@ -36,6 +36,42 @@ def _mm_to_dots(mm: float, dpi: int = DEFAULT_DPI) -> int:
     return round(mm * dpi / 25.4)
 
 
+# QR-kod "bayt rejimi" (byte mode), ECC daraja L (kod TSPL buyrug'ida
+# ham "L" bilan chop etiladi) uchun har bir versiyaning maksimal
+# sig'imi (bayt) — standart QR spetsifikatsiyasidan. Modul soni =
+# 4*versiya + 17 (versiya 1 dan 20 gacha — bizning qisqa URL'larimiz
+# uchun yetarli, undan uzunroq matn kamdan-kam uchraydi).
+_QR_BYTE_CAPACITY_ECC_L = [
+    17, 32, 53, 78, 106, 134, 154, 192, 230, 271,
+    321, 367, 425, 458, 520, 586, 644, 718, 792, 858,
+]
+
+
+def _qr_module_count(data: str) -> int:
+    """Berilgan matn uchun QR-kod nechta "modul"dan (katakcha) iborat
+    bo'lishini taxmin qiladi — cell_size (dona nuqta/modul) ni qog'oz
+    o'lchamiga moslab hisoblash uchun kerak."""
+    data_len = len(data.encode('utf-8', errors='replace'))
+    for i, cap in enumerate(_QR_BYTE_CAPACITY_ECC_L, start=1):
+        if data_len <= cap:
+            return 4 * i + 17
+    # Juda uzun matn (kamdan-kam) — eng katta versiya bilan davom etiladi.
+    return 4 * len(_QR_BYTE_CAPACITY_ECC_L) + 17
+
+
+def _fit_qr_cell_size(qr_data: str, width_mm: float, height_mm: float, margin_mm: float, dpi: int) -> int:
+    """QR-kod tanlangan qog'oz o'lchamiga (kenglik/balandlik) sig'adigan
+    eng katta hujayra o'lchamini (1-10, TSPL QRCODE buyrug'ining o'zi
+    qabul qiladigan diapazon) hisoblaydi — kichik qog'ozda QR chegaradan
+    chiqib ketmasligi (kesilib qolmasligi), katta qog'ozda esa imkon
+    qadar yaxshi o'qiladigan (yirik) bo'lishi uchun."""
+    modules = _qr_module_count(qr_data)
+    available_mm = min(width_mm, height_mm) - 2 * margin_mm
+    available_dots = _mm_to_dots(max(available_mm, 0), dpi)
+    cell_size = available_dots // modules
+    return max(1, min(10, cell_size))
+
+
 def build_tspl_label(
     qr_data: str,
     width_mm: float = 40.0, height_mm: float = 30.0, gap_mm: float = 2.0,
@@ -50,9 +86,14 @@ def build_tspl_label(
     `SIZE`/`GAP` buyruqlari mm birligini to'g'ridan-to'g'ri qabul qiladi
     (masalan "SIZE 40 mm,30 mm") — lekin `QRCODE` kabi joylashuv
     buyruqlari har doim NUQTA (dot) birligida, shuning uchun ular DPI
-    asosida mm'dan hisoblanadi."""
-    margin_dots = _mm_to_dots(2, dpi)
-    qr_cell_size = 6  # QRCODE hujayra o'lchami (1-10) — 6 o'rtacha o'qish masofasiga mos
+    asosida mm'dan hisoblanadi.
+
+    QR-kod hujayra o'lchami endi QATTIQ KODLANMAGAN — tanlangan qog'oz
+    o'lchamiga (`width_mm`/`height_mm`) qarab avtomatik hisoblanadi
+    (`_fit_qr_cell_size`), shunda kichik qog'ozda QR kesilib qolmaydi."""
+    margin_mm = 2
+    margin_dots = _mm_to_dots(margin_mm, dpi)
+    qr_cell_size = _fit_qr_cell_size(qr_data, width_mm, height_mm, margin_mm, dpi)
 
     lines = [
         f"SIZE {width_mm:g} mm,{height_mm:g} mm",
