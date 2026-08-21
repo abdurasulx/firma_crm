@@ -1,3 +1,4 @@
+import math
 import os
 import pandas as pd
 import io
@@ -6,6 +7,18 @@ from django.http import HttpResponse
 from django.utils import timezone
 from openpyxl.styles import Border, Side, Alignment, Font
 from openpyxl.utils import get_column_letter
+
+
+def haversine_metres(lat1, lng1, lat2, lng2):
+    """Ikki GPS nuqta orasidagi masofa (metrda) — Yer sferasi bo'yicha
+    (haversine formulasi). Qisqa masofalarda (bir necha yuz metrgacha)
+    yetarli aniqlikda."""
+    R = 6371000.0
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    d_phi = math.radians(lat2 - lat1)
+    d_lambda = math.radians(lng2 - lng1)
+    a = math.sin(d_phi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(d_lambda / 2) ** 2
+    return 2 * R * math.asin(math.sqrt(a))
 
 
 def validate_uploaded_file(f, allowed_ext=('.pdf', '.jpg', '.jpeg', '.png'), max_mb=10):

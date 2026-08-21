@@ -1407,19 +1407,58 @@ def main(request):
                
                 if 'accept' in yk_id:
                     yk_id=yk_id.replace('accept','')
-                    # Desktop Agent ishlatuvchi firmalarda bu yerdan
-                    # tasdiqlash butunlay yopiladi — aks holda yetkazib
-                    # beruvchi/savdogar hech qanday fizik nazoratsiz
-                    # ("o'zi so'rab-o'zi tasdiqlaydi") o'zining yuklamasini
-                    # o'zi tasdiqlab yuborishi mumkin edi. Bunday firmalarda
-                    # tasdiqlash faqat Desktop Agent'da Serial QR skanerlab
-                    # amalga oshadi (`agent_finalize_yuklama`).
-                    if request.company.custom_desktop_agent_stations > 0:
-                        messages.error(
-                            request,
-                            "Bu firmada yuklama faqat Desktop Agent orqali (Serial QR skanerlab) tasdiqlanadi."
-                        )
+                    yk = YuklamaSorov.objects.filter(id=yk_id, company=request.company, user=yt_obj).first()
+                    if not yk:
+                        messages.error(request, "So'rov topilmadi.")
                         return redirect('main')
+                    # Desktop Agent ishlatuvchi firmalarda, QR bor mahsulot
+                    # uchun bu yerdan tasdiqlash butunlay yopiladi — aks
+                    # holda yetkazib beruvchi/savdogar hech qanday fizik
+                    # nazoratsiz ("o'zi so'rab-o'zi tasdiqlaydi") o'zining
+                    # yuklamasini o'zi tasdiqlab yuborishi mumkin edi.
+                    # Bunday mahsulot uchun tasdiqlash faqat Desktop Agent'da
+                    # Serial QR skanerlab amalga oshadi (`agent_finalize_yuklama`).
+                    #
+                    # QR-siz (`serial_granularity='none'`) mahsulotni esa
+                    # stansiyada SKANERLAB bo'lmaydi (Serial umuman
+                    # yaratilmaydi) — shuning uchun ular uchun o'zi-tasdiqlash
+                    # ochiq qoladi, lekin fizik nazorat o'rnini GPS bosib
+                    # o'tadi: faqat ombordan 100 metr radiusida turib
+                    # bosilsa qabul qilinadi.
+                    if request.company.custom_desktop_agent_stations:
+                        if yk.mahsulot.serial_granularity != 'none':
+                            messages.error(
+                                request,
+                                "Bu firmada yuklama faqat Desktop Agent orqali (Serial QR skanerlab) tasdiqlanadi."
+                            )
+                            return redirect('main')
+                        from .utils import haversine_metres
+                        try:
+                            lat = float(request.POST.get('latitude'))
+                            lng = float(request.POST.get('longitude'))
+                        except (TypeError, ValueError):
+                            messages.error(
+                                request,
+                                "Joylashuvingizni aniqlab bo'lmadi — telefon/brauzerda GPS ruxsatini yoqib qayta urinib ko'ring.",
+                            )
+                            return redirect('main')
+                        omborlar = list(
+                            Ombor.objects.filter(
+                                company=request.company, latitude__isnull=False, longitude__isnull=False,
+                            )
+                        )
+                        if not omborlar:
+                            messages.error(request, "Ombor joylashuvi tizimda belgilanmagan — ega bilan bog'laning.")
+                            return redirect('main')
+                        eng_yaqin_masofa = min(
+                            haversine_metres(lat, lng, o.latitude, o.longitude) for o in omborlar
+                        )
+                        if eng_yaqin_masofa > 100:
+                            messages.error(
+                                request,
+                                f"Siz ombordan {eng_yaqin_masofa:.0f} metr uzoqdasiz — faqat 100 metr radiusida turib qabul qilishingiz mumkin.",
+                            )
+                            return redirect('main')
                     # Refactored to use Service
                     success, message = approve_yuklama_sorov_service(yk_id, request.user)
                     if success:

@@ -587,13 +587,65 @@
             <div class="req-card">
                 <div style="display: flex; flex-direction: column; gap: 0.25rem;">
                     <span style="font-weight: 800; color: var(--slate-900);">{{ yk.mahsulot.nomi }}</span>
+                    {% if yk.mahsulot.serial_granularity == 'none' %}
+                    <span style="color: var(--slate-500); font-weight: 500;">
+                        {{ yk.miqdor|floatformat:"-2" }} {{ yk.mahsulot.turi }} — QR yo'q, ombordan 100 metr radiusida turib qabul qiling
+                    </span>
+                    {% else %}
                     <span style="color: var(--slate-500); font-weight: 500;">
                         {{ yk.miqdor|floatformat:"-2" }} {{ yk.mahsulot.turi }} — <i class="fas fa-qrcode"></i> stansiyada skanerlashingiz kutilmoqda
                     </span>
+                    {% endif %}
                 </div>
+                {% if yk.mahsulot.serial_granularity == 'none' %}
+                <div class="btn-group">
+                    <form method="post" class="gps-accept-form" style="flex: 1;">
+                        {% csrf_token %}
+                        <input type="hidden" name="yk_id" value="accept{{ yk.id }}">
+                        <input type="hidden" name="latitude" class="gps-lat">
+                        <input type="hidden" name="longitude" class="gps-lng">
+                        <button type="submit" class="action-btn btn-accept"><i class="fas fa-location-dot"></i> Oldim</button>
+                    </form>
+                </div>
+                {% endif %}
             </div>
             {% endfor %}
         </div>
+        <script>
+            document.querySelectorAll('.gps-accept-form').forEach(function (form) {
+                form.addEventListener('submit', function (e) {
+                    // Serverga yuborishdan oldin joriy GPS koordinatasi
+                    // aniqlanadi — ombordan 100 metrdan uzoq bo'lsa server
+                    // rad etadi (fizik nazorat o'rniga).
+                    if (form.dataset.located === '1') return;
+                    e.preventDefault();
+                    const btn = form.querySelector('button[type="submit"]');
+                    const origHtml = btn.innerHTML;
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Joylashuv aniqlanmoqda...';
+                    if (!navigator.geolocation) {
+                        if (window.showNotification) window.showNotification('Xato', "Brauzeringiz joylashuvni aniqlay olmaydi.", 'warning');
+                        btn.disabled = false;
+                        btn.innerHTML = origHtml;
+                        return;
+                    }
+                    navigator.geolocation.getCurrentPosition(
+                        function (pos) {
+                            form.querySelector('.gps-lat').value = pos.coords.latitude;
+                            form.querySelector('.gps-lng').value = pos.coords.longitude;
+                            form.dataset.located = '1';
+                            form.requestSubmit ? form.requestSubmit() : form.submit();
+                        },
+                        function () {
+                            if (window.showNotification) window.showNotification('Xato', "Joylashuvni aniqlab bo'lmadi — GPS ruxsatini yoqing.", 'warning');
+                            btn.disabled = false;
+                            btn.innerHTML = origHtml;
+                        },
+                        { enableHighAccuracy: true, timeout: 10000 },
+                    );
+                });
+            });
+        </script>
     </div>
 </div>
 {% else %}
