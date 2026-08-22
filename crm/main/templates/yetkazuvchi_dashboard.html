@@ -480,26 +480,25 @@
         </p>
         <form method="post" id="sorovForm" style="margin-bottom: 1rem;">
             {% csrf_token %}
-            <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem;">
+            <!-- 100+ mahsuloti bor firmalarda hammasini bir vaqtda
+                 skrollab chiqish og'ir edi — endi mahsulot QIDIRIB
+                 topib, so'rovga QO'SHILADI (faqat tanlanganlar
+                 ko'rinadi). Har bir mahsulot uchun yashirin input
+                 baribir mavjud (backend `sorov_miqdor_<id>` nomi
+                 bilan o'qiydi) — faqat vizual qatorlar endi faqat
+                 tanlangan mahsulotlar uchun DOMga qo'shiladi. -->
+            <div style="position:relative; margin-bottom:0.75rem;">
+                <input type="text" id="sorovSearchInput" placeholder="Mahsulot qidirish..." autocomplete="off"
+                       style="width:100%; padding:0.65rem 0.9rem; border-radius:10px; border:1.5px solid var(--slate-200,#e2e8f0); font-size:0.95rem;">
+                <div id="sorovSearchResults" style="display:none; position:absolute; z-index:20; top:calc(100% + 4px); left:0; right:0; max-height:260px; overflow-y:auto; background:#fff; border:1px solid var(--slate-200,#e2e8f0); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.12);"></div>
+            </div>
+            <div id="sorovSelectedList" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem;"></div>
+            <div id="sorovEmptyHint" style="color:var(--slate-400); font-size:0.85rem; text-align:center; padding:0.5rem 0;">
+                Hali mahsulot tanlanmagan — yuqoridan qidirib qo'shing.
+            </div>
+            <div style="display:none;">
                 {% for m in zaxira_mahsulotlar %}
-                <div style="display: flex; align-items: center; gap: 0.75rem; background: var(--slate-50, #f8fafc); border: 1px solid var(--slate-200, #e2e8f0); border-radius: 10px; padding: 0.6rem 0.9rem;">
-                    <div style="flex: 1; min-width: 0;">
-                        <div style="font-weight: 800; color: var(--slate-900);">{{ m.nomi }}</div>
-                        <div style="font-size: 0.75rem; color: var(--slate-500);">Omborda: {{ m.miqdori|floatformat:"-2" }} {{ m.turi }}</div>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 0.4rem;">
-                        <button type="button" onclick="sorovStep('{{ m.id }}', -1)"
-                                style="width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--slate-200, #e2e8f0); background: #fff; color: var(--slate-600, #475569); font-weight: 800; cursor: pointer;">
-                            <i class="fas fa-minus"></i>
-                        </button>
-                        <input type="number" id="sorov_inp_{{ m.id }}" name="sorov_miqdor_{{ m.id }}" step="any" min="0" max="{{ m.miqdori|floatformat:'-2' }}" value="0" data-max="{{ m.miqdori|floatformat:'-2' }}"
-                               style="width: 64px; padding: 0.45rem 0; border: none; background: transparent; text-align: center; font-weight: 800; font-size: 1.05rem; color: var(--slate-900, #0f172a); -moz-appearance: textfield;">
-                        <button type="button" onclick="sorovStep('{{ m.id }}', 1)" {% if m.miqdori <= 0 %}disabled title="Omborda qoldiq yo'q"{% endif %}
-                                style="width: 34px; height: 34px; border-radius: 10px; border: none; background: var(--primary, #10b981); color: #fff; font-weight: 800; cursor: pointer;{% if m.miqdori <= 0 %} opacity:.4; cursor:not-allowed;{% endif %}">
-                            <i class="fas fa-plus"></i>
-                        </button>
-                    </div>
-                </div>
+                <input type="number" id="sorov_inp_{{ m.id }}" name="sorov_miqdor_{{ m.id }}" value="0" data-max="{{ m.miqdori|floatformat:'-2' }}">
                 {% endfor %}
             </div>
             <button type="submit" name="sorov_submit" value="1" class="btn-main" style="width: 100%; padding: 0.7rem;">
@@ -510,14 +509,83 @@
             /* Brauzerning o'z +/- spinner'lari yashiriladi — faqat bizning tugmalar */
             input[id^="sorov_inp_"]::-webkit-outer-spin-button,
             input[id^="sorov_inp_"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+            .sorov-search-item { padding:0.6rem 0.9rem; cursor:pointer; display:flex; justify-content:space-between; gap:0.5rem; }
+            .sorov-search-item:hover { background:var(--slate-50,#f8fafc); }
+            .sorov-search-item + .sorov-search-item { border-top:1px solid var(--slate-100,#f1f5f9); }
         </style>
         <script>
+            const SOROV_MAHSULOTLAR = [
+                {% for m in zaxira_mahsulotlar %}
+                {id: '{{ m.id }}', nomi: "{{ m.nomi|escapejs }}", miqdori: {{ m.miqdori|default:0|stringformat:"f" }}, turi: "{{ m.turi|default:''|escapejs }}"},
+                {% endfor %}
+            ];
+            const sorovSelectedIds = new Set();
+
             function sorovStep(id, delta) {
                 const inp = document.getElementById('sorov_inp_' + id);
                 const max = parseFloat(inp.dataset.max) || 0;
                 const val = Math.min(max, Math.max(0, (parseFloat(inp.value) || 0) + delta));
                 inp.value = val;
+                const disp = document.getElementById('sorov_disp_' + id);
+                if (disp) disp.textContent = val;
             }
+
+            function sorovAddItem(id) {
+                if (sorovSelectedIds.has(id)) return;
+                const m = SOROV_MAHSULOTLAR.find(x => x.id === id);
+                if (!m) return;
+                sorovSelectedIds.add(id);
+                document.getElementById('sorovEmptyHint').style.display = 'none';
+                const row = document.createElement('div');
+                row.id = 'sorov_row_' + id;
+                row.style.cssText = 'display:flex;align-items:center;gap:0.75rem;background:var(--slate-50,#f8fafc);border:1px solid var(--slate-200,#e2e8f0);border-radius:10px;padding:0.6rem 0.9rem;';
+                row.innerHTML = `
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-weight:800;color:var(--slate-900);">${m.nomi}</div>
+                        <div style="font-size:0.75rem;color:var(--slate-500);">Omborda: ${m.miqdori} ${m.turi}</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:0.4rem;">
+                        <button type="button" onclick="sorovStep('${id}', -1)" style="width:34px;height:34px;border-radius:10px;border:1px solid var(--slate-200,#e2e8f0);background:#fff;color:var(--slate-600,#475569);font-weight:800;cursor:pointer;"><i class="fas fa-minus"></i></button>
+                        <span id="sorov_disp_${id}" style="width:44px;text-align:center;font-weight:800;font-size:1.05rem;color:var(--slate-900,#0f172a);">1</span>
+                        <button type="button" onclick="sorovStep('${id}', 1)" style="width:34px;height:34px;border-radius:10px;border:none;background:var(--primary,#10b981);color:#fff;font-weight:800;cursor:pointer;"><i class="fas fa-plus"></i></button>
+                        <button type="button" onclick="sorovRemoveItem('${id}')" title="Olib tashlash" style="width:34px;height:34px;border-radius:10px;border:none;background:#fee2e2;color:#b91c1c;font-weight:800;cursor:pointer;"><i class="fas fa-xmark"></i></button>
+                    </div>`;
+                document.getElementById('sorovSelectedList').appendChild(row);
+                document.getElementById('sorov_inp_' + id).value = 1;
+            }
+
+            function sorovRemoveItem(id) {
+                sorovSelectedIds.delete(id);
+                const row = document.getElementById('sorov_row_' + id);
+                if (row) row.remove();
+                document.getElementById('sorov_inp_' + id).value = 0;
+                if (sorovSelectedIds.size === 0) document.getElementById('sorovEmptyHint').style.display = 'block';
+            }
+
+            (function () {
+                const input = document.getElementById('sorovSearchInput');
+                const results = document.getElementById('sorovSearchResults');
+                if (!input) return;
+                input.addEventListener('input', function () {
+                    const q = input.value.trim().toLowerCase();
+                    if (!q) { results.style.display = 'none'; results.innerHTML = ''; return; }
+                    const matches = SOROV_MAHSULOTLAR.filter(m => m.nomi.toLowerCase().includes(q)).slice(0, 20);
+                    if (!matches.length) {
+                        results.innerHTML = '<div style="padding:0.6rem 0.9rem;color:var(--slate-400);">Topilmadi</div>';
+                        results.style.display = 'block';
+                        return;
+                    }
+                    results.innerHTML = matches.map(m => `
+                        <div class="sorov-search-item" onclick="sorovAddItem('${m.id}'); document.getElementById('sorovSearchInput').value=''; document.getElementById('sorovSearchResults').style.display='none';">
+                            <span style="font-weight:700;">${m.nomi}</span>
+                            <span style="color:var(--slate-400);font-size:0.8rem;">${m.miqdori} ${m.turi}</span>
+                        </div>`).join('');
+                    results.style.display = 'block';
+                });
+                document.addEventListener('click', function (e) {
+                    if (!results.contains(e.target) && e.target !== input) results.style.display = 'none';
+                });
+            })();
 
             // Haqiqiy AJAX: forma yuborilganda SAHIFA UMUMAN QAYTA
             // YUKLANMAYDI — natija shu yerning o'zida (kutilayotgan
@@ -565,11 +633,11 @@
                                         </span>
                                     </div>`;
                                 list.appendChild(card);
-                                // Shu mahsulot uchun inputni 0'ga qaytarib,
-                                // qolgan omborda miqdorini qayta so'ramaslik
-                                // uchun maksimal chegarani ham nolga tushiramiz.
-                                const inp = document.getElementById('sorov_inp_' + item.mahsulot_id);
-                                if (inp) { inp.value = 0; }
+                                // Yuborilgan mahsulot "tanlanganlar" ro'yxatidan
+                                // olib tashlanadi (input ham 0'ga qaytadi) —
+                                // aks holda foydalanuvchi uni yana bor deb
+                                // o'ylab qayta yuborishga urinishi mumkin edi.
+                                sorovRemoveItem(String(item.mahsulot_id));
                             });
                         })
                         .catch(() => {
