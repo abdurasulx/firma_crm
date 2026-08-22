@@ -527,7 +527,7 @@
                 const val = Math.min(max, Math.max(0, (parseFloat(inp.value) || 0) + delta));
                 inp.value = val;
                 const disp = document.getElementById('sorov_disp_' + id);
-                if (disp) disp.textContent = val;
+                if (disp) disp.value = val;
             }
 
             function sorovAddItem(id) {
@@ -546,12 +546,29 @@
                     </div>
                     <div style="display:flex;align-items:center;gap:0.4rem;">
                         <button type="button" onclick="sorovStep('${id}', -1)" style="width:34px;height:34px;border-radius:10px;border:1px solid var(--slate-200,#e2e8f0);background:#fff;color:var(--slate-600,#475569);font-weight:800;cursor:pointer;"><i class="fas fa-minus"></i></button>
-                        <span id="sorov_disp_${id}" style="width:44px;text-align:center;font-weight:800;font-size:1.05rem;color:var(--slate-900,#0f172a);">1</span>
+                        <input type="number" id="sorov_disp_${id}" value="1" min="0" max="${m.miqdori}" step="any" inputmode="decimal"
+                               oninput="sorovSetFromDisplay('${id}', this.value)"
+                               style="width:70px; text-align:center; font-weight:800; font-size:1.05rem; color:var(--slate-900,#0f172a); border:1.5px solid var(--slate-200,#e2e8f0); border-radius:8px; padding:0.35rem 0;">
                         <button type="button" onclick="sorovStep('${id}', 1)" style="width:34px;height:34px;border-radius:10px;border:none;background:var(--primary,#10b981);color:#fff;font-weight:800;cursor:pointer;"><i class="fas fa-plus"></i></button>
                         <button type="button" onclick="sorovRemoveItem('${id}')" title="Olib tashlash" style="width:34px;height:34px;border-radius:10px;border:none;background:#fee2e2;color:#b91c1c;font-weight:800;cursor:pointer;"><i class="fas fa-xmark"></i></button>
                     </div>`;
                 document.getElementById('sorovSelectedList').appendChild(row);
                 document.getElementById('sorov_inp_' + id).value = 1;
+            }
+
+            function sorovSetFromDisplay(id, rawVal) {
+                const inp = document.getElementById('sorov_inp_' + id);
+                const disp = document.getElementById('sorov_disp_' + id);
+                const max = parseFloat(inp.dataset.max) || 0;
+                let val = parseFloat(rawVal);
+                if (isNaN(val) || val < 0) val = 0;
+                if (max > 0) val = Math.min(val, max);
+                inp.value = val;
+                // Foydalanuvchi hozir aynan shu inputga yozayotgan bo'lishi
+                // mumkin (masalan "10" yozayotganda oraliq "1" holatida) —
+                // qiymatni faqat max bilan cheklanganda qayta yozamiz,
+                // aks holda yozish jarayonida kursor sakrab ketardi.
+                if (val !== parseFloat(rawVal)) disp.value = val;
             }
 
             function sorovRemoveItem(id) {
