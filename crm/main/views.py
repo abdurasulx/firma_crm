@@ -3205,6 +3205,112 @@ def check_new_deliveries(request):
         return JsonResponse({'success': False, 'count': 0, 'deliveries': [], 'error': str(e)}, status=200)
 
 
+def _gps_within_100m(company, lat, lng):
+    """Berilgan GPS nuqta firmaning istalgan Ombor'idan 100 metr ichidami —
+    telefon orqali QR skanerlab yuklama olishni fizik nazoratsiz
+    ("uydan turib so'rab-o'zi tasdiqlash") holatidan himoya qilish uchun
+    ishlatiladi (Desktop Agent stansiyasi o'rnini bosuvchi alternativa)."""
+    from .utils import haversine_metres
+    omborlar = list(
+        Ombor.objects.filter(company=company, latitude__isnull=False, longitude__isnull=False)
+    )
+    if not omborlar:
+        return False, None, "Ombor joylashuvi tizimda belgilanmagan — ega bilan bog'laning."
+    masofa = min(haversine_metres(lat, lng, o.latitude, o.longitude) for o in omborlar)
+    if masofa > 100:
+        return False, masofa, f"Siz ombordan {masofa:.0f} metr uzoqdasiz — faqat 100 metr radiusida turib skanerlashingiz mumkin."
+    return True, masofa, None
+
+
+@login_required(login_url='login')
+@require_http_methods(["POST"])
+def yuklama_qr_scan_check(request):
+    """Telefon kamerasi orqali QR skanerlanganda — HAR BIR skanerdan oldin
+    chaqiriladi. Desktop Agent stansiyasidagi `agent_scan_delivery_serial`
+    bilan bir xil tekshiruv (mahsulot so'ralganmi, seriali omborda turibmi),
+    ustiga GPS 100 metr radiusi tekshiruvi qo'shilgan — bu yerda fizik
+    nazorat stansiya emas, joylashuv orqali ta'minlanadi."""
+    if request.user.type != 'yetkazib_beruvchi':
+        return JsonResponse({'valid': False, 'detail': "Ruxsat yo'q."}, status=403)
+    yb = YetkazibBeruvchi.objects.filter(user=request.user, company=request.company).first()
+    if not yb:
+        return JsonResponse({'valid': False, 'detail': "Profil topilmadi."}, status=404)
+
+    try:
+        lat = float(request.POST.get('latitude'))
+        lng = float(request.POST.get('longitude'))
+    except (TypeError, ValueError):
+        return JsonResponse({'valid': False, 'detail': "Joylashuv aniqlanmadi — GPS ruxsatini yoqing."}, status=400)
+    ok, _masofa, err = _gps_within_100m(request.company, lat, lng)
+    if not ok:
+        return JsonResponse({'valid': False, 'detail': err}, status=400)
+
+    raw = (request.POST.get('kod') or '').strip()
+    if '/' in raw:
+        parts = [p for p in raw.split('/') if p]
+        kod = parts[-1] if parts else raw
+    else:
+        kod = raw
+    if not kod:
+        return JsonResponse({'valid': False, 'detail': "QR kod bo'sh."}, status=400)
+
+    serial = Serial.objects.filter(company=request.company, kod=kod, holati='omborda').select_related('mahsulot').first()
+    if not serial:
+        return JsonResponse({'valid': False, 'detail': "Bu QR kod topilmadi yoki allaqachon ishlatilgan."}, status=404)
+    if serial.mahsulot.serial_granularity != 'unit':
+        return JsonResponse({'valid': False, 'detail': "Bu mahsulot turi telefon orqali skanerlashni qo'llamaydi."}, status=400)
+    if not YuklamaSorov.objects.filter(company=request.company, user=yb, mahsulot=serial.mahsulot, mode='waiting').exists():
+        return JsonResponse({'valid': False, 'detail': f"{serial.mahsulot.nomi} — buni so'ramagansiz."}, status=400)
+
+    return JsonResponse({
+        'valid': True, 'serial_id': serial.id,
+        'mahsulot_id': serial.mahsulot_id, 'mahsulot': serial.mahsulot.nomi,
+    })
+
+
+@login_required(login_url='login')
+@require_http_methods(["POST"])
+def yuklama_qr_scan_finalize(request):
+    """Bitta mahsulot uchun so'ralgan miqdorning HAMMASI (kam emas)
+    telefon orqali skanerlab bo'lingach chaqiriladi — faqat aynan
+    skanerlangan seriallarni ishlatadi (FIFO to'ldirishga yo'l qo'yilmaydi,
+    aks holda ba'zi donalar jismonan tekshirilmagan bo'lib qolar edi)."""
+    if request.user.type != 'yetkazib_beruvchi':
+        return JsonResponse({'ok': False, 'detail': "Ruxsat yo'q."}, status=403)
+    yb = YetkazibBeruvchi.objects.filter(user=request.user, company=request.company).first()
+    if not yb:
+        return JsonResponse({'ok': False, 'detail': "Profil topilmadi."}, status=404)
+
+    try:
+        lat = float(request.POST.get('latitude'))
+        lng = float(request.POST.get('longitude'))
+    except (TypeError, ValueError):
+        return JsonResponse({'ok': False, 'detail': "Joylashuv aniqlanmadi — GPS ruxsatini yoqing."}, status=400)
+    ok, _masofa, err = _gps_within_100m(request.company, lat, lng)
+    if not ok:
+        return JsonResponse({'ok': False, 'detail': err}, status=400)
+
+    mahsulot_id = request.POST.get('mahsulot_id')
+    serial_ids_raw = request.POST.get('serial_ids') or ''
+    serial_ids = [s for s in serial_ids_raw.split(',') if s.strip().isdigit()]
+    if not mahsulot_id or not serial_ids:
+        return JsonResponse({'ok': False, 'detail': "Ma'lumot yetishmayapti."}, status=400)
+
+    so_rov = YuklamaSorov.objects.filter(
+        company=request.company, user=yb, mahsulot_id=mahsulot_id, mode='waiting',
+    ).first()
+    if not so_rov:
+        return JsonResponse({'ok': False, 'detail': "So'rov topilmadi."}, status=404)
+    if len(serial_ids) < so_rov.miqdor:
+        return JsonResponse(
+            {'ok': False, 'detail': f"Hali hammasi skanerlanmagan ({len(serial_ids)}/{so_rov.miqdor:g})."},
+            status=400,
+        )
+
+    success, message = approve_yuklama_sorov_service(so_rov.id, request.user, serial_ids=serial_ids)
+    return JsonResponse({'ok': success, 'detail': message})
+
+
 # ─── MVP: Ishlab chiqaruvchi — So'rovlar tarixi ──────────────────────────────
 @login_required(login_url='login')
 def pz_sorov_tarixi(request):

@@ -655,12 +655,19 @@
                                 if (!list) return;
                                 const card = document.createElement('div');
                                 card.className = 'req-card';
+                                const nomiJs = item.mahsulot.replace(/'/g, "\\'");
                                 card.innerHTML = `
                                     <div style="display: flex; flex-direction: column; gap: 0.25rem;">
                                         <span style="font-weight: 800; color: var(--slate-900);">${item.mahsulot}</span>
                                         <span style="color: var(--slate-500); font-weight: 500;">
-                                            ${item.miqdor} ${item.birlik} — <i class="fas fa-qrcode"></i> stansiyada skanerlashingiz kutilmoqda
+                                            ${item.miqdor} ${item.birlik} — <i class="fas fa-qrcode"></i> QR skanerlab oling (stansiyada ham mumkin)
                                         </span>
+                                    </div>
+                                    <div class="btn-group">
+                                        <button type="button" class="action-btn btn-accept" style="flex:1;"
+                                                onclick="openYuklamaQrModal('${item.mahsulot_id}', '${nomiJs}', ${item.miqdor})">
+                                            <i class="fas fa-camera"></i> QR skanerlash
+                                        </button>
                                     </div>`;
                                 list.appendChild(card);
                                 // Yuborilgan mahsulot "tanlanganlar" ro'yxatidan
@@ -691,7 +698,7 @@
                     </span>
                     {% else %}
                     <span style="color: var(--slate-500); font-weight: 500;">
-                        {{ yk.miqdor|floatformat:"-2" }} {{ yk.mahsulot.turi }} — <i class="fas fa-qrcode"></i> stansiyada skanerlashingiz kutilmoqda
+                        {{ yk.miqdor|floatformat:"-2" }} {{ yk.mahsulot.turi }} — <i class="fas fa-qrcode"></i> QR skanerlab oling (stansiyada ham mumkin)
                     </span>
                     {% endif %}
                 </div>
@@ -705,10 +712,193 @@
                         <button type="submit" class="action-btn btn-accept"><i class="fas fa-location-dot"></i> Oldim</button>
                     </form>
                 </div>
+                {% else %}
+                <div class="btn-group">
+                    <button type="button" class="action-btn btn-accept" style="flex:1;"
+                            onclick="openYuklamaQrModal('{{ yk.mahsulot_id }}', '{{ yk.mahsulot.nomi|escapejs }}', {{ yk.miqdor|default:0|stringformat:'f' }})">
+                        <i class="fas fa-camera"></i> QR skanerlash
+                    </button>
+                </div>
                 {% endif %}
             </div>
             {% endfor %}
         </div>
+
+        <!-- Telefon kamerasi orqali QR skanerlab yuklama olish modali —
+             faqat ombordan 100 metr radiusida ishlaydi (Desktop Agent
+             stansiyasi o'rniga fizik nazoratni GPS ta'minlaydi). -->
+        <div id="yuklamaQrModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,.8); z-index:9999; align-items:center; justify-content:center;">
+            <div style="background:#fff; border-radius:16px; padding:18px; width:min(92vw, 420px); max-height:90vh; overflow-y:auto;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <strong id="yuklamaQrTitle">QR skanerlash</strong>
+                    <button type="button" onclick="closeYuklamaQrModal()" style="border:none; background:none; font-size:22px; cursor:pointer; line-height:1;">&times;</button>
+                </div>
+                <div id="yuklamaQrProgress" style="font-weight:800; font-size:1.1rem; color:var(--primary,#10b981); margin-bottom:8px;"></div>
+                <div id="yuklamaQrReaderBox" style="width:100%; border-radius:10px; overflow:hidden;"></div>
+                <div id="yuklamaQrStatus" style="min-height:20px; margin-top:10px; font-size:13px; font-weight:700;"></div>
+                <button type="button" id="yuklamaQrFinishBtn" onclick="finishYuklamaQrScan()" disabled
+                        class="action-btn btn-accept" style="width:100%; margin-top:10px; opacity:.5;">
+                    <i class="fas fa-check-double"></i> Yakunlash
+                </button>
+            </div>
+        </div>
+        <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+        <script>
+            (function () {
+                const CHECK_URL = "{% url 'yuklama_qr_scan_check' %}";
+                const FINALIZE_URL = "{% url 'yuklama_qr_scan_finalize' %}";
+                const CSRF = "{{ csrf_token }}";
+
+                let currentMahsulotId = null, currentTarget = 0;
+                let scannedSerialIds = [];
+                let html5QrCode = null;
+                let checking = false;
+                let lastGeo = null;
+
+                function setStatus(text, color) {
+                    const el = document.getElementById('yuklamaQrStatus');
+                    el.style.color = color;
+                    el.textContent = text;
+                }
+                function refreshProgress() {
+                    document.getElementById('yuklamaQrProgress').textContent =
+                        scannedSerialIds.length + ' / ' + currentTarget + ' dona skanerlandi';
+                    const btn = document.getElementById('yuklamaQrFinishBtn');
+                    const done = scannedSerialIds.length >= currentTarget;
+                    btn.disabled = !done;
+                    btn.style.opacity = done ? '1' : '.5';
+                }
+
+                function getGeo() {
+                    return new Promise(function (resolve, reject) {
+                        if (!navigator.geolocation) { reject(); return; }
+                        navigator.geolocation.getCurrentPosition(
+                            function (pos) { resolve({lat: pos.coords.latitude, lng: pos.coords.longitude}); },
+                            function () { reject(); },
+                            { enableHighAccuracy: true, timeout: 10000 },
+                        );
+                    });
+                }
+
+                function extractKod(decodedText) {
+                    try {
+                        const url = new URL(decodedText);
+                        const parts = url.pathname.split('/').filter(Boolean);
+                        return parts[parts.length - 1] || decodedText;
+                    } catch (e) {
+                        return decodedText.trim();
+                    }
+                }
+
+                window.openYuklamaQrModal = function (mahsulotId, mahsulotNomi, miqdor) {
+                    currentMahsulotId = mahsulotId;
+                    currentTarget = miqdor;
+                    scannedSerialIds = [];
+                    document.getElementById('yuklamaQrTitle').textContent = mahsulotNomi;
+                    refreshProgress();
+                    setStatus('Joylashuv aniqlanmoqda...', '#64748b');
+                    document.getElementById('yuklamaQrModal').style.display = 'flex';
+
+                    getGeo().then(function (geo) {
+                        lastGeo = geo;
+                        setStatus('Kamerani QR kodga qarating...', '#64748b');
+                        startScanner();
+                    }).catch(function () {
+                        setStatus("Joylashuvni aniqlab bo'lmadi — GPS ruxsatini yoqib qayta oching.", '#b91c1c');
+                    });
+                };
+
+                function startScanner() {
+                    if (typeof Html5Qrcode === 'undefined') {
+                        setStatus("Skaner kutubxonasi yuklanmadi — internetni tekshiring.", '#b91c1c');
+                        return;
+                    }
+                    html5QrCode = new Html5Qrcode('yuklamaQrReaderBox');
+                    html5QrCode.start(
+                        { facingMode: 'environment' },
+                        { fps: 10, qrbox: 220 },
+                        function (decodedText) {
+                            if (checking || scannedSerialIds.length >= currentTarget) return;
+                            checking = true;
+                            const kod = extractKod(decodedText);
+                            const formData = new FormData();
+                            formData.set('kod', kod);
+                            formData.set('latitude', lastGeo.lat);
+                            formData.set('longitude', lastGeo.lng);
+                            fetch(CHECK_URL, {
+                                method: 'POST', body: formData,
+                                headers: { 'X-CSRFToken': CSRF },
+                            })
+                                .then(r => r.json())
+                                .then(function (data) {
+                                    if (data.valid) {
+                                        if (scannedSerialIds.includes(data.serial_id)) {
+                                            setStatus('Bu dona allaqachon skanerlangan.', '#b45309');
+                                        } else if (String(data.mahsulot_id) !== String(currentMahsulotId)) {
+                                            setStatus(data.mahsulot + ' — bu boshqa mahsulot, joyiga qo\'ying.', '#b45309');
+                                        } else {
+                                            scannedSerialIds.push(data.serial_id);
+                                            refreshProgress();
+                                            setStatus('✓ ' + data.mahsulot + ' qo\'shildi (' + scannedSerialIds.length + '/' + currentTarget + ')', '#166534');
+                                        }
+                                    } else {
+                                        setStatus(data.detail || 'Yaroqsiz QR kod.', '#b91c1c');
+                                    }
+                                })
+                                .catch(function () {
+                                    setStatus('Tarmoq xatosi — qayta urinib ko\'ring.', '#b91c1c');
+                                })
+                                .finally(function () { checking = false; });
+                        },
+                        function () { /* har frame'da chaqiriladi, o'qilmasa jim turadi */ },
+                    ).catch(function () {
+                        setStatus("Kamerani ochib bo'lmadi — ruxsat berilganini tekshiring.", '#b91c1c');
+                    });
+                }
+
+                window.closeYuklamaQrModal = function () {
+                    document.getElementById('yuklamaQrModal').style.display = 'none';
+                    if (html5QrCode) { html5QrCode.stop().catch(() => {}); html5QrCode = null; }
+                };
+
+                window.finishYuklamaQrScan = function () {
+                    if (scannedSerialIds.length < currentTarget) return;
+                    const btn = document.getElementById('yuklamaQrFinishBtn');
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Yakunlanmoqda...';
+                    const formData = new FormData();
+                    formData.set('mahsulot_id', currentMahsulotId);
+                    formData.set('serial_ids', scannedSerialIds.join(','));
+                    formData.set('latitude', lastGeo.lat);
+                    formData.set('longitude', lastGeo.lng);
+                    fetch(FINALIZE_URL, {
+                        method: 'POST', body: formData,
+                        headers: { 'X-CSRFToken': CSRF },
+                    })
+                        .then(r => r.json())
+                        .then(function (data) {
+                            if (window.showNotification) {
+                                window.showNotification(
+                                    data.ok ? 'Yuklama olindi' : 'Xato',
+                                    data.detail, data.ok ? 'success' : 'warning',
+                                );
+                            }
+                            if (data.ok) {
+                                closeYuklamaQrModal();
+                                setTimeout(() => window.location.reload(), 600);
+                            } else {
+                                btn.disabled = false;
+                                btn.innerHTML = '<i class="fas fa-check-double"></i> Yakunlash';
+                            }
+                        })
+                        .catch(function () {
+                            if (window.showNotification) window.showNotification('Xato', 'Tarmoq xatosi.', 'warning');
+                            btn.disabled = false;
+                            btn.innerHTML = '<i class="fas fa-check-double"></i> Yakunlash';
+                        });
+                };
+            })();
+        </script>
         <script>
             document.querySelectorAll('.gps-accept-form').forEach(function (form) {
                 form.addEventListener('submit', function (e) {
