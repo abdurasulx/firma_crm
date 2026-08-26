@@ -289,11 +289,14 @@
                     <img id="haridorPickerImg" src="" alt="" style="display:none; width:28px; height:28px; border-radius:6px; object-fit:cover;">
                     <span id="haridorPickerLabel" style="color:var(--slate-400);">— Tanlang —</span>
                 </button>
+                <div id="haridorGpsWarning" style="display:none; margin-top:6px; font-size:12px; font-weight:700; color:#b91c1c; background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:8px 10px;"></div>
+                <input type="hidden" id="latitudeInput" name="latitude">
+                <input type="hidden" id="longitudeInput" name="longitude">
             </div>
 
             <div class="form-group">
                 <label class="form-label">Oluvchining ismi</label>
-                <input type="text" name="oluvchi" class="form-input" placeholder="Ism kiriting" required>
+                <input type="text" name="oluvchi" id="oluvchiInput" class="form-input" placeholder="Ism kiriting" required>
             </div>
         </div>
 
@@ -392,9 +395,21 @@
             nomi: "{{ h.nomi|escapejs }}",
             rasmi: "{% if h.dukon_rasmi %}{{ h.dukon_rasmi.url|escapejs }}{% endif %}",
             own: {% if h.created_by_id == request.user.id %}true{% else %}false{% endif %},
+            lat: {% if h.latitude %}{{ h.latitude }}{% else %}null{% endif %},
+            lng: {% if h.longitude %}{{ h.longitude }}{% else %}null{% endif %},
         }{% if not forloop.last %},{% endif %}
         {% endfor %}
     ];
+
+    // Yerning sferasi bo'yicha ikki GPS nuqta orasidagi masofa (metrda).
+    function haversineMetres(lat1, lng1, lat2, lng2) {
+        const R = 6371000;
+        const toRad = (d) => d * Math.PI / 180;
+        const dPhi = toRad(lat2 - lat1);
+        const dLambda = toRad(lng2 - lng1);
+        const a = Math.sin(dPhi / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLambda / 2) ** 2;
+        return 2 * R * Math.asin(Math.sqrt(a));
+    }
 
     (function () {
         const modal = document.getElementById('haridorModal');
@@ -430,6 +445,65 @@
             });
         }
 
+        function applyGpsLock(tooFar, warningText) {
+            const oluvchi = document.getElementById('oluvchiInput');
+            const warnEl = document.getElementById('haridorGpsWarning');
+            const submitBtn = document.getElementById('submit-btn');
+            if (tooFar) {
+                oluvchi.readOnly = true;
+                oluvchi.style.background = 'var(--slate-100)';
+                warnEl.textContent = warningText;
+                warnEl.style.display = 'block';
+                submitBtn.dataset.gpsBlocked = '1';
+            } else {
+                oluvchi.readOnly = false;
+                oluvchi.style.background = '';
+                warnEl.style.display = 'none';
+                delete submitBtn.dataset.gpsBlocked;
+            }
+            if (typeof recalc === 'function') recalc();
+        }
+
+        // Real muammo: sotuvchi do'kondan uzoqda turib ham, boshqa
+        // do'kon nomidan sotuv yozib qo'yishi mumkin edi (soxta/masofaviy
+        // sotuv). Do'kon tanlanganda joriy GPS bilan do'konning
+        // ro'yxatdagi koordinatasi solishtiriladi — 100 metrdan uzoq
+        // bo'lsa, "Oluvchining ismi" maydoni readonly bo'lib qoladi va
+        // "Tasdiqlash" bloklanadi.
+        function checkHaridorProximity(h) {
+            if (h.lat == null || h.lng == null) {
+                applyGpsLock(false, '');
+                return;
+            }
+            const pos = window.latestLocationPoint;
+            const runCheck = (lat, lng) => {
+                document.getElementById('latitudeInput').value = lat;
+                document.getElementById('longitudeInput').value = lng;
+                const masofa = haversineMetres(lat, lng, h.lat, h.lng);
+                if (masofa > 100) {
+                    applyGpsLock(true, `Siz "${h.nomi}"dan ${Math.round(masofa)} metr uzoqdasiz — faqat 100 metr radiusida turib sotuvni yakunlashingiz mumkin.`);
+                } else {
+                    applyGpsLock(false, '');
+                }
+            };
+            if (pos && pos.lat != null) {
+                runCheck(pos.lat, pos.lng);
+            } else if (navigator.geolocation) {
+                applyGpsLock(true, 'Joylashuvingiz aniqlanmoqda...');
+                navigator.geolocation.getCurrentPosition(
+                    (p) => {
+                        document.getElementById('latitudeInput').value = p.coords.latitude;
+                        document.getElementById('longitudeInput').value = p.coords.longitude;
+                        runCheck(p.coords.latitude, p.coords.longitude);
+                    },
+                    () => applyGpsLock(true, "Joylashuvni aniqlab bo'lmadi — GPS ruxsatini yoqing."),
+                    { enableHighAccuracy: true, timeout: 10000 },
+                );
+            } else {
+                applyGpsLock(true, "Brauzeringiz joylashuvni aniqlay olmaydi.");
+            }
+        }
+
         function selectHaridor(h) {
             hiddenInput.value = h.id;
             pickerLabel.textContent = h.nomi;
@@ -441,6 +515,7 @@
                 pickerImg.style.display = 'none';
             }
             window.closeHaridorModal();
+            checkHaridorProximity(h);
         }
 
         window.closeHaridorModal = function () {
@@ -545,9 +620,10 @@
             if (p) total += totals[idx] * p.narx;
         }
         document.getElementById('total-display').textContent = total.toLocaleString('uz-UZ') + " so'm";
-        
+
         const hasSelection = Object.values(totals).some(val => val > 0);
-        document.getElementById('submit-btn').disabled = !hasSelection;
+        const submitBtn = document.getElementById('submit-btn');
+        submitBtn.disabled = !hasSelection || submitBtn.dataset.gpsBlocked === '1';
     }
 
     function setPay(el, val) {

@@ -2874,6 +2874,24 @@ def sotish(request):
                 haridor = None
                 if request.user.type != 'savdogar':
                     haridor = HaridorDukon.objects.get(id=request.POST.get('haridor'), company=request.company)
+                    # Mijoz JS orqali (masofa hisoblanganda) tekshirilgan
+                    # bo'lsa ham, server tomonda ham qayta tasdiqlanadi —
+                    # aks holda JS o'chirib/DevTools orqali chetlab
+                    # o'tilishi mumkin edi (soxta/masofaviy sotuv).
+                    if request.user.type == 'yetkazib_beruvchi' and haridor.latitude is not None and haridor.longitude is not None:
+                        try:
+                            req_lat = float(request.POST.get('latitude'))
+                            req_lng = float(request.POST.get('longitude'))
+                        except (TypeError, ValueError):
+                            messages.error(request, "Joylashuvingiz aniqlanmadi — GPS ruxsatini yoqib qayta urinib ko'ring.")
+                            return redirect('sotish')
+                        ok, masofa, err = _gps_within_100m_of_point(haridor.latitude, haridor.longitude, req_lat, req_lng)
+                        if not ok:
+                            messages.error(
+                                request,
+                                f"\"{haridor.nomi}\"dan {masofa:.0f} metr uzoqdasiz — faqat 100 metr radiusida turib sotuvni yakunlashingiz mumkin." if masofa is not None else err,
+                            )
+                            return redirect('sotish')
                 oluvchi=(request.POST.get('oluvchi') or '').strip()
                 if request.user.type == 'savdogar' and not oluvchi:
                     messages.error(request, "Savdogar savdosi uchun mijoz ism-familyasini kiriting.")
@@ -3215,6 +3233,17 @@ def check_new_deliveries(request):
         return JsonResponse({'success': False, 'count': 0, 'deliveries': []}, status=200)
     except Exception as e:
         return JsonResponse({'success': False, 'count': 0, 'deliveries': [], 'error': str(e)}, status=200)
+
+
+def _gps_within_100m_of_point(target_lat, target_lng, lat, lng):
+    """`_gps_within_100m`ning umumiyroq varianti — Ombor emas, istalgan
+    bitta nuqtaga (masalan HaridorDukon koordinatasiga) nisbatan
+    tekshiradi. Qaytaradi: (ok, masofa_metrda, xato_matni)."""
+    from .utils import haversine_metres
+    masofa = haversine_metres(lat, lng, target_lat, target_lng)
+    if masofa > 100:
+        return False, masofa, None
+    return True, masofa, None
 
 
 def _gps_within_100m(company, lat, lng):
