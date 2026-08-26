@@ -1424,8 +1424,18 @@ class EmployeeScanWidget(QWidget):
         QTimer.singleShot(3000, self._auto_close)
 
     def _auto_close(self):
-        self.no_requests_label.setVisible(False)
-        self.close_requested.emit()
+        # Real xato (foydalanuvchi topdi): bu funksiya ilgari faqat
+        # oynani yashirardi, lekin `_end_session()`ni CHAQIRMASDI — shu
+        # sabab `_session`, `_pending_print_batch` va ayniqsa
+        # `_own_batch_kods` (hozirgina chop etilgan partiyaning QR
+        # kodlari) tozalanmay qolib ketardi. Natijada, xodim keyinroq
+        # aynan o'sha jismoniy yorliqni tekshirish uchun skanerlasa,
+        # `handle_scanned_code`dagi "o'zimiz chop etgan kod" filtri
+        # (673-qator) uni HAMON eski partiyaga tegishli deb hisoblab,
+        # skanni serverga umuman yubormasdan jimgina yutib yuborardi —
+        # ekranda hech narsa yangilanmay, avvalgi (allaqachon yopilgan)
+        # xodim kartochkasi "muallaq" qolib ko'rinar edi.
+        self._end_session()
 
     def _show_next_weigh_request(self):
         # Yangi so'rov uchun tarozi barqarorlik holati boshidan boshlanadi
