@@ -28,20 +28,30 @@ def create_company_notification(company_or_subdomain, title, message, notificati
 
 
 def send_ws_notification(company_subdomain, title, message, notification_type='info', notification_id=None):
-    channel_layer = get_channel_layer()
-    if not channel_layer:
-        return
+    """Redis o'chiq/yetib bo'lmaydigan holatda `group_send` ~1 daqiqagacha
+    osilib qolishi mumkin (TCP ulanish sukut bo'yicha kutadi) — bu
+    chaqiruvchi HTTP so'rovini (masalan Desktop Agentda QR skanerlash)
+    ushlab turmasligi uchun fon oqimida yuboriladi."""
+    def _send():
+        try:
+            channel_layer = get_channel_layer()
+            if not channel_layer:
+                return
+            async_to_sync(channel_layer.group_send)(
+                f"notifications_{company_subdomain}",
+                {
+                    "type": "send_notification",
+                    "id": notification_id,
+                    "title": title,
+                    "message": message,
+                    "notification_type": notification_type,
+                },
+            )
+        except Exception as exc:
+            print(f"Notification error: {exc}")
 
-    async_to_sync(channel_layer.group_send)(
-        f"notifications_{company_subdomain}",
-        {
-            "type": "send_notification",
-            "id": notification_id,
-            "title": title,
-            "message": message,
-            "notification_type": notification_type,
-        },
-    )
+    import threading
+    threading.Thread(target=_send, daemon=True).start()
 
 
 def notify_low_stock_if_needed(mahsulot, old_qty, new_qty):

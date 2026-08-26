@@ -55,23 +55,35 @@ def _reset_login_throttle(request, username):
     cache.delete(_login_throttle_key(request, username))
 
 def send_ws_notification(company_subdomain, title, message, type='info', refresh=False):
-    try:
-        from channels.layers import get_channel_layer
-        from asgiref.sync import async_to_sync
-        channel_layer = get_channel_layer()
-        if channel_layer:
-            async_to_sync(channel_layer.group_send)(
-                f"notifications_{company_subdomain}",
-                {
-                    "type": "send_notification",
-                    "title": title,
-                    "message": message,
-                    "notification_type": type,
-                    "refresh": refresh,
-                }
-            )
-    except Exception as e:
-        print(f"WS Notification Error: {e}")
+    """Real ishlab chiqarishda topilgan xato: Redis o'chiq/yetib
+    bo'lmaydigan holatda `channel_layer.group_send` darhol xato bermaydi
+    — TCP ulanish sukut bo'yicha ~1 daqiqagacha "osilib qoladi", shu
+    vaqt davomida BUTUN HTTP so'rovi (masalan Desktop Agentda mahsulot
+    QR skanerlash — vazifa yakunlanishi shu funksiyani chaqiradi) javob
+    bermay to'xtab qoladi, garchi bildirishnoma ikkinchi darajali bo'lsa
+    ham. Endi fon oqimida yuboriladi — asosiy so'rov Redis holatidan
+    mustaqil, darhol javob qaytaradi."""
+    def _send():
+        try:
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+            channel_layer = get_channel_layer()
+            if channel_layer:
+                async_to_sync(channel_layer.group_send)(
+                    f"notifications_{company_subdomain}",
+                    {
+                        "type": "send_notification",
+                        "title": title,
+                        "message": message,
+                        "notification_type": type,
+                        "refresh": refresh,
+                    }
+                )
+        except Exception as e:
+            print(f"WS Notification Error: {e}")
+
+    import threading
+    threading.Thread(target=_send, daemon=True).start()
 
 @login_required(login_url='login')
 def end_setup(request):

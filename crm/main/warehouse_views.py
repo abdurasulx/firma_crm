@@ -28,26 +28,39 @@ def _send_ws_notification(company_subdomain, title, message, type='info', refres
 
     `extra` — ixtiyoriy qo'shimcha ma'lumot (dict), masalan stansiya
     onlayn holati (`agent_heartbeat` hodisasi uchun) — brauzer JS'i
-    shu orqali sahifani qayta yuklashsiz darhol yangilaydi."""
-    try:
-        from asgiref.sync import async_to_sync
-        from channels.layers import get_channel_layer
+    shu orqali sahifani qayta yuklashsiz darhol yangilaydi.
 
-        channel_layer = get_channel_layer()
-        async_to_sync(channel_layer.group_send)(
-            f"notifications_{company_subdomain}",
-            {
-                "type": "send_notification",
-                "title": title,
-                "message": message,
-                "notification_type": type,
-                "refresh": refresh,
-                "event": event,
-                "extra": extra or {},
-            },
-        )
-    except Exception as exc:
-        print(f"Warehouse notification error: {exc}")
+    Real ishlab chiqarishda topilgan xato: Redis o'chiq/yetib bo'lmaydigan
+    holatda `channel_layer.group_send` darhol xato bermaydi — TCP ulanish
+    sukut bo'yicha ~1 daqiqagacha "osilib qoladi" (kutadi), shu vaqt
+    davomida BUTUN HTTP so'rovi (masalan Desktop Agentda mahsulot QR
+    skanerlash) javob bermay to'xtab qoladi, garchi bu bildirishnoma
+    ikkinchi darajali (muhim bo'lmagan) bo'lsa ham. Shuning uchun endi
+    fon oqimida (background thread) yuboriladi — asosiy so'rov Redis
+    holatidan mustaqil, darhol javob qaytaradi."""
+    def _send():
+        try:
+            from asgiref.sync import async_to_sync
+            from channels.layers import get_channel_layer
+
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                f"notifications_{company_subdomain}",
+                {
+                    "type": "send_notification",
+                    "title": title,
+                    "message": message,
+                    "notification_type": type,
+                    "refresh": refresh,
+                    "event": event,
+                    "extra": extra or {},
+                },
+            )
+        except Exception as exc:
+            print(f"Warehouse notification error: {exc}")
+
+    import threading
+    threading.Thread(target=_send, daemon=True).start()
 
 
 def _warehouse_guard(request):
