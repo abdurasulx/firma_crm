@@ -946,6 +946,16 @@ class EmployeeScanWidget(QWidget):
 
     def _on_delivery_requests_loaded(self, so_rovlar: list):
         if not so_rovlar:
+            # Real muammo (ishlab chiqarishda topilgan): so'rov yo'q bo'lsa
+            # ham sessiya to'liq muddat (~2 daqiqagacha) ochiq qolardi —
+            # shu vaqt davomida `_delivery_mode_active` hali `True` bo'lgani
+            # uchun HAR QANDAY keyingi skan (hatto BOSHQA xodimning badge'i
+            # bo'lsa ham) yangi login sifatida emas, balki yuklama-serial
+            # skani sifatida talqin qilinib, "Bu QR kod topilmadi" xatosi
+            # bilan rad etilardi — stansiya amalda 2 daqiqaga qulflanib
+            # qolgandek ko'rinardi. Endi so'rov yo'qligi darhol aniqlansa,
+            # xabar bir zum ko'rsatilib, sessiya avtomatik yopiladi —
+            # keyingi xodim badge'ini darrov skanerlashi mumkin.
             self._delivery_requested = {}
             self.delivery_requests_label.setStyleSheet(
                 "font-size:13px; font-weight:700; color:#b45309; background:#fef3c7; "
@@ -953,8 +963,9 @@ class EmployeeScanWidget(QWidget):
             )
             self.delivery_requests_label.setText(
                 "Sizda kutilayotgan yuklama so'rovi yo'q — avval dashboardda "
-                "kerakli mahsulotlarni so'rang."
+                "kerakli mahsulotlarni so'rang. Yopilmoqda..."
             )
+            QTimer.singleShot(1500, self._end_session)
             return
         self._delivery_requested = {
             r["mahsulot_id"]: r for r in so_rovlar if r.get("mahsulot_id") is not None
