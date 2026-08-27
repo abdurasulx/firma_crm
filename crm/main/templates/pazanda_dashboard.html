@@ -699,8 +699,15 @@
                 if (data.ok && row) {
                     row.remove();
                     var badge = document.getElementById('pendingPickupsBadge');
-                    if (badge) {
-                        badge.textContent = Math.max(0, (parseInt(badge.textContent) || 0) - 1);
+                    var qolgan = Math.max(0, (parseInt(badge ? badge.textContent : '1') || 0) - 1);
+                    if (badge) badge.textContent = qolgan;
+                    // Oxirgi kutilayotgan komponent olindi — vazifa endi
+                    // "ishlab chiqarilmoqda" holatiga o'tgan bo'lishi mumkin
+                    // (boshqa bo'limlar ham yangilanishi kerak), shuning
+                    // uchun sahifa qayta yuklanadi.
+                    if (qolgan <= 0) {
+                        window.location.reload();
+                        return;
                     }
                 } else {
                     btn.disabled = false;

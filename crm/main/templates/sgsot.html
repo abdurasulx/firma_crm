@@ -75,7 +75,8 @@
     }
     .step-minus { background: #fff; color: var(--slate-600); }
     .step-plus { background: var(--primary); color: #fff; }
-    .step-val { width: 38px; text-align: center; color: var(--slate-900); font-weight: 800; }
+    .step-val { width: 42px; text-align: center; color: var(--slate-900); font-weight: 800; border: none; background: transparent; font-size: 1rem; font-family: inherit; padding: 0; -moz-appearance: textfield; }
+    .step-val::-webkit-outer-spin-button, .step-val::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     .payment-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; }
     .credit-panel { display: none; }
     .credit-panel.active { display: block; }
@@ -223,7 +224,8 @@
                     </div>
                     <div class="stepper">
                         <button type="button" class="step-btn step-minus" onclick="stepBy({{ forloop.counter }}, -1)"><i class="fas fa-minus"></i></button>
-                        <div class="step-val" id="pval{{ forloop.counter }}">0</div>
+                        <input type="number" class="step-val" id="pval{{ forloop.counter }}" value="0" min="0" max="{{ m.miqdor|floatformat:'-2' }}" step="any" inputmode="decimal"
+                               oninput="stepSetFromDisplay({{ forloop.counter }}, this.value)" onfocus="this.select()" onblur="stepNormalizeDisplay({{ forloop.counter }})">
                         <button type="button" class="step-btn step-plus" onclick="stepBy({{ forloop.counter }}, 1)"><i class="fas fa-plus"></i></button>
                     </div>
                     <input type="hidden" name="miqdor_{{ m.nom }}" id="pinp{{ forloop.counter }}" value="0">
@@ -362,15 +364,29 @@
     let creditMarkup = 0;
     PRODUCT_DATA.forEach(p => BY_IDX[p.idx] = p);
 
+    function applyStepValue(idx, nxt) {
+        totals[idx] = nxt;
+        document.getElementById('pval' + idx).value = nxt;
+        document.getElementById('pinp' + idx).value = nxt;
+        document.getElementById('prow' + idx).classList.toggle('selected', nxt > 0);
+        recalc();
+    }
     function stepBy(idx, delta) {
         const p = BY_IDX[idx];
         const cur = totals[idx] || 0;
         const nxt = Math.max(0, Math.min(p.max, cur + delta));
-        totals[idx] = nxt;
-        document.getElementById('pval' + idx).textContent = nxt;
-        document.getElementById('pinp' + idx).value = nxt;
-        document.getElementById('prow' + idx).classList.toggle('selected', nxt > 0);
-        recalc();
+        applyStepValue(idx, nxt);
+    }
+    function stepSetFromDisplay(idx, rawVal) {
+        const p = BY_IDX[idx];
+        let val = parseFloat(rawVal);
+        if (isNaN(val) || val < 0) val = 0;
+        if (p) val = Math.min(val, p.max);
+        applyStepValue(idx, val);
+        if (val !== parseFloat(rawVal)) document.getElementById('pval' + idx).value = val;
+    }
+    function stepNormalizeDisplay(idx) {
+        document.getElementById('pval' + idx).value = totals[idx] || 0;
     }
     function recalc() {
         let baseTotal = 0;
