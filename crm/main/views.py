@@ -2389,7 +2389,12 @@ def seemahsulot(request, mahsulot_id):
         mahsulot.narxi = yangi_narxi
         mahsulot.save(update_fields=['narxi'])
         messages.success(request, "Mahsulot muvaffaqiyatli saqlandi.")
-        return redirect('mahsulotlar_list')
+        # Real bug (foydalanuvchi topdi): saqlagandan keyin ro'yxat
+        # sahifasiga yo'naltirilardi — foydalanuvchi narxni o'zgartirib,
+        # o'sha mahsulotning statistikasini (yangi foyda bilan)
+        # ko'rmoqchi bo'lsa, avval ro'yxatga tashlab ketilib, qayta
+        # mahsulotga kirishga majbur bo'lardi.
+        return redirect('seeproduct', mahsulot_id=mahsulot.id)
     context = {
         'mahsulot': mahsulot, 'turs': turs,
         'mahsulot_turi_choices': Mahsulot.MAHSULOT_TURI_CHOICES,
