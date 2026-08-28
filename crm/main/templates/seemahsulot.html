@@ -428,10 +428,10 @@
 
                         {% if request.company.custom_desktop_agent_stations %}
                         <div class="form-group">
-                            <label class="form-label">Serial/QR kod</label>
-                            <div class="input-wrapper" style="display:flex; align-items:center; gap:10px;">
+                            <label class="form-label">Serial/QR kod (joriy holati)</label>
+                            <div class="input-wrapper">
                                 <i class="fa-solid fa-qrcode"></i>
-                                <span style="font-weight:700;">{{ mahsulot.get_serial_granularity_display }}</span>
+                                <input type="text" class="form-control" value="{{ mahsulot.get_serial_granularity_display }}" disabled>
                             </div>
                             <div style="margin-top:8px;">
                                 <label class="form-label" style="font-weight:400; font-size:12px;">Boshqa turga o'zgartirish:</label>
