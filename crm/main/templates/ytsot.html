@@ -454,14 +454,24 @@
             });
         }
 
-        function applyGpsLock(tooFar, warningText) {
+        let currentHaridor = null;
+
+        function applyGpsLock(tooFar, warningText, showRetry) {
             const oluvchi = document.getElementById('oluvchiInput');
             const warnEl = document.getElementById('haridorGpsWarning');
             const submitBtn = document.getElementById('submit-btn');
             if (tooFar) {
                 oluvchi.readOnly = true;
                 oluvchi.style.background = 'var(--slate-100)';
-                warnEl.textContent = warningText;
+                warnEl.innerHTML = warningText;
+                if (showRetry) {
+                    const retryBtn = document.createElement('button');
+                    retryBtn.type = 'button';
+                    retryBtn.textContent = "Qayta urinish";
+                    retryBtn.style.cssText = 'display:block; margin-top:6px; padding:6px 12px; border:1px solid #fecaca; background:#fff; color:#b91c1c; border-radius:8px; font-weight:700; cursor:pointer;';
+                    retryBtn.onclick = () => { if (currentHaridor) checkHaridorProximity(currentHaridor); };
+                    warnEl.appendChild(retryBtn);
+                }
                 warnEl.style.display = 'block';
                 submitBtn.dataset.gpsBlocked = '1';
             } else {
@@ -479,38 +489,40 @@
         // ro'yxatdagi koordinatasi solishtiriladi — 100 metrdan uzoq
         // bo'lsa, "Oluvchining ismi" maydoni readonly bo'lib qoladi va
         // "Tasdiqlash" bloklanadi.
+        //
+        // Real bug (foydalanuvchi topdi): avval fon rejimidagi
+        // `window.latestLocationPoint` hali tayyor bo'lmasa, zaxira
+        // sifatida `getCurrentPosition` chaqirilardi — lekin ikkinchi
+        // do'kon tanlanganda bu zaxira so'rov negadir muvaffaqiyatsiz
+        // tugab, foydalanuvchi hech qanday chiqish yo'li (faqat sahifani
+        // to'liq qayta ochish) topolmay qolardi. Endi HAR DOIM to'g'ridan-
+        // to'g'ri, yangi so'rov yuboriladi va xato bo'lsa "Qayta urinish"
+        // tugmasi chiqadi — sahifani yangilash shart emas.
         function checkHaridorProximity(h) {
+            currentHaridor = h;
             if (h.lat == null || h.lng == null) {
                 applyGpsLock(false, '');
                 return;
             }
-            const pos = window.latestLocationPoint;
-            const runCheck = (lat, lng) => {
-                document.getElementById('latitudeInput').value = lat;
-                document.getElementById('longitudeInput').value = lng;
-                const masofa = haversineMetres(lat, lng, h.lat, h.lng);
-                if (masofa > 100) {
-                    applyGpsLock(true, `Siz "${h.nomi}"dan ${Math.round(masofa)} metr uzoqdasiz — faqat 100 metr radiusida turib sotuvni yakunlashingiz mumkin.`);
-                } else {
-                    applyGpsLock(false, '');
-                }
-            };
-            if (pos && pos.lat != null) {
-                runCheck(pos.lat, pos.lng);
-            } else if (navigator.geolocation) {
-                applyGpsLock(true, 'Joylashuvingiz aniqlanmoqda...');
-                navigator.geolocation.getCurrentPosition(
-                    (p) => {
-                        document.getElementById('latitudeInput').value = p.coords.latitude;
-                        document.getElementById('longitudeInput').value = p.coords.longitude;
-                        runCheck(p.coords.latitude, p.coords.longitude);
-                    },
-                    () => applyGpsLock(true, "Joylashuvni aniqlab bo'lmadi — GPS ruxsatini yoqing."),
-                    { enableHighAccuracy: true, timeout: 10000 },
-                );
-            } else {
-                applyGpsLock(true, "Brauzeringiz joylashuvni aniqlay olmaydi.");
+            if (!navigator.geolocation) {
+                applyGpsLock(true, "Brauzeringiz joylashuvni aniqlay olmaydi.", false);
+                return;
             }
+            applyGpsLock(true, 'Joylashuvingiz aniqlanmoqda...', false);
+            navigator.geolocation.getCurrentPosition(
+                (p) => {
+                    document.getElementById('latitudeInput').value = p.coords.latitude;
+                    document.getElementById('longitudeInput').value = p.coords.longitude;
+                    const masofa = haversineMetres(p.coords.latitude, p.coords.longitude, h.lat, h.lng);
+                    if (masofa > 100) {
+                        applyGpsLock(true, `Siz "${h.nomi}"dan ${Math.round(masofa)} metr uzoqdasiz — faqat 100 metr radiusida turib sotuvni yakunlashingiz mumkin.`, false);
+                    } else {
+                        applyGpsLock(false, '');
+                    }
+                },
+                () => applyGpsLock(true, "Joylashuvni aniqlab bo'lmadi — GPS ruxsatini yoqing.", true),
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 },
+            );
         }
 
         function selectHaridor(h) {
@@ -659,6 +671,17 @@
         document.getElementById('pay-input').value = val;
     }
 
+    // Real muammo: sotuv muvaffaqiyatli yakunlanib chek sahifasiga
+    // o'tgandan keyin "Orqaga" bosilsa, brauzer bu formani keshdan
+    // (bfcache) eski, allaqachon yuborilgan holatda ko'rsatib qo'yardi.
+    // Reja bo'yicha bu holatda dashboardga qaytish kerak — shuning
+    // uchun sahifa keshdan tiklanganini aniqlab, darhol dashboardga
+    // yo'naltiramiz.
+    window.addEventListener('pageshow', function (event) {
+        if (event.persisted) {
+            window.location.replace("{% url 'main' %}");
+        }
+    });
 </script>
 {% include 'camera_capture_widget.html' %}
 {% endblock %}

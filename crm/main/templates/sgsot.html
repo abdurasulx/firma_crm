@@ -447,6 +447,14 @@
     document.getElementById('customer-name').addEventListener('input', updateContractLink);
     document.getElementById('credit-down-payment').addEventListener('input', updateContractLink);
     updateContractLink();
+
+    // Sotuv yakunlanib chek sahifasidan "Orqaga" bosilganda eski
+    // (keshdagi) forma o'rniga dashboardga qaytish uchun.
+    window.addEventListener('pageshow', function (event) {
+        if (event.persisted) {
+            window.location.replace("{% url 'main' %}");
+        }
+    });
 </script>
 {% include 'camera_capture_widget.html' %}
 {% endblock %}
