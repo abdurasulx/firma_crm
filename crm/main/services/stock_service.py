@@ -8,8 +8,58 @@ from ..models import (
     Mahsulot, YetkazibBeruvchi, YuklamaSorov,
     MiqdorQoshish, DeliveryStock, StockHistory,
     MahsulotRetsept, ProductionMaterialRequest, Savdo,
+    ProductionTask, Serial,
 )
 from . import qr_service
+
+
+def get_serial_granularity_pending(mahsulot, target):
+    """Mahsulotning QR/Serial kuzatuv turi (`serial_granularity`)
+    o'zgartirilmoqchi bo'lganda — eski tizimda "osilib qolgan" holatlarni
+    topadi, ularni bexabar tashlab ketmaslik uchun:
+
+    - `unit`/`batch` -> `none`: hali "ishlab chiqarilmoqda" holatidagi
+      vazifalar (QR to'liq skanerlanishini kutmoqda) va omborda hali
+      hech kimga topshirilmagan (skanerlab olinmagan) tayyor QR
+      yorliqlar — bularsiz o'tkazib yuborilsa, ular hech qachon
+      yakunlanmay yoki hech qachon topshirib bo'lmay qolib ketardi.
+    - `none` -> `unit`/`batch`: mavjud (QR'siz kiritilgan) zaxira —
+      unga hech qanday Serial yo'q, shuning uchun yangi QR-talab
+      qiluvchi oqimlar (yuklama, sotuv) buni "ko'rmaydi".
+
+    Har biri alohida-alohida qaror talab qiladi — funksiya faqat
+    ANIQLAYDI, hech narsani o'zgartirmaydi."""
+    pending = {}
+    if mahsulot.serial_granularity != 'none' and target == 'none':
+        tasks = list(
+            ProductionTask.objects.filter(mahsulot=mahsulot, status='producing').select_related('pazanda__user')
+        )
+        producing_tasks = []
+        for t in tasks:
+            mq = t.miqdor_qoshishlar.first()
+            hozircha = 0
+            if mq:
+                hozircha = Serial.objects.filter(batch=mq, scan_soni__gte=1).aggregate(
+                    s=Sum('dona_soni'),
+                )['s'] or 0
+            producing_tasks.append({
+                'task': t,
+                'xodim': t.pazanda.tuliq_ismi if t.pazanda else "Noma'lum",
+                'rejalashtirilgan': t.rejalashtirilgan_miqdor,
+                'hozircha': hozircha,
+            })
+        if producing_tasks:
+            pending['producing_tasks'] = producing_tasks
+
+        omborda_count = Serial.objects.filter(mahsulot=mahsulot, holati='omborda').count()
+        if omborda_count:
+            pending['omborda_count'] = omborda_count
+
+    elif mahsulot.serial_granularity == 'none' and target != 'none':
+        if mahsulot.miqdori and mahsulot.miqdori > 0:
+            pending['bulk_stock'] = mahsulot.miqdori
+
+    return pending
 
 
 def effective_ish_haqi_turi(user, company):

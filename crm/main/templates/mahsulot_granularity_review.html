@@ -1,0 +1,119 @@
+{% extends 'egabase.html' %}
+
+{% block title %}QR turi o'zgartirish - StockFirm{% endblock %}
+
+{% block content %}
+<style>
+    .gr-container { max-width: 640px; margin: 0 auto; }
+    .gr-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 1.5rem; margin-bottom: 1rem; }
+    .gr-item { border: 1px solid #fde68a; background: #fffbeb; border-radius: 10px; padding: 1rem; margin-bottom: 0.75rem; }
+    .gr-item-title { font-weight: 800; color: #92400e; margin-bottom: 0.5rem; }
+    .gr-option { display: flex; align-items: flex-start; gap: 0.5rem; padding: 0.5rem 0; cursor: pointer; }
+    .gr-option input { margin-top: 3px; }
+    .gr-option-label { font-weight: 700; color: #1e293b; }
+    .gr-option-desc { font-size: 0.8rem; color: #64748b; }
+</style>
+
+<div class="gr-container">
+    <div class="gr-card">
+        <h2 style="margin-top:0;">"{{ mahsulot.nomi }}" — QR turini o'zgartirish</h2>
+        <p style="color:#64748b;">
+            <b>{{ mahsulot.get_serial_granularity_display }}</b> → <b>{{ target_display }}</b>
+        </p>
+        <p style="color:#b45309; font-weight:600;">
+            Eski tizimda hali yakunlanmagan holatlar topildi — har biriga alohida qaror qabul qiling.
+            Barchasi hal qilinmaguncha QR turi o'zgarmaydi.
+        </p>
+    </div>
+
+    <form method="post" action="{% url 'mahsulot_granularity_apply' mahsulot.id %}">
+        {% csrf_token %}
+        <input type="hidden" name="target" value="{{ target }}">
+
+        {% if pending.producing_tasks %}
+        <div class="gr-card">
+            <h3 style="margin-top:0;">Hali ishlab chiqarilmoqda ({{ pending.producing_tasks|length }} ta vazifa)</h3>
+            {% for item in pending.producing_tasks %}
+            <div class="gr-item">
+                <div class="gr-item-title">
+                    {{ item.xodim }} — {{ item.hozircha|floatformat:0 }} / {{ item.rejalashtirilgan|floatformat:0 }} dona tayyor
+                </div>
+                <label class="gr-option">
+                    <input type="radio" name="task_{{ item.task.id }}" value="finish_now" checked>
+                    <span>
+                        <span class="gr-option-label">Hozir yakunlansin</span><br>
+                        <span class="gr-option-desc">Hozirgacha tayyor bo'lgan miqdor ({{ item.hozircha|floatformat:0 }} dona) omborga qo'shiladi, qolgani uchun odatdagidek shtraf hisoblanadi. QR kutish shart emas.</span>
+                    </span>
+                </label>
+                <label class="gr-option">
+                    <input type="radio" name="task_{{ item.task.id }}" value="wait">
+                    <span>
+                        <span class="gr-option-label">Hali kutilsin</span><br>
+                        <span class="gr-option-desc">Bu vazifa hali eski QR tizimi bilan (barcha QR skanerlanguncha) davom etadi — QR turi hozircha o'zgarmaydi.</span>
+                    </span>
+                </label>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if pending.omborda_count %}
+        <div class="gr-card">
+            <h3 style="margin-top:0;">Omborda hali topshirilmagan QR yorliqlar ({{ pending.omborda_count }} ta)</h3>
+            <div class="gr-item">
+                <label class="gr-option">
+                    <input type="radio" name="omborda" value="keep_qr" checked>
+                    <span>
+                        <span class="gr-option-label">QR bilan topshirilishi majburiy qolsin</span><br>
+                        <span class="gr-option-desc">Bu {{ pending.omborda_count }} ta yorliq hali yetkazib beruvchiga/agentga QR skanerlab topshirilmagan — QR turi hozircha o'zgarmaydi.</span>
+                    </span>
+                </label>
+                <label class="gr-option">
+                    <input type="radio" name="omborda" value="convert_bulk">
+                    <span>
+                        <span class="gr-option-label">Endi oddiy zaxira sifatida hisoblansin</span><br>
+                        <span class="gr-option-desc">Bu yorliqlar uchun QR skanerlash endi talab qilinmaydi — mahsulot allaqachon ombordagi umumiy miqdorga kirgan, shunchaki alohida kuzatilmaydi.</span>
+                    </span>
+                </label>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if pending.bulk_stock %}
+        <div class="gr-card">
+            <h3 style="margin-top:0;">Mavjud QR'siz zaxira ({{ pending.bulk_stock|floatformat:0 }} dona)</h3>
+            <div class="gr-item">
+                <label class="gr-option">
+                    <input type="radio" name="bulk" value="print_now" checked>
+                    <span>
+                        <span class="gr-option-label">Hozirgi zaxira uchun QR chop etish partiyasi yaratilsin</span><br>
+                        <span class="gr-option-desc">{{ pending.bulk_stock|floatformat:0 }} dona uchun Serial/QR kodlar yaratiladi — Desktop Agentda navbatdagi badge skanida chop etish uchun chiqadi.</span>
+                        <div style="margin-top:6px;">
+                            <label style="font-size:12px; color:#64748b;">Kim nomidan yozilsin (xodim):</label>
+                            <select name="bulk_pazanda" class="form-control" style="max-width:260px;">
+                                <option value="">— tanlang —</option>
+                                {% for pz in pazandalar %}
+                                <option value="{{ pz.id }}">{{ pz.tuliq_ismi }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </span>
+                </label>
+                <label class="gr-option">
+                    <input type="radio" name="bulk" value="leave_untracked">
+                    <span>
+                        <span class="gr-option-label">Hozirgi zaxira QR'siz qoldirilsin</span><br>
+                        <span class="gr-option-desc">Faqat KEYINGI ishlab chiqarishlar QR bilan kuzatiladi — hozirgi {{ pending.bulk_stock|floatformat:0 }} dona umumiy miqdor sifatida qoladi.</span>
+                    </span>
+                </label>
+            </div>
+        </div>
+        {% endif %}
+
+        <div style="display:flex; gap:0.75rem;">
+            <button type="submit" class="btn btn-primary" style="padding:0.75rem 1.5rem; font-weight:700;">Tasdiqlash</button>
+            <a href="{% url 'seeproduct' mahsulot.id %}" style="padding:0.75rem 1.5rem; font-weight:700; color:#64748b;">Bekor qilish</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -7,6 +7,7 @@ from django.core.paginator import Paginator
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.shortcuts import redirect
+from django.urls import reverse
 from .models import BACKUP_CHOICES, BillingPaymentLink, Company, Plan, HaridorDukon, User, YetkazibBeruvchi, Pazanda, Mahsulot, MahsulotTuri, Savdo, SavdoMahsulot, YuklamaSorov, MiqdorQoshish, HaridorDukon, AmalLog, qaytarilgan_mahsulotlar, PlanRequest, NasiyaTolov, ProductionMaterialRequest, StockHistory, Serial, Ombor, MahsulotQoshimchaXarajat, PazandaMahsulot, MahsulotRetsept, DESKTOP_AGENT_UNIT_PRICE, XodimBadge, ProductionTask, XodimMaosh, XodimTolov, XodimOyYopish, QoshimchaChiqim, AgentRelease, TaskMaterialPickup
 from .functions import mahsulotlar_miqdori, makenewform, yuklama_maker, accptyuk, sotishm, sotuv_new_form ,yetkazuvchi_mahsulot_filter, get_bugungi_savdo_summ, add_spctoint, format_compact_money
 from .plan_utils import (
@@ -110,6 +111,7 @@ from .services.stock_service import (
     get_mahsulot_statistika,
     recompute_tannarx,
     effective_ish_haqi_turi,
+    get_serial_granularity_pending,
 )
 from .services.retsept_service import add_retsept_row, delete_retsept_row
 from .services import qr_service, task_service, payroll_service, kpi_service
@@ -2338,21 +2340,10 @@ def seemahsulot(request, mahsulot_id):
         except ValueError:
             mahsulot.kutilgan_ishlab_chiqarish_soat = None
 
-        serial_granularity = request.POST.get('serial_granularity')
-        if serial_granularity in dict(Mahsulot.SERIAL_GRANULARITY_CHOICES):
-            # `unit`/`batch` — jismoniy QR yorliq chop etilishini va
-            # Desktop Agentda skanerlanishini talab qiladi. Bunday
-            # stansiyasi yo'q firmada bu tanlov faqat "hech qachon chop
-            # etilmaydigan/ko'rinmaydigan" Serial qatorlarini yaratib
-            # qoladi (real logik xato — foydalanuvchi topdi), shuning
-            # uchun bunday firmalar uchun har doim 'none'ga majburlanadi.
-            if serial_granularity != 'none' and not request.company.custom_desktop_agent_stations:
-                messages.error(
-                    request,
-                    "Har bir dona/partiyaga alohida QR faqat Desktop Agent stansiyasi bor firmalarda ishlaydi.",
-                )
-            else:
-                mahsulot.serial_granularity = serial_granularity
+        # `serial_granularity` bu yerdan ENDI o'zgartirilmaydi — o'zgarish
+        # eski ishlab chiqarish/omborda "osilib qolgan" QR holatlarini
+        # yaratishi mumkin, shuning uchun alohida tekshiruv-tasdiqlash
+        # oqimiga ko'chirildi (`mahsulot_granularity_review`/`_apply`).
 
         # Look up by ID as sent from the template <option value="{{ tur.id }}">
         turi_id = request.POST.get('turi')
@@ -3350,6 +3341,128 @@ def yuklama_qr_scan_finalize(request):
 
     success, message = approve_yuklama_sorov_service(so_rov.id, request.user, serial_ids=serial_ids)
     return JsonResponse({'ok': success, 'detail': message})
+
+
+@login_required(login_url='login')
+def mahsulot_granularity_review(request, mahsulot_id):
+    """Mahsulotning "Serial/QR kod" turi o'zgartirilmoqchi bo'lganda
+    (`seemahsulot.html`dagi tugma orqali) — avval eski tizimda "osilib
+    qolgan" holatlar (hali yakunlanmagan ishlab chiqarish, omborda
+    hali topshirilmagan QR yorliqlar, yoki QR'ga o'tishda mavjud
+    QR'siz zaxira) borligini ko'rsatadi, har biriga alohida qaror
+    so'raydi. Hech narsa "osilib qolmagan" bo'lsa, darhol o'zgaradi."""
+    if request.user.type != 'ega':
+        return redirect('main')
+    mahsulot = get_object_or_404(Mahsulot, id=mahsulot_id, company=request.company)
+    target = request.GET.get('target')
+    if target not in dict(Mahsulot.SERIAL_GRANULARITY_CHOICES):
+        messages.error(request, "Noto'g'ri QR turi tanlandi.")
+        return redirect('seeproduct', mahsulot_id=mahsulot.id)
+    if target == mahsulot.serial_granularity:
+        messages.info(request, "Bu allaqachon joriy tur.")
+        return redirect('seeproduct', mahsulot_id=mahsulot.id)
+    if target != 'none' and not request.company.custom_desktop_agent_stations:
+        messages.error(
+            request,
+            "Har bir dona/partiyaga alohida QR faqat Desktop Agent stansiyasi bor firmalarda ishlaydi.",
+        )
+        return redirect('seeproduct', mahsulot_id=mahsulot.id)
+
+    pending = get_serial_granularity_pending(mahsulot, target)
+    if not pending:
+        _apply_granularity_change(mahsulot, target, resolutions={})
+        messages.success(request, f"QR turi o'zgartirildi: {mahsulot.get_serial_granularity_display()}.")
+        return redirect('seeproduct', mahsulot_id=mahsulot.id)
+
+    return render(request, 'mahsulot_granularity_review.html', {
+        'mahsulot': mahsulot, 'target': target,
+        'target_display': dict(Mahsulot.SERIAL_GRANULARITY_CHOICES).get(target),
+        'pending': pending,
+        'pazandalar': Pazanda.objects.filter(company=request.company).select_related('user') if 'bulk_stock' in pending else None,
+    })
+
+
+def _apply_granularity_change(mahsulot, target, resolutions):
+    """`resolutions` — {'task_<id>': 'finish_now'|'wait', 'omborda': 'convert_bulk'|'keep_qr',
+    'bulk': 'print_now'|'leave_untracked'}. Har bir 'wait'/'keep_qr' hal
+    qilinmagan holat o'zgarishni butunlay to'xtatadi (qisman/aralash
+    holatga yo'l qo'yilmaydi) — chaqiruvchi buni oldindan tekshirishi
+    kerak. Muvaffaqiyatli yakunlansa mahsulot.serial_granularity
+    saqlanadi."""
+    with transaction.atomic():
+        for key, action in resolutions.items():
+            if key.startswith('task_') and action == 'finish_now':
+                task_id = key[len('task_'):]
+                task = ProductionTask.objects.select_for_update().filter(id=task_id, mahsulot=mahsulot).first()
+                if task and task.status == 'producing':
+                    task_service.finish_production_task_service(task)
+
+        if resolutions.get('bulk') == 'print_now' and mahsulot.miqdori:
+            # `MiqdorQoshish.pazanda` majburiy — bu retrospektiv (allaqachon
+            # mavjud, hech kim tomonidan hozir "ishlab chiqarilmagan")
+            # zaxira, shuning uchun kim nomidan yozilishini ega tanlaydi
+            # (soxta/tasodifiy xodimga bog'lab qo'yilmasligi uchun).
+            pazanda = Pazanda.objects.filter(id=resolutions.get('bulk_pazanda'), company=mahsulot.company).first()
+            mq = MiqdorQoshish.objects.create(
+                company=mahsulot.company, mahsulot=mahsulot, pazanda=pazanda,
+                miqdor=mahsulot.miqdori, tasdiqlangan=True,
+            )
+            mahsulot.serial_granularity = target
+            mahsulot.save(update_fields=['serial_granularity'])
+            qr_service.generate_serials_for_batch(mq)
+        else:
+            mahsulot.serial_granularity = target
+            mahsulot.save(update_fields=['serial_granularity'])
+
+
+@login_required(login_url='login')
+@require_http_methods(["POST"])
+def mahsulot_granularity_apply(request, mahsulot_id):
+    if request.user.type != 'ega':
+        return redirect('main')
+    mahsulot = get_object_or_404(Mahsulot, id=mahsulot_id, company=request.company)
+    target = request.POST.get('target')
+    if target not in dict(Mahsulot.SERIAL_GRANULARITY_CHOICES) or target == mahsulot.serial_granularity:
+        messages.error(request, "Noto'g'ri so'rov.")
+        return redirect('seeproduct', mahsulot_id=mahsulot.id)
+
+    pending = get_serial_granularity_pending(mahsulot, target)
+    resolutions = {}
+    blocked_reasons = []
+    for item in pending.get('producing_tasks', []):
+        key = f"task_{item['task'].id}"
+        action = request.POST.get(key, 'wait')
+        resolutions[key] = action
+        if action == 'wait':
+            blocked_reasons.append(
+                f"\"{item['xodim']}\" ishlab chiqarayotgan vazifa hali QR bilan yakunlanishi kutilmoqda."
+            )
+    if 'omborda_count' in pending:
+        action = request.POST.get('omborda', 'keep_qr')
+        resolutions['omborda'] = action
+        if action == 'keep_qr':
+            blocked_reasons.append(
+                f"Omborda hali topshirilmagan {pending['omborda_count']} ta QR yorliq bor."
+            )
+    if 'bulk_stock' in pending:
+        action = request.POST.get('bulk', 'leave_untracked')
+        resolutions['bulk'] = action
+        if action == 'print_now':
+            bulk_pazanda_id = request.POST.get('bulk_pazanda')
+            if not bulk_pazanda_id or not Pazanda.objects.filter(id=bulk_pazanda_id, company=request.company).exists():
+                blocked_reasons.append("QR chop etish uchun kim nomidan yozilishini (xodim) tanlang.")
+            else:
+                resolutions['bulk_pazanda'] = bulk_pazanda_id
+
+    if blocked_reasons:
+        for r in blocked_reasons:
+            messages.warning(request, r)
+        messages.error(request, "Hal qilinmagan holatlar borligi uchun QR turi o'zgartirilmadi.")
+        return redirect(f"{reverse('mahsulot_granularity_review', args=[mahsulot.id])}?target={target}")
+
+    _apply_granularity_change(mahsulot, target, resolutions)
+    messages.success(request, f"QR turi o'zgartirildi: {mahsulot.get_serial_granularity_display()}.")
+    return redirect('seeproduct', mahsulot_id=mahsulot.id)
 
 
 # ─── MVP: Ishlab chiqaruvchi — So'rovlar tarixi ──────────────────────────────
