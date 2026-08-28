@@ -3397,7 +3397,16 @@ def _apply_granularity_change(mahsulot, target, resolutions):
                 task_id = key[len('task_'):]
                 task = ProductionTask.objects.select_for_update().filter(id=task_id, mahsulot=mahsulot).first()
                 if task and task.status == 'producing':
-                    task_service.finish_production_task_service(task)
+                    # `actual_count` ATAYLAB reja miqdoriga TENG beriladi
+                    # (scan_soni asosida emas) — xodim "Ish bitdi" bosib
+                    # ishini tugatgan, QR/skaner esa faqat TIZIM TOMONIDAN
+                    # tanlangan kuzatuv usuli edi. Ega o'z qarori bilan
+                    # QR'dan voz kechsa, buning aybi/zarari xodimga
+                    # (shtraf sifatida) o'tmasligi kerak — shuning uchun
+                    # shtraf har doim 0 bo'ladi.
+                    task_service.finish_production_task_service(
+                        task, actual_count=task.rejalashtirilgan_miqdor,
+                    )
 
         if resolutions.get('bulk') == 'print_now' and mahsulot.miqdori:
             # `MiqdorQoshish.pazanda` majburiy — bu retrospektiv (allaqachon

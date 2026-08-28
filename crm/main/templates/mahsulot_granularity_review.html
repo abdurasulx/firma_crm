@@ -37,13 +37,13 @@
             {% for item in pending.producing_tasks %}
             <div class="gr-item">
                 <div class="gr-item-title">
-                    {{ item.xodim }} — {{ item.hozircha|floatformat:0 }} / {{ item.rejalashtirilgan|floatformat:0 }} dona tayyor
+                    {{ item.xodim }} — reja: {{ item.rejalashtirilgan|floatformat:0 }} dona ({{ item.hozircha|floatformat:0 }} tasi QR skanerlangan)
                 </div>
                 <label class="gr-option">
                     <input type="radio" name="task_{{ item.task.id }}" value="finish_now" checked>
                     <span>
                         <span class="gr-option-label">Hozir yakunlansin</span><br>
-                        <span class="gr-option-desc">Hozirgacha tayyor bo'lgan miqdor ({{ item.hozircha|floatformat:0 }} dona) omborga qo'shiladi, qolgani uchun odatdagidek shtraf hisoblanadi. QR kutish shart emas.</span>
+                        <span class="gr-option-desc">Xodim "Ish bitdi" bosib ishini tugatgan — to'liq reja miqdori ({{ item.rejalashtirilgan|floatformat:0 }} dona) omborga qo'shiladi, shtraf hisoblanmaydi (QR/skaner shart emas edi, faqat kuzatuv usuli edi — bekor qilinishi xodimga ta'sir qilmaydi).</span>
                     </span>
                 </label>
                 <label class="gr-option">
