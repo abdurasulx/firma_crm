@@ -3289,8 +3289,10 @@ def yuklama_qr_scan_check(request):
     serial = Serial.objects.filter(company=request.company, kod=kod, holati='omborda').select_related('mahsulot').first()
     if not serial:
         return JsonResponse({'valid': False, 'detail': "Bu QR kod topilmadi yoki allaqachon ishlatilgan."}, status=404)
-    if serial.mahsulot.serial_granularity != 'unit':
-        return JsonResponse({'valid': False, 'detail': "Bu mahsulot turi telefon orqali skanerlashni qo'llamaydi."}, status=400)
+    # `mahsulot.serial_granularity` bu Serial yaratilgandan keyin 'none'ga
+    # o'zgargan bo'lishi mumkin (masalan boshqa xodim endi QR-siz ishlaydi)
+    # — lekin bu ANIQ dona jismonan QR bilan chop etilgan, shuning uchun
+    # joriy mahsulot sozlamasidan qat'i nazar hamon QR orqali topshiriladi.
     if not YuklamaSorov.objects.filter(company=request.company, user=yb, mahsulot=serial.mahsulot, mode='waiting').exists():
         return JsonResponse({'valid': False, 'detail': f"{serial.mahsulot.nomi} — buni so'ramagansiz."}, status=400)
 
@@ -3426,6 +3428,16 @@ def mahsulot_granularity_apply(request, mahsulot_id):
         messages.error(request, "Noto'g'ri so'rov.")
         return redirect('seeproduct', mahsulot_id=mahsulot.id)
 
+    # Muhim: hali "ishlab chiqarilmoqda" vazifalar va omborda hali
+    # topshirilmagan QR yorliqlar mahsulotning YANGI granularity
+    # o'zgarishini ENDI BLOKLAMAYDI — ular o'zlarining ALLAQACHON
+    # yaratilgan Serial/MiqdorQoshish yozuvlari asosida mustaqil ishlaydi
+    # (mahsulotning joriy sozlamasidan qat'i nazar). "Eski tizimda
+    # qolsin" tanlansa — hech narsa qilinmaydi, o'sha vazifa/yorliqlar
+    # o'zining eski QR oqimi bilan (skanerlab yakunlash/topshirish)
+    # davom etadi; mahsulotning o'zi esa DARHOL yangi sozlamaga o'tadi,
+    # shu paytdan boshlab yaratiladigan YANGI vazifalar/zaxira yangi
+    # tizimda ishlaydi.
     pending = get_serial_granularity_pending(mahsulot, target)
     resolutions = {}
     blocked_reasons = []
@@ -3433,17 +3445,6 @@ def mahsulot_granularity_apply(request, mahsulot_id):
         key = f"task_{item['task'].id}"
         action = request.POST.get(key, 'wait')
         resolutions[key] = action
-        if action == 'wait':
-            blocked_reasons.append(
-                f"\"{item['xodim']}\" ishlab chiqarayotgan vazifa hali QR bilan yakunlanishi kutilmoqda."
-            )
-    if 'omborda_count' in pending:
-        action = request.POST.get('omborda', 'keep_qr')
-        resolutions['omborda'] = action
-        if action == 'keep_qr':
-            blocked_reasons.append(
-                f"Omborda hali topshirilmagan {pending['omborda_count']} ta QR yorliq bor."
-            )
     if 'bulk_stock' in pending:
         action = request.POST.get('bulk', 'leave_untracked')
         resolutions['bulk'] = action

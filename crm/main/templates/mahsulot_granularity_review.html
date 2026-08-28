@@ -21,8 +21,9 @@
             <b>{{ mahsulot.get_serial_granularity_display }}</b> → <b>{{ target_display }}</b>
         </p>
         <p style="color:#b45309; font-weight:600;">
-            Eski tizimda hali yakunlanmagan holatlar topildi — har biriga alohida qaror qabul qiling.
-            Barchasi hal qilinmaguncha QR turi o'zgarmaydi.
+            Eski tizimda hali yakunlanmagan holatlar topildi. QR turi baribir DARHOL o'zgaradi —
+            bulardan har biri o'z eski oqimi bilan mustaqil davom etadi, faqat "Hozir yakunlansin"
+            tanlansangiz shu zahoti yopiladi.
         </p>
     </div>
 
@@ -48,8 +49,8 @@
                 <label class="gr-option">
                     <input type="radio" name="task_{{ item.task.id }}" value="wait">
                     <span>
-                        <span class="gr-option-label">Hali kutilsin</span><br>
-                        <span class="gr-option-desc">Bu vazifa hali eski QR tizimi bilan (barcha QR skanerlanguncha) davom etadi — QR turi hozircha o'zgarmaydi.</span>
+                        <span class="gr-option-label">Eski tizimda qolsin</span><br>
+                        <span class="gr-option-desc">Bu vazifa hech narsa o'zgartirilmasdan, eski QR tizimi bilan (barcha QR skanerlanguncha) davom etadi. Mahsulotning o'zi baribir yangi turga o'tadi — bu faqat SHU 10 donaga tegishli.</span>
                     </span>
                 </label>
             </div>
@@ -60,21 +61,12 @@
         {% if pending.omborda_count %}
         <div class="gr-card">
             <h3 style="margin-top:0;">Omborda hali topshirilmagan QR yorliqlar ({{ pending.omborda_count }} ta)</h3>
-            <div class="gr-item">
-                <label class="gr-option">
-                    <input type="radio" name="omborda" value="keep_qr" checked>
-                    <span>
-                        <span class="gr-option-label">QR bilan topshirilishi majburiy qolsin</span><br>
-                        <span class="gr-option-desc">Bu {{ pending.omborda_count }} ta yorliq hali yetkazib beruvchiga/agentga QR skanerlab topshirilmagan — QR turi hozircha o'zgarmaydi.</span>
-                    </span>
-                </label>
-                <label class="gr-option">
-                    <input type="radio" name="omborda" value="convert_bulk">
-                    <span>
-                        <span class="gr-option-label">Endi oddiy zaxira sifatida hisoblansin</span><br>
-                        <span class="gr-option-desc">Bu yorliqlar uchun QR skanerlash endi talab qilinmaydi — mahsulot allaqachon ombordagi umumiy miqdorga kirgan, shunchaki alohida kuzatilmaydi.</span>
-                    </span>
-                </label>
+            <div class="gr-item" style="background:#eff6ff; border-color:#bfdbfe;">
+                <span class="gr-option-desc" style="font-size:0.85rem;">
+                    Bu {{ pending.omborda_count }} ta yorliq allaqachon jismonan chop etilgan — hech narsa qilish
+                    shart emas. Mahsulot turi o'zgarsa ham, ular hamon o'z QR kodi orqali (skanerlab)
+                    yetkazib beruvchiga topshiriladi, chunki bu aniq donalar uchun QR allaqachon chiqarilgan.
+                </span>
             </div>
         </div>
         {% endif %}
