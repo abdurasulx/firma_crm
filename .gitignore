@@ -73,3 +73,4 @@ saved_videos/
 # Hujjat-generatsiya skriptlari (shaxsiy)
 tools/
 reprint_qr.py
+test_qr_print.py
