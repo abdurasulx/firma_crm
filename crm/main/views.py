@@ -2102,13 +2102,19 @@ def editusr(request, username):
         if yb:
             mn = yb.bmh
             mr = yb.bmr.url if yb.bmr else ''
-        all_mahsulotlar = Mahsulot.objects.filter(company=request.company).order_by('nomi')
-        
         # Parse current stock string into dict {nom: miqdor}
         from .functions import mahsulotlar_miqdori
         yuklamalar_list = mahsulotlar_miqdori(yb.mahsulotlar)
         for y in yuklamalar_list:
             current_yuklamalar_dict[y.nom] = y.miqdor
+
+        # Faqat shu xodimning O'ZIDA haqiqatan bor (miqdori > 0) mahsulotlar
+        # ko'rsatiladi — ilgari firmadagi barcha mahsulot (xom ashyo ham)
+        # bo'sh qiymat bilan chiqib ketardi.
+        all_mahsulotlar = Mahsulot.objects.filter(
+            company=request.company,
+            nomi__in=[nom for nom, q in current_yuklamalar_dict.items() if q and q > 0],
+        ).order_by('nomi')
 
     if request.method == 'POST':
         action_type = request.POST.get('action_type')
