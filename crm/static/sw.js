@@ -7,7 +7,7 @@
  */
 
 const CACHE_VERSION   = 'sf-v1';
-const TILE_CACHE      = 'sf-tiles-v1';
+const TILE_CACHE      = 'sf-tiles-v2';
 const STATIC_CACHE    = 'sf-static-v1';
 const SYNC_TAG        = 'sf-location-sync';
 const MAX_TILE_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 kun
