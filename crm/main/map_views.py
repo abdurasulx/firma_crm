@@ -385,7 +385,31 @@ def api_route_history(request, deliverer_id):
     if len(current_segment) > 1:
         path_segments.append(current_segment)
 
+    # Do'konlar (koordinatasi borlari) va shu kuni shu yetkazib beruvchi
+    # sotuv qilganlari — marshrut ustida ko'rsatish uchun.
+    sotuvlar = Savdo.objects.filter(
+        company=request.company, yetkazib_beruvchi=deliverer,
+        vaqt_sana__gte=since, vaqt_sana__lte=until,
+    ).select_related('haridor_dukon')
+    sotilgan = {}
+    for sv in sotuvlar:
+        if sv.haridor_dukon_id:
+            info = sotilgan.setdefault(sv.haridor_dukon_id, {'soni': 0, 'summa': 0, 'vaqt': ''})
+            info['soni'] += 1
+            info['summa'] += float(sv.summa or 0)
+            info['vaqt'] = timezone.localtime(sv.vaqt_sana).strftime('%H:%M')
+    shops = [
+        {
+            'id': d.id, 'nomi': d.nomi, 'lat': d.latitude, 'lng': d.longitude,
+            'sotuv': sotilgan.get(d.id),
+        }
+        for d in HaridorDukon.objects.filter(
+            company=request.company, latitude__isnull=False, longitude__isnull=False,
+        )
+    ]
+
     return JsonResponse({
+        'shops': shops,
         'deliverer': {
             'id': deliverer.id,
             'name': deliverer.tuliq_ismi,

@@ -351,6 +351,21 @@
                 }).addTo(map).bindPopup(`Tugash: ${last[2] || '-'}`));
             }
 
+            // Do'konlar: shu kuni sotuv qilingani yashil, qolgani kulrang.
+            (data.shops || []).forEach((shop) => {
+                const sold = !!shop.sotuv;
+                const detail = sold
+                    ? `<br>Sotuv: ${shop.sotuv.soni} ta, ${Math.round(shop.sotuv.summa).toLocaleString('uz-UZ')} so'm (${shop.sotuv.vaqt})`
+                    : "<br>Shu kuni sotuv yo'q";
+                endpointLayers.push(L.circleMarker([shop.lat, shop.lng], {
+                    radius: sold ? 8 : 6,
+                    color: sold ? '#047857' : '#64748b',
+                    fillColor: sold ? '#34d399' : '#cbd5e1',
+                    fillOpacity: .95,
+                    weight: 2
+                }).addTo(map).bindPopup(`<b>${shop.nomi}</b>${detail}`));
+            });
+
             if (bounds.length) {
                 map.fitBounds(bounds, {padding: [28, 28]});
             }
