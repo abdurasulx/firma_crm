@@ -235,6 +235,10 @@ LANDING_DOMAINS = [
     if domain.strip()
 ]
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# Django'ning standart 'same-origin' siyosati boshqa saytlarga Referer
+# yubormaydi — OpenStreetMap tile serveri Referer'siz so'rovlarni
+# "403 Access blocked" bilan rad etadi (xarita sahifalari).
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 LOGIN_URL = '/login/'
 
 # Production xavfsizlik sozlamalari (faqat DEBUG=False bo'lganda) — nginx
