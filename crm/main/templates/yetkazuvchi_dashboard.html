@@ -979,13 +979,14 @@
 </div>
 {% endif %}
 
-<!-- Inventory Section -->
+<!-- Inventory Section — doim ochiq: yetkazib beruvchi qoldiqni har
+     safar bosib ochmasdan darhol ko'rishi kerak. -->
 <div class="dashboard-section">
-    <div class="section-header" onclick="toggleSection(this)">
-        <h2><i class="fas fa-warehouse" style="color: var(--slate-600);"></i> Zaxiradagi Mahsulotlar</h2>
+    <div class="section-header active" onclick="toggleSection(this)">
+        <h2><i class="fas fa-warehouse" style="color: var(--slate-600);"></i> Zaxiradagi Mahsulotlar (Qoldiq)</h2>
         <i class="fas fa-chevron-down toggle-caret"></i>
     </div>
-    <div class="section-content">
+    <div class="section-content show">
         {% if zaxira_mahsulotlar %}
         <div class="items-grid">
             {% for m in zaxira_mahsulotlar %}
@@ -1004,13 +1005,14 @@
     </div>
 </div>
 
-<!-- Sales History -->
+<!-- Sales History — doim ochiq: kunlik savdolar darhol ko'rinib
+     tursin. -->
 <div class="dashboard-section">
-    <div class="section-header" onclick="toggleSection(this)">
+    <div class="section-header active" onclick="toggleSection(this)">
         <h2><i class="fas fa-clock-rotate-left" style="color: var(--success);"></i> Bugungi Sotuvlar Tarixi</h2>
         <i class="fas fa-chevron-down toggle-caret"></i>
     </div>
-    <div class="section-content">
+    <div class="section-content show">
         {% if nfs %}
         <div class="sales-list">
             {% for s in nfs %}
