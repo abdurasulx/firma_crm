@@ -109,7 +109,7 @@
 <div class="map-container">
     <div id="map"></div>
     
-    <div class="map-overlay">
+    <div class="map-overlay"{% if request.user.type != 'ega' %} style="display:none;"{% endif %}>
         <h3 style="font-size: 16px; margin-bottom: 12px; color: var(--text-dark);">Xarita Sozlamalari</h3>
         <div style="display: flex; flex-direction: column; gap: 10px;">
             <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
