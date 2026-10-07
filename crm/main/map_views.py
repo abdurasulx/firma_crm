@@ -1,4 +1,5 @@
 import re
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, render
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -262,6 +263,8 @@ def api_map_data(request):
         last_lat__isnull=False,
         last_lng__isnull=False,
     ).order_by('-last_active')
+    if own_yb_id is not None:
+        deliverers = deliverers.filter(id=own_yb_id)  # boshqa haydovchilar yashirin
 
     deliverers_data = []
     
@@ -342,6 +345,10 @@ def api_map_data(request):
         latitude__isnull=False,
         longitude__isnull=False
     )
+    if own_yb_id is not None:
+        # Yetkazib beruvchi: bo'sh (hech kimga biriktirilmagan) va o'ziga
+        # biriktirilgan do'konlarni ko'radi; boshqasiga biriktirilganlar yopiq.
+        shops = shops.filter(Q(yetkazib_beruvchi__isnull=True) | Q(yetkazib_beruvchi_id=own_yb_id))
     shops_data = []
     for s in shops.select_related('yetkazib_beruvchi'):
         yb = s.yetkazib_beruvchi
@@ -378,6 +385,7 @@ def api_map_data(request):
         for yb in YetkazibBeruvchi.objects.filter(
             company=request.company, user__type='yetkazib_beruvchi',
         ).order_by('tuliq_ismi')
+        if own_yb_id is None or yb.id == own_yb_id
     ]
 
     return JsonResponse({
