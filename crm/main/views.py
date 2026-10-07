@@ -2199,6 +2199,12 @@ def editusr(request, username):
         # faqat "yuklama" so'rovi (web'da tasdiqlash yoki Desktop Agent orqali
         # Serial QR skanerlash) orqali, tizim tomonidan o'zgaradi.
 
+        if user_edit.type == 'yetkazib_beruvchi':
+            import re as _re
+            rang = (request.POST.get('rang') or '').strip()
+            if _re.match(r'^#[0-9a-fA-F]{6}$', rang):
+                YetkazibBeruvchi.objects.filter(user=user_edit, company=request.company).update(rang=rang)
+
         messages.success(request, message)
         return redirect('hodimlar_list')
 
@@ -2220,6 +2226,11 @@ def editusr(request, username):
         'effective_ish_haqi_turi_display': effective_turi_display,
         'oylik_maosh': maosh_obj.oylik_maosh if maosh_obj else None,
     }
+    if user_edit.type == 'yetkazib_beruvchi':
+        from .map_views import deliverer_color
+        yb_obj = YetkazibBeruvchi.objects.filter(user=user_edit, company=request.company).first()
+        if yb_obj:
+            context['yb_rang'] = deliverer_color(yb_obj)
     if user_edit.type in ['pazanda', 'ishlab_chiqaruvchi']:
         pz = Pazanda.objects.filter(user=user_edit, company=request.company).first()
         if pz:

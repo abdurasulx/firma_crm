@@ -1,3 +1,4 @@
+import re
 from django.shortcuts import get_object_or_404, render
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -58,16 +59,24 @@ def build_route_segments(history):
 
 
 DELIVERER_COLORS = [
-    '#f43f5e', '#8b5cf6', '#0ea5e9', '#10b981', '#f59e0b', '#6366f1',
+    '#f43f5e', '#8b5cf6', '#0ea5e9', '#10b981', '#3b82f6', '#6366f1',
     '#ec4899', '#14b8a6', '#ef4444', '#84cc16', '#a855f7', '#06b6d4',
 ]
-UNASSIGNED_SHOP_COLOR = '#94a3b8'
+UNASSIGNED_SHOP_COLOR = '#f97316'  # to'q sariq — biriktirilmagan do'konlar
 
 
-def deliverer_color(deliverer_id):
-    """Yetkazib beruvchining barqaror (har doim bir xil) rangi — xaritada
-    o'zi ham, unga biriktirilgan do'konlar ham shu rangda chiqadi."""
-    return DELIVERER_COLORS[deliverer_id % len(DELIVERER_COLORS)]
+HEX_COLOR_RE = re.compile(r'^#[0-9a-fA-F]{6}$')
+
+
+def deliverer_color(deliverer):
+    """Yetkazib beruvchining barqaror rangi — xaritada o'zi ham, unga
+    biriktirilgan do'konlar ham shu rangda chiqadi. Ega xodim tahrirlash
+    sahifasida tanlagan rang (`rang`) birinchi o'rinda, tanlanmagan
+    bo'lsa id bo'yicha avtomatik rang."""
+    custom = (getattr(deliverer, 'rang', '') or '').strip()
+    if HEX_COLOR_RE.match(custom):
+        return custom
+    return DELIVERER_COLORS[deliverer.id % len(DELIVERER_COLORS)]
 
 
 @login_required(login_url='login')
@@ -290,7 +299,7 @@ def api_map_data(request):
             'last_active': last_seen_text,
             'is_online': is_online,
             'image': d.rasmi.url if d.rasmi else None,
-            'color': deliverer_color(d.id),
+            'color': deliverer_color(d),
             'path': [point for segment in path_segments for point in segment],
             'path_segments': path_segments,
         })
@@ -328,7 +337,7 @@ def api_map_data(request):
             'id': s.id,
             'deliverer_id': yb.id if yb else None,
             'deliverer_name': yb.tuliq_ismi if yb else None,
-            'color': deliverer_color(yb.id) if yb else UNASSIGNED_SHOP_COLOR,
+            'color': deliverer_color(yb) if yb else UNASSIGNED_SHOP_COLOR,
             'name': s.nomi,
             'lat': s.latitude,
             'lng': s.longitude,
@@ -353,7 +362,7 @@ def api_map_data(request):
     ]
 
     all_deliverers = [
-        {'id': yb.id, 'name': yb.tuliq_ismi, 'color': deliverer_color(yb.id)}
+        {'id': yb.id, 'name': yb.tuliq_ismi, 'color': deliverer_color(yb)}
         for yb in YetkazibBeruvchi.objects.filter(
             company=request.company, user__type='yetkazib_beruvchi',
         ).order_by('tuliq_ismi')

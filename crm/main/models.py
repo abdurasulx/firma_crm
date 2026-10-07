@@ -462,6 +462,10 @@ class YetkazibBeruvchi(models.Model):
     mahsulotlar = models.TextField(null=True, blank=True)
     
     # Location tracking
+    rang = models.CharField(
+        max_length=7, blank=True, default='',
+        help_text="Xaritada ko'rsatiladigan rang (#rrggbb). Bo'sh bo'lsa avtomatik tanlanadi.",
+    )
     last_lat = models.FloatField(null=True, blank=True)
     last_lng = models.FloatField(null=True, blank=True)
     last_active = models.DateTimeField(null=True, blank=True)
