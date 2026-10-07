@@ -549,6 +549,13 @@
                         <i class="fas fa-map-location-dot"></i> Marshrutlar
                     </a>
                 </li>
+                {% if request.has_map %}
+                <li class="nav-item">
+                    <a href="{% url 'map_dashboard' %}" class="{% if request.resolver_match.url_name == 'map_dashboard' %}active{% endif %}">
+                        <i class="fas fa-earth-asia"></i> Xarita
+                    </a>
+                </li>
+                {% endif %}
                 <li class="nav-item">
                     <a href="{% url 'add_haridor' %}" class="{% if request.resolver_match.url_name == 'add_haridor' or request.resolver_match.url_name == 'mijoz_detail' %}active{% endif %}">
                         <i class="fas fa-store"></i> Haridor
@@ -654,6 +661,11 @@
             <a href="{% url 'yt_navigation' %}" class="dropdown-link {% if request.resolver_match.url_name == 'yt_navigation' %}active{% endif %}">
                 <i class="fas fa-map-location-dot"></i> Marshrutlar
             </a>
+            {% if request.has_map %}
+            <a href="{% url 'map_dashboard' %}" class="dropdown-link {% if request.resolver_match.url_name == 'map_dashboard' %}active{% endif %}">
+                <i class="fas fa-earth-asia"></i> Xarita
+            </a>
+            {% endif %}
             <a href="{% url 'add_haridor' %}" class="dropdown-link {% if request.resolver_match.url_name == 'add_haridor' or request.resolver_match.url_name == 'mijoz_detail' %}active{% endif %}">
                 <i class="fas fa-store"></i> Haridor qo'shish
             </a>

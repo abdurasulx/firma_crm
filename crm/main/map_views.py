@@ -90,7 +90,9 @@ def map_dashboard(request):
         messages.warning(request, "Xarita xizmatidan foydalanish uchun to'lov amalga oshirilgan bo'lishi kerak.")
         return render(request, 'map_no_access.html')
     
-    return render(request, 'map_dashboard.html')
+    # Yetkazib beruvchi ham xaritani kuzata oladi (o'z menyusi/dizayni bilan).
+    base_template = 'ytbase.html' if request.user.type == 'yetkazib_beruvchi' else 'egabase.html'
+    return render(request, 'map_dashboard.html', {'base_template': base_template})
 
 
 @login_required(login_url='login')
@@ -249,12 +251,18 @@ def api_map_data(request):
     now = timezone.now()
     online_threshold = now - timedelta(minutes=2) # 2 minute threshold for "Real-time"
     
+    # Yetkazib beruvchi uchun: faqat o'zining yo'l chizig'i/savdolari ko'rinadi.
+    own_yb_id = None
+    if request.user.type == 'yetkazib_beruvchi':
+        own_yb = YetkazibBeruvchi.objects.filter(user=request.user, company=request.company).first()
+        own_yb_id = own_yb.id if own_yb else -1
+
     deliverers = YetkazibBeruvchi.objects.filter(
         company=request.company,
         last_lat__isnull=False,
         last_lng__isnull=False,
     ).order_by('-last_active')
-    
+
     deliverers_data = []
     
     for d in deliverers:
@@ -300,8 +308,9 @@ def api_map_data(request):
             'is_online': is_online,
             'image': d.rasmi.url if d.rasmi else None,
             'color': deliverer_color(d),
-            'path': [point for segment in path_segments for point in segment],
-            'path_segments': path_segments,
+            # Yo'l chizig'i: yetkazib beruvchi faqat o'zinikini ko'radi.
+            'path': [point for segment in path_segments for point in segment] if own_yb_id in (None, d.id) else [],
+            'path_segments': path_segments if own_yb_id in (None, d.id) else [],
         })
     
     # Recent Sales with locations (TODAY ONLY)
@@ -312,7 +321,10 @@ def api_map_data(request):
         latitude__isnull=False,
         longitude__isnull=False
     ).select_related('haridor_dukon', 'yetkazib_beruvchi', 'savdogar')
-    
+    # Yetkazib beruvchi faqat O'Z savdolarini ko'radi (boshqalarning summalari yopiq).
+    if own_yb_id is not None:
+        sales = sales.filter(yetkazib_beruvchi_id=own_yb_id)
+
     sales_data = []
     for s in sales:
         sales_data.append({
@@ -369,6 +381,7 @@ def api_map_data(request):
     ]
 
     return JsonResponse({
+        'can_assign': request.user.type == 'ega',
         'all_deliverers': all_deliverers,
         'deliverers': deliverers_data,
         'sales': sales_data,

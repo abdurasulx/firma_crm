@@ -1,4 +1,4 @@
-{% extends 'egabase.html' %}
+{% extends base_template|default:'egabase.html' %}
 {% load static %}
 
 {% block title %}Xarita - StockFirm ERP{% endblock %}
@@ -192,6 +192,7 @@
         let shopMarkers = [];
         let omborMarkers = [];
         let allDeliverers = [];
+        let canAssign = false;
         let lastShopsSig = '';
 
         let shopsById = {};
@@ -203,9 +204,9 @@
                 : '<span style="color:#94a3b8; font-size:12px;">Biriktirilmagan</span>';
             return `<b>${sh.name}</b>
                 <div style="margin:6px 0 10px;">${current}</div>
-                <button type="button" onclick="openAssignModal(${sh.id})" style="width:100%; padding:8px; border:none; border-radius:8px; background:#10b981; color:#fff; font-weight:700; cursor:pointer;">
+                ${canAssign ? `<button type="button" onclick="openAssignModal(${sh.id})" style="width:100%; padding:8px; border:none; border-radius:8px; background:#10b981; color:#fff; font-weight:700; cursor:pointer;">
                     Yetkazib beruvchini tanlash
-                </button>`;
+                </button>` : ''}`;
         }
 
         let assignShopId = null;
@@ -373,7 +374,8 @@
                     // chizamiz — aks holda har 5 soniyada ochiq turgan oyna
                     // (yetkazib beruvchi tanlash) yopilib ketardi.
                     allDeliverers = data.all_deliverers || [];
-                    const shopsSig = JSON.stringify([showShops, data.shops, allDeliverers]);
+                    canAssign = !!data.can_assign;
+                    const shopsSig = JSON.stringify([showShops, data.shops, allDeliverers, canAssign]);
                     if (shopsSig !== lastShopsSig) {
                         lastShopsSig = shopsSig;
                         shopMarkers.forEach(m => map.removeLayer(m));
