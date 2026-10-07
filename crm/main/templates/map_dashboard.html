@@ -197,6 +197,16 @@
 
         let shopsById = {};
 
+        // "Borish" tugmalari — telefonda mos xarita ilovasini ochib, shu joyga
+        // yo'nalish (navigatsiya) boshlaydi.
+        function goButtons(lat, lng) {
+            const btn = 'flex:1; text-align:center; padding:8px; border-radius:8px; color:#fff; font-weight:700; text-decoration:none; font-size:13px;';
+            return `<div style="display:flex; gap:6px; margin-bottom:8px;">
+                <a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving" target="_blank" rel="noopener" style="${btn} background:#2563eb;">📍 Google</a>
+                <a href="https://yandex.com/maps/?rtext=~${lat},${lng}&rtt=auto" target="_blank" rel="noopener" style="${btn} background:#dc2626;">📍 Yandex</a>
+            </div>`;
+        }
+
         function shopPopupHtml(sh) {
             shopsById[sh.id] = sh;
             const current = sh.deliverer_name
@@ -204,6 +214,7 @@
                 : '<span style="color:#94a3b8; font-size:12px;">Biriktirilmagan</span>';
             return `<b>${sh.name}</b>
                 <div style="margin:6px 0 10px;">${current}</div>
+                ${goButtons(sh.lat, sh.lng)}
                 ${canAssign ? `<button type="button" onclick="openAssignModal(${sh.id})" style="width:100%; padding:8px; border:none; border-radius:8px; background:#10b981; color:#fff; font-weight:700; cursor:pointer;">
                     Yetkazib beruvchini tanlash
                 </button>` : ''}`;
@@ -409,7 +420,7 @@
                             });
                             const marker = L.marker([o.lat, o.lng], {icon: icon})
                                 .addTo(map)
-                                .bindPopup(`<b>${o.name}</b>${o.manzil ? '<br>' + o.manzil : ''}`);
+                                .bindPopup(`<b>${o.name}</b>${o.manzil ? '<br>' + o.manzil : ''}<div style="margin-top:8px;">${goButtons(o.lat, o.lng)}</div>`);
                             omborMarkers.push(marker);
                         });
                     }
