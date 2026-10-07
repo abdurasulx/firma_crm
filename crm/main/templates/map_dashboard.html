@@ -130,6 +130,33 @@
     </div>
 </div>
 
+<style>
+    #assignModal { display:none; position:fixed; inset:0; background:rgba(15,23,42,.6); z-index:10000; align-items:center; justify-content:center; padding:16px; }
+    .assign-box { background:#fff; border-radius:18px; width:min(94vw, 420px); max-height:80vh; display:flex; flex-direction:column; box-shadow:0 20px 50px rgba(0,0,0,.25); overflow:hidden; }
+    .assign-head { padding:18px 20px 12px; display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+    .assign-head h3 { margin:0; font-size:16px; font-weight:800; color:#0f172a; }
+    .assign-head small { color:#64748b; }
+    .assign-close { border:none; background:#f1f5f9; width:30px; height:30px; border-radius:50%; font-size:18px; cursor:pointer; color:#475569; }
+    .assign-search { margin:0 20px 10px; padding:11px 14px; border:1.5px solid #e2e8f0; border-radius:12px; font-size:14px; outline:none; }
+    .assign-search:focus { border-color:#10b981; box-shadow:0 0 0 3px rgba(16,185,129,.15); }
+    #assignList { overflow-y:auto; padding:0 12px 14px; }
+    .assign-row { display:flex; align-items:center; gap:12px; padding:10px 10px; border-radius:12px; cursor:pointer; }
+    .assign-row:hover { background:#f1f5f9; }
+    .assign-row.active { background:#ecfdf5; }
+    .assign-dot { width:34px; height:34px; border-radius:50%; color:#fff; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .assign-name { flex:1; font-weight:600; color:#1e293b; }
+    .assign-check { color:#059669; font-weight:800; }
+</style>
+<div id="assignModal" onclick="if(event.target===this) closeAssignModal()">
+    <div class="assign-box">
+        <div class="assign-head">
+            <div><h3>Yetkazib beruvchini tanlang</h3><small id="assignShopName"></small></div>
+            <button type="button" class="assign-close" onclick="closeAssignModal()">&times;</button>
+        </div>
+        <input type="search" id="assignSearch" class="assign-search" placeholder="Ism bo'yicha qidirish..." autocomplete="off" oninput="renderAssignList()">
+        <div id="assignList"></div>
+    </div>
+</div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -167,26 +194,62 @@
         let allDeliverers = [];
         let lastShopsSig = '';
 
+        let shopsById = {};
+
         function shopPopupHtml(sh) {
-            const options = ['<option value="">— Biriktirilmagan —</option>']
-                .concat(allDeliverers.map(d =>
-                    `<option value="${d.id}" ${d.id === sh.deliverer_id ? 'selected' : ''}>${d.name}</option>`));
+            shopsById[sh.id] = sh;
             const current = sh.deliverer_name
-                ? `<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${sh.color}; margin-right:4px;"></span>${sh.deliverer_name}`
-                : "Biriktirilmagan";
-            return `<b>${sh.name}</b><br>Yetkazib beruvchi: ${current}
-                <div style="margin-top:8px;">
-                    <select id="assign-select-${sh.id}" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;">${options.join('')}</select>
-                    <button type="button" onclick="assignShop(${sh.id})" style="margin-top:6px; width:100%; padding:7px; border:none; border-radius:6px; background:#10b981; color:#fff; font-weight:700; cursor:pointer;">Biriktirish</button>
-                </div>`;
+                ? `<span style="display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:999px; background:${sh.color}1f; color:${sh.color}; font-weight:700; font-size:12px;"><span style="width:8px; height:8px; border-radius:50%; background:${sh.color};"></span>${sh.deliverer_name}</span>`
+                : '<span style="color:#94a3b8; font-size:12px;">Biriktirilmagan</span>';
+            return `<b>${sh.name}</b>
+                <div style="margin:6px 0 10px;">${current}</div>
+                <button type="button" onclick="openAssignModal(${sh.id})" style="width:100%; padding:8px; border:none; border-radius:8px; background:#10b981; color:#fff; font-weight:700; cursor:pointer;">
+                    Yetkazib beruvchini tanlash
+                </button>`;
         }
 
-        function assignShop(shopId) {
-            const select = document.getElementById('assign-select-' + shopId);
-            if (!select) return;
+        let assignShopId = null;
+
+        function renderAssignList() {
+            const q = document.getElementById('assignSearch').value.trim().toLowerCase();
+            const sh = shopsById[assignShopId];
+            const list = document.getElementById('assignList');
+            list.innerHTML = '';
+            const rows = [{id: '', name: 'Biriktirilmagan (olib tashlash)', color: '#94a3b8'}]
+                .concat(allDeliverers)
+                .filter(d => d.id === '' ? !q : d.name.toLowerCase().includes(q));
+            if (!rows.length) {
+                list.innerHTML = '<div style="padding:18px; text-align:center; color:#94a3b8;">Topilmadi.</div>';
+                return;
+            }
+            rows.forEach(d => {
+                const active = (d.id === '' && !sh.deliverer_id) || d.id === sh.deliverer_id;
+                const row = document.createElement('div');
+                row.className = 'assign-row' + (active ? ' active' : '');
+                row.innerHTML = `<span class="assign-dot" style="background:${d.color};">${d.id === '' ? '–' : d.name.charAt(0).toUpperCase()}</span>
+                    <span class="assign-name">${d.name}</span>${active ? '<span class="assign-check">✓</span>' : ''}`;
+                row.onclick = () => assignShop(assignShopId, d.id);
+                list.appendChild(row);
+            });
+        }
+
+        function openAssignModal(shopId) {
+            assignShopId = shopId;
+            document.getElementById('assignShopName').textContent = shopsById[shopId].name;
+            document.getElementById('assignSearch').value = '';
+            document.getElementById('assignModal').style.display = 'flex';
+            renderAssignList();
+            document.getElementById('assignSearch').focus();
+        }
+
+        function closeAssignModal() {
+            document.getElementById('assignModal').style.display = 'none';
+        }
+
+        function assignShop(shopId, delivererId) {
             const body = new FormData();
             body.set('shop_id', shopId);
-            body.set('deliverer_id', select.value);
+            body.set('deliverer_id', delivererId);
             fetch('{% url "api_assign_shop_deliverer" %}', {
                 method: 'POST', body,
                 headers: {'X-CSRFToken': '{{ csrf_token }}'},
@@ -194,6 +257,7 @@
                 .then(r => r.json())
                 .then(res => {
                     if (!res.ok) { alert(res.detail || 'Xato'); return; }
+                    closeAssignModal();
                     map.closePopup();
                     lastShopsSig = '';
                     updateMap();
