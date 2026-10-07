@@ -24,7 +24,7 @@ from .log_views import amallog_view, savdo_chek
 from .qaytarish_views import qaytarish_view, qaytarishlar_view, qaytarish_tasdiq, qaytarish_rad, qaytarish_sozlash
 from . import analytics
 from .analytics_views import analytics_dashboard
-from .map_views import map_dashboard, route_history_page, api_map_data, api_route_history, api_route_active_days, api_location_batch
+from .map_views import map_dashboard, route_history_page, api_map_data, api_route_history, api_route_active_days, api_location_batch, api_assign_shop_deliverer
 from .api import dashboard_stats_api
 from .backup_views import download_backup, restore_view, prepare_backup_page
 from .export_views import export_savdolar, export_nasiya, export_mahsulotlar, export_xodimlar
@@ -171,6 +171,7 @@ urlpatterns = [
     path('map/', map_dashboard, name='map_dashboard'),
     path('map/routes/', route_history_page, name='route_history'),
     path('api/map/data/', api_map_data, name='api_map_data'),
+    path('api/map/assign-shop/', api_assign_shop_deliverer, name='api_assign_shop_deliverer'),
     path('api/map/active-days/<int:deliverer_id>/', api_route_active_days, name='api_route_active_days'),
     path('api/map/route/<int:deliverer_id>/', api_route_history, name='api_route_history'),
     path('api/location/batch/', api_location_batch, name='api_location_batch'),

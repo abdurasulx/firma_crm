@@ -164,6 +164,42 @@
         let saleMarkers = [];
         let shopMarkers = [];
         let omborMarkers = [];
+        let allDeliverers = [];
+        let lastShopsSig = '';
+
+        function shopPopupHtml(sh) {
+            const options = ['<option value="">— Biriktirilmagan —</option>']
+                .concat(allDeliverers.map(d =>
+                    `<option value="${d.id}" ${d.id === sh.deliverer_id ? 'selected' : ''}>${d.name}</option>`));
+            const current = sh.deliverer_name
+                ? `<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${sh.color}; margin-right:4px;"></span>${sh.deliverer_name}`
+                : "Biriktirilmagan";
+            return `<b>${sh.name}</b><br>Yetkazib beruvchi: ${current}
+                <div style="margin-top:8px;">
+                    <select id="assign-select-${sh.id}" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;">${options.join('')}</select>
+                    <button type="button" onclick="assignShop(${sh.id})" style="margin-top:6px; width:100%; padding:7px; border:none; border-radius:6px; background:#10b981; color:#fff; font-weight:700; cursor:pointer;">Biriktirish</button>
+                </div>`;
+        }
+
+        function assignShop(shopId) {
+            const select = document.getElementById('assign-select-' + shopId);
+            if (!select) return;
+            const body = new FormData();
+            body.set('shop_id', shopId);
+            body.set('deliverer_id', select.value);
+            fetch('{% url "api_assign_shop_deliverer" %}', {
+                method: 'POST', body,
+                headers: {'X-CSRFToken': '{{ csrf_token }}'},
+            })
+                .then(r => r.json())
+                .then(res => {
+                    if (!res.ok) { alert(res.detail || 'Xato'); return; }
+                    map.closePopup();
+                    lastShopsSig = '';
+                    updateMap();
+                })
+                .catch(() => alert("Tarmoq xatosi — qayta urinib ko'ring."));
+        }
 
         function updateMap() {
             const showSales = document.getElementById('show-sales').checked;
@@ -262,21 +298,29 @@
                     }
 
                     // Update Static Shops
-                    shopMarkers.forEach(m => map.removeLayer(m));
-                    shopMarkers = [];
-                    if (showShops) {
-                        data.shops.forEach(sh => {
-                            const icon = L.divIcon({
-                                className: 'shop-marker',
-                                html: `<div class="marker-label" style="background:#6366f1;">${sh.name}</div><div class="shop-avatar-wrapper" style="border-color:#6366f1; width:32px; height:32px; border-radius:8px;"><img src="${sh.pic || '/static/images/default_shop.png'}"></div>`,
-                                iconSize: [32, 32],
-                                iconAnchor: [16, 16]
+                    // Do'kon belgilarini faqat ma'lumot o'zgargandagina qayta
+                    // chizamiz — aks holda har 5 soniyada ochiq turgan oyna
+                    // (yetkazib beruvchi tanlash) yopilib ketardi.
+                    allDeliverers = data.all_deliverers || [];
+                    const shopsSig = JSON.stringify([showShops, data.shops, allDeliverers]);
+                    if (shopsSig !== lastShopsSig) {
+                        lastShopsSig = shopsSig;
+                        shopMarkers.forEach(m => map.removeLayer(m));
+                        shopMarkers = [];
+                        if (showShops) {
+                            data.shops.forEach(sh => {
+                                const icon = L.divIcon({
+                                    className: 'shop-marker',
+                                    html: `<div class="marker-label" style="background:${sh.color};">${sh.name}</div><div class="shop-avatar-wrapper" style="border-color:${sh.color}; width:32px; height:32px; border-radius:8px;"><img src="${sh.pic || '/static/images/default_shop.png'}"></div>`,
+                                    iconSize: [32, 32],
+                                    iconAnchor: [16, 16]
+                                });
+                                const marker = L.marker([sh.lat, sh.lng], {icon: icon})
+                                    .addTo(map)
+                                    .bindPopup(shopPopupHtml(sh), {minWidth: 220});
+                                shopMarkers.push(marker);
                             });
-                            const marker = L.marker([sh.lat, sh.lng], {icon: icon})
-                                .addTo(map)
-                                .bindPopup(`<b>${sh.name}</b><br>Status: Ro'yxatdan o'tgan shop`);
-                            shopMarkers.push(marker);
-                        });
+                        }
                     }
 
                     // Update Omborlar (warehouses)
@@ -315,7 +359,7 @@
                         const statusText = d.is_online ? 'Onlayn' : 'Oflayn';
                         list.innerHTML += `
                             <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:12px; opacity: ${d.is_online ? 1 : 0.7}; cursor:pointer;" onclick="map.setView([${d.lat}, ${d.lng}], 15)">
-                                <div style="width:8px; height:8px; border-radius:50%; background:${statusColor};" title="${statusText}"></div>
+                                <div style="width:10px; height:10px; border-radius:50%; background:${d.color}; opacity:${d.is_online ? 1 : 0.5};" title="${statusText}"></div>
                                 <span style="flex:1; font-weight:${d.is_online ? '600' : '400'}">${d.name}</span>
                                 <span style="color:var(--text-light); font-size:10px;">${d.last_active}</span>
                             </div>

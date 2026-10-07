@@ -310,6 +310,12 @@ class HaridorDukon(models.Model):
     telefon = models.CharField(max_length=20, null=True, blank=True)
     telegram_username = models.CharField(max_length=100, null=True, blank=True)
     mijoz_turi = models.CharField(max_length=10, choices=MIJOZ_TURI_CHOICES, default='oddiy')
+    yetkazib_beruvchi = models.ForeignKey(
+        'YetkazibBeruvchi', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='biriktirilgan_dukonlar',
+        help_text="Bu do'konga biriktirilgan yetkazib beruvchi — xaritada do'kon shu "
+                  "yetkazib beruvchining rangida ko'rsatiladi.",
+    )
     created_by = models.ForeignKey(
         'User', on_delete=models.SET_NULL, null=True, blank=True, related_name='yaratgan_dukonlar',
         help_text="Bu do'konni kim qo'shgani — sotuv sahifasida shu foydalanuvchining "

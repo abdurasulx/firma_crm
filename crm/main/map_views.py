@@ -56,6 +56,20 @@ def build_route_segments(history):
 
     return segments
 
+
+DELIVERER_COLORS = [
+    '#f43f5e', '#8b5cf6', '#0ea5e9', '#10b981', '#f59e0b', '#6366f1',
+    '#ec4899', '#14b8a6', '#ef4444', '#84cc16', '#a855f7', '#06b6d4',
+]
+UNASSIGNED_SHOP_COLOR = '#94a3b8'
+
+
+def deliverer_color(deliverer_id):
+    """Yetkazib beruvchining barqaror (har doim bir xil) rangi — xaritada
+    o'zi ham, unga biriktirilgan do'konlar ham shu rangda chiqadi."""
+    return DELIVERER_COLORS[deliverer_id % len(DELIVERER_COLORS)]
+
+
 @login_required(login_url='login')
 def map_dashboard(request):
     # Tarifda xarita bormi?
@@ -233,7 +247,6 @@ def api_map_data(request):
     ).order_by('-last_active')
     
     deliverers_data = []
-    colors = ['#f43f5e', '#8b5cf6', '#0ea5e9', '#10b981', '#f59e0b', '#6366f1', '#ec4899', '#14b8a6']
     
     for d in deliverers:
         is_online = d.last_active >= online_threshold
@@ -277,7 +290,7 @@ def api_map_data(request):
             'last_active': last_seen_text,
             'is_online': is_online,
             'image': d.rasmi.url if d.rasmi else None,
-            'color': colors[d.id % len(colors)],
+            'color': deliverer_color(d.id),
             'path': [point for segment in path_segments for point in segment],
             'path_segments': path_segments,
         })
@@ -309,8 +322,13 @@ def api_map_data(request):
         longitude__isnull=False
     )
     shops_data = []
-    for s in shops:
+    for s in shops.select_related('yetkazib_beruvchi'):
+        yb = s.yetkazib_beruvchi
         shops_data.append({
+            'id': s.id,
+            'deliverer_id': yb.id if yb else None,
+            'deliverer_name': yb.tuliq_ismi if yb else None,
+            'color': deliverer_color(yb.id) if yb else UNASSIGNED_SHOP_COLOR,
             'name': s.nomi,
             'lat': s.latitude,
             'lng': s.longitude,
@@ -334,12 +352,42 @@ def api_map_data(request):
         for o in omborlar
     ]
 
+    all_deliverers = [
+        {'id': yb.id, 'name': yb.tuliq_ismi, 'color': deliverer_color(yb.id)}
+        for yb in YetkazibBeruvchi.objects.filter(
+            company=request.company, user__type='yetkazib_beruvchi',
+        ).order_by('tuliq_ismi')
+    ]
+
     return JsonResponse({
+        'all_deliverers': all_deliverers,
         'deliverers': deliverers_data,
         'sales': sales_data,
         'shops': shops_data,
         'omborlar': omborlar_data,
     })
+
+@login_required(login_url='login')
+def api_assign_shop_deliverer(request):
+    """Xaritadagi do'kon oynasidan — do'konga yetkazib beruvchini biriktirish
+    (yoki bo'sh yuborilsa, biriktirishni olib tashlash). Faqat ega."""
+    if request.method != 'POST' or request.user.type != 'ega':
+        return JsonResponse({'ok': False, 'detail': "Ruxsat yo'q."}, status=403)
+    shop = HaridorDukon.objects.filter(id=request.POST.get('shop_id'), company=request.company).first()
+    if not shop:
+        return JsonResponse({'ok': False, 'detail': "Do'kon topilmadi."}, status=404)
+    deliverer_id = request.POST.get('deliverer_id')
+    deliverer = None
+    if deliverer_id:
+        deliverer = YetkazibBeruvchi.objects.filter(
+            id=deliverer_id, company=request.company, user__type='yetkazib_beruvchi',
+        ).first()
+        if not deliverer:
+            return JsonResponse({'ok': False, 'detail': "Yetkazib beruvchi topilmadi."}, status=404)
+    shop.yetkazib_beruvchi = deliverer
+    shop.save(update_fields=['yetkazib_beruvchi'])
+    return JsonResponse({'ok': True})
+
 
 @login_required(login_url='login')
 def api_route_history(request, deliverer_id):
