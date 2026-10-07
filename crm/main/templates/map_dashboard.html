@@ -265,6 +265,13 @@
                 .catch(() => alert("Tarmoq xatosi — qayta urinib ko'ring."));
         }
 
+        // Kod DOMContentLoaded ichida — inline onclick="..." ishlashi uchun
+        // funksiyalar global (window) ga chiqariladi.
+        window.openAssignModal = openAssignModal;
+        window.closeAssignModal = closeAssignModal;
+        window.renderAssignList = renderAssignList;
+        window.assignShop = assignShop;
+
         function updateMap() {
             const showSales = document.getElementById('show-sales').checked;
             const showDeliverers = document.getElementById('show-deliverers').checked;
