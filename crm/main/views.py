@@ -2475,9 +2475,33 @@ def createmahsulot(request):
         rasmi = request.FILES.get('rasmi')
         mahsulot_turi = request.POST.get('mahsulot_turi', 'ishlab_chiqariladigan')
         is_savdogar_product = 'is_savdogar_product' in request.POST
+        extra = {}
+        errors = []
+        for fname in ('narxi', 'ishlab_chiqarish_narxi', 'sotuv_ish_haqi_narxi', 'amortizatsiya_foizi'):
+            field = Mahsulot._meta.get_field(fname)
+            max_val = Decimal(10) ** (field.max_digits - field.decimal_places) - Decimal(1) / (Decimal(10) ** field.decimal_places)
+            try:
+                val = Decimal(str(request.POST.get(fname) or 0))
+            except Exception:
+                errors.append(f"{fname}: noto'g'ri son formati.")
+                continue
+            if val < 0 or val > max_val:
+                errors.append(f"{fname}: qiymat 0 dan {max_val} gacha bo'lishi kerak.")
+                continue
+            extra[fname] = val
+        if errors:
+            messages.error(request, "Saqlanmadi — " + " ".join(errors))
+            return render(request, 'crtmahsulot.html', payload)
+        soat = (request.POST.get('kutilgan_ishlab_chiqarish_soat') or '').strip()
+        try:
+            extra['kutilgan_ishlab_chiqarish_soat'] = float(soat) if soat else None
+        except ValueError:
+            extra['kutilgan_ishlab_chiqarish_soat'] = None
+        extra['shtrix_kod'] = (request.POST.get('shtrix_kod') or '').strip()[:32]
         mh=Mahsulot.objects.create(
-            nomi=nomi, miqdori=miqdori, turi=turi, narxi=0, rasmi=rasmi, company=request.company,
+            nomi=nomi, miqdori=miqdori, turi=turi, rasmi=rasmi, company=request.company,
             warehouse_type='finished', mahsulot_turi=mahsulot_turi, is_savdogar_product=is_savdogar_product,
+            **extra,
         )
         # Activity log
         AmalLog.objects.create(

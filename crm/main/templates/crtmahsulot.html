@@ -6,316 +6,118 @@
 {% block page_title %}Mahsulotlar{% endblock %}
 
 {% block content %}
+{% include '_edit_form_styles.html' %}
 <style>
-    :root {
-        --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
-    }
-
-    .edit-grid {
-        display: grid;
-        grid-template-columns: 1fr 2fr;
-        gap: 24px;
-        max-width: 1200px;
-        margin: 0 auto;
-    }
-
-    @media (max-width: 992px) {
-        .edit-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-
-    .edit-card {
-        background: white;
-        border-radius: 20px;
-        padding: 30px;
-        box-shadow: var(--card-shadow);
-        border: 1px solid var(--border-color);
-        margin-bottom: 24px;
-        animation: fadeIn 0.4s ease-out;
-    }
-
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(10px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .card-title {
-        font-size: 18px;
-        font-weight: 700;
-        color: var(--text-dark);
-        margin-bottom: 24px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .card-title i {
-        color: var(--primary-color);
-    }
-
-    /* Photo Upload Card */
-    .photo-upload-container {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 16px;
-    }
-
-    .photo-card {
-        width: 100%;
-        text-align: center;
-        padding: 30px;
-        background: #f9fafb;
-        border: 2px dashed #e5e7eb;
-        border-radius: 20px;
-        transition: all 0.3s ease;
-        cursor: pointer;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .photo-card:hover {
-        border-color: var(--primary-color);
-        background: #f0fdf4;
-    }
-
-    .photo-card.active {
-        border-color: var(--primary-color);
-        background: white;
-        box-shadow: 0 0 0 4px var(--primary-glow);
-    }
-
-    .photo-preview-wrap {
-        position: relative;
-        width: 180px;
-        height: 180px;
-        margin: 0 auto 16px;
-    }
-
-    .photo-preview {
-        width: 100%;
-        height: 100%;
-        border-radius: 16px;
-        object-fit: cover;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        border: 3px solid white;
-        transition: opacity .2s ease;
-    }
-
-    .edit-badge {
-        position: absolute;
-        bottom: -5px;
-        right: -5px;
-        background: var(--primary-color);
-        color: white;
-        width: 36px;
-        height: 36px;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 4px 10px var(--primary-glow);
-        border: 3px solid white;
-    }
-
-    /* Form Styles */
-    .form-group {
-        margin-bottom: 20px;
-    }
-
-    .form-label {
-        display: block;
-        font-size: 14px;
-        font-weight: 600;
-        color: var(--text-dark);
-        margin-bottom: 8px;
-    }
-
-    .input-wrapper {
-        position: relative;
-        display: flex;
-        align-items: center;
-    }
-
-    .input-wrapper i {
-        position: absolute;
-        left: 16px;
-        color: var(--text-light);
-        font-size: 16px;
-        pointer-events: none;
-    }
-
-    .form-control {
-        width: 100%;
-        padding: 12px 16px 12px 46px;
-        font-size: 15px;
-        color: var(--text-dark);
-        background: #f9fafb;
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
-        transition: all 0.2s ease;
-    }
-
-    .form-control:focus {
-        background: white;
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 4px var(--primary-glow);
-        outline: none;
-    }
-
-    select.form-control {
-        padding-left: 46px;
-        appearance: none;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
-        background-repeat: no-repeat;
-        background-position: right 16px center;
-        background-size: 16px;
-    }
-
-    .submit-btn {
-        width: 100%;
-        padding: 14px;
-        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
-        color: white;
-        font-size: 16px;
-        font-weight: 700;
-        border: none;
-        border-radius: 12px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 12px var(--primary-glow);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        margin-top: 10px;
-    }
-
-    .submit-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px var(--primary-glow);
-    }
-
-    .back-link {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        margin-top: 20px;
-        color: var(--text-light);
-        text-decoration: none;
-        font-size: 14px;
-        font-weight: 500;
-        transition: color 0.2s;
-    }
-
-    .back-link:hover {
-        color: var(--primary-color);
-    }
-
-    .check-row {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-        padding: 14px 16px;
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
-        background: #f9fafb;
-        color: var(--text-dark);
-        font-weight: 700;
-    }
-
-    .check-row input {
-        width: 18px;
-        height: 18px;
-    }
+    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    @media (max-width:640px){ .grid-2{ grid-template-columns:1fr; } }
+    .form-hint { font-size:12px; color:var(--text-light); margin-top:6px; }
 </style>
 
 <div class="main-container">
     <form method="POST" enctype="multipart/form-data">
         {% csrf_token %}
         <div class="edit-grid">
-            <!-- Left Side: Product Image -->
             <div class="edit-left">
                 <div class="edit-card">
-                    <h3 class="card-title"><i class="fa-solid fa-image"></i> Mahsulot Rasmi</h3>
-
-                    <div class="photo-upload-container">
+                    <h3 class="card-title"><i class="fa-solid fa-camera"></i> Mahsulot rasmi</h3>
+                    <div class="photo-upload-grid">
                         <div class="photo-card" onclick="document.getElementById('rasmi_input').click()">
                             <div class="photo-preview-wrap">
-                                <img id="preview-rasm" src="{% static 'images/default.png' %}" class="photo-preview"
-                                    alt="Mahsulot">
-                                <div class="edit-badge"><i class="fa-solid fa-camera"></i></div>
+                                <img id="preview-rasm" src="{% static 'images/default.png' %}" class="photo-preview" alt="Mahsulot">
+                                <div class="edit-badge"><i class="fa-solid fa-pen"></i></div>
                             </div>
-                            <span
-                                style="font-size: 14px; font-weight: 600; color: var(--text-dark); display: block;">Rasm
-                                yuklash</span>
-                            <span style="font-size: 12px; color: var(--text-light); margin-top: 4px;">Tiniq va yorug'
-                                surat tanlang</span>
-                            <input type="file" required id="rasmi_input" name="rasmi" accept="image/*"
-                                style="display: none;" onchange="showPreview(this)">
+                            <span class="photo-label">Rasm yuklash</span>
+                            <span class="photo-hint">Tiniq va yorug' surat tanlang</span>
+                            <input type="file" required id="rasmi_input" name="rasmi" accept="image/*" style="display:none;" onchange="showPreview(this)">
                         </div>
                     </div>
                 </div>
-
-                <a href="{% url 'main' %}" class="back-link">
+                <a href="{% url 'main' %}" class="back-link" style="display:inline-block; margin-top:16px;">
                     <i class="fa-solid fa-arrow-left"></i> Bosh sahifaga qaytish
                 </a>
             </div>
 
-            <!-- Right Side: Product Details -->
             <div class="edit-right">
                 <div class="edit-card">
-                    <h3 class="card-title"><i class="fa-solid fa-box-open"></i> Mahsulot Ma'lumotlari</h3>
+                    <h3 class="card-title"><i class="fa-solid fa-box-open"></i> Mahsulot ma'lumotlari</h3>
 
                     <div class="form-group">
                         <label class="form-label">Mahsulot nomi</label>
                         <div class="input-wrapper">
                             <i class="fa-solid fa-tag"></i>
-                            <input type="text" id="nomi" name="nomi" class="form-control" value="{{ nomi }}"
-                                placeholder="Masalan: Paxta yog'i" required>
+                            <input type="text" name="nomi" class="form-control" placeholder="Masalan: Somsa" required>
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">Miqdori</label>
-                        <div class="input-wrapper">
-                            <i class="fa-solid fa-layer-group"></i>
-                            <input type="number" id="miqdori" name="miqdori" class="form-control" value="{{ miqdori }}"
-                                placeholder="0.00" required>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Narxi (so'm)</label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-money-bill-1-wave"></i>
+                                <input type="number" name="narxi" class="form-control" step="0.01" min="0" value="0" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Boshlang'ich miqdor</label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-layer-group"></i>
+                                <input type="number" name="miqdori" class="form-control" step="0.01" min="0" value="0" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">O'lchov birligi</label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-ruler-combined"></i>
+                                <select name="turi" class="form-control" required>
+                                    {% for tur in turs %}<option value="{{ tur.id }}">{{ tur.nomi }}</option>{% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Mahsulot turi</label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-industry"></i>
+                                <select name="mahsulot_turi" class="form-control">
+                                    {% for value, label in mahsulot_turi_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Ishlab chiqarish narxi</label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-hand-holding-dollar"></i>
+                                <input type="number" name="ishlab_chiqarish_narxi" class="form-control" step="0.01" min="0" value="0">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Sotuv uchun ish haqi</label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-hand-holding-dollar"></i>
+                                <input type="number" name="sotuv_ish_haqi_narxi" class="form-control" step="0.01" min="0" value="0">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Amortizatsiya (%)</label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-gears"></i>
+                                <input type="number" name="amortizatsiya_foizi" class="form-control" step="0.01" min="0" max="100" value="0">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Kutilayotgan ishlab chiqarish vaqti (soat)</label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-clock"></i>
+                                <input type="number" name="kutilgan_ishlab_chiqarish_soat" class="form-control" step="0.5" min="0" placeholder="Ixtiyoriy">
+                            </div>
                         </div>
                     </div>
+                    <div class="form-hint">Tannarx retsept va xarajatlardan avtomatik hisoblanadi — retsept va qo'shimcha xarajatlarni mahsulot yaratilgach tahrirlash sahifasida kiritasiz.</div>
 
-                    <div class="form-group">
-                        <label class="form-label">Turi (O'lchov birligi)</label>
+                    <div class="form-group" style="margin-top:16px;">
+                        <label class="form-label">Shtrix-kod (ixtiyoriy)</label>
                         <div class="input-wrapper">
-                            <i class="fa-solid fa-scale-balanced"></i>
-                            <select id="turi" name="turi" class="form-control" required>
-                                {% for tur in turs %}
-                                <option value="{{ tur.id }}" {% if turi == tur.id %}selected{% endif %}>{{ tur.nomi }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Mahsulot turi</label>
-                        <div class="input-wrapper">
-                            <i class="fa-solid fa-industry"></i>
-                            <select id="mahsulot_turi" name="mahsulot_turi" class="form-control">
-                                {% for value, label in mahsulot_turi_choices %}
-                                <option value="{{ value }}">{{ label }}</option>
-                                {% endfor %}
-                            </select>
+                            <i class="fa-solid fa-barcode"></i>
+                            <input type="text" name="shtrix_kod" class="form-control" maxlength="32" placeholder="Masalan: 4780000123456">
                         </div>
                     </div>
 
@@ -326,7 +128,7 @@
                         </label>
                     </div>
 
-                    <button type="submit" class="submit-btn" style="margin-top: 10px;">
+                    <button type="submit" class="submit-btn" style="margin-top:10px;">
                         <i class="fa-solid fa-save"></i> Mahsulotni saqlash
                     </button>
                 </div>
@@ -336,50 +138,14 @@
 </div>
 
 <script>
-    function showPreview(input) {
-        const preview = document.getElementById('preview-rasm');
-        const card = input.closest('.photo-card');
-
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                preview.style.opacity = '0';
-                setTimeout(() => {
-                    preview.src = e.target.result;
-                    preview.style.opacity = '1';
-                    card.classList.add('active');
-                }, 120);
-            }
-            reader.readAsDataURL(input.files[0]);
-        }
+function showPreview(input) {
+    const preview = document.getElementById('preview-rasm');
+    const card = input.closest('.photo-card');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function (e) { preview.src = e.target.result; card.classList.add('active'); };
+        reader.readAsDataURL(input.files[0]);
     }
-
-    document.addEventListener('DOMContentLoaded', function () {
-        // Backenddan kelgan mahsulot narxi va miqdori
-        let mahsulotNarxi = "{{ narxi }}";
-        let mahsulotMiqdori = "{{ miqdori }}";
-
-        // Narxni formatlash
-        function formatValue(val) {
-            if (!val || val  === "None") return "";
-            let formatted = val;
-            if (typeof val  === 'string' && val.includes(',')) {
-                formatted = val.replace(',', '.');
-            }
-            return parseFloat(formatted).toFixed(2);
-        }
-
-        const narxiInput = document.getElementById('narxi');
-        if (narxiInput && mahsulotNarxi) {
-            const fv = formatValue(mahsulotNarxi);
-            if (!isNaN(fv)) narxiInput.value = fv;
-        }
-
-        const miqdoriInput = document.getElementById('miqdori');
-        if (miqdoriInput && mahsulotMiqdori) {
-            const fv = formatValue(mahsulotMiqdori);
-            if (!isNaN(fv)) miqdoriInput.value = fv;
-        }
-    });
+}
 </script>
 {% endblock %}

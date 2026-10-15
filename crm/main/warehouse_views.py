@@ -146,6 +146,18 @@ def warehouse_product_create(request):
             'ombor_turi': request.POST.get('ombor_turi', 'xom_ashyo'),
             'rasmi': request.FILES['rasmi'],
         }
+        if product_data['ombor_turi'] == 'yarim_tayyor':
+            try:
+                ich = Decimal(str(request.POST.get('ishlab_chiqarish_narxi') or 0))
+                amo = Decimal(str(request.POST.get('amortizatsiya_foizi') or 0))
+            except Exception:
+                messages.error(request, "Ishlab chiqarish narxi yoki amortizatsiya noto'g'ri kiritilgan.")
+                return redirect('warehouse_product_create')
+            if not (0 <= ich <= Decimal('99999999.99')) or not (0 <= amo <= 100):
+                messages.error(request, "Ishlab chiqarish narxi yoki amortizatsiya ruxsat etilgan oraliqdan tashqarida.")
+                return redirect('warehouse_product_create')
+            product_data['ishlab_chiqarish_narxi'] = ich
+            product_data['amortizatsiya_foizi'] = amo
         product = Mahsulot.objects.create(**product_data)
         StockHistory.objects.create(
             actor_user=request.user,

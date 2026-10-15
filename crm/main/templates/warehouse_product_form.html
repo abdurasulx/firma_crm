@@ -36,14 +36,14 @@
             <input class="field" type="text" value="{{ product.tannarx|unlocalize }} so'm" disabled>
         </label>
         {% endif %}
-        {% if product and product.ombor_turi == 'yarim_tayyor' %}
-        <label>
+        {% if not product or product.ombor_turi == 'yarim_tayyor' %}
+        <label class="yt-only" {% if not product %}style="display:none;"{% endif %}>
             <div style="font-weight:800; margin-bottom:8px;">Ishlab chiqarish narxi (ishchi haqi)</div>
-            <input class="field" type="number" step="0.01" name="ishlab_chiqarish_narxi" value="{{ product.ishlab_chiqarish_narxi|unlocalize }}">
+            <input class="field" type="number" step="0.01" min="0" name="ishlab_chiqarish_narxi" value="{% if product %}{{ product.ishlab_chiqarish_narxi|unlocalize }}{% else %}0{% endif %}">
         </label>
-        <label>
+        <label class="yt-only" {% if not product %}style="display:none;"{% endif %}>
             <div style="font-weight:800; margin-bottom:8px;">Amortizatsiya (foizda)</div>
-            <input class="field" type="number" step="0.01" min="0" max="100" name="amortizatsiya_foizi" value="{{ product.amortizatsiya_foizi|unlocalize }}">
+            <input class="field" type="number" step="0.01" min="0" max="100" name="amortizatsiya_foizi" value="{% if product %}{{ product.amortizatsiya_foizi|unlocalize }}{% else %}0{% endif %}">
         </label>
         {% endif %}
         <label>
@@ -152,4 +152,17 @@
 {% endif %}
 {% endif %}
 </div>
+{% if not product %}
+<script>
+(function () {
+    var sel = document.querySelector('select[name="ombor_turi"]');
+    function sync() {
+        var show = sel.value === 'yarim_tayyor';
+        document.querySelectorAll('.yt-only').forEach(function (el) { el.style.display = show ? '' : 'none'; });
+    }
+    sel.addEventListener('change', sync);
+    sync();
+})();
+</script>
+{% endif %}
 {% endblock %}
