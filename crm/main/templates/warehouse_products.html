@@ -114,7 +114,9 @@
         return decPart ? `${grouped}.${decPart}` : grouped;
     }
 
+    const PAGE_KEY = 'wh_prod_page';
     function fetchList(query, page) {
+        try { sessionStorage.setItem(PAGE_KEY, String(page)); } catch (e) {}
         if (abortCtrl) abortCtrl.abort();
         abortCtrl = new AbortController();
         const url = `${listUrl}?data_format=json&page_size=20&q=${encodeURIComponent(query)}&page=${page}`;
@@ -200,7 +202,12 @@
     });
 
     // Birinchi yuklanishda ham sahifalash tugmalari ko'rinishi uchun
-    fetchList(input.value.trim(), {{ products.number }});
+    let startPage = {{ products.number }};
+    try {
+        const saved = parseInt(sessionStorage.getItem(PAGE_KEY), 10);
+        if (saved && !new URLSearchParams(location.search).has('page') && !input.value.trim()) startPage = saved;
+    } catch (e) {}
+    fetchList(input.value.trim(), startPage);
 })();
 </script>
 {% endblock %}

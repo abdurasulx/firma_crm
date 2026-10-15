@@ -300,7 +300,13 @@
     let gridAbort = null;
     let selectedProduct = null;
 
+    const PAGE_KEY = 'wh_mv_page';
+    let currentPage = 1;
+    try { currentPage = parseInt(sessionStorage.getItem(PAGE_KEY), 10) || 1; } catch (e) {}
+
     function fetchGrid(query, page) {
+        currentPage = page;
+        try { sessionStorage.setItem(PAGE_KEY, String(page)); } catch (e) {}
         gridEl.innerHTML = '<div class="mv-empty">Yuklanmoqda...</div>';
         paginationEl.innerHTML = '';
         if (gridAbort) gridAbort.abort();
@@ -430,7 +436,7 @@
         }
     });
 
-    fetchGrid('', 1);
+    fetchGrid('', currentPage);
 
     function openModal(p) {
         selectedProduct = p;
@@ -513,7 +519,7 @@
                 `;
                 historyBody.insertBefore(tr, historyBody.firstChild);
 
-                fetchGrid(gridSearch.value.trim(), 1);
+                fetchGrid(gridSearch.value.trim(), currentPage);
                 setTimeout(closeModal, 700);
             } else {
                 showFeedback(data.error || 'Xatolik yuz berdi.', false);
