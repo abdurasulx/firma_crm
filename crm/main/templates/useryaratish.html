@@ -2,176 +2,198 @@
 {% load static %}
 
 {% block title %}Yangi Xodim Qo'shish{% endblock %}
+{% block page_title %}Yangi Xodim Qo'shish{% endblock %}
 
 {% block content %}
-<style>
-.form-container {
-    background-color: white;
-    max-width: 600px;
-    margin: 30px auto;
-    padding: 25px;
-    border-radius: 8px;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-}
-.form-container h2 {
-    text-align: center;
-    margin-bottom: 20px;
-    color: #007acc;
-}
-.form-group {
-    margin-bottom: 15px;
-}
-.form-group label {
-    display: block;
-    margin-bottom: 6px;
-    font-weight: 600;
-    color: #333;
-}
-.form-group input,
-.form-group select {
-    width: 100%;
-    padding: 10px;
-    font-size: 15px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    box-sizing: border-box;
-}
-.preview-img {
-    display: block;
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid #007acc;
-    margin: 10px auto;
-    cursor: pointer;
-}
-#preview-mashina {
-    display: block;
-    width: 150px;
-    height: 100px;
-    object-fit: cover;
-    border: 2px solid #007acc;
-    margin: 10px auto;
-    cursor: pointer;
-}
-.submit-btn {
-    width: 100%;
-    padding: 12px;
-    background-color: #007acc;
-    color: white;
-    font-size: 16px;
-    font-weight: bold;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-.submit-btn:hover {
-    background-color: #005fa3;
-}
-@media (max-width: 600px) {
-    .form-container {
-        padding: 20px;
-    }
-}
-</style>
+{% include '_edit_form_styles.html' %}
 
-<div class="form-container">
-    <h2>Yangi Xodim Qo'shish</h2>
-
-    <form method="POST" enctype="multipart/form-data">
+<div class="main-container">
+    <form id="createUserForm" method="POST" enctype="multipart/form-data">
         {% csrf_token %}
+        <div class="edit-grid">
+            <!-- Chap: rasmlar -->
+            <div class="edit-left">
+                <div class="edit-card">
+                    <h3 class="card-title"><i class="fa-solid fa-camera"></i> Rasmlar</h3>
 
-        <div class="form-group">
-            <label for="username">Login (foydalanuvchi nomi)</label>
-            <input type="text" value="{{ username }}" id="username" name="username" required>
-        </div>
+                    <div class="photo-upload-grid">
+                        <div class="photo-card" id="rasmi-card" onclick="document.getElementById('rasmi_input').click()">
+                            <div class="photo-preview-wrap">
+                                <img id="rasm_preview" src="{% static 'images/default_avatar.jpg' %}" class="photo-preview avatar" alt="Avatar">
+                                <div class="edit-badge"><i class="fa-solid fa-pen"></i></div>
+                            </div>
+                            <span class="photo-label">Profil rasmi</span>
+                            <span class="photo-hint">Shaxsiy surat</span>
+                            <input type="file" id="rasmi_input" name="rasmi" accept="image/*" style="display:none;"
+                                   onchange="previewImage(this, 'rasm_preview')" required>
+                        </div>
 
-        <div class="form-group">
-            <label for="password">Parol</label>
-            <input type="text" value="{{ password }}" id="password" minlength="8" name="password" required>
-        </div>
-
-        <div class="form-group">
-            <label for="tuliq_ismi">To‘liq ismi</label>
-            <input type="text" id="tuliq_ismi" value="{{ tuliq_ismi }}" name="tuliq_ismi" required>
-        </div>
-
-        <div class="form-group">
-            <label for="telefon">Telefon raqam</label>
-            <input type="tel" id="telefon" value="{{ telefon }}" name="telefon" placeholder="+998 90 123 45 67"  required>
-        </div>
-
-        <div class="form-group">
-            <label for="turi">Xodim turi</label>
-            <select id="turi" name="turi" required onchange="toggleMashinaFields()">
-                <option value="ishlab_chiqaruvchi" {% if turi == 'ishlab_chiqaruvchi' or turi == 'pazanda' %}selected{% endif %}>Ishlab chiqaruvchi</option>
-                {% if not request.company.custom_desktop_agent_stations %}
-                <option value="omborchi" {% if turi == 'omborchi' %}selected{% endif %}>Omborchi</option>
-                {% endif %}
-                {% if request.company.custom_has_savdogar_sales or request.company.is_on_trial %}
-                <option value="savdogar" {% if turi == 'savdogar' %}selected{% endif %}>Savdogar</option>
-                {% else %}
-                <option value="savdogar" disabled>Savdogar ($10 modul kerak)</option>
-                {% endif %}
-                <option value="yetkazib_beruvchi" {% if turi == 'yetkazib_beruvchi' %}selected{% endif %}>Yetkazib beruvchi</option>
-                {% if desktop_agent_slots_left > 0 %}
-                <option value="desktop_agent" {% if turi == 'desktop_agent' %}selected{% endif %}>Desktop Agent ({{ desktop_agent_slots_left }} ta joy qoldi)</option>
-                {% else %}
-                <option value="desktop_agent" disabled>Desktop Agent (stansiya sotib olinmagan — biz bilan bog'laning)</option>
-                {% endif %}
-            </select>
-        </div>
-
-        <div id="rasmi-field">
-            <label for="rasmi_input"> Xodim rasmi
-                <img src="{% static 'images/default_avatar.jpg' %}" alt="Xodim rasmi" id="preview-rasm" class="preview-img">
-            </label>
-            <input type="file" id="rasmi_input" name="rasmi" style="display: none;" accept="image/*" onchange="showPreview(event, 'preview-rasm')" required>
-        </div>
-
-        <div id="mashina-fields" style="{% if turi == 'yetkazib_beruvchi' %}display:block;{% else %}display:none;{% endif %}">
-            <div class="form-group">
-                <label for="mashina_nomi">Mashina nomi</label>
-                <input type="text" id="mashina_nomi" value="{{ mashina_nomi }}" name="mashina_nomi">
+                        <div class="photo-card" id="mashina-card" style="display:none;" onclick="document.getElementById('mashina_rasmi_input').click()">
+                            <div class="photo-preview-wrap">
+                                <img id="mashina_rasm_preview" src="{% static 'images/damas.jpg' %}" class="photo-preview" alt="Mashina">
+                                <div class="edit-badge"><i class="fa-solid fa-pen"></i></div>
+                            </div>
+                            <span class="photo-label">Mashina rasmi</span>
+                            <span class="photo-hint">Transport surati</span>
+                            <input type="file" id="mashina_rasmi_input" name="mashina_rasmi" accept="image/*" style="display:none;"
+                                   onchange="previewImage(this, 'mashina_rasm_preview')">
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <label for="mashina_rasmi_input">
-                <img src="{% static 'images/damas.jpg' %}" alt="Mashina rasmi" id="preview-mashina">
-            </label>
-            <input type="file" id="mashina_rasmi_input"  name="mashina_rasmi" style="display: none;" accept="image/*" onchange="showPreview(event, 'preview-mashina')">
+            <!-- O'ng: ma'lumotlar -->
+            <div class="edit-right">
+                <div class="edit-card">
+                    <h3 class="card-title"><i class="fa-solid fa-user-plus"></i> Ma'lumotlar</h3>
+
+                    <div class="form-group">
+                        <label class="form-label" for="username">Login (foydalanuvchi nomi)</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-at"></i>
+                            <input type="text" id="username" name="username" class="form-control" value="{{ username }}" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="password">Parol</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-lock"></i>
+                            <input type="text" id="password" name="password" class="form-control" minlength="8" value="{{ password }}" required placeholder="Kamida 8 belgi">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="tuliq_ismi">To'liq ism</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-signature"></i>
+                            <input type="text" id="tuliq_ismi" name="tuliq_ismi" class="form-control" value="{{ tuliq_ismi }}" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="telefon">Telefon raqam</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-phone"></i>
+                            <input type="tel" id="telefon" name="telefon" class="form-control" value="{{ telefon }}" placeholder="+998 90 123 45 67" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="turi">Xodim turi</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-id-badge"></i>
+                            <select id="turi" name="turi" class="form-control" required onchange="onTuriChange()">
+                                <option value="ishlab_chiqaruvchi" {% if turi == 'ishlab_chiqaruvchi' or turi == 'pazanda' %}selected{% endif %}>Ishlab chiqaruvchi</option>
+                                {% if not request.company.custom_desktop_agent_stations %}
+                                <option value="omborchi" {% if turi == 'omborchi' %}selected{% endif %}>Omborchi</option>
+                                {% endif %}
+                                {% if request.company.custom_has_savdogar_sales or request.company.is_on_trial %}
+                                <option value="savdogar" {% if turi == 'savdogar' %}selected{% endif %}>Savdogar</option>
+                                {% else %}
+                                <option value="savdogar" disabled>Savdogar ($10 modul kerak)</option>
+                                {% endif %}
+                                <option value="yetkazib_beruvchi" {% if turi == 'yetkazib_beruvchi' %}selected{% endif %}>Yetkazib beruvchi</option>
+                                {% if desktop_agent_slots_left > 0 %}
+                                <option value="desktop_agent" {% if turi == 'desktop_agent' %}selected{% endif %}>Desktop Agent ({{ desktop_agent_slots_left }} ta joy qoldi)</option>
+                                {% else %}
+                                <option value="desktop_agent" disabled>Desktop Agent (stansiya sotib olinmagan — biz bilan bog'laning)</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="mashina-fields" style="display:none;">
+                        <div class="form-group">
+                            <label class="form-label" for="mashina_nomi">Mashina nomi / Model</label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-car"></i>
+                                <input type="text" id="mashina_nomi" name="mashina_nomi" class="form-control" value="{{ mashina_nomi }}">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Xaritadagi rangi</label>
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <input type="color" name="rang" value="#10b981" style="width:56px; height:42px; padding:2px; border:1.5px solid var(--border-color); border-radius:10px; background:#fff; cursor:pointer;">
+                                <span style="font-size:12px; color:var(--text-light);">Xaritada shu yetkazib beruvchi va unga biriktirilgan do'konlar shu rangda ko'rinadi (to'q sariq rang biriktirilmagan do'konlar uchun band).</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ish haqi turi -->
+                <div class="edit-card" id="ish-haqi-card" style="margin-top:24px;">
+                    <h3 class="card-title"><i class="fa-solid fa-sack-dollar"></i> Ish haqi turi</h3>
+                    <p style="font-size:12px; color:var(--text-light); margin-bottom:14px;">
+                        Firma standarti: <b>{{ company_ish_haqi_turi_display }}</b>. Faqat shu xodim uchun boshqacha tur kerak bo'lsa tanlang.
+                    </p>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                        <select name="ish_haqi_turi_override" id="ishHaqiTuri" class="form-control" style="flex:1; min-width:220px;" onchange="toggleOylik()">
+                            <option value="">Firma standarti</option>
+                            <option value="fixed">Oylik (fiksval)</option>
+                            <option value="per_unit" data-for="ishlab">Ishlab chiqarilgan mahsulotga qarab</option>
+                            <option value="per_sale" data-for="sotuv">Sotilgan/yetkazilgan mahsulotga qarab</option>
+                        </select>
+                        <div id="oylikWrap" style="display:none; align-items:center; gap:8px;">
+                            <input type="number" name="oylik_maosh" class="form-control" step="0.01" min="0" placeholder="Oylik maosh summasi" style="min-width:180px;">
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-btn" style="margin-top:24px;">
+                    <i class="fa-solid fa-save"></i> Saqlash
+                </button>
+            </div>
         </div>
-
-        <button type="submit" class="submit-btn">Saqlash</button>
     </form>
-
 </div>
 
 <script>
-function toggleMashinaFields() {
-    const turi = document.getElementById("turi").value;
-    const mashinaFields = document.getElementById("mashina-fields");
-    mashinaFields.style.display = (turi === "yetkazib_beruvchi") ? "block" : "none";
-
-    // Desktop Agent — bu qurilma hisobi, xodim rasmi talab qilinmaydi
-    const rasmiField = document.getElementById("rasmi-field");
-    const rasmiInput = document.getElementById("rasmi_input");
-    const isDevice = (turi === "desktop_agent");
-    rasmiField.style.display = isDevice ? "none" : "block";
-    rasmiInput.required = !isDevice;
-}
-
-function showPreview(event, imgId) {
-    const input = event.target;
-    const reader = new FileReader();
-    reader.onload = function(){
-        document.getElementById(imgId).src = reader.result;
-    }
-    if(input.files[0]){
+function previewImage(input, previewId) {
+    const preview = document.getElementById(previewId);
+    const card = input.closest('.photo-card');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            preview.src = e.target.result;
+            if (card) card.classList.add('active');
+        };
         reader.readAsDataURL(input.files[0]);
     }
 }
-</script>
 
+function toggleOylik() {
+    const v = document.getElementById('ishHaqiTuri').value;
+    // Oylik summa: "Firma standarti" yoki "fiksval" tanlansa kiritiladi
+    document.getElementById('oylikWrap').style.display = (v === '' || v === 'fixed') ? 'flex' : 'none';
+}
+
+function onTuriChange() {
+    const turi = document.getElementById('turi').value;
+    const isYb = turi === 'yetkazib_beruvchi';
+    const isDevice = turi === 'desktop_agent';
+    const isProducer = turi === 'ishlab_chiqaruvchi' || turi === 'pazanda';
+    const isSeller = turi === 'savdogar' || isYb;
+
+    document.getElementById('mashina-fields').style.display = isYb ? 'block' : 'none';
+    document.getElementById('mashina-card').style.display = isYb ? 'block' : 'none';
+
+    // Desktop Agent — qurilma hisobi: rasm ham, ish haqi ham kerak emas
+    document.getElementById('rasmi-card').style.display = isDevice ? 'none' : 'block';
+    document.getElementById('rasmi_input').required = !isDevice;
+
+    const salaryAllowed = !isDevice && turi !== 'omborchi';
+    document.getElementById('ish-haqi-card').style.display = salaryAllowed ? 'block' : 'none';
+
+    const select = document.getElementById('ishHaqiTuri');
+    Array.from(select.options).forEach(function (opt) {
+        const f = opt.dataset.for;
+        opt.hidden = opt.disabled = (f === 'ishlab' && !isProducer) || (f === 'sotuv' && !isSeller);
+    });
+    if (select.selectedOptions[0] && select.selectedOptions[0].disabled) select.value = '';
+    toggleOylik();
+}
+
+onTuriChange();
+</script>
 {% endblock %}

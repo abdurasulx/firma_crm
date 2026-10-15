@@ -1,3 +1,4 @@
+import re
 from django.shortcuts import render, get_list_or_404, get_object_or_404
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout, get_user_model
 from django.contrib.auth.decorators import login_required
@@ -2033,6 +2034,7 @@ def crtuser(request):
                 messages.error(request, "Savdogar rolini ochish uchun maxsus tarifda $10 lik Savdogar savdo modulini yoqing.")
                 ctx = request.POST.dict()
                 ctx['desktop_agent_slots_left'] = _desktop_agent_slots_left(company)
+                ctx['company_ish_haqi_turi_display'] = dict(company.ISH_HAQI_TURI_CHOICES).get(company.ish_haqi_turi)
                 return render(request, 'useryaratish.html', ctx)
 
             if requested_type == 'desktop_agent':
@@ -2045,6 +2047,7 @@ def crtuser(request):
                     )
                     ctx = request.POST.dict()
                     ctx['desktop_agent_slots_left'] = _desktop_agent_slots_left(company)
+                    ctx['company_ish_haqi_turi_display'] = dict(company.ISH_HAQI_TURI_CHOICES).get(company.ish_haqi_turi)
                     return render(request, 'useryaratish.html', ctx)
 
             # Get max_users from custom plan or standard plan
@@ -2063,6 +2066,7 @@ def crtuser(request):
                     messages.error(request, f"Siz tanlagan tarif bo'yicha maksimal foydalanuvchilar soni ({max_users}) ga yetgan. Qo'shish uchun tarifni yangilang.")
                     ctx = request.POST.dict()
                     ctx['desktop_agent_slots_left'] = _desktop_agent_slots_left(company)
+                    ctx['company_ish_haqi_turi_display'] = dict(company.ISH_HAQI_TURI_CHOICES).get(company.ish_haqi_turi)
                     return render(request, 'useryaratish.html', ctx)
 
         user, message = create_user_service(
@@ -2077,16 +2081,47 @@ def crtuser(request):
             company=request.company
         )
         if user:
+            # Tahrirlash sahifasidagi bilan bir xil qo'shimcha sozlamalar —
+            # endi yaratish paytidayoq beriladi.
+            override = request.POST.get('ish_haqi_turi_override', '')
+            if override not in dict(User.ISH_HAQI_TURI_OVERRIDE_CHOICES):
+                override = ''
+            if override == 'per_unit' and user.type not in ['pazanda', 'ishlab_chiqaruvchi']:
+                override = ''
+            if override == 'per_sale' and user.type not in ['savdogar', 'yetkazib_beruvchi']:
+                override = ''
+            if user.type in ['desktop_agent', 'omborchi']:
+                override = ''
+            if override:
+                user.ish_haqi_turi_override = override
+                user.save(update_fields=['ish_haqi_turi_override'])
+
+            oylik_raw = (request.POST.get('oylik_maosh') or '').strip()
+            if oylik_raw and user.type not in ['desktop_agent', 'omborchi']:
+                try:
+                    oylik = Decimal(oylik_raw)
+                    if oylik >= 0:
+                        payroll_service.set_fixed_salary(user, request.company, oylik, request.user)
+                except (InvalidOperation, ValueError):
+                    messages.warning(request, "Oylik maosh summasi noto'g'ri kiritilgani uchun saqlanmadi.")
+
+            if user.type == 'yetkazib_beruvchi':
+                rang = (request.POST.get('rang') or '').strip()
+                if re.match(r'^#[0-9a-fA-F]{6}$', rang):
+                    YetkazibBeruvchi.objects.filter(user=user, company=request.company).update(rang=rang)
+
             messages.success(request, message)
             return redirect('hodimlar_list')
         else:
             messages.error(request, message)
             ctx = request.POST.dict()
             ctx['desktop_agent_slots_left'] = _desktop_agent_slots_left(company)
+            ctx['company_ish_haqi_turi_display'] = dict(company.ISH_HAQI_TURI_CHOICES).get(company.ish_haqi_turi)
             return render(request, 'useryaratish.html', ctx)
 
     return render(request, 'useryaratish.html', {
         'desktop_agent_slots_left': _desktop_agent_slots_left(request.company),
+        'company_ish_haqi_turi_display': dict(request.company.ISH_HAQI_TURI_CHOICES).get(request.company.ish_haqi_turi),
     })
 
 @login_required(login_url='login')
