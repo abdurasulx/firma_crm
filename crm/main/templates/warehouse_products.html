@@ -198,6 +198,9 @@
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => fetchList(input.value.trim(), 1), 300);
     });
+
+    // Birinchi yuklanishda ham sahifalash tugmalari ko'rinishi uchun
+    fetchList(input.value.trim(), {{ products.number }});
 })();
 </script>
 {% endblock %}
