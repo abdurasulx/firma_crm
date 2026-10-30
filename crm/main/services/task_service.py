@@ -77,7 +77,13 @@ def create_production_task(
     if rejalashtirilgan_miqdor <= 0:
         return None, "Rejalashtirilgan miqdor 0 dan katta bo'lishi kerak.", False
 
-    if mahsulot.serial_granularity == 'batch':
+    if mahsulot.serial_granularity == 'batch' and is_weighable_birlik(mahsulot.turi.nomi if mahsulot.turi else ''):
+        # Kg/gramm mahsulot: ishlab chiqaruvchi necha kg chiqarishini kiritadi —
+        # shu miqdor = 1 partiya = 1 QR (qadoq hajmi so'ralmaydi).
+        if int(rejalashtirilgan_miqdor) != rejalashtirilgan_miqdor:
+            return None, "Og'irlikdagi mahsulot uchun miqdor butun son bo'lishi kerak (masalan 5 kg).", False
+        qadoq_hajmi = None
+    elif mahsulot.serial_granularity == 'batch':
         if not qadoq_hajmi or qadoq_hajmi <= 0:
             return None, "Bu mahsulot uchun \"necha donadan bitta qadoq\" kiritilishi shart (partiya turi tanlangan).", False
         full_packages, remainder = divmod(int(rejalashtirilgan_miqdor), int(qadoq_hajmi))

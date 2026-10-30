@@ -602,7 +602,7 @@
                 <label style="display:block; font-size:12px; font-weight:700; color:var(--text-light); margin-bottom:6px;">Mahsulot</label>
                 <select name="mahsulot" id="pzTaskMahsulotSelect" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #e2e8f0;">
                     {% for m in task_mahsulotlar %}
-                    <option value="{{ m.id }}" data-granularity="{{ m.serial_granularity }}">{{ m.nomi }}</option>
+                    <option value="{{ m.id }}" data-granularity="{{ m.serial_granularity }}" data-kg="{% if m.turi.nomi|lower in 'kg,g,gr,gramm,kilogramm' %}1{% endif %}">{{ m.nomi }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -633,7 +633,7 @@
                 if (!select) return;
                 function toggle() {
                     var opt = select.options[select.selectedIndex];
-                    var isBatch = opt && opt.getAttribute('data-granularity') === 'batch';
+                    var isBatch = opt && opt.getAttribute('data-granularity') === 'batch' && !opt.getAttribute('data-kg');
                     qadoqRow.style.display = isBatch ? 'block' : 'none';
                     forceRow.style.display = isBatch ? 'block' : 'none';
                 }

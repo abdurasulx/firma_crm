@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from main.agent_api_views import _maybe_finish_task_on_scan
-from main.models import Company, Mahsulot, MahsulotRetsept, MahsulotTuri, Pazanda, ProductionTask, TaskMaterialPickup, User
+from main.models import Company, Mahsulot, MahsulotRetsept, MahsulotTuri, MiqdorQoshish, Pazanda, ProductionTask, TaskMaterialPickup, User
 from main.services import qr_service, task_service
 
 
@@ -26,7 +26,8 @@ class BatchQrTrackingTests(TestCase):
             miqdori=1000, baza_tannarx=1000, tannarx=1000,
         )
         self.mahsulot = Mahsulot.objects.create(
-            company=self.company, nomi="Somsa hamir 24", narxi=12000, turi=self.turi,
+            company=self.company, nomi="Somsa hamir 24", narxi=12000,
+            turi=MahsulotTuri.objects.create(nomi="dona"),
             warehouse_type="finished", mahsulot_turi="ishlab_chiqariladigan",
             serial_granularity="batch",
         )
@@ -48,6 +49,25 @@ class BatchQrTrackingTests(TestCase):
         task_service.confirm_task_finished_materials(task.id, self.pazanda, self.company)
         task.refresh_from_db()
         return task
+
+    def test_kg_batch_is_single_qr_with_entered_weight(self):
+        self.mahsulot.turi = self.turi  # kg
+        self.mahsulot.save()
+        task, err, _ = task_service.create_production_task(
+            self.company, self.mahsulot, 5, timezone.localdate(), self.ega,
+            pazanda=self.pazanda, qadoq_hajmi=3,
+        )
+        self.assertIsNone(err, err)
+        self.assertIsNone(task.qadoq_hajmi)
+        mq = MiqdorQoshish.objects.create(
+            company=self.company, pazanda=self.pazanda, mahsulot=self.mahsulot, miqdor=5, tasdiqlangan=False,
+        )
+        serials = qr_service.generate_serials_for_batch(mq, qadoq_hajmi=task.qadoq_hajmi)
+        self.assertEqual([s.dona_soni for s in serials], [5])
+        _, err, _ = task_service.create_production_task(
+            self.company, self.mahsulot, 2.5, timezone.localdate(), self.ega, pazanda=self.pazanda,
+        )
+        self.assertIsNotNone(err)
 
     def test_batch_task_stays_producing_until_all_qr_scanned(self):
         task = self._create_and_start_task(miqdor=10, qadoq_hajmi=3)
