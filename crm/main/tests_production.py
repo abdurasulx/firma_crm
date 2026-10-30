@@ -64,10 +64,14 @@ class BatchQrTrackingTests(TestCase):
         )
         serials = qr_service.generate_serials_for_batch(mq, qadoq_hajmi=task.qadoq_hajmi)
         self.assertEqual([s.dona_soni for s in serials], [5])
-        _, err, _ = task_service.create_production_task(
+        task2, err, _ = task_service.create_production_task(
             self.company, self.mahsulot, 2.5, timezone.localdate(), self.ega, pazanda=self.pazanda,
         )
-        self.assertIsNotNone(err)
+        self.assertIsNone(err, err)
+        mq2 = MiqdorQoshish.objects.create(
+            company=self.company, pazanda=self.pazanda, mahsulot=self.mahsulot, miqdor=2.5, tasdiqlangan=False,
+        )
+        self.assertEqual([s.dona_soni for s in qr_service.generate_serials_for_batch(mq2)], [2.5])
 
     def test_batch_task_stays_producing_until_all_qr_scanned(self):
         task = self._create_and_start_task(miqdor=10, qadoq_hajmi=3)

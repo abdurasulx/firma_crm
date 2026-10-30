@@ -47,10 +47,11 @@ def generate_serials_for_batch(miqdor_qoshish, qadoq_hajmi=None):
 
     company = miqdor_qoshish.company
     producer_user = miqdor_qoshish.pazanda.user if miqdor_qoshish.pazanda_id else None
-    total = int(miqdor_qoshish.miqdor)
+    kg_batch = granularity == 'batch' and mahsulot.is_kg
+    total = round(float(miqdor_qoshish.miqdor), 3) if kg_batch else int(miqdor_qoshish.miqdor)
 
     if granularity == 'batch':
-        if qadoq_hajmi:
+        if qadoq_hajmi and not kg_batch:
             full_packages, remainder = divmod(total, int(qadoq_hajmi))
             serials = [
                 Serial.objects.create(

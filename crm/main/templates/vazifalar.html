@@ -96,7 +96,7 @@
             <select class="field" name="mahsulot" id="taskMahsulotSelect" required>
                 <option value="">— tanlang —</option>
                 {% for m in mahsulotlar %}
-                <option value="{{ m.id }}" data-granularity="{{ m.serial_granularity }}" data-kg="{% if m.turi.nomi|lower in 'kg,g,gr,gramm,kilogramm' %}1{% endif %}">{{ m.nomi }}</option>
+                <option value="{{ m.id }}" data-granularity="{{ m.serial_granularity }}" data-kg="{% if m.is_kg %}1{% endif %}">{{ m.nomi }}</option>
                 {% endfor %}
             </select>
             {% if not mahsulotlar %}

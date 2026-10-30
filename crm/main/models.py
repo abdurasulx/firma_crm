@@ -414,6 +414,11 @@ class Mahsulot(models.Model):
         help_text="Public QR sahifasida ko'rsatiladigan matn (tarkib, foydalanish, ogohlantirish va h.k.)",
     )
 
+    @property
+    def is_kg(self):
+        """Faqat kilogrammda o'lchanadigan mahsulot (partiya QR'i kasr miqdorni ko'taradi)."""
+        return (self.turi.nomi if self.turi_id else '').strip().lower() in ('kg', 'kilogramm', 'кг')
+
     def __str__(self):
         return self.nomi
 
@@ -560,7 +565,7 @@ class Serial(models.Model):
     savdo = models.ForeignKey('Savdo', on_delete=models.SET_NULL, related_name='serials', null=True, blank=True)
     kod = models.CharField(max_length=64, unique=True, default=uuid4, editable=False)
     unit_index = models.PositiveIntegerField(null=True, blank=True, help_text="Bo'sh bo'lsa — butun partiyani anglatadi")
-    dona_soni = models.PositiveIntegerField(
+    dona_soni = models.FloatField(
         default=1,
         help_text="Bu QR kod nechta mahsulot donasini ifodalaydi — 'unit' granularityda har doim 1, "
                    "'batch'da qadoqlash hajmiga qarab (masalan 3talik qadoq bo'lsa 3, qoldiq bo'lsa 1)",

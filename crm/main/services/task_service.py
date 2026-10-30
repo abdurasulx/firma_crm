@@ -77,11 +77,9 @@ def create_production_task(
     if rejalashtirilgan_miqdor <= 0:
         return None, "Rejalashtirilgan miqdor 0 dan katta bo'lishi kerak.", False
 
-    if mahsulot.serial_granularity == 'batch' and is_weighable_birlik(mahsulot.turi.nomi if mahsulot.turi else ''):
-        # Kg/gramm mahsulot: ishlab chiqaruvchi necha kg chiqarishini kiritadi —
-        # shu miqdor = 1 partiya = 1 QR (qadoq hajmi so'ralmaydi).
-        if int(rejalashtirilgan_miqdor) != rejalashtirilgan_miqdor:
-            return None, "Og'irlikdagi mahsulot uchun miqdor butun son bo'lishi kerak (masalan 5 kg).", False
+    if mahsulot.serial_granularity == 'batch' and mahsulot.is_kg:
+        # Kg mahsulot: ishlab chiqaruvchi necha kg (kasr ham mumkin, masalan 2.5)
+        # chiqarishini kiritadi — shu miqdor = 1 partiya = 1 QR.
         qadoq_hajmi = None
     elif mahsulot.serial_granularity == 'batch':
         if not qadoq_hajmi or qadoq_hajmi <= 0:
@@ -517,5 +515,5 @@ def task_progress(task):
     if not mq:
         return 0
     if task.status == 'done':
-        return int(mq.miqdor)
+        return mq.miqdor
     return Serial.objects.filter(batch=mq, scan_soni__gte=1).aggregate(t=Sum('dona_soni'))['t'] or 0
