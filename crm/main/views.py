@@ -114,7 +114,7 @@ from .services.stock_service import (
     effective_ish_haqi_turi,
     get_serial_granularity_pending,
 )
-from .services.retsept_service import add_retsept_row, delete_retsept_row
+from .services.retsept_service import add_retsept_row, delete_retsept_row, set_tarozi_bogliq
 from .services import qr_service, task_service, payroll_service, kpi_service
 from .services.notifications import create_company_notification
 from .services.auth_service import create_user_service, update_user_service
@@ -2321,9 +2321,24 @@ def seemahsulot(request, mahsulot_id):
                 norma_miqdor = float(request.POST.get('norma_miqdor') or 0)
             except ValueError:
                 norma_miqdor = 0
-            ok, err = add_retsept_row(request.company, mahsulot, komponent, norma_miqdor)
+            # `ozgarmas` — "0"/"1"; yuborilmagan bo'lsa mavjud belgi saqlanadi.
+            ozgarmas_raw = request.POST.get('ozgarmas')
+            ozgarmas = None if ozgarmas_raw is None else ozgarmas_raw == '1'
+            ok, err = add_retsept_row(request.company, mahsulot, komponent, norma_miqdor, ozgarmas=ozgarmas)
             if ok:
                 messages.success(request, "Retsept qatori saqlandi.")
+            else:
+                messages.error(request, err)
+            return redirect('seeproduct', mahsulot_id=mahsulot.id)
+
+        if action == 'set_tarozi_bogliq':
+            ok, err = set_tarozi_bogliq(mahsulot, request.POST.get('tarozi_bogliq') == '1')
+            if ok:
+                messages.success(
+                    request,
+                    "Mahsulot taroziga bog'liq (o'zgaruvchan) deb belgilandi." if mahsulot.tarozi_bogliq
+                    else "Mahsulot endi taroziga bog'liq emas (o'zgarmas).",
+                )
             else:
                 messages.error(request, err)
             return redirect('seeproduct', mahsulot_id=mahsulot.id)
@@ -3444,6 +3459,13 @@ def mahsulot_granularity_review(request, mahsulot_id):
     if target == mahsulot.serial_granularity:
         messages.info(request, "Bu allaqachon joriy tur.")
         return redirect('seeproduct', mahsulot_id=mahsulot.id)
+    if target == 'unit' and mahsulot.tarozi_bogliq:
+        messages.error(
+            request,
+            "Taroziga bog'liq mahsulotda \"Har bir donaga alohida QR\" ishlamaydi (1 vazifa = 1 partiya = 1 QR) — "
+            "avval Retsept bo'limida \"Taroziga bog'liq\" belgisini o'chiring.",
+        )
+        return redirect('seeproduct', mahsulot_id=mahsulot.id)
     if target != 'none' and not request.company.custom_desktop_agent_stations:
         messages.error(
             request,
@@ -3514,7 +3536,10 @@ def mahsulot_granularity_apply(request, mahsulot_id):
         return redirect('main')
     mahsulot = get_object_or_404(Mahsulot, id=mahsulot_id, company=request.company)
     target = request.POST.get('target')
-    if target not in dict(Mahsulot.SERIAL_GRANULARITY_CHOICES) or target == mahsulot.serial_granularity:
+    if (
+        target not in dict(Mahsulot.SERIAL_GRANULARITY_CHOICES) or target == mahsulot.serial_granularity
+        or (target == 'unit' and mahsulot.tarozi_bogliq)
+    ):
         messages.error(request, "Noto'g'ri so'rov.")
         return redirect('seeproduct', mahsulot_id=mahsulot.id)
 

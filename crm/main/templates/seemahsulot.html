@@ -619,6 +619,29 @@
     {% if mahsulot.mahsulot_turi == 'ishlab_chiqariladigan' %}
     <div class="edit-card" style="margin-top:20px;">
         <h3 class="card-title"><i class="fa-solid fa-flask"></i> Retsept</h3>
+        <!-- Taroziga bog'liq (o'zgaruvchan) mahsulot — masalan go'sht: haqiqiy
+             ishlab chiqarilgan miqdor Desktop Agent'da tarozidan olinadi. -->
+        <form method="post" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; background:#f8fafc; border:1px solid var(--border-color,#e2e8f0); border-radius:10px; padding:12px 14px; margin-bottom:16px;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="set_tarozi_bogliq">
+            <div style="flex:1; min-width:220px;">
+                <div style="font-weight:800;"><i class="fa-solid fa-scale-balanced"></i> Ishlab chiqarish miqdori</div>
+                <div style="font-size:12px; color:var(--text-light); margin-top:2px;">
+                    {% if mahsulot.tarozi_bogliq %}
+                    Taroziga bog'liq: vazifada kiritilgan kg faqat taxminiy reja. Tayyor mahsulot Desktop Agent'da
+                    taroziga qo'yilib <b>Enter</b> bosilganda haqiqiy og'irlik yoziladi (1 vazifa = 1 qadoq = 1 partiya).
+                    {% else %}
+                    O'zgarmas: vazifada kiritilgan miqdor ishlab chiqariladi. Go'sht kabi og'irligi o'zgaradigan
+                    mahsulot uchun "Taroziga bog'liq"ni tanlang (faqat kg mahsulotlar).
+                    {% endif %}
+                </div>
+            </div>
+            <select name="tarozi_bogliq" class="form-control" style="width:auto;">
+                <option value="0" {% if not mahsulot.tarozi_bogliq %}selected{% endif %}>O'zgarmas (taroziga bog'liq emas)</option>
+                <option value="1" {% if mahsulot.tarozi_bogliq %}selected{% endif %}>O'zgaruvchan (taroziga bog'liq)</option>
+            </select>
+            <button type="submit" class="btn primary"><i class="fa-solid fa-check"></i> Saqlash</button>
+        </form>
         <table style="width:100%; border-collapse:collapse; margin-bottom:16px;">
             <tbody>
                 {% for row in retsept_rows %}
@@ -635,6 +658,11 @@
                             <input type="number" name="norma_miqdor" value="{{ row.norma_miqdor|unlocalize }}" step="0.0001" min="0.0001"
                                    style="width:90px; padding:5px 8px; border:1px solid var(--border-color,#e2e8f0); border-radius:6px;">
                             <span style="color:var(--text-light); font-size:13px;">{{ row.komponent.turi.nomi }}</span>
+                            <select name="ozgarmas" title="O'zgaruvchan — mahsulot miqdoriga ko'paytiriladi; O'zgarmas — 1 vazifaga shuncha"
+                                    style="padding:5px 6px; border:1px solid var(--border-color,#e2e8f0); border-radius:6px; font-size:13px;">
+                                <option value="0" {% if not row.ozgarmas %}selected{% endif %}>O'zgaruvchan</option>
+                                <option value="1" {% if row.ozgarmas %}selected{% endif %}>O'zgarmas</option>
+                            </select>
                             <button type="submit" title="Saqlash" style="border:1px solid #a7f3d0; background:#ecfdf5; color:#047857; padding:5px 9px; border-radius:6px; cursor:pointer;"><i class="fa-solid fa-check"></i></button>
                         </form>
                     </td>

@@ -77,7 +77,13 @@ def create_production_task(
     if rejalashtirilgan_miqdor <= 0:
         return None, "Rejalashtirilgan miqdor 0 dan katta bo'lishi kerak.", False
 
-    if mahsulot.serial_granularity == 'batch' and mahsulot.is_kg:
+    if mahsulot.tarozi_bogliq:
+        # Taroziga bog'liq (o'zgaruvchan) mahsulot: 1 vazifa = 1 qadoq =
+        # 1 partiya. Kiritilgan miqdor faqat TAXMINIY reja (xom ashyo shu
+        # bo'yicha tortiladi) — haqiqiy miqdor oxirida tarozidan olinadi
+        # (`finish_weighed_task`).
+        qadoq_hajmi = None
+    elif mahsulot.serial_granularity == 'batch' and mahsulot.is_kg:
         # Kg mahsulot: ishlab chiqaruvchi necha kg (kasr ham mumkin, masalan 2.5)
         # chiqarishini kiritadi — shu miqdor = 1 partiya = 1 QR.
         qadoq_hajmi = None
@@ -106,7 +112,10 @@ def create_production_task(
         for row in bom_rows:
             TaskMaterialPickup.objects.create(
                 task=task, komponent=row.komponent,
-                expected_qty=row.norma_miqdor * rejalashtirilgan_miqdor,
+                # "O'zgarmas" komponent (qadoq/etiketka) reja miqdoriga
+                # ko'paytirilmaydi — go'sht miqdori o'zgarsa ham qadoq
+                # soni o'zgarmaydi.
+                expected_qty=row.kerakli_miqdor(rejalashtirilgan_miqdor),
             )
     return task, None, False
 
@@ -270,6 +279,9 @@ def weigh_task_pickup(pickup_id, pazanda, measured_qty):
         'approved': True, 'pour_completed': True, 'pickup_completed': True,
         'expected': expected, 'measured': measured_qty,
         'poured': new_poured, 'remaining': 0, 'materials_ready': materials_ready,
+        # Taroziga bog'liq mahsulot — keyingi qadam veb "Ish bitdi" emas,
+        # Desktop Agent'da tayyor mahsulotni tortib Enter bosish.
+        'tarozi_bogliq': materials_ready and task.mahsulot.tarozi_bogliq,
     }
 
 
@@ -294,6 +306,15 @@ def confirm_task_finished_materials(task_id, pazanda, company):
     orqali ta'minlanadi — bunday UPDATE har doim (SQLite'da ham) faqat
     bitta chaqiruvchi uchun muvaffaqiyatli bo'ladi, chunki DB darajasidagi
     yagona yozish amali sifatida bajariladi."""
+    if ProductionTask.objects.filter(
+        id=task_id, company=company, pazanda=pazanda, mahsulot__tarozi_bogliq=True,
+    ).exists():
+        # Taroziga bog'liq mahsulot — haqiqiy miqdor tarozidan olinishi
+        # shart, shuning uchun veb "Ish bitdi" bu yerda ishlamaydi.
+        return None, (
+            "Bu mahsulot taroziga bog'liq — tayyor mahsulotni Desktop Agent'da "
+            "taroziga qo'yib, Enter tugmasini bosing."
+        )
     updated = ProductionTask.objects.filter(
         id=task_id, company=company, pazanda=pazanda, status='materials_ready',
     ).update(status='producing')
@@ -301,6 +322,44 @@ def confirm_task_finished_materials(task_id, pazanda, company):
         return None, "Bu vazifa hozir \"Ish bitdi\" bosish uchun mos holatda emas."
     task = ProductionTask.objects.select_related('mahsulot').get(id=task_id)
     return _start_producing(task), None
+
+
+def get_pending_output_weighs(pazanda, company):
+    """Desktop Agent badge-sessiyasida chaqiriladi — xom ashyosi to'liq
+    tortib bo'lingan ('materials_ready'), TAROZIGA BOG'LIQ mahsulotli
+    vazifalar: tayyor mahsulot taroziga qo'yilib, Enter bilan
+    yakunlanishini kutmoqda (`finish_weighed_task`)."""
+    return list(
+        ProductionTask.objects.filter(
+            company=company, pazanda=pazanda, status='materials_ready', mahsulot__tarozi_bogliq=True,
+        ).select_related('mahsulot', 'mahsulot__turi').order_by('created_at')
+    )
+
+
+@transaction.atomic
+def finish_weighed_task(task_id, pazanda, company, measured_qty):
+    """Taroziga bog'liq (o'zgaruvchan) mahsulot vazifasini yakunlaydi —
+    Desktop Agent'da tayyor mahsulot taroziga qo'yilib Enter bosilganda
+    chaqiriladi. Veb "Ish bitdi" + QR skanerlash bosqichlarining o'rnini
+    bitta qadam bosadi: `measured_qty` (tarozidagi haqiqiy og'irlik) =
+    ishlab chiqarilgan miqdor, 1 vazifa = 1 partiya = 1 QR, vazifa shu
+    zahoti 'done' bo'ladi. Rejadan kam chiqqani uchun shtraf YO'Q
+    (foydalanuvchi bilan kelishilgan — hozircha belgilanmaydi).
+
+    (miqdor_qoshish, xato_xabari) juftligini qaytaradi. Ikki marta
+    bosilishdan himoya — `confirm_task_finished_materials`dagi kabi
+    bitta atomik `UPDATE ... WHERE status='materials_ready'`."""
+    if measured_qty is None or measured_qty <= 0:
+        return None, "Tarozida hech narsa yo'q — tayyor mahsulotni taroziga qo'ying."
+    measured_qty = round(float(measured_qty), 3)
+    updated = ProductionTask.objects.filter(
+        id=task_id, company=company, pazanda=pazanda, status='materials_ready',
+        mahsulot__tarozi_bogliq=True,
+    ).update(status='producing')
+    if not updated:
+        return None, "Bu vazifa hozir tortib yakunlash uchun mos holatda emas."
+    task = ProductionTask.objects.select_related('mahsulot').get(id=task_id)
+    return _start_producing(task, actual_miqdor=measured_qty), None
 
 
 def get_pending_print_batch(pazanda, company):
@@ -349,7 +408,7 @@ def report_serial_print_result(kod, company, success, reason=''):
     return updated > 0
 
 
-def _start_producing(task):
+def _start_producing(task, actual_miqdor=None):
     """`confirm_task_finished_materials` ichidan chaqiriladi (xom ashyo
     tortilib, pazanda "Ish bitdi" bosgach). Eski `_apply_retsept_hisobkitob`dan
     farqli — vaqt-oynasi evristikasi kerak emas, chunki har bir
@@ -371,8 +430,14 @@ def _start_producing(task):
     teng). Faqat `serial_granularity == 'none'` (chop etiladigan QR
     umuman yo'q) holatida eski xatti-harakat saqlanadi: darhol, to'liq
     reja miqdori bilan yakunlanadi (shtrafsiz) — chunki kutish uchun
-    hech qanday QR mavjud emas."""
+    hech qanday QR mavjud emas.
+
+    `actual_miqdor` berilsa (taroziga bog'liq mahsulot —
+    `finish_weighed_task`): partiya rejadagi emas, shu HAQIQIY (tarozida
+    o'lchangan) miqdor bilan yaratiladi va QR skanerlashni kutmasdan
+    darhol yakunlanadi — miqdor allaqachon tarozi orqali tasdiqlangan."""
     mahsulot = Mahsulot.objects.select_for_update().get(id=task.mahsulot_id)
+    batch_miqdor = task.rejalashtirilgan_miqdor if actual_miqdor is None else actual_miqdor
     pickups = list(task.material_pickups.select_related('komponent').all())
 
     jarima_summasi = Decimal('0')
@@ -417,7 +482,7 @@ def _start_producing(task):
         with transaction.atomic():
             miqdor_qoshish = MiqdorQoshish.objects.create(
                 company=task.company, pazanda=task.pazanda, mahsulot=mahsulot,
-                miqdor=task.rejalashtirilgan_miqdor, tasdiqlangan=False,
+                miqdor=batch_miqdor, tasdiqlangan=False,
                 jarima_summasi=jarima_summasi, source_task=task,
             )
     except IntegrityError:
@@ -431,14 +496,14 @@ def _start_producing(task):
         miqdor_qoshish.labels_printed = True
         miqdor_qoshish.save(update_fields=['labels_printed'])
 
-    if mahsulot.serial_granularity != 'none':
+    if mahsulot.serial_granularity != 'none' and actual_miqdor is None:
         task.status = 'producing'
         task.save(update_fields=['status'])
     else:
         # `finish_production_task_service` DB'da yangi qatorni mutatsiya
         # qiladi — chaqiruvchiga eskirgan (tasdiqlanmagan) obyekt emas,
         # yangilangan holatni qaytarish uchun natijasini ishlatamiz.
-        miqdor_qoshish = finish_production_task_service(task, actual_count=task.rejalashtirilgan_miqdor)
+        miqdor_qoshish = finish_production_task_service(task, actual_count=batch_miqdor)
 
     return miqdor_qoshish
 
@@ -469,6 +534,10 @@ def finish_production_task_service(task, actor=None, actual_count=None):
         )['t'] or 0
 
     shortfall = max(task.rejalashtirilgan_miqdor - actual_count, 0)
+    if mahsulot.tarozi_bogliq:
+        # Taroziga bog'liq mahsulotda reja faqat taxminiy — haqiqiy miqdor
+        # tarozidan olinadi, kam chiqqani uchun shtraf hozircha yo'q.
+        shortfall = 0
     penalty = Decimal(str(shortfall)) * Decimal(str(mahsulot.baza_tannarx))
 
     old_qty = mahsulot.miqdori

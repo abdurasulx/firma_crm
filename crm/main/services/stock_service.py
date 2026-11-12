@@ -395,7 +395,7 @@ def _apply_retsept_hisobkitob(req, mahsulot):
     tannarx_ulushi = Decimal('0')
 
     for row in bom_rows:
-        expected_qty = row.norma_miqdor * req.miqdor
+        expected_qty = row.kerakli_miqdor(req.miqdor)
 
         matched_qs = ProductionMaterialRequest.objects.select_for_update().filter(
             company=req.company,

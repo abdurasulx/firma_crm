@@ -306,6 +306,24 @@ def fetch_my_task_pickups(server_url: str, token: str, session_token: str):
     return data.get("so_rovlar", [])
 
 
+def fetch_my_output_weighs(server_url: str, token: str, session_token: str):
+    """Taroziga bog'liq (o'zgaruvchan) mahsulotli, xom ashyosi tortib
+    bo'lingan vazifalar — tayyor mahsulot taroziga qo'yilib Enter bilan
+    yakunlanishini kutmoqda (`submit_output_weigh`)."""
+    data = _get(server_url, token, "/api/agent/my-output-weighs/", params={"session_token": session_token})
+    return data.get("vazifalar", [])
+
+
+def submit_output_weigh(server_url: str, token: str, task_id: int, session_token: str, measured_qty: float):
+    """Enter bosilganda chaqiriladi — tarozidagi haqiqiy og'irlik
+    (`measured_qty`) ishlab chiqarilgan miqdor sifatida yoziladi va vazifa
+    yakunlanadi. Javob: `{'approved': bool, 'miqdor', 'has_labels',
+    'detail'}`."""
+    return _post(server_url, token, f"/api/agent/task/{task_id}/output-weigh/", data={
+        "session_token": session_token, "measured_qty": measured_qty,
+    })
+
+
 def acknowledge_material_request(server_url: str, token: str, request_id: int, session_token: str):
     """Xodim "Qabul qildim" tugmasini bosganda chaqiriladi — so'rovning
     `acknowledged_at`ini belgilaydi (status'ga tegmaydi)."""

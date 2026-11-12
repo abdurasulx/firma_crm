@@ -17,6 +17,19 @@
                 <div class="form-label">Norma miqdori (1 dona uchun)</div>
                 <input type="number" id="retseptMiqdorInput" step="0.0001" min="0.0001" class="form-control" oninput="updateRetseptPreview()">
             </label>
+            <!-- O'zgaruvchan: norma reja miqdoriga ko'paytiriladi (go'sht).
+                 O'zgarmas: 1 vazifa (partiya) uchun normaning o'zi (qadoq). -->
+            <div style="margin-bottom:12px;">
+                <div class="form-label">Miqdor turi</div>
+                <label style="display:flex; gap:8px; align-items:flex-start; margin-bottom:6px; cursor:pointer;">
+                    <input type="radio" name="retseptOzgarmasRadio" value="0" checked style="margin-top:3px;">
+                    <span><b>O'zgaruvchan</b> — mahsulot miqdoriga qarab ko'payadi (masalan go'sht, ziravor)</span>
+                </label>
+                <label style="display:flex; gap:8px; align-items:flex-start; cursor:pointer;">
+                    <input type="radio" name="retseptOzgarmasRadio" value="1" style="margin-top:3px;">
+                    <span><b>O'zgarmas</b> — miqdor o'zgarsa ham 1 vazifaga shuncha ketadi (masalan qadoq, etiketka)</span>
+                </label>
+            </div>
             <div style="background:#f8fafc; border-radius:10px; padding:12px; margin-bottom:14px; font-size:14px;">
                 <div>Ushbu komponent narxi: <strong id="retseptLineCost">0</strong> so'm</div>
                 <div style="margin-top:4px;">Retsept umumiy tannarxi (taxminiy): <strong id="retseptRunningTotal">0</strong> so'm</div>
@@ -34,6 +47,7 @@
     <input type="hidden" name="action" value="add_retsept_row">
     <input type="hidden" name="komponent" id="retseptKomponentInput">
     <input type="hidden" name="norma_miqdor" id="retseptNormaInput">
+    <input type="hidden" name="ozgarmas" id="retseptOzgarmasInput" value="0">
 </form>
 
 <script>
@@ -110,6 +124,8 @@ function submitRetseptRow() {
     }
     document.getElementById('retseptKomponentInput').value = retseptSelected.id;
     document.getElementById('retseptNormaInput').value = miqdor;
+    const ozgarmasRadio = document.querySelector('input[name="retseptOzgarmasRadio"]:checked');
+    document.getElementById('retseptOzgarmasInput').value = ozgarmasRadio ? ozgarmasRadio.value : '0';
     document.getElementById('retseptHiddenForm').submit();
 }
 </script>

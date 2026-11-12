@@ -768,6 +768,8 @@
                     &nbsp;·&nbsp;
                     {% if task.status == 'claimed' %}
                     <span style="color:#b45309;font-weight:600;">⏳ Xom ashyoni Desktop Agent'da tarozida tortib oling</span>
+                    {% elif task.status == 'materials_ready' and task.mahsulot.tarozi_bogliq %}
+                    <span style="color:#9a3412;font-weight:600;">⚖ Xom ashyo tortildi — tayyor mahsulotni Desktop Agent'da taroziga qo'yib, Enter bosing</span>
                     {% elif task.status == 'materials_ready' %}
                     <span style="color:#9a3412;font-weight:600;">📦 Xom ashyo tortildi — mahsulotni tayyorlab bo'lgach "Ish bitdi"ni bosing</span>
                     {% elif task.status == 'producing' and not task.labels_printed %}
@@ -795,7 +797,9 @@
                 </div>
                 {% endif %}
             </div>
-            {% if task.status == 'materials_ready' %}
+            {% if task.status == 'materials_ready' and task.mahsulot.tarozi_bogliq %}
+            {# Taroziga bog'liq — "Ish bitdi" yo'q, Desktop Agent'da Enter bilan yakunlanadi #}
+            {% elif task.status == 'materials_ready' %}
             <form method="post" action="{% url 'pz_confirm_task_finished' task.id %}" style="margin-left:auto;">
                 {% csrf_token %}
                 <button type="submit" style="border:1px solid #86efac; background:#f0fdf4; color:#15803d; padding:6px 14px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:700; white-space:nowrap;">

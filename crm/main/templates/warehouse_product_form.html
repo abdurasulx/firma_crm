@@ -130,7 +130,7 @@
             {% for row in retsept_rows %}
             <tr style="border-bottom:1px solid var(--border);">
                 <td style="padding:8px 4px;">{{ row.komponent.nomi }}</td>
-                <td style="padding:8px 4px;">{{ row.norma_miqdor }} {{ row.komponent.turi.nomi }}</td>
+                <td style="padding:8px 4px;">{{ row.norma_miqdor }} {{ row.komponent.turi.nomi }}{% if row.ozgarmas %} <span style="font-size:12px; color:var(--muted);">(o'zgarmas)</span>{% endif %}</td>
                 <td style="padding:8px 4px; font-weight:800;">{{ row.komponent.tannarx|floatformat:0 }} so'm/{{ row.komponent.turi.nomi }}</td>
                 <td style="padding:8px 4px; text-align:right;">
                     <form method="post" style="display:inline;">

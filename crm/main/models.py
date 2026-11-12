@@ -405,6 +405,13 @@ class Mahsulot(models.Model):
         max_length=10, choices=SERIAL_GRANULARITY_CHOICES, default='none',
         help_text="Ishlab chiqarishda avtomatik QR/serial yaratilsinmi",
     )
+    tarozi_bogliq = models.BooleanField(
+        default=False,
+        help_text="O'zgaruvchan (taroziga bog'liq) mahsulot — masalan go'sht: ishlab chiqarilgan "
+                   "haqiqiy miqdor oldindan kiritilgan rejadan emas, Desktop Agent'da tayyor mahsulot "
+                   "taroziga qo'yilib Enter bosilganda TAROZIDAN olinadi. 1 vazifa = 1 qadoq = 1 partiya "
+                   "(1 QR). Faqat kg birlikdagi mahsulotlar uchun ma'noli.",
+    )
     yaroqlilik_kun_soni = models.PositiveIntegerField(
         null=True, blank=True,
         help_text="Ishlab chiqarilgan sanadan necha kun yaroqli (bo'sh = muddat ko'rsatilmaydi)",
@@ -947,6 +954,17 @@ class MahsulotRetsept(models.Model):
     mahsulot = models.ForeignKey(Mahsulot, on_delete=models.CASCADE, related_name='retsept_qatorlari')
     komponent = models.ForeignKey(Mahsulot, on_delete=models.CASCADE, related_name='komponent_qatorlari')
     norma_miqdor = models.FloatField(help_text="1 dona 'mahsulot' uchun kerak bo'ladigan 'komponent' miqdori")
+    ozgarmas = models.BooleanField(
+        default=False,
+        help_text="O'zgarmas komponent (masalan qadoq/etiketka) — mahsulot miqdori qancha bo'lishidan "
+                   "qat'i nazar, 1 vazifa (partiya) uchun `norma_miqdor`ning O'ZI kerak bo'ladi, reja "
+                   "miqdoriga KO'PAYTIRILMAYDI. O'chirilgan (standart) bo'lsa — o'zgaruvchan: "
+                   "`norma_miqdor * reja miqdori`.",
+    )
+
+    def kerakli_miqdor(self, mahsulot_miqdori):
+        """Shu komponentdan `mahsulot_miqdori` birlik mahsulot uchun qancha kerak."""
+        return self.norma_miqdor if self.ozgarmas else self.norma_miqdor * mahsulot_miqdori
 
     class Meta:
         verbose_name = "Mahsulot retsepti"

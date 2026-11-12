@@ -16,7 +16,7 @@ from ..api_client import (
     fetch_material_requests, weigh_material_request, fetch_miqdor_requests,
     approve_miqdor_qoshish, scan_delivery_serial, finalize_yuklama, toggle_attendance, scan, ApiError,
     weigh_task_pickup, fetch_my_task_pickups, fetch_pending_print_batch, mark_batch_printed,
-    fetch_delivery_requests, report_print_result,
+    fetch_delivery_requests, report_print_result, fetch_my_output_weighs, submit_output_weigh,
 )
 from ..label_printer_service import LabelPrintWorker
 
@@ -264,6 +264,19 @@ class EmployeeScanWidget(QWidget):
         # ko'rsatardi. Endi faqat sezilarli o'zgarishda (`SCALE_DISPLAY_
         # THRESHOLD_KG`dan katta) matn qayta yoziladi.
         self._scale_last_displayed: float | None = None
+        # Taroziga bog'liq (o'zgaruvchan) mahsulot — tayyor mahsulotni
+        # tortib yakunlash navbati (`output_card`). Xom ashyo tortishdan
+        # farqli, bu yerda AVTOMATIK yuborish yo'q — xodim Enter bosadi.
+        self._pending_output_weighs: list = []
+        self._current_output_weigh: dict | None = None
+        self._output_weighs_fetched = False
+        self._output_submitting = False
+        self._output_live_scale = False
+        self._output_last_value: float | None = None
+        self._output_stable_since = 0.0
+        self._output_last_displayed: float | None = None
+        self._output_worker: _ApiCallWorker | None = None
+        self._output_list_worker: _ApiCallWorker | None = None
         self._delivery_cart: dict = {}
         # Dashboardda so'ralgan (zayavka) mahsulotlar: {mahsulot_id: {'mahsulot', 'miqdor'}}
         # — skanerlashda limit shu yerdan tekshiriladi (so'ralganidan ortiq
@@ -530,6 +543,49 @@ class EmployeeScanWidget(QWidget):
 
         self.weigh_card.setVisible(False)
         layout.addWidget(self.weigh_card)
+
+        # Taroziga bog'liq (o'zgaruvchan) mahsulot — TAYYOR mahsulotni
+        # tortib yakunlash kartochkasi. Tarozidagi jonli og'irlik
+        # ko'rsatiladi, xodim Enter bosganda shu og'irlik ishlab
+        # chiqarilgan miqdor bo'lib yoziladi (Enter = done). Enter
+        # `MainWindow.eventFilter` orqali ushlanadi — kiosk qulfi
+        # yoqilgan bo'lsa ham ishlaydi.
+        self.output_card = QFrame()
+        self.output_card.setStyleSheet(
+            "background:#ecfeff; border:1px solid #67e8f9; border-radius:10px;"
+        )
+        output_outer = QVBoxLayout(self.output_card)
+        self.output_title_label = QLabel("")
+        self.output_title_label.setWordWrap(True)
+        self.output_title_label.setStyleSheet("font-size:15px; font-weight:800; color:#155e75;")
+        output_outer.addWidget(self.output_title_label)
+        self.output_hint_label = QLabel("")
+        self.output_hint_label.setWordWrap(True)
+        self.output_hint_label.setStyleSheet("font-size:13px; font-weight:700; color:#0e7490;")
+        output_outer.addWidget(self.output_hint_label)
+
+        output_input_row = QHBoxLayout()
+        output_input_row.addWidget(QLabel("Tarozi qiymati:"))
+        self.output_input = QLineEdit()
+        self.output_input.setPlaceholderText("tarozi ulanmagan — qo'lda kiriting")
+        self.output_input.setStyleSheet("font-size:22px; font-weight:800; padding:6px;")
+        output_input_row.addWidget(self.output_input, 1)
+        self.output_submit_btn = QPushButton("Tayyor (Enter)")
+        self.output_submit_btn.setStyleSheet(
+            "font-size:15px; font-weight:800; padding:10px 16px; border-radius:10px; "
+            "background:#0891b2; color:#fff; border:none;"
+        )
+        self.output_submit_btn.clicked.connect(self.confirm_output_weigh)
+        output_input_row.addWidget(self.output_submit_btn)
+        output_outer.addLayout(output_input_row)
+
+        self.output_feedback_label = QLabel("")
+        self.output_feedback_label.setWordWrap(True)
+        self.output_feedback_label.setStyleSheet("font-size:13px; font-weight:700; color:#155e75;")
+        output_outer.addWidget(self.output_feedback_label)
+
+        self.output_card.setVisible(False)
+        layout.addWidget(self.output_card)
 
         # Miqdor qo'shish (ishlab chiqarish natijasi) so'rovini tasdiqlash
         # kartochkasi (82-qadam) — tarozi tekshiruvi kerak emas, faqat
@@ -909,6 +965,11 @@ class EmployeeScanWidget(QWidget):
         self._miqdor_fetched = False
         self._task_pickups_fetched = False
         self._pending_print_fetched = False
+        self._output_weighs_fetched = False
+        self._pending_output_weighs = []
+        self._current_output_weigh = None
+        self._output_submitting = False
+        self.output_card.setVisible(False)
 
         if info.get("user_type") in ("yetkazib_beruvchi", "savdogar"):
             # Yetkazib beruvchi VA savdogar uchun ham material-so'rov/
@@ -1405,6 +1466,21 @@ class EmployeeScanWidget(QWidget):
             return
 
         self.miqdor_card.setVisible(False)
+
+        # Eng oxirida — taroziga bog'liq mahsulotlarning TAYYOR mahsulotini
+        # tortib yakunlash (Enter = done). Boshqa navbatlardan farqli, bu
+        # xodimning aniq harakatini (Enter) kutadi, shuning uchun oxirida
+        # turadi — avtomatik ishlar uni kutib qolmaydi.
+        if not self._output_weighs_fetched:
+            self._output_weighs_fetched = True
+            self._load_output_weighs(self._session["session_token"])
+            return
+
+        if self._pending_output_weighs:
+            self._show_next_output_weigh()
+            return
+
+        self.output_card.setVisible(False)
         if self._had_any_request:
             self._show_transient_message("Barcha so'rovlar bajarildi ✓", success=True)
         else:
@@ -1415,6 +1491,7 @@ class EmployeeScanWidget(QWidget):
         soniyadan so'ng avtomatik yopiladi (popup ham shu bilan yopiladi)."""
         self.weigh_card.setVisible(False)
         self.miqdor_card.setVisible(False)
+        self.output_card.setVisible(False)
         self.no_requests_label.setText(text)
         bg, fg = ("#dcfce7", "#166534") if success else ("#f1f5f9", "#64748b")
         self.no_requests_label.setStyleSheet(
@@ -1557,6 +1634,9 @@ class EmployeeScanWidget(QWidget):
         (o'lchangan vazn, kerakli dona o'rniga) jo'natilib, "Miqdor
         normadan kam" xatosiga olib kelardi (real ishlab chiqarishda
         kuzatilgan xato)."""
+        if self.output_card.isVisible():
+            self._update_output_live_weight(value)
+            return
         if not self.weigh_card.isVisible():
             return
         if self._current_weigh_request is not None and not (
@@ -1720,10 +1800,20 @@ class EmployeeScanWidget(QWidget):
                 # (159-qadam); QR-yorliqlar shu yerda EMAS, "Ish bitdi"dan
                 # keyingi KEYINGI badge skanida chop etiladi
                 # (`_load_pending_print_batch`).
-                self._set_weigh_feedback(
-                    "Xom ashyo tortildi ✓ — mahsulotni tayyorlab bo'lgach, "
-                    "dashboard'da \"Ish bitdi\"ni bosing.", error=False,
-                )
+                if result.get("output_weigh"):
+                    # Taroziga bog'liq mahsulot — "Ish bitdi" yo'q, tayyor
+                    # mahsulot shu stansiyada tortilib Enter bilan
+                    # yakunlanadi; navbat shu vazifani qayta so'rab oladi.
+                    self._output_weighs_fetched = False
+                    self._set_weigh_feedback(
+                        "Xom ashyo tortildi ✓ — mahsulot tayyor bo'lgach, uni "
+                        "taroziga qo'yib Enter bosing.", error=False,
+                    )
+                else:
+                    self._set_weigh_feedback(
+                        "Xom ashyo tortildi ✓ — mahsulotni tayyorlab bo'lgach, "
+                        "dashboard'da \"Ish bitdi\"ni bosing.", error=False,
+                    )
 
             if db.get_setting("scale_com_port", "").strip():
                 # Tarozi jonli ulangan — keyingi so'rov darhol/vaqt bo'yicha
@@ -1739,6 +1829,186 @@ class EmployeeScanWidget(QWidget):
         color = "#b91c1c" if error else "#166534"
         self.weigh_feedback_label.setStyleSheet(f"font-size:13px; font-weight:700; color:{color};")
         self.weigh_feedback_label.setText(text)
+
+    # ── Taroziga bog'liq mahsulot — tayyor mahsulotni tortib yakunlash ────
+    # (Enter = done). Go'sht kabi og'irligi o'zgaradigan mahsulotlarda
+    # ishlab chiqarilgan miqdor oldindan kiritilgan rejadan emas, shu
+    # yerda tarozidan olinadi; 1 vazifa = 1 qadoq = 1 partiya (1 QR).
+
+    def _load_output_weighs(self, session_token: str):
+        server_url = db.get_setting("server_url", "")
+        token = db.get_setting("agent_token", "")
+        worker = _ApiCallWorker(fetch_my_output_weighs, server_url, token, session_token)
+        worker.succeeded.connect(self._on_output_weighs_loaded)
+        worker.failed.connect(lambda _msg: self._on_output_weighs_loaded([]))
+        self._replace_worker("_output_list_worker", worker)
+        worker.start()
+
+    def _on_output_weighs_loaded(self, vazifalar: list):
+        if self._session is None:
+            return
+        self._pending_output_weighs = list(vazifalar or [])
+        self._advance_queue()
+
+    def _output_manual_allowed(self) -> bool:
+        """Og'irlikni qo'lda kiritishga faqat tarozi sozlanmagan yoki firma
+        sozlamasida tarozi shart emas deb belgilangan bo'lsa ruxsat —
+        aks holda (tarozi bor, lekin signal kelmayapti) soxta qiymat
+        kiritilmasligi uchun maydon yopiq qoladi."""
+        return not (db.get_setting("scale_com_port", "").strip() and _scale_required())
+
+    def _show_next_output_weigh(self):
+        task = self._pending_output_weighs[0]
+        self._current_output_weigh = task
+        self._output_submitting = False
+        self._output_live_scale = False
+        self._output_last_value = None
+        self._output_stable_since = 0.0
+        self._output_last_displayed = None
+
+        self._extend_session()
+        self._had_any_request = True
+        self.no_requests_label.setVisible(False)
+        self.weigh_card.setVisible(False)
+        self.miqdor_card.setVisible(False)
+        self._rec_start(f"output-{task['id']}", "tayyor_mahsulot_tortish")
+
+        birlik = task.get("birlik") or "kg"
+        self.output_title_label.setText(f"{task['mahsulot']} — tayyor mahsulotni torting")
+        self.output_hint_label.setText(
+            f"Taxminiy reja: {task.get('rejalashtirilgan_miqdor', 0):g} {birlik}. "
+            "Tayyor mahsulotni taroziga qo'yib, Enter tugmasini bosing."
+        )
+        manual = self._output_manual_allowed()
+        self.output_input.clear()
+        self.output_input.setReadOnly(not manual)
+        self.output_input.setPlaceholderText(
+            "og'irlikni kiriting va Enter bosing" if manual else "tarozidan signal kutilmoqda..."
+        )
+        self._set_output_feedback("", error=False)
+        self.output_submit_btn.setEnabled(True)
+        self.output_card.setVisible(True)
+        if manual:
+            self.output_input.setFocus()
+
+    def _update_output_live_weight(self, value: float):
+        """Tayyor mahsulot kartochkasi ochiq turganda tarozining jonli
+        qiymatini ko'rsatadi. Xom ashyo tortishdan farqli — bu yerda hech
+        narsa AVTOMATIK yuborilmaydi, faqat Enter bosilganda."""
+        if self._current_output_weigh is None or self._output_submitting:
+            return
+        self._output_live_scale = True
+        self.output_input.setReadOnly(True)
+        if (
+            self._output_last_displayed is None
+            or abs(value - self._output_last_displayed) >= SCALE_DISPLAY_THRESHOLD_KG
+        ):
+            self.output_input.setText(f"{value:.2f}")
+            self._output_last_displayed = value
+
+        now = time.monotonic()
+        if self._output_last_value is None or abs(value - self._output_last_value) > SCALE_STABLE_THRESHOLD_KG:
+            # Og'irlik o'zgaryapti — xodim mahsulotni qo'ymoqda: bu faol
+            # ish, sessiya shu orada tugab qolmasligi kerak.
+            self._output_stable_since = now
+            self._extend_session()
+        self._output_last_value = value
+
+    def is_awaiting_output_weigh(self) -> bool:
+        """`MainWindow.eventFilter` shu orqali biladi: hozir Enter tugmasi
+        "tayyor mahsulotni yakunlash" (done) ma'nosini anglatadimi."""
+        return self.output_card.isVisible() and self._current_output_weigh is not None
+
+    def output_accepts_typing(self) -> bool:
+        """Tarozi yo'q rejimida og'irlik klaviaturadan kiritiladi — kiosk
+        qulfi shu maydon uchun klaviaturani bloklamasligi kerak."""
+        return self.is_awaiting_output_weigh() and not self.output_input.isReadOnly()
+
+    def confirm_output_weigh(self):
+        """Enter (yoki "Tayyor" tugmasi) — tarozidagi joriy og'irlikni
+        ishlab chiqarilgan miqdor sifatida serverga yuboradi."""
+        if not self.is_awaiting_output_weigh() or self._output_submitting or self._session is None:
+            return
+
+        if self._output_live_scale:
+            value = self._output_last_value
+            if value is None or value <= SCALE_EMPTY_THRESHOLD_KG:
+                self._set_output_feedback("Tarozi bo'sh — avval tayyor mahsulotni taroziga qo'ying.", error=True)
+                return
+            if time.monotonic() - self._output_stable_since < SCALE_STABLE_SECONDS:
+                self._set_output_feedback(
+                    "Tarozi hali barqaror emas — bir oz kutib, Enter'ni qayta bosing.", error=True,
+                )
+                return
+        else:
+            if self.output_input.isReadOnly():
+                self._set_output_feedback(
+                    "Tarozidan signal yo'q — tarozi ulanganini tekshiring.", error=True,
+                )
+                return
+            try:
+                value = float(self.output_input.text().strip().replace(",", "."))
+            except ValueError:
+                self._set_output_feedback("To'g'ri og'irlik kiriting.", error=True)
+                return
+            if value <= 0:
+                self._set_output_feedback("Og'irlik 0 dan katta bo'lishi kerak.", error=True)
+                return
+
+        value = round(value, 3)
+        self._output_submitting = True
+        self.output_submit_btn.setEnabled(False)
+        self.output_input.setText(f"{value:g}")
+        self._set_output_feedback("Saqlanmoqda...", error=False)
+        self._extend_session()
+
+        server_url = db.get_setting("server_url", "")
+        token = db.get_setting("agent_token", "")
+        worker = _ApiCallWorker(
+            submit_output_weigh, server_url, token, self._current_output_weigh["id"],
+            self._session["session_token"], value,
+        )
+        worker.succeeded.connect(self._on_output_weigh_resolved)
+        worker.failed.connect(self._on_output_weigh_failed)
+        self._replace_worker("_output_worker", worker)
+        worker.start()
+
+    def _on_output_weigh_failed(self, message: str):
+        self._output_submitting = False
+        self.output_submit_btn.setEnabled(True)
+        self._set_output_feedback(message, error=True)
+
+    def _on_output_weigh_resolved(self, result: dict):
+        self._output_submitting = False
+        self._extend_session()
+        if not result.get("approved"):
+            self.output_submit_btn.setEnabled(True)
+            self._set_output_feedback(result.get("detail", "Noma'lum xato."), error=True)
+            return
+
+        if self._pending_output_weighs:
+            task = self._pending_output_weighs.pop(0)
+            self._rec_stop(f"output-{task['id']}")
+        self._current_output_weigh = None
+        yorliq = " QR-yorliq chop etilmoqda." if result.get("has_labels") else ""
+        self._set_output_feedback(
+            f"✓ {result.get('miqdor', 0):g} kg qabul qilindi — vazifa yakunlandi.{yorliq}", error=False,
+        )
+        # Yangi partiyaning QR-yorlig'i odatdagi "chop etilmagan partiya"
+        # navbati orqali chiqadi — shuning uchun u qayta tekshiriladi.
+        self._pending_print_fetched = False
+        QTimer.singleShot(1200, self._after_output_weigh_done)
+
+    def _after_output_weigh_done(self):
+        if self._session is None:
+            return
+        self.output_card.setVisible(False)
+        self._advance_queue()
+
+    def _set_output_feedback(self, text: str, error: bool):
+        color = "#b91c1c" if error else "#155e75"
+        self.output_feedback_label.setStyleSheet(f"font-size:13px; font-weight:700; color:{color};")
+        self.output_feedback_label.setText(text)
 
     # ── Miqdor qo'shish (ishlab chiqarish natijasi) so'rovlari (82-qadam) ─
 
@@ -1924,6 +2194,10 @@ class EmployeeScanWidget(QWidget):
         self._miqdor_fetched = False
         self._task_pickups_fetched = False
         self._pending_print_fetched = False
+        self._output_weighs_fetched = False
+        self._pending_output_weighs = []
+        self._current_output_weigh = None
+        self._output_submitting = False
         self._had_any_request = False
         self._delivery_mode_active = False
         self._delivery_cart = {}
@@ -1939,6 +2213,7 @@ class EmployeeScanWidget(QWidget):
         self.session_banner.setVisible(False)
         self.weigh_card.setVisible(False)
         self.miqdor_card.setVisible(False)
+        self.output_card.setVisible(False)
         self.delivery_card.setVisible(False)
         self.no_requests_label.setVisible(False)
         self.print_batch_card.setVisible(False)

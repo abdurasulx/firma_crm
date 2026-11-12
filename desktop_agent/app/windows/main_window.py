@@ -2,7 +2,9 @@ from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QStackedWidget,
     QStackedLayout, QLabel, QMessageBox, QGraphicsOpacityEffect, QApplication,
 )
-from PyQt6.QtCore import QThread, QTimer, pyqtSignal, QPropertyAnimation, QEasingCurve, QEvent
+import time
+
+from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal, QPropertyAnimation, QEasingCurve, QEvent
 
 from .. import db
 from ..scanner_service import ScannerService
@@ -663,15 +665,64 @@ class MainWindow(QMainWindow):
         QEvent.Type.TouchBegin, QEvent.Type.TouchUpdate, QEvent.Type.TouchEnd,
     }
 
+    # Taroziga bog'liq mahsulot: tayyor mahsulot tortish kartochkasi ochiq
+    # turganda Enter = "done" (`EmployeeScanWidget.confirm_output_weigh`).
+    # HID qo'l skaneri ham har bir kodni Enter bilan tugatadi — skaner
+    # belgilari bir-biridan bir necha millisekund oraliqda keladi, shuning
+    # uchun belgidan shu muddat ichida kelgan Enter "skaner tugatuvchisi"
+    # deb hisoblanadi va done sifatida QABUL QILINMAYDI (aks holda badge
+    # skanerlash bexosdan vazifani yakunlab qo'yardi).
+    _SCANNER_ENTER_GAP_SECONDS = 0.15
+    _ENTER_KEYS = (Qt.Key.Key_Return, Qt.Key.Key_Enter)
+    # Tarozi yo'q rejimida og'irlik qo'lda kiritiladi — kiosk qulfi faqat
+    # shu tugmalarni (raqam, nuqta/vergul, o'chirish, strelka) o'tkazadi.
+    _OUTPUT_TYPING_KEYS = {
+        Qt.Key.Key_0, Qt.Key.Key_1, Qt.Key.Key_2, Qt.Key.Key_3, Qt.Key.Key_4,
+        Qt.Key.Key_5, Qt.Key.Key_6, Qt.Key.Key_7, Qt.Key.Key_8, Qt.Key.Key_9,
+        Qt.Key.Key_Period, Qt.Key.Key_Comma, Qt.Key.Key_Backspace, Qt.Key.Key_Delete,
+        Qt.Key.Key_Left, Qt.Key.Key_Right,
+    }
+    _last_text_key_at = 0.0
+
+    def _handle_output_weigh_key(self, event) -> bool:
+        """Tayyor mahsulot tortish kartochkasi ochiq bo'lsa klaviatura
+        hodisasini qayta ishlaydi. `True` — hodisa shu yerda iste'mol
+        qilindi (Enter); `False` — odatdagi qoidalar bo'yicha davom etsin."""
+        scan_widget = getattr(self, "_scan_widget", None)
+        if scan_widget is None or not scan_widget.is_awaiting_output_weigh():
+            return False
+        if event.key() not in self._ENTER_KEYS:
+            if event.text():
+                self._last_text_key_at = time.monotonic()
+            return False
+        if event.isAutoRepeat():
+            return True
+        typing = scan_widget.output_accepts_typing()
+        if not typing and time.monotonic() - self._last_text_key_at < self._SCANNER_ENTER_GAP_SECONDS:
+            return True  # skaner kodining tugatuvchi Enter'i — done emas
+        scan_widget.confirm_output_weigh()
+        return True
+
     def eventFilter(self, obj, event):
+        widget = obj if isinstance(obj, QWidget) else None
+        in_main_window = widget is not None and widget.window() is self
+        if in_main_window and event.type() == QEvent.Type.KeyPress and self._handle_output_weigh_key(event):
+            # Enter = done — kiosk qulfi yoqilgan bo'lsa ham ishlaydi.
+            return True
         if self._kiosk_locked and event.type() in self._BLOCKED_EVENT_TYPES:
             # Faqat shu asosiy oynaning O'ZIGA tegishli hodisalar
             # yutiladi — alohida oyna sifatida ochiladigan QMessageBox
             # (masalan "Qulf ochilmadi" ogohlantirishi) o'zining "OK"
             # tugmasini bosish orqali yopilishi kerak, aks holda dastur
             # abadiy tiqilib qolgan bo'lardi.
-            widget = obj if isinstance(obj, QWidget) else None
-            if widget is not None and widget.window() is self:
+            if in_main_window:
+                if (
+                    event.type() in (QEvent.Type.KeyPress, QEvent.Type.KeyRelease)
+                    and event.key() in self._OUTPUT_TYPING_KEYS
+                    and getattr(self, "_scan_widget", None) is not None
+                    and self._scan_widget.output_accepts_typing()
+                ):
+                    return super().eventFilter(obj, event)
                 return True
         return super().eventFilter(obj, event)
 

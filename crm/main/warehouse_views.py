@@ -226,7 +226,9 @@ def warehouse_product_edit(request, product_id):
                 norma_miqdor = float(request.POST.get('norma_miqdor') or 0)
             except ValueError:
                 norma_miqdor = 0
-            ok, err = add_retsept_row(request.company, product, komponent, norma_miqdor)
+            ozgarmas_raw = request.POST.get('ozgarmas')
+            ozgarmas = None if ozgarmas_raw is None else ozgarmas_raw == '1'
+            ok, err = add_retsept_row(request.company, product, komponent, norma_miqdor, ozgarmas=ozgarmas)
             if ok:
                 messages.success(request, "Retsept qatori saqlandi.")
             else:

@@ -800,18 +800,100 @@ def agent_weigh_task_pickup(request, pickup_id):
         'pour_completed': result.get('pour_completed', True),
         'pickup_completed': result.get('pickup_completed', True),
         'materials_ready': result['materials_ready'],
+        'output_weigh': bool(result.get('tarozi_bogliq')),
     }
     if result['materials_ready']:
+        keyingi_qadam = (
+            "tayyor mahsulot tarozida tortilishi kutilmoqda." if result.get('tarozi_bogliq')
+            else "\"Ish bitdi\" bosilishi kutilmoqda."
+        )
         try:
             _send_ws_notification(
                 company.subdomain, "Xom ashyo tortildi",
                 f"{pazanda.tuliq_ismi} vazifa uchun barcha xom ashyoni tortib bo'ldi — "
-                "\"Ish bitdi\" bosilishi kutilmoqda.",
+                f"{keyingi_qadam}",
                 'success', refresh=True,
             )
         except Exception:
             pass
     return Response(response_data)
+
+
+def _pazanda_from_session(request, company, session_token):
+    """Badge sessiya-tokenidan ishlab chiqaruvchini topadi.
+    (pazanda, xato_Response) juftligini qaytaradi."""
+    user_id = _user_id_from_session_token(session_token, company)
+    if not user_id:
+        return None, Response(
+            {'detail': "Sessiya-token yo'q yoki muddati tugagan. Badge'ni qayta skanerlang."},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+    pazanda = Pazanda.objects.filter(user_id=user_id, company=company).first()
+    if not pazanda:
+        return None, Response({'detail': "Bu foydalanuvchi ishlab chiqaruvchi emas."}, status=status.HTTP_404_NOT_FOUND)
+    return pazanda, None
+
+
+@api_view(['GET'])
+def agent_my_output_weighs(request):
+    """Badge sessiyasida chaqiriladi — TAROZIGA BOG'LIQ (o'zgaruvchan)
+    mahsulotli, xom ashyosi to'liq tortib bo'lingan vazifalar: tayyor
+    mahsulot taroziga qo'yilib, Enter bilan yakunlanishini kutmoqda
+    (`agent_output_weigh`)."""
+    company = _company_from_token(request)
+    if not company:
+        return Response({'detail': "Token noto'g'ri yoki topilmadi."}, status=status.HTTP_401_UNAUTHORIZED)
+    pazanda, err = _pazanda_from_session(request, company, request.GET.get('session_token'))
+    if err:
+        return err
+
+    tasks = task_service.get_pending_output_weighs(pazanda, company)
+    return Response({'vazifalar': [
+        {
+            'id': t.id,
+            'mahsulot': t.mahsulot.nomi,
+            'birlik': t.mahsulot.turi.nomi if t.mahsulot.turi_id else 'kg',
+            'rejalashtirilgan_miqdor': t.rejalashtirilgan_miqdor,
+        }
+        for t in tasks
+    ]})
+
+
+@api_view(['POST'])
+def agent_output_weigh(request, task_id):
+    """Taroziga bog'liq mahsulot vazifasini yakunlaydi — Desktop Agent'da
+    tayyor mahsulot taroziga qo'yilib Enter bosilganda chaqiriladi.
+    `measured_qty` (tarozidagi haqiqiy og'irlik) ishlab chiqarilgan miqdor
+    sifatida yoziladi, vazifa darhol 'done' bo'ladi; QR-yorliq (bo'lsa)
+    odatdagi `agent_pending_print_batch` oqimi orqali chop etiladi."""
+    company = _company_from_token(request)
+    if not company:
+        return Response({'detail': "Token noto'g'ri yoki topilmadi."}, status=status.HTTP_401_UNAUTHORIZED)
+    pazanda, err = _pazanda_from_session(request, company, request.data.get('session_token'))
+    if err:
+        return err
+
+    try:
+        measured_qty = float(request.data.get('measured_qty'))
+    except (TypeError, ValueError):
+        return Response({'detail': "'measured_qty' noto'g'ri."}, status=status.HTTP_400_BAD_REQUEST)
+
+    mq, err_msg = task_service.finish_weighed_task(task_id, pazanda, company, measured_qty)
+    if err_msg:
+        return Response({'approved': False, 'detail': err_msg})
+
+    try:
+        _send_ws_notification(
+            company.subdomain, "Vazifa bajarildi",
+            f"{pazanda.tuliq_ismi} {mq.mahsulot.nomi} vazifasini yakunladi — tarozida {mq.miqdor:g} kg.",
+            'success', refresh=True,
+        )
+    except Exception:
+        pass
+    return Response({
+        'approved': True, 'miqdor': mq.miqdor, 'mahsulot': mq.mahsulot.nomi,
+        'has_labels': not mq.labels_printed,
+    })
 
 
 @api_view(['GET'])
