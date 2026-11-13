@@ -22,6 +22,8 @@ kod o'zgarishi shart emas.
 import win32print
 from PyQt6.QtCore import QThread, pyqtSignal
 
+from .network_printer_service import parse_tcp_name, is_port_open, send_raw_tcp
+
 DEFAULT_DPI = 203  # XP-365B standart bosim zichligi (nuqta/dyuym) — aksariyat 3-dyuymli termal etiketka printerlarida shu
 
 
@@ -170,7 +172,17 @@ def get_printer_status_issue(printer_name: str) -> str | None:
     qaytadi — shuning uchun haqiqiy natija faqat shu yerda aniqlanadi.
     Uch manba ketma-ket ko'riladi: `Status` bitmask, `Attributes`dagi
     "oflayn ishlash" biti, va navbatda osilib qolgan ishlarning holati.
-    Muammo topilmasa `None`."""
+    Muammo topilmasa `None`.
+
+    LAN printer (`tcp://ip:port`) uchun Windows spooler ishlatilmaydi —
+    holat to'g'ridan-to'g'ri chop etish portiga ulanib ko'rish orqali
+    aniqlanadi (ulanib bo'lsa — printer haqiqatan yoniq va tarmoqda)."""
+    tcp = parse_tcp_name(printer_name)
+    if tcp:
+        host, port = tcp
+        if is_port_open(host, port, timeout=2.0):
+            return None
+        return f"LAN printer ({host}) tarmoqda javob bermayapti"
     try:
         handle = win32print.OpenPrinter(printer_name)
     except Exception:  # noqa: BLE001
@@ -202,7 +214,13 @@ def get_printer_status_issue(printer_name: str) -> str | None:
 def print_raw(printer_name: str, data: bytes, doc_name: str = "StockFirm Label"):
     """Tayyor TSPL bayt ketma-ketligini printer navbatiga RAW rejimida
     yuboradi — hech qanday Windows sahifa-tarjimasi/GDI ishlatilmaydi,
-    printer buyruqlarni bevosita, o'zgarishsiz oladi."""
+    printer buyruqlarni bevosita, o'zgarishsiz oladi. LAN printer
+    (`tcp://ip:port`) bo'lsa — xuddi shu baytlar Windows'siz, to'g'ridan-
+    to'g'ri printerning RAW portiga (9100) yuboriladi."""
+    tcp = parse_tcp_name(printer_name)
+    if tcp:
+        send_raw_tcp(tcp[0], tcp[1], data)
+        return
     handle = win32print.OpenPrinter(printer_name)
     try:
         job_info = (doc_name, None, "RAW")

@@ -11,6 +11,9 @@ from PyQt6.QtGui import QPixmap, QPainter, QPen, QColor, QPolygonF
 from .. import db
 from ..api_client import station_login, station_login_by_qr, parse_server_input, ApiError, send_logout
 from ..label_printer_service import list_printers, LabelPrintWorker
+from ..network_printer_service import (
+    discover_lan_printers, make_reachable, make_tcp_name, parse_tcp_name, display_name,
+)
 from .camera_config_dialog import CameraConfigDialog
 
 
@@ -378,6 +381,13 @@ class SettingsPage(QWidget):
         printer_row.addWidget(self.printer_refresh_btn)
         printer_body.addLayout(self._make_field("Printer", printer_row))
 
+        # LAN (tarmoq) printerini IP'sini bilmasdan topish — kabelda turgan
+        # printer boshqa tarmoqda bo'lsa ham (zavod manzili) aniqlanadi.
+        self.printer_lan_search_btn = QPushButton("🔍  LAN printerni avtomatik qidirish")
+        self.printer_lan_search_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.printer_lan_search_btn.clicked.connect(self._search_lan_printers)
+        printer_body.addWidget(self.printer_lan_search_btn)
+
         size_row = QHBoxLayout()
         size_row.setSpacing(10)
         self.label_width_input = QLineEdit()
@@ -413,6 +423,8 @@ class SettingsPage(QWidget):
         layout.addLayout(devices_row)
 
         self._print_worker: LabelPrintWorker | None = None
+        self._lan_search_worker: _ApiCallWorker | None = None
+        self._lan_reach_worker: _ApiCallWorker | None = None
 
         layout.addStretch(1)
         self._load()
@@ -698,7 +710,7 @@ class SettingsPage(QWidget):
     # ── Etiketka printeri ─────────────────────────────────────────────
 
     def _refresh_printers(self):
-        current = self.printer_combo.currentText()
+        current = self._selected_printer()
         self.printer_combo.clear()
         try:
             names = list_printers()
@@ -706,13 +718,107 @@ class SettingsPage(QWidget):
             self.printer_status_label.setStyleSheet("color:#b91c1c;")
             self.printer_status_label.setText(f"Printerlar ro'yxatini olishda xato: {exc}")
             return
-        self.printer_combo.addItems(names)
+        # Har bir qatorning "data"si — saqlanadigan haqiqiy nom: Windows
+        # printer nomi yoki LAN printer uchun `tcp://ip:port`.
+        for name in names:
+            self.printer_combo.addItem(name, name)
         saved = db.get_setting("label_printer_name", "")
-        target = saved if saved in names else current
+        for lan_name in (saved, current):
+            if parse_tcp_name(lan_name):
+                self._add_lan_printer_item(lan_name)
+        target = saved if self.printer_combo.findData(saved) >= 0 else current
         if target:
-            index = self.printer_combo.findText(target)
+            index = self.printer_combo.findData(target)
             if index >= 0:
                 self.printer_combo.setCurrentIndex(index)
+
+    def _selected_printer(self) -> str:
+        return (self.printer_combo.currentData() or "").strip()
+
+    def _add_lan_printer_item(self, tcp_name: str) -> int:
+        index = self.printer_combo.findData(tcp_name)
+        if index < 0:
+            self.printer_combo.addItem(display_name(tcp_name), tcp_name)
+            index = self.printer_combo.count() - 1
+        return index
+
+    # ── LAN printerni avtomatik topish ────────────────────────────────
+
+    def _set_printer_status(self, text: str, color: str):
+        self.printer_status_label.setStyleSheet(f"color:{color};")
+        self.printer_status_label.setText(text)
+
+    def _search_lan_printers(self):
+        self.printer_lan_search_btn.setEnabled(False)
+        self._set_printer_status("Tarmoqda printer qidirilmoqda (10–20 soniya)...", "#64748b")
+        worker = _ApiCallWorker(discover_lan_printers)
+        worker.succeeded.connect(self._on_lan_search_done)
+        worker.failed.connect(self._on_lan_search_failed)
+        self._lan_search_worker = worker
+        worker.start()
+
+    def _on_lan_search_failed(self, message: str):
+        self.printer_lan_search_btn.setEnabled(True)
+        self._set_printer_status(f"Qidirishda xato: {message}", "#b91c1c")
+
+    def _on_lan_search_done(self, devices: list):
+        self.printer_lan_search_btn.setEnabled(True)
+        if not devices:
+            self._set_printer_status(
+                "Tarmoqda printer topilmadi — printer yoqilganini va LAN kabeli ulanganini tekshiring.",
+                "#b91c1c",
+            )
+            return
+
+        ready = [d for d in devices if d["reachable"]]
+        if ready:
+            self._select_lan_printer(ready[0]["ip"])
+            boshqalar = f" (yana {len(ready) - 1} ta topildi — ro'yxatdan tanlang)" if len(ready) > 1 else ""
+            for d in ready[1:]:
+                self._add_lan_printer_item(make_tcp_name(d["ip"]))
+            self._set_printer_status(
+                f"Topildi: {ready[0]['ip']}{boshqalar}. \"Sinov chop etish\" bilan tekshirib, \"Saqlash\"ni bosing.",
+                "#059669",
+            )
+            return
+
+        # Printer kabelda bor, lekin kompyuter boshqa tarmoqda — yo'l ochish
+        # uchun tarmoq kartasiga manzil qo'shiladi (Windows ruxsat so'raydi).
+        device = devices[0]
+        reply = QMessageBox.question(
+            self, "LAN printer topildi",
+            f"Printer topildi: {device['ip']} (\"{device['alias']}\" kabelida).\n\n"
+            f"U kompyuterdan boshqa tarmoqda turibdi (kompyuter: {device['src_ip']}). Ulanish uchun "
+            "kompyuterning shu tarmoq kartasiga printer tarmog'idan qo'shimcha manzil qo'shiladi — "
+            "mavjud manzil o'zgarmaydi.\n\nWindows administrator ruxsatini so'raydi. Davom etilsinmi?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            self._set_printer_status(
+                f"Printer topildi ({device['ip']}), lekin u boshqa tarmoqda — ulanish yoqilmadi.", "#b45309",
+            )
+            return
+        self.printer_lan_search_btn.setEnabled(False)
+        self._set_printer_status(f"{device['ip']} ga ulanilmoqda...", "#64748b")
+        worker = _ApiCallWorker(make_reachable, device)
+        worker.succeeded.connect(lambda result, d=device: self._on_lan_reach_done(d, result))
+        worker.failed.connect(self._on_lan_search_failed)
+        self._lan_reach_worker = worker
+        worker.start()
+
+    def _on_lan_reach_done(self, device: dict, result):
+        self.printer_lan_search_btn.setEnabled(True)
+        ok, message = result
+        if not ok:
+            self._set_printer_status(message, "#b91c1c")
+            return
+        self._select_lan_printer(device["ip"])
+        self._set_printer_status(
+            f"{message} \"Sinov chop etish\" bilan tekshirib, \"Saqlash\"ni bosing.", "#059669",
+        )
+
+    def _select_lan_printer(self, ip: str):
+        self.printer_combo.setCurrentIndex(self._add_lan_printer_item(make_tcp_name(ip)))
 
     def _load_printer_settings(self):
         self.label_width_input.setText(db.get_setting("label_width_mm", "40"))
@@ -731,7 +837,7 @@ class SettingsPage(QWidget):
         return width, height, gap
 
     def _save_printer_settings(self):
-        printer_name = self.printer_combo.currentText().strip()
+        printer_name = self._selected_printer()
         if not printer_name:
             self.printer_status_label.setStyleSheet("color:#b91c1c;")
             self.printer_status_label.setText("Avval printer tanlang.")
@@ -748,10 +854,10 @@ class SettingsPage(QWidget):
         db.set_setting("label_height_mm", f"{height:g}")
         db.set_setting("label_gap_mm", f"{gap:g}")
         self.printer_status_label.setStyleSheet("color:#059669;")
-        self.printer_status_label.setText(f"Saqlandi: {printer_name} ({width:g}x{height:g} mm, oraliq {gap:g} mm)")
+        self.printer_status_label.setText(f"Saqlandi: {display_name(printer_name)} ({width:g}x{height:g} mm, oraliq {gap:g} mm)")
 
     def _test_print(self):
-        printer_name = self.printer_combo.currentText().strip()
+        printer_name = self._selected_printer()
         if not printer_name:
             self.printer_status_label.setStyleSheet("color:#b91c1c;")
             self.printer_status_label.setText("Avval printer tanlang.")

@@ -25,6 +25,7 @@ from PyQt6.QtCore import pyqtSignal, QTimer, QThread
 from .. import db
 from ..api_client import fetch_omborlar
 from ..label_printer_service import list_printers, get_printer_status_issue
+from ..network_printer_service import parse_tcp_name, display_name
 
 OK_STYLE = "color:#059669; font-weight:700;"
 WARN_STYLE = "color:#b45309; font-weight:700;"
@@ -52,7 +53,8 @@ def _check_printer_live():
         installed = list_printers()
     except Exception:  # noqa: BLE001 — Windows printer API muammosi tekshiruvni to'xtatmasin
         installed = []
-    if installed and name not in installed:
+    is_lan = parse_tcp_name(name) is not None
+    if not is_lan and installed and name not in installed:
         return False, f"\"{name}\" endi Windows'da topilmadi — qayta tanlang."
     # Chop etishdan keyingi tekshiruv bilan AYNAN bir xil funksiya —
     # avval bu yerda faqat `Status` bitmask ko'rilardi, USB printer
@@ -63,8 +65,8 @@ def _check_printer_live():
     except Exception as exc:  # noqa: BLE001
         return False, f"\"{name}\" bilan bog'lanib bo'lmadi: {exc}"
     if issue:
-        return False, f"\"{name}\": {issue} — kabel, quvvat va qog'ozni tekshiring."
-    return True, f"Ulangan: {name}"
+        return False, f"{display_name(name)}: {issue} — kabel, quvvat va qog'ozni tekshiring."
+    return True, f"Ulangan: {display_name(name)}"
 
 
 def _sync_tarozi_majburiy():
