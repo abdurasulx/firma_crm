@@ -145,27 +145,57 @@ _STATUS_REASONS = (
 )
 
 
+# Real qurilmada (XP-80C, USB) aniqlangan: printer o'chirilganda/kabeli
+# uzilganda Windows "Offline" deb ko'rsatadi, lekin `Status` bitmask 0
+# bo'lib QOLAVERADI — oflaynlik `Attributes`dagi shu bit orqali
+# bildiriladi (`PRINTER_ATTRIBUTE_WORK_OFFLINE`). Faqat `Status`ga qarash
+# shu sabab oflayn printerni "Ulangan" deb ko'rsatardi.
+_ATTRIBUTE_WORK_OFFLINE = 0x400
+
+# Navbatdagi ish (job) holati bitlari — printer holati 0 bo'lsa ham, ish
+# chiqmay qolganini (xato/oflayn/qog'oz yo'q) shu orqali bilib olamiz.
+_JOB_STATUS_REASONS = (
+    (0x40, "Qog'oz tugagan"),               # JOB_STATUS_PAPEROUT
+    (0x20, "Printer oflayn"),               # JOB_STATUS_OFFLINE
+    (0x400, "Printerga e'tibor kerak"),     # JOB_STATUS_USER_INTERVENTION
+    (0x200, "Printer ishni qabul qilmayapti"),  # JOB_STATUS_BLOCKED_DEVQ
+    (0x2, "Chop etish navbatida xato"),     # JOB_STATUS_ERROR
+)
+
+
 def get_printer_status_issue(printer_name: str) -> str | None:
-    """Chop etishdan KEYIN chaqiriladi — printer HAQIQIY holatini
-    (Windows spooler `GetPrinter` status bitmask) tekshiradi. `print_raw`
-    (RAW yozish API'si) printer oflayn/qog'ozsiz bo'lsa ham odatda
-    xatosiz qaytadi — shuning uchun haqiqiy natija faqat shu status
-    tekshiruvi orqali aniqlanadi. Muammo topilmasa `None`."""
+    """Printerning HAQIQIY holatini tekshiradi (dastur ochilishidagi
+    qurilma-tekshiruvi va har bir chop etishdan keyin). `print_raw` (RAW
+    yozish API'si) printer oflayn/qog'ozsiz bo'lsa ham odatda xatosiz
+    qaytadi — shuning uchun haqiqiy natija faqat shu yerda aniqlanadi.
+    Uch manba ketma-ket ko'riladi: `Status` bitmask, `Attributes`dagi
+    "oflayn ishlash" biti, va navbatda osilib qolgan ishlarning holati.
+    Muammo topilmasa `None`."""
     try:
         handle = win32print.OpenPrinter(printer_name)
     except Exception:  # noqa: BLE001
         return "Printer bilan bog'lanib bo'lmadi"
     try:
-        info = win32print.GetPrinter(handle, 2)
+        try:
+            info = win32print.GetPrinter(handle, 2)
+        except Exception:  # noqa: BLE001
+            return None  # holatni bilib bo'lmadi — ijobiy taxmin qilamiz (spooler qabul qilgan)
         status_bits = info.get("Status", 0)
-    except Exception:  # noqa: BLE001
-        return None  # holatni bilib bo'lmadi — ijobiy taxmin qilamiz (spooler qabul qilgan)
+        for bit, reason in _STATUS_REASONS:
+            if status_bits & bit:
+                return reason
+        if info.get("Attributes", 0) & _ATTRIBUTE_WORK_OFFLINE:
+            return "Printer oflayn"
+        try:
+            jobs = win32print.EnumJobs(handle, 0, 50, 1)
+        except Exception:  # noqa: BLE001
+            jobs = []
+        for job in jobs:
+            for bit, reason in _JOB_STATUS_REASONS:
+                if job.get("Status", 0) & bit:
+                    return reason
     finally:
         win32print.ClosePrinter(handle)
-
-    for bit, reason in _STATUS_REASONS:
-        if status_bits & bit:
-            return reason
     return None
 
 

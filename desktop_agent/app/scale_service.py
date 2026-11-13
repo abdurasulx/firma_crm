@@ -24,7 +24,24 @@ from . import db
 
 BAUD_RATE = 9600
 WEIGHT_PATTERN = re.compile(r"Weight\s*:\s*(-?[\d.]+)\s*kg", re.IGNORECASE)
+# Boshqa indikatorlar "Weight :" so'zisiz yuboradi (masalan
+# "ST,GS,+  1.234kg") — asosiy naqsh mos kelmasa, qatordagi "<son> kg"
+# shaklidagi qiymat olinadi.
+FALLBACK_WEIGHT_PATTERN = re.compile(r"([-+]?\s*\d+(?:\.\d+)?)\s*kg", re.IGNORECASE)
+LINE_SPLIT_PATTERN = re.compile(rb"[\r\n]+")
 RECONNECT_DELAY_SECONDS = 5
+
+
+def parse_weight_line(text: str) -> float | None:
+    """Tarozi yuborgan bitta qatordan vaznni (kg) ajratib oladi; qator
+    vazn bo'lmasa `None`."""
+    match = WEIGHT_PATTERN.search(text) or FALLBACK_WEIGHT_PATTERN.search(text)
+    if not match:
+        return None
+    try:
+        return float(match.group(1).replace(" ", ""))
+    except ValueError:
+        return None
 
 
 class ScaleReaderWorker(QThread):
@@ -38,6 +55,14 @@ class ScaleReaderWorker(QThread):
         # shu orqali "haqiqatan ham jonli ulanganmi" deb bilib oladi,
         # alohida (raqobatlashuvchi) COM-port ulanishisiz.
         self.last_reading_at = 0.0
+        # Diagnostika holati (`diagnose()`): "javob kelmadi" degan bitta
+        # umumiy xabar o'rniga aniq sabab ko'rsatish uchun — port
+        # ochilmadimi, ochildi-yu hech narsa kelmayaptimi, yoki nimadir
+        # kelyapti-yu vazn sifatida tushunilmayaptimi.
+        self.port_open = False
+        self.open_error = ""
+        self.bytes_received = 0
+        self.last_raw_line = ""
 
     def run(self):
         self._running = True
@@ -45,16 +70,24 @@ class ScaleReaderWorker(QThread):
         while self._running:
             try:
                 with serial.Serial(self._com_port, baudrate=BAUD_RATE, timeout=1) as ser:
+                    self.port_open = True
+                    self.open_error = ""
                     while self._running:
                         chunk = ser.read(256)
                         if not chunk:
                             continue
+                        self.bytes_received += len(chunk)
                         buffer += chunk
-                        while b"\n" in buffer:
-                            line, buffer = buffer.split(b"\n", 1)
+                        # Ba'zi tarozilar qatorni faqat "\r" bilan tugatadi.
+                        parts = LINE_SPLIT_PATTERN.split(buffer)
+                        buffer = parts.pop()
+                        for line in parts:
                             self._handle_line(line)
-            except Exception:  # noqa: BLE001 — port band/uzilgan bo'lishi mumkin, keyinroq qayta uriniladi
-                pass
+                        if len(buffer) > 4096:  # tugatuvchisiz oqim — xotira o'smasin
+                            buffer = buffer[-256:]
+            except Exception as exc:  # noqa: BLE001 — port band/uzilgan bo'lishi mumkin, keyinroq qayta uriniladi
+                self.open_error = str(exc)
+            self.port_open = False
             if self._running:
                 time.sleep(RECONNECT_DELAY_SECONDS)
 
@@ -63,14 +96,38 @@ class ScaleReaderWorker(QThread):
             text = line.decode(errors="ignore")
         except Exception:  # noqa: BLE001
             return
-        match = WEIGHT_PATTERN.search(text)
-        if match:
-            try:
-                value = float(match.group(1))
-            except ValueError:
-                return
+        if text.strip():
+            self.last_raw_line = text.strip()[:60]
+        value = parse_weight_line(text)
+        if value is not None:
             self.last_reading_at = time.monotonic()
             self.weight_changed.emit(value)
+
+    def diagnose(self) -> str:
+        """Tarozidan vazn kelmayotgan bo'lsa — nega ekanini odam tilida."""
+        port = self._com_port
+        if not self.port_open:
+            if self.open_error:
+                low = self.open_error.lower()
+                if "denied" in low or "permission" in low:
+                    return f"{port} portini boshqa dastur band qilgan — o'sha dasturni yoping."
+                if "filenotfound" in low or "cannot find" in low:
+                    return f"{port} porti topilmadi — USB-COM kabel ulanganini tekshiring yoki Sozlamalarda portni qayta tanlang."
+                return f"{port} portini ochib bo'lmadi: {self.open_error[:80]}"
+            return f"{port} portiga ulanilmoqda..."
+        if self.bytes_received == 0:
+            return (
+                f"{port} porti ochildi, lekin tarozidan hech qanday signal kelmayapti — tarozi yoqilganini, "
+                "kabel tarozining RS232 chiqishiga ulanganini va tarozida uzluksiz yuborish (stream) rejimi "
+                "yoqilganini tekshiring."
+            )
+        if self.last_reading_at == 0.0:
+            sample = f" (kelgan: \"{self.last_raw_line}\")" if self.last_raw_line else ""
+            return (
+                f"{port} portidan ma'lumot kelyapti, lekin vazn sifatida o'qib bo'lmadi{sample} — "
+                f"tarozi tezligi {BAUD_RATE} baud ekanini tekshiring."
+            )
+        return f"{port}: tarozidan signal uzilib qoldi — kabel va quvvatni tekshiring."
 
     def stop(self):
         self._running = False
@@ -115,3 +172,10 @@ class ScaleService:
         if self._worker is None:
             return False
         return (time.monotonic() - self._worker.last_reading_at) < within_seconds
+
+    def diagnose(self) -> str:
+        """Tarozi ulanmagan deb topilganda — aniq sabab (qurilma-tekshiruv
+        sahifasida ko'rsatiladi)."""
+        if self._worker is None:
+            return "Tarozi sozlanmagan."
+        return self._worker.diagnose()

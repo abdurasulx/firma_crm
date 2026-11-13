@@ -104,6 +104,7 @@ class MainWindow(QMainWindow):
         # o'zidan so'raladi (176-177-qadamlarga qarang).
         self.startup_check_page = StartupCheckPage(
             scale_checker=lambda: self.scale_service.is_connected(),
+            scale_diagnoser=lambda: self.scale_service.diagnose(),
             scanner_checker=lambda: self.scanner_service.is_camera_connected(),
             ombor_checker=lambda: self.camera_recorder_service.connected_camera_count(),
         )

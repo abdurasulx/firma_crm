@@ -24,7 +24,7 @@ from PyQt6.QtCore import pyqtSignal, QTimer, QThread
 
 from .. import db
 from ..api_client import fetch_omborlar
-from ..label_printer_service import list_printers
+from ..label_printer_service import list_printers, get_printer_status_issue
 
 OK_STYLE = "color:#059669; font-weight:700;"
 WARN_STYLE = "color:#b45309; font-weight:700;"
@@ -54,22 +54,16 @@ def _check_printer_live():
         installed = []
     if installed and name not in installed:
         return False, f"\"{name}\" endi Windows'da topilmadi — qayta tanlang."
+    # Chop etishdan keyingi tekshiruv bilan AYNAN bir xil funksiya —
+    # avval bu yerda faqat `Status` bitmask ko'rilardi, USB printer
+    # o'chiq bo'lsa ham (Windows "Offline" deb tursa ham) "Ulangan" deb
+    # chiqardi (real qurilmada topilgan: oflaynlik `Attributes`da keladi).
     try:
-        import win32print
-        handle = win32print.OpenPrinter(name)
-        try:
-            info = win32print.GetPrinter(handle, 2)
-            status = info.get("Status", 0)
-            # PRINTER_STATUS_OFFLINE=0x80, PRINTER_STATUS_ERROR=0x2 — Windows
-            # spooler bergan bitmask (win32print konstantalari).
-            if status & 0x80:
-                return False, f"\"{name}\" oflayn — kabel/quvvatni tekshiring."
-            if status & 0x2:
-                return False, f"\"{name}\" xato holatida."
-        finally:
-            win32print.ClosePrinter(handle)
+        issue = get_printer_status_issue(name)
     except Exception as exc:  # noqa: BLE001
         return False, f"\"{name}\" bilan bog'lanib bo'lmadi: {exc}"
+    if issue:
+        return False, f"\"{name}\": {issue} — kabel, quvvat va qog'ozni tekshiring."
     return True, f"Ulangan: {name}"
 
 
@@ -93,7 +87,7 @@ def _sync_tarozi_majburiy():
     db.set_setting("tarozi_majburiy", "1" if tarozi_majburiy else "")
 
 
-def _check_scale_live(scale_checker):
+def _check_scale_live(scale_checker, scale_diagnoser=None):
     # Firma ERP sozlamasida "tarozi shart emas" deb belgilangan bo'lsa —
     # ulanish umuman qidirilmaydi/talab qilinmaydi, startup darhol "OK"
     # deb hisoblaydi (`Company.tarozi_majburiy`, login/sinxronlashda
@@ -110,6 +104,13 @@ def _check_scale_live(scale_checker):
         if scale_checker():
             return True, f"Ulangan ({port})"
         time.sleep(0.2)
+    if scale_diagnoser is not None:
+        # Bitta umumiy "javob kelmadi" o'rniga aniq sabab: port
+        # ochilmadimi, signal umuman yo'qmi yoki format tushunarsizmi.
+        try:
+            return False, scale_diagnoser()
+        except Exception:  # noqa: BLE001
+            pass
     return False, f"{port} portidan javob kelmadi (tarozi o'chiqmi?)."
 
 
@@ -166,8 +167,9 @@ class _DeviceProbeWorker(QThread):
     esa "ishlab turgan narsa checkpointdan o'tolmayabdi")."""
     finished_probe = pyqtSignal(dict)
 
-    def __init__(self, scale_checker=None, scanner_checker=None, ombor_checker=None):
+    def __init__(self, scale_checker=None, scanner_checker=None, ombor_checker=None, scale_diagnoser=None):
         super().__init__()
+        self._scale_diagnoser = scale_diagnoser
         self._scale_checker = scale_checker
         self._scanner_checker = scanner_checker
         self._ombor_checker = ombor_checker
@@ -176,7 +178,7 @@ class _DeviceProbeWorker(QThread):
         _sync_tarozi_majburiy()
         result = {}
         result["printer"] = _check_printer_live()
-        result["scale"] = _check_scale_live(self._scale_checker)
+        result["scale"] = _check_scale_live(self._scale_checker, self._scale_diagnoser)
         result["scanner_camera"] = _check_scanner_camera_live(self._scanner_checker)
         result["ombor_cameras"] = _check_ombor_cameras_live(self._ombor_checker)
         self.finished_probe.emit(result)
@@ -193,6 +195,7 @@ class _CheckRow(QFrame):
         title_label = QLabel(title)
         title_label.setStyleSheet("font-weight:700; font-size:14px;")
         self.detail_label = QLabel("Tekshirilmoqda...")
+        self.detail_label.setWordWrap(True)
         self.detail_label.setStyleSheet(CHECKING_STYLE)
         text_col.addWidget(title_label)
         text_col.addWidget(self.detail_label)
@@ -213,8 +216,10 @@ class StartupCheckPage(QWidget):
     continue_requested = pyqtSignal()
     open_settings_requested = pyqtSignal()
 
-    def __init__(self, scale_checker=None, scanner_checker=None, ombor_checker=None, parent=None):
+    def __init__(self, scale_checker=None, scanner_checker=None, ombor_checker=None, parent=None,
+                 scale_diagnoser=None):
         super().__init__(parent)
+        self._scale_diagnoser = scale_diagnoser
         self._scale_checker = scale_checker
         self._scanner_checker = scanner_checker
         self._ombor_checker = ombor_checker
@@ -314,6 +319,7 @@ class StartupCheckPage(QWidget):
             scale_checker=self._scale_checker,
             scanner_checker=self._scanner_checker,
             ombor_checker=self._ombor_checker,
+            scale_diagnoser=self._scale_diagnoser,
         )
         self._probe_worker.finished_probe.connect(self._on_probe_finished)
         self._probe_worker.start()
