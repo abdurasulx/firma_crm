@@ -1,12 +1,98 @@
+import os
+import tempfile
+
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QMessageBox,
+    QFrame, QScrollArea, QLayout,
 )
-from PyQt6.QtCore import QThread, QTimer, pyqtSignal
+from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal, QPointF
+from PyQt6.QtGui import QPixmap, QPainter, QPen, QColor, QPolygonF
 
 from .. import db
 from ..api_client import station_login, station_login_by_qr, parse_server_input, ApiError, send_logout
 from ..label_printer_service import list_printers, LabelPrintWorker
 from .camera_config_dialog import CameraConfigDialog
+
+
+# Sozlamalar sahifasining ko'rinishi (ERP veb-interfeysi bilan bir xil
+# ranglar: to'q ko'k matn, yashil asosiy tugma, oq kartochkalar). Faqat
+# shu sahifaga (va undan ochiladigan dialoglarga) ta'sir qiladi.
+SETTINGS_QSS = """
+#settingsPage, #settingsContent { background:#f1f5f9; }
+QScrollArea { background:#f1f5f9; border:none; }
+QFrame#card { background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; }
+QLabel { color:#0f172a; font-size:13px; background:transparent; }
+QLabel#pageTitle { font-size:24px; font-weight:800; }
+QLabel#pageSubtitle { color:#64748b; font-size:13px; }
+QLabel#cardIcon { font-size:20px; }
+QLabel#cardTitle { font-size:16px; font-weight:800; }
+QLabel#cardDesc { color:#64748b; font-size:12px; }
+QLabel#fieldLabel { color:#475569; font-size:12px; font-weight:700; }
+QLabel#fieldHint { color:#94a3b8; font-size:11px; }
+QLabel#accountStatus { font-size:14px; font-weight:700; }
+QLabel#statusPill {
+    background:#f1f5f9; border:1px solid #e2e8f0; border-radius:8px;
+    padding:10px 12px; font-weight:700; color:#334155;
+}
+QLabel#infoBox {
+    color:#1e3a8a; background:#eff6ff; border:1px solid #bfdbfe;
+    border-radius:10px; padding:14px; font-weight:600;
+}
+QLabel#warnBox {
+    color:#92400e; background:#fffbeb; border:1px solid #fde68a;
+    border-radius:10px; padding:12px; font-weight:700;
+}
+QLineEdit, QComboBox {
+    background:#ffffff; border:1px solid #cbd5e1; border-radius:8px;
+    padding:8px 10px; font-size:14px; color:#0f172a; min-height:22px;
+}
+QLineEdit:focus, QComboBox:focus { border:1px solid #10b981; }
+QComboBox::drop-down { subcontrol-origin:padding; subcontrol-position:center right; width:30px; border:none; }
+QComboBox::down-arrow { image:url(__COMBO_ARROW__); width:12px; height:12px; margin-right:10px; }
+QComboBox QAbstractItemView {
+    background:#ffffff; border:1px solid #cbd5e1; color:#0f172a;
+    selection-background-color:#d1fae5; selection-color:#065f46; outline:none;
+}
+QPushButton {
+    background:#ffffff; border:1px solid #cbd5e1; border-radius:8px;
+    padding:9px 16px; font-size:13px; font-weight:700; color:#0f172a; min-height:20px;
+}
+QPushButton:hover { background:#f8fafc; border-color:#94a3b8; }
+QPushButton:pressed { background:#e2e8f0; }
+QPushButton:disabled { color:#94a3b8; background:#f1f5f9; border-color:#e2e8f0; }
+QPushButton[variant="primary"] { background:#10b981; border:1px solid #10b981; color:#ffffff; }
+QPushButton[variant="primary"]:hover { background:#059669; border-color:#059669; }
+QPushButton[variant="primary"]:pressed { background:#047857; }
+QPushButton[variant="primary"]:disabled { background:#a7f3d0; border-color:#a7f3d0; color:#ffffff; }
+QPushButton[variant="danger"] { background:#fff1f2; border:1px solid #fecaca; color:#b91c1c; }
+QPushButton[variant="danger"]:hover { background:#ffe4e6; border-color:#fca5a5; }
+QPushButton[variant="link"] {
+    background:transparent; border:none; color:#2563eb; padding:2px 0; text-align:left;
+}
+QPushButton[variant="link"]:hover { color:#1d4ed8; background:transparent; }
+"""
+
+
+def _combo_arrow_path() -> str:
+    """Ro'yxat (combo) uchun pastga qaragan strelka rasmi. Qt uslublar
+    jadvali strelkani faqat rasm fayli orqali qabul qiladi, exe ichiga esa
+    alohida resurs fayllari qo'shilmagan — shuning uchun kichik PNG ish
+    vaqtida vaqtinchalik papkaga chizib qo'yiladi."""
+    path = os.path.join(tempfile.gettempdir(), "stockfirm_agent_combo_arrow.png")
+    if not os.path.exists(path):
+        pixmap = QPixmap(24, 24)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        pen = QPen(QColor("#64748b"))
+        pen.setWidthF(3.0)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+        painter.setPen(pen)
+        painter.drawPolyline(QPolygonF([QPointF(5, 9), QPointF(12, 16), QPointF(19, 9)]))
+        painter.end()
+        pixmap.save(path, "PNG")
+    return path.replace("\\", "/")
 
 
 class _ApiCallWorker(QThread):
@@ -71,20 +157,68 @@ class SettingsPage(QWidget):
         self._connecting_timer.setInterval(400)
         self._connecting_timer.timeout.connect(self._tick_connecting_animation)
         self._connecting_dots = 0
-        layout = QVBoxLayout(self)
+        self.setObjectName("settingsPage")
+        self.setStyleSheet(SETTINGS_QSS.replace("__COMBO_ARROW__", _combo_arrow_path()))
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
 
+        # Kichik ekranli stansiyalarda ham hamma narsa sig'ishi uchun —
+        # sahifa aylantiriladigan (scroll) maydon ichida.
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        outer.addWidget(scroll)
+        content = QWidget()
+        content.setObjectName("settingsContent")
+        scroll.setWidget(content)
+        layout = QVBoxLayout(content)
+        layout.setContentsMargins(32, 26, 32, 26)
+        layout.setSpacing(16)
+
+        # ── Sarlavha ─────────────────────────────────────────────────────
         title_row = QHBoxLayout()
-        title = QLabel("Sozlamalar — ERP bilan bog'lash")
-        title.setStyleSheet("font-size:18px; font-weight:700;")
-        title_row.addWidget(title)
+        title_col = QVBoxLayout()
+        title_col.setSpacing(2)
+        title = QLabel("Sozlamalar")
+        title.setObjectName("pageTitle")
+        subtitle = QLabel("Stansiyani ERP'ga ulash va qurilmalarni (skaner, tarozi, printer) sozlash")
+        subtitle.setObjectName("pageSubtitle")
+        title_col.addWidget(title)
+        title_col.addWidget(subtitle)
+        title_row.addLayout(title_col)
         title_row.addStretch(1)
         # Qurilma-tekshiruv sahifasidan "Sozlamalarga o'tish" bosilgach
         # (176-qadam) — muammo tuzatilgach shu tugma orqali qayta
         # tekshirishga qaytiladi (`_on_startup_open_settings`ga qarang).
-        recheck_btn = QPushButton("🔄 Qurilmalarni qayta tekshirish")
+        recheck_btn = QPushButton("🔄  Qurilmalarni qayta tekshirish")
+        recheck_btn.setProperty("variant", "primary")
+        recheck_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         recheck_btn.clicked.connect(lambda: self.on_recheck_devices and self.on_recheck_devices())
-        title_row.addWidget(recheck_btn)
+        title_row.addWidget(recheck_btn, 0, Qt.AlignmentFlag.AlignVCenter)
         layout.addLayout(title_row)
+
+        # ── Hisob (ERP bilan bog'lanish) ─────────────────────────────────
+        account_card, account_body = self._make_card("🔗", "ERP hisobi")
+
+        account_row = QHBoxLayout()
+        self.status_label = QLabel("")
+        self.status_label.setWordWrap(True)
+        self.status_label.setObjectName("accountStatus")
+        account_row.addWidget(self.status_label, 1)
+        # Real bug (foydalanuvchi topdi): omborlar allaqachon WebSocket
+        # orqali real-vaqtda avtomatik sinxronlanadi (91-qadam) — qo'lda
+        # "Sinxronlash" tugmasi endi ortiqcha, chalkashtiradi. Olib
+        # tashlandi.
+        # Faqat login qilingan holatda ko'rinadi (`_show_synced_view`/
+        # `show_login_required` shu ko'rinishni boshqaradi) — stansiyani
+        # boshqa xodim/firma uchun qayta ishlatish uchun.
+        self.logout_btn = QPushButton("🚪  Chiqish")
+        self.logout_btn.setProperty("variant", "danger")
+        self.logout_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.logout_btn.clicked.connect(self._logout)
+        self.logout_btn.setVisible(False)
+        account_row.addWidget(self.logout_btn, 0, Qt.AlignmentFlag.AlignTop)
+        account_body.addLayout(account_row)
 
         # QR kod orqali login — endi standart usul (145-qadam). Qurilma
         # hali login qilinmagan bo'lsa, qo'lda login/parol maydonlari
@@ -99,11 +233,8 @@ class SettingsPage(QWidget):
             "skaneriga) ko'rsating — avtomatik tizimga kirasiz."
         )
         self.qr_prompt_label.setWordWrap(True)
-        self.qr_prompt_label.setStyleSheet(
-            "color:#0f172a; background:#eff6ff; border:1px solid #bfdbfe; "
-            "border-radius:8px; padding:14px; font-weight:600;"
-        )
-        layout.addWidget(self.qr_prompt_label)
+        self.qr_prompt_label.setObjectName("infoBox")
+        account_body.addWidget(self.qr_prompt_label)
 
         # Real muammo (foydalanuvchi xabar berdi): yangi stansiyada hali
         # hech qanday kamera "skaner" roliga ulanmagan bo'lsa,
@@ -115,22 +246,20 @@ class SettingsPage(QWidget):
             "ISHLAMAYDI. Pastdagi \"Skaner\" bo'limida kamerani tanlab saqlang."
         )
         self.no_scanner_warning_label.setWordWrap(True)
-        self.no_scanner_warning_label.setStyleSheet(
-            "color:#92400e; background:#fffbeb; border:1px solid #fde68a; "
-            "border-radius:8px; padding:12px; font-weight:700; margin-top:8px;"
-        )
+        self.no_scanner_warning_label.setObjectName("warnBox")
         self.no_scanner_warning_label.setVisible(False)
-        layout.addWidget(self.no_scanner_warning_label)
+        account_body.addWidget(self.no_scanner_warning_label)
 
         self.manual_toggle_btn = QPushButton("Qo'lda login/parol bilan kirish")
-        self.manual_toggle_btn.setFlat(True)
-        self.manual_toggle_btn.setStyleSheet("text-align:left; color:#2563eb; border:none;")
+        self.manual_toggle_btn.setProperty("variant", "link")
+        self.manual_toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.manual_toggle_btn.clicked.connect(self._toggle_manual_login)
-        layout.addWidget(self.manual_toggle_btn)
+        account_body.addWidget(self.manual_toggle_btn, 0, Qt.AlignmentFlag.AlignLeft)
 
         self.manual_login_container = QWidget()
         manual_layout = QVBoxLayout(self.manual_login_container)
-        manual_layout.setContentsMargins(0, 8, 0, 0)
+        manual_layout.setContentsMargins(0, 4, 0, 0)
+        manual_layout.setSpacing(8)
 
         desc = QLabel(
             "Firmangiz nomini (do'kon yaratilganda tanlangan manzil qismi, "
@@ -141,176 +270,147 @@ class SettingsPage(QWidget):
             "birzumda@http://127.0.0.1:8000.)"
         )
         desc.setWordWrap(True)
-        desc.setStyleSheet("color:#666;")
+        desc.setObjectName("cardDesc")
         manual_layout.addWidget(desc)
 
-        manual_layout.addWidget(QLabel("Firma nomi"))
+        manual_fields = QHBoxLayout()
+        manual_fields.setSpacing(12)
         self.server_input = QLineEdit()
         self.server_input.setPlaceholderText("masalan: birzumda")
-        manual_layout.addWidget(self.server_input)
-
-        manual_layout.addWidget(QLabel("Stansiya logini"))
         self.username_input = QLineEdit()
-        manual_layout.addWidget(self.username_input)
-
-        manual_layout.addWidget(QLabel("Parol"))
         self.password_input = QLineEdit()
         self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
-        manual_layout.addWidget(self.password_input)
-
-        login_btn_row = QHBoxLayout()
+        self.password_input.returnPressed.connect(self._login)
+        for label_text, widget in (
+            ("Firma nomi", self.server_input),
+            ("Stansiya logini", self.username_input),
+            ("Parol", self.password_input),
+        ):
+            manual_fields.addLayout(self._make_field(label_text, widget), 1)
         self.login_btn = QPushButton("Kirish")
+        self.login_btn.setProperty("variant", "primary")
+        self.login_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.login_btn.clicked.connect(self._login)
-        login_btn_row.addWidget(self.login_btn)
-        login_btn_row.addStretch(1)
-        manual_layout.addLayout(login_btn_row)
+        manual_fields.addWidget(self.login_btn, 0, Qt.AlignmentFlag.AlignBottom)
+        manual_layout.addLayout(manual_fields)
 
         self.manual_login_container.setVisible(False)
-        layout.addWidget(self.manual_login_container)
+        account_body.addWidget(self.manual_login_container)
+        layout.addWidget(account_card)
 
-        sync_row = QHBoxLayout()
-        # Real bug (foydalanuvchi topdi): omborlar allaqachon WebSocket
-        # orqali real-vaqtda avtomatik sinxronlanadi (91-qadam) — qo'lda
-        # "Sinxronlash" tugmasi endi ortiqcha, chalkashtiradi. Olib
-        # tashlandi.
-        # Faqat login qilingan holatda ko'rinadi (`_show_synced_view`/
-        # `show_login_required` shu ko'rinishni boshqaradi) — stansiyani
-        # boshqa xodim/firma uchun qayta ishlatish uchun.
-        self.logout_btn = QPushButton("🚪 Chiqish")
-        self.logout_btn.setStyleSheet("color:#b91c1c;")
-        self.logout_btn.clicked.connect(self._logout)
-        self.logout_btn.setVisible(False)
-        sync_row.addWidget(self.logout_btn)
-        layout.addLayout(sync_row)
+        # ── Qurilmalar: uchta kartochka yonma-yon ────────────────────────
+        devices_row = QHBoxLayout()
+        devices_row.setSpacing(16)
 
-        self.status_label = QLabel("")
-        self.status_label.setWordWrap(True)
-        layout.addWidget(self.status_label)
-
-        scanner_title = QLabel("Skaner")
-        scanner_title.setStyleSheet("font-size:16px; font-weight:700; margin-top:20px;")
-        layout.addWidget(scanner_title)
-
-        scanner_desc = QLabel(
-            "Xodim shaxsiy QR (badge)ini ko'rsatishi uchun ishlatiladigan "
-            "kamera yoki qo'lda (pistolet shaklidagi) USB skaner. Sozlangach, "
-            "dastur ochiq turgan davomida hech qanday menyu ochmasdan — hatto "
-            "boshqa oyna (masalan brauzer) fokusda bo'lsa ham — istalgan payt "
-            "skanerlansa, ma'lumot avtomatik chiqadi."
+        # Skaner
+        scanner_card, scanner_body = self._make_card(
+            "📷", "Skaner",
+            "Xodim badge'i va QR kodlar uchun kamera yoki qo'l (USB) skaneri. "
+            "Sozlangach, dastur ochiq turganda istalgan payt skanerlash mumkin — "
+            "boshqa oyna fokusda bo'lsa ham.",
         )
-        scanner_desc.setWordWrap(True)
-        scanner_desc.setStyleSheet("color:#666;")
-        layout.addWidget(scanner_desc)
-
         self.scanner_status_label = QLabel("")
         self.scanner_status_label.setWordWrap(True)
-        self.scanner_status_label.setStyleSheet("font-weight:600;")
-        layout.addWidget(self.scanner_status_label)
-
+        self.scanner_status_label.setObjectName("statusPill")
+        scanner_body.addWidget(self.scanner_status_label)
+        scanner_body.addStretch(1)
         scanner_configure_btn = QPushButton("Skanerni sozlash")
+        scanner_configure_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         scanner_configure_btn.clicked.connect(self._configure_scanner)
-        layout.addWidget(scanner_configure_btn)
+        scanner_body.addWidget(scanner_configure_btn)
+        devices_row.addWidget(scanner_card, 1)
 
-        # ── Tarozi (CAS CI-200A va shu formatga mos boshqalar, RS232) ────
-        scale_title = QLabel("Tarozi")
-        scale_title.setStyleSheet("font-size:16px; font-weight:700; margin-top:20px;")
-        layout.addWidget(scale_title)
-
-        scale_desc = QLabel(
-            "Xom ashyo tortilganda tarozi qiymati avtomatik to'ldirilishi "
-            "uchun — tarozi ulangan COM portni kiriting (masalan COM4). "
-            "Bo'sh qoldirilsa, vaznni qo'lda kiritish davom etadi."
+        # Tarozi (CAS CI-200A va shu formatga mos boshqalar, RS232)
+        scale_card, scale_body = self._make_card(
+            "⚖️", "Tarozi",
+            "Vazn tarozidan avtomatik olinadi. Tarozi ulangan COM portni tanlang; "
+            "tanlanmasa, vazn qo'lda kiritiladi.",
         )
-        scale_desc.setWordWrap(True)
-        scale_desc.setStyleSheet("color:#666;")
-        layout.addWidget(scale_desc)
-
-        scale_row = QHBoxLayout()
         self.scale_com_combo = QComboBox()
-        self.scale_refresh_btn = QPushButton("Yangilash")
+        self.scale_refresh_btn = QPushButton("↻")
+        self.scale_refresh_btn.setToolTip("Portlar ro'yxatini yangilash")
+        self.scale_refresh_btn.setFixedWidth(40)
+        self.scale_refresh_btn.setStyleSheet("font-size:18px; padding:4px 0;")
+        self.scale_refresh_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.scale_refresh_btn.clicked.connect(self._refresh_scale_ports)
-        self.scale_save_btn = QPushButton("Saqlash")
-        self.scale_save_btn.clicked.connect(self._save_scale_settings)
-        scale_row.addWidget(self.scale_com_combo, 1)
-        scale_row.addWidget(self.scale_refresh_btn)
-        scale_row.addWidget(self.scale_save_btn)
-        layout.addLayout(scale_row)
+        port_row = QHBoxLayout()
+        port_row.setSpacing(8)
+        port_row.addWidget(self.scale_com_combo, 1)
+        port_row.addWidget(self.scale_refresh_btn)
+        scale_body.addLayout(self._make_field("COM port", port_row))
 
-        scale_capacity_desc = QLabel(
-            "Tarozining maksimal sig'imi (kg) — tarozilar turlicha bo'ladi "
-            "(20/30/60 kg va h.k.). Kerakli xom ashyo miqdori shu sig'imdan "
-            "oshsa, tortish avtomatik bir necha ketma-ket porsiyaga "
-            "bo'linadi (masalan 45 kg, 30 kg sig'imli tarozida — avval 30 "
-            "kg, keyin 15 kg). Bo'sh qoldirilsa, cheklovsiz (bitta "
-            "tortishda) so'raladi."
-        )
-        scale_capacity_desc.setWordWrap(True)
-        scale_capacity_desc.setStyleSheet("color:#666; margin-top:8px;")
-        layout.addWidget(scale_capacity_desc)
-
-        scale_capacity_row = QHBoxLayout()
         self.scale_capacity_input = QLineEdit()
         self.scale_capacity_input.setPlaceholderText("Masalan: 30")
-        self.scale_capacity_save_btn = QPushButton("Saqlash")
-        self.scale_capacity_save_btn.clicked.connect(self._save_scale_capacity)
-        scale_capacity_row.addWidget(self.scale_capacity_input, 1)
-        scale_capacity_row.addWidget(self.scale_capacity_save_btn)
-        layout.addLayout(scale_capacity_row)
+        scale_body.addLayout(self._make_field(
+            "Maksimal sig'im (kg)", self.scale_capacity_input,
+            hint="Kerakli miqdor sig'imdan oshsa, tortish porsiyalarga bo'linadi "
+                 "(45 kg, 30 kg li tarozida: 30 + 15). Bo'sh qoldirilsa — cheklovsiz.",
+        ))
+        self.scale_status_label = QLabel("")
+        self.scale_status_label.setWordWrap(True)
+        scale_body.addWidget(self.scale_status_label)
+        scale_body.addStretch(1)
+        # Port va sig'im avval ikkita alohida "Saqlash" tugmasi bilan
+        # saqlanardi — chalkashtirardi, endi bittasi ikkalasini saqlaydi.
+        self.scale_save_btn = QPushButton("Saqlash")
+        self.scale_save_btn.setProperty("variant", "primary")
+        self.scale_save_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.scale_save_btn.clicked.connect(self._save_scale_all)
+        scale_body.addWidget(self.scale_save_btn)
+        devices_row.addWidget(scale_card, 1)
 
-        # ── Etiketka printeri (XPrinter XP-365B va h.k. — TSPL) ──────────
-        printer_title = QLabel("Etiketka printeri (QR chop etish)")
-        printer_title.setStyleSheet("font-size:16px; font-weight:700; margin-top:20px;")
-        layout.addWidget(printer_title)
-
-        printer_desc = QLabel(
-            "Miqdor qo'shish tasdiqlangach chop etiladigan Serial QR "
-            "yorliqlari uchun (masalan XPrinter XP-365B). Windows'ga "
-            "o'rnatilgan printerlardan birini tanlang. Kenglik/balandlik/"
-            "oralig'ini QO'LLANILAYOTGAN plyonka (etiketka) o'lchamiga "
-            "moslab kiriting — plyonka boshqa o'lchamga almashtirilsa, "
-            "shu yerda qiymatlarni yangilash kifoya, kod o'zgartirish "
-            "kerak emas."
+        # Etiketka printeri (XPrinter XP-365B va h.k. — TSPL)
+        printer_card, printer_body = self._make_card(
+            "🖨️", "Etiketka printeri",
+            "QR yorliqlar shu printerda chop etiladi. O'lchamlarni ishlatilayotgan "
+            "etiketka (plyonka) o'lchamiga moslang.",
         )
-        printer_desc.setWordWrap(True)
-        printer_desc.setStyleSheet("color:#666;")
-        layout.addWidget(printer_desc)
-
-        printer_row = QHBoxLayout()
         self.printer_combo = QComboBox()
-        self.printer_refresh_btn = QPushButton("Yangilash")
+        self.printer_refresh_btn = QPushButton("↻")
+        self.printer_refresh_btn.setToolTip("Printerlar ro'yxatini yangilash")
+        self.printer_refresh_btn.setFixedWidth(40)
+        self.printer_refresh_btn.setStyleSheet("font-size:18px; padding:4px 0;")
+        self.printer_refresh_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.printer_refresh_btn.clicked.connect(self._refresh_printers)
+        printer_row = QHBoxLayout()
+        printer_row.setSpacing(8)
         printer_row.addWidget(self.printer_combo, 1)
         printer_row.addWidget(self.printer_refresh_btn)
-        layout.addLayout(printer_row)
+        printer_body.addLayout(self._make_field("Printer", printer_row))
 
         size_row = QHBoxLayout()
-        size_row.addWidget(QLabel("Kenglik (mm)"))
+        size_row.setSpacing(10)
         self.label_width_input = QLineEdit()
         self.label_width_input.setPlaceholderText("40")
-        size_row.addWidget(self.label_width_input)
-        size_row.addWidget(QLabel("Balandlik (mm)"))
         self.label_height_input = QLineEdit()
         self.label_height_input.setPlaceholderText("30")
-        size_row.addWidget(self.label_height_input)
-        size_row.addWidget(QLabel("Oraliq (mm)"))
         self.label_gap_input = QLineEdit()
         self.label_gap_input.setPlaceholderText("2")
-        size_row.addWidget(self.label_gap_input)
-        layout.addLayout(size_row)
-
-        printer_btn_row = QHBoxLayout()
-        self.printer_save_btn = QPushButton("Saqlash")
-        self.printer_save_btn.clicked.connect(self._save_printer_settings)
-        self.printer_test_btn = QPushButton("Sinov chop etish")
-        self.printer_test_btn.clicked.connect(self._test_print)
-        printer_btn_row.addWidget(self.printer_save_btn)
-        printer_btn_row.addWidget(self.printer_test_btn)
-        printer_btn_row.addStretch(1)
-        layout.addLayout(printer_btn_row)
+        size_row.addLayout(self._make_field("Kenglik (mm)", self.label_width_input), 1)
+        size_row.addLayout(self._make_field("Balandlik (mm)", self.label_height_input), 1)
+        size_row.addLayout(self._make_field("Oraliq (mm)", self.label_gap_input), 1)
+        printer_body.addLayout(size_row)
 
         self.printer_status_label = QLabel("")
         self.printer_status_label.setWordWrap(True)
-        layout.addWidget(self.printer_status_label)
+        printer_body.addWidget(self.printer_status_label)
+        printer_body.addStretch(1)
+
+        printer_btn_row = QHBoxLayout()
+        printer_btn_row.setSpacing(8)
+        self.printer_test_btn = QPushButton("Sinov chop etish")
+        self.printer_test_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.printer_test_btn.clicked.connect(self._test_print)
+        self.printer_save_btn = QPushButton("Saqlash")
+        self.printer_save_btn.setProperty("variant", "primary")
+        self.printer_save_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.printer_save_btn.clicked.connect(self._save_printer_settings)
+        printer_btn_row.addWidget(self.printer_test_btn, 1)
+        printer_btn_row.addWidget(self.printer_save_btn, 1)
+        printer_body.addLayout(printer_btn_row)
+        devices_row.addWidget(printer_card, 1)
+
+        layout.addLayout(devices_row)
 
         self._print_worker: LabelPrintWorker | None = None
 
@@ -321,6 +421,50 @@ class SettingsPage(QWidget):
         self._load_printer_settings()
         self._refresh_scale_ports()
         self._load_scale_capacity()
+
+    def _make_card(self, icon: str, title: str, desc: str = ""):
+        """Oq kartochka (sarlavha + ixtiyoriy izoh). (frame, ichki layout)
+        qaytaradi — bo'lim maydonlari shu layoutga qo'shiladi."""
+        card = QFrame()
+        card.setObjectName("card")
+        body = QVBoxLayout(card)
+        body.setContentsMargins(20, 18, 20, 18)
+        body.setSpacing(12)
+        head = QHBoxLayout()
+        head.setSpacing(8)
+        icon_label = QLabel(icon)
+        icon_label.setObjectName("cardIcon")
+        title_label = QLabel(title)
+        title_label.setObjectName("cardTitle")
+        head.addWidget(icon_label)
+        head.addWidget(title_label)
+        head.addStretch(1)
+        body.addLayout(head)
+        if desc:
+            desc_label = QLabel(desc)
+            desc_label.setWordWrap(True)
+            desc_label.setObjectName("cardDesc")
+            body.addWidget(desc_label)
+        return card, body
+
+    def _make_field(self, label_text: str, field, hint: str = ""):
+        """Maydon ustida kichik sarlavha, ostida ixtiyoriy izoh. `field` —
+        widget yoki tayyor layout (masalan combo + yangilash tugmasi)."""
+        col = QVBoxLayout()
+        col.setSpacing(4)
+        label = QLabel(label_text)
+        label.setObjectName("fieldLabel")
+        col.addWidget(label)
+        if isinstance(field, QLayout):
+            col.addLayout(field)
+        else:
+            col.addWidget(field)
+        if hint:
+            hint_label = QLabel(hint)
+            hint_label.setWordWrap(True)
+            hint_label.setObjectName("fieldHint")
+            col.addWidget(hint_label)
+        return col
 
     def _load(self):
         self.server_input.setText(db.get_setting("server_input_raw", "") or db.get_setting("server_url", ""))
@@ -360,7 +504,7 @@ class SettingsPage(QWidget):
         etadi."""
         self._connecting_base_text = base_text
         self._connecting_dots = 0
-        self.status_label.setStyleSheet("color:#666;")
+        self.status_label.setStyleSheet("color:#64748b;")
         self.status_label.setText(base_text)
         self._connecting_timer.start()
 
@@ -470,7 +614,7 @@ class SettingsPage(QWidget):
         db.set_setting("company_name", "")
         if self.on_logout:
             self.on_logout()
-        self.status_label.setStyleSheet("color:#666;")
+        self.status_label.setStyleSheet("color:#64748b;")
         self.status_label.setText("Tizimdan chiqdingiz.")
         self._update_login_ui_state()
 
@@ -513,6 +657,21 @@ class SettingsPage(QWidget):
             if idx >= 0:
                 self.scale_com_combo.setCurrentIndex(idx)
 
+    def _save_scale_all(self):
+        """Bitta "Saqlash" — port ham, sig'im ham. Sig'im noto'g'ri bo'lsa
+        hech narsa saqlanmaydi (xabar chiqadi)."""
+        if not self._save_scale_capacity():
+            self.scale_status_label.setText("")
+            return
+        self._save_scale_settings()
+        port = self.scale_com_combo.currentData() or ""
+        capacity = db.get_setting("scale_max_capacity_kg", "")
+        self.scale_status_label.setStyleSheet("color:#059669;")
+        self.scale_status_label.setText(
+            f"Saqlandi: {port or 'port tanlanmagan'}"
+            + (f", sig'im {float(capacity):g} kg" if capacity else ", sig'im cheklovsiz")
+        )
+
     def _save_scale_settings(self):
         db.set_setting("scale_com_port", self.scale_com_combo.currentData() or "")
         if self.on_scale_changed:
@@ -530,12 +689,11 @@ class SettingsPage(QWidget):
                     raise ValueError
             except ValueError:
                 QMessageBox.warning(self, "Xato", "Sig'im musbat son bo'lishi kerak (masalan 30).")
-                return
+                return False
             db.set_setting("scale_max_capacity_kg", str(value))
         else:
             db.set_setting("scale_max_capacity_kg", "")
-        if self.on_scale_changed:
-            self.on_scale_changed()
+        return True
 
     # ── Etiketka printeri ─────────────────────────────────────────────
 
@@ -606,7 +764,7 @@ class SettingsPage(QWidget):
         width, height, gap = size
 
         self.printer_test_btn.setEnabled(False)
-        self.printer_status_label.setStyleSheet("color:#666;")
+        self.printer_status_label.setStyleSheet("color:#64748b;")
         self.printer_status_label.setText("Sinov etiketkasi chop etilmoqda...")
 
         label = {"qr_data": "https://stockfirm.uz/p/test/"}
