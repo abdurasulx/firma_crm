@@ -11,9 +11,9 @@
         <h3 style="margin-bottom:6px;">{{ target_user.tuliq_ismi|default:target_user.username }}</h3>
         <div style="color:var(--muted); font-size:13px; margin-bottom:18px;">{{ target_user.get_type_display }}</div>
         {% if target_user.type == 'desktop_agent' and request.user.type == 'ega' %}
-        {# desktop_agent hisobi shaxs emas, stansiya — uning "badge"i ayni paytda
+        {% comment %}desktop_agent hisobi shaxs emas, stansiya — uning "badge"i ayni paytda
            login QR ham bo'lishi kerak (foydalanuvchi talabi: alohida-alohida
-           ikkita QR emas, bitta QR hamma narsani o'z ichiga olsin). #}
+           ikkita QR emas, bitta QR hamma narsani o'z ichiga olsin).{% endcomment %}
         <img src="{% url 'agent_login_qr_image' target_user.id %}?v={{ target_user.agent_qr_nonce }}" alt="Agent login QR" style="width:220px; height:220px; border:1px solid var(--border); border-radius:14px; padding:10px; background:#fff;">
         <p style="margin-top:16px; color:var(--muted); font-size:12px;">Bu QR — Desktop Agent stansiyasini login qilish uchun. Sozlamalar sahifasida kamerasiga ko'rsating.</p>
         <a class="btn" href="{% url 'agent_login_qr_image' target_user.id %}?v={{ target_user.agent_qr_nonce }}" download="agent_login_{{ target_user.username }}.png" style="margin-top:10px; display:inline-flex;"><i class="fa-solid fa-download"></i> Yuklab olish</a>

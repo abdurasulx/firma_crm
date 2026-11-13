@@ -246,9 +246,9 @@
             </div>
 
             {% if not request.company.custom_desktop_agent_stations %}
-            {# Desktop Agent ishlatuvchi firmalarda bu ortiqcha: tasdiqlash/audit
+            {% comment %}Desktop Agent ishlatuvchi firmalarda bu ortiqcha: tasdiqlash/audit
                izi endi ombor kamerasi (video yozuv) + Serial QR orqali
-               ta'minlanadi (87/82-qadam), qo'lda rasm biriktirish shart emas. #}
+               ta'minlanadi (87/82-qadam), qo'lda rasm biriktirish shart emas.{% endcomment %}
             <div class="form-group">
                 <label>Rasm (ixtiyoriy)</label>
                 <div class="upload-area" id="uploadArea">
